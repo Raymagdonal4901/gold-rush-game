@@ -44,9 +44,9 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
   };
 
   const getAmountColor = (tx: Transaction) => {
-     if (tx.amount > 0) return 'text-emerald-400';
-     if (tx.amount < 0) return 'text-red-400';
-     return 'text-stone-400'; // For 0 amount (like crafting)
+    if (tx.amount > 0) return 'text-emerald-400';
+    if (tx.amount < 0) return 'text-red-400';
+    return 'text-stone-400'; // For 0 amount (like crafting)
   };
 
   const getStatusColor = (status: string) => {
@@ -60,18 +60,18 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-      <div className="bg-stone-950 border border-stone-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-        
+      <div className="bg-stone-950 border border-stone-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] landscape:max-h-[60vh]">
+
         {/* Header */}
         <div className="bg-stone-900 p-5 border-b border-stone-800 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
-             <div className="bg-stone-800 p-2 rounded text-stone-300">
-                <History size={24} />
-             </div>
-             <div>
-                <h2 className="text-xl font-display font-bold text-white">ประวัติธุรกรรม</h2>
-                <p className="text-xs text-stone-500 uppercase tracking-wider">บัญชีการเงิน</p>
-             </div>
+            <div className="bg-stone-800 p-2 rounded text-stone-300">
+              <History size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-display font-bold text-white">ประวัติธุรกรรม</h2>
+              <p className="text-xs text-stone-500 uppercase tracking-wider">บัญชีการเงิน</p>
+            </div>
           </div>
           <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
             <X size={24} />
@@ -80,37 +80,37 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
 
         {/* List */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
-           {transactions.length === 0 ? (
-               <div className="flex flex-col items-center justify-center py-20 text-stone-500 gap-4">
-                   <AlertCircle size={48} opacity={0.5} />
-                   <p>ไม่พบประวัติธุรกรรม</p>
-               </div>
-           ) : (
-               <div className="divide-y divide-stone-800">
-                  {transactions.map((tx) => (
-                      <div key={tx.id} className="p-4 hover:bg-stone-900/50 transition-colors flex items-center justify-between group">
-                          <div className="flex items-center gap-4">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-stone-900 border border-stone-800 group-hover:border-stone-700`}>
-                                  {getIcon(tx.type)}
-                              </div>
-                              <div>
-                                  <div className="text-stone-200 font-bold text-sm">{tx.description}</div>
-                                  <div className="text-xs text-stone-500 font-mono">{new Date(tx.timestamp).toLocaleString()}</div>
-                              </div>
-                          </div>
-                          
-                          <div className="flex flex-col items-end gap-1">
-                              <div className={`font-mono font-bold ${getAmountColor(tx)}`}>
-                                  {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString(undefined, {minimumFractionDigits: 2})} {CURRENCY}
-                              </div>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider font-bold ${getStatusColor(tx.status)}`}>
-                                  {tx.status}
-                              </span>
-                          </div>
-                      </div>
-                  ))}
-               </div>
-           )}
+          {transactions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-stone-500 gap-4">
+              <AlertCircle size={48} opacity={0.5} />
+              <p>ไม่พบประวัติธุรกรรม</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-stone-800">
+              {transactions.map((tx) => (
+                <div key={tx.id} className="p-4 hover:bg-stone-900/50 transition-colors flex items-center justify-between group">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-stone-900 border border-stone-800 group-hover:border-stone-700`}>
+                      {getIcon(tx.type)}
+                    </div>
+                    <div>
+                      <div className="text-stone-200 font-bold text-sm">{tx.description}</div>
+                      <div className="text-xs text-stone-500 font-mono">{new Date(tx.timestamp).toLocaleString()}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1">
+                    <div className={`font-mono font-bold ${getAmountColor(tx)}`}>
+                      {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}
+                    </div>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider font-bold ${getStatusColor(tx.status)}`}>
+                      {tx.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

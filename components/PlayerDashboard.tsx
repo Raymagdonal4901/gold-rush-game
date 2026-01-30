@@ -533,7 +533,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     const equippedGlove = equippedGloveId ? inventory.find(i => i.id === equippedGloveId) || null : null;
 
     return (
-        <div className="min-h-screen font-sans pb-24 lg:pb-20 bg-stone-950 text-stone-200">
+        <div className="min-h-screen font-sans pb-24 landscape:pb-16 lg:pb-20 bg-stone-950 text-stone-200">
             {user.isDemo && (
                 <div className="fixed top-0 left-0 w-full z-[200] bg-red-600 text-white text-center py-1 text-xs font-bold uppercase tracking-widest animate-pulse shadow-lg">
                     DEMO MODE: SPEED x{DEMO_SPEED_MULTIPLIER} (Time Limit: 10 Mins)
@@ -543,7 +543,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
             {/* ... Navbar (omitted for brevity, assume same structure) ... */}
             <nav className="sticky top-0 z-40 bg-stone-950/90 backdrop-blur-md border-b border-yellow-900/30 shadow-2xl">
-                <div className="w-full px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+                <div className="w-full px-4 sm:px-6 py-3 landscape:py-2 sm:py-4 flex justify-between items-center">
                     <div className="flex items-center gap-3">
                         <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 p-1.5 sm:p-2 rounded-sm shadow-[0_0_15px_rgba(234,179,8,0.5)]">
                             <Hammer size={20} className="text-stone-900 sm:w-6 sm:h-6" />
@@ -630,10 +630,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             </nav>
 
             {/* Main Content */}
-            <main className="w-full px-4 sm:px-6 py-6 sm:py-8 pb-24 lg:pb-8">
+            <main className="w-full px-4 sm:px-6 py-6 landscape:py-4 sm:py-8 pb-24 landscape:pb-16 lg:pb-8">
 
                 {/* Global Stats Ticker */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 bg-stone-900/50 p-3 rounded-lg border border-stone-800 backdrop-blur-sm">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 landscape:mb-3 bg-stone-900/50 p-3 landscape:p-2 rounded-lg border border-stone-800 backdrop-blur-sm">
                     <div className="flex flex-col items-center justify-center border-r border-stone-800">
                         <div className="text-[10px] sm:text-xs text-stone-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Users size={12} /> นักขุดออนไลน์</div>
                         <div className="text-sm sm:text-lg font-bold text-blue-400 font-mono animate-pulse">{globalStats.onlineMiners.toLocaleString()}</div>
@@ -707,7 +707,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                     <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                         <Grid size={24} className="text-yellow-500" /> พื้นที่สัมปทาน (Mining Slots)
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-8">
+                    <div className="grid grid-cols-1 landscape:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-8">
                         {Array.from({ length: MAX_RIGS_PER_USER }).map((_, index) => {
                             const slotNumber = index + 1;
                             const rig = rigs[index];
@@ -922,7 +922,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
             {/* Mobile Bottom Navigation Bar */}
             <nav className="fixed bottom-0 left-0 right-0 z-50 bg-stone-950/95 backdrop-blur-lg border-t border-stone-800 lg:hidden safe-area-pb">
-                <div className="grid grid-cols-5 gap-1 px-2 py-2">
+                <div className="grid grid-cols-5 gap-1 px-2 py-2 landscape:py-1">
                     <button
                         onClick={() => setIsBuyModalOpen(true)}
                         className="flex flex-col items-center justify-center py-2 px-1 rounded-lg text-stone-400 hover:text-yellow-500 hover:bg-stone-800/50 transition-all active:scale-95"
