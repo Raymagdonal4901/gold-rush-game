@@ -1,0 +1,574 @@
+
+import React, { useState, useEffect } from 'react';
+import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, CheckCircle2, ChevronRight, Hourglass, Sparkles } from 'lucide-react';
+import { SHOP_ITEMS, CURRENCY, RARITY_SETTINGS, MATERIAL_CONFIG, EQUIPMENT_SERIES } from '../constants';
+import { CraftingQueueItem } from '../types';
+import { InfinityGlove } from './InfinityGlove';
+import { MaterialIcon } from './MaterialIcon';
+import { MockDB } from '../services/db';
+
+interface AccessoryShopModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    walletBalance: number;
+    onBuy: (itemId: string) => void;
+}
+
+export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, onClose, walletBalance, onBuy }) => {
+    const [activeTab, setActiveTab] = useState<'SHOP' | 'WORKSHOP'>('SHOP');
+    const [buyingId, setBuyingId] = useState<string | null>(null);
+
+    const [craftingQueue, setCraftingQueue] = useState<CraftingQueueItem[]>([]);
+    const [userMaterials, setUserMaterials] = useState<Record<number, number>>({});
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [buyQuantities, setBuyQuantities] = useState<Record<string, number>>({});
+    const [claimedItem, setClaimedItem] = useState<any>(null);
+
+    const currentUser = MockDB.getSession();
+
+    useEffect(() => {
+        if (isOpen && currentUser) {
+            const user = MockDB.getAllUsers().find(u => u.id === currentUser.id);
+            if (user) {
+                setCraftingQueue(user.craftingQueue || []);
+                setUserMaterials(user.materials || {});
+            }
+        }
+    }, [isOpen, refreshTrigger, currentUser]);
+
+    useEffect(() => {
+        if (!isOpen || activeTab !== 'WORKSHOP') return;
+        const interval = setInterval(() => {
+            setRefreshTrigger(prev => prev + 1);
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [isOpen, activeTab]);
+
+    if (!isOpen) return null;
+
+    const handleBuyClick = (itemId: string, price: number) => {
+        const quantity = buyQuantities[itemId] || 1;
+        const totalCost = price * quantity;
+
+        if (walletBalance < totalCost) {
+            alert('เงินไม่พอ!');
+            return;
+        }
+
+        setBuyingId(itemId);
+        // Simulate buying specific quantity (MockDB needs loop or update)
+        // Since MockDB.buyItem takes just ID, we loop here or assume singular.
+        // Ideally we update MockDB to take quantity, but for now loop is safer without changing backend too much.
+
+        const processBuy = async () => {
+            for (let i = 0; i < quantity; i++) {
+                onBuy(itemId); // This calls MockDB.buyItem(userId, itemId)
+                await new Promise(r => setTimeout(r, 100)); // Small delay to prevent race
+            }
+            setBuyingId(null);
+            // Reset quantity
+            setBuyQuantities(prev => ({ ...prev, [itemId]: 1 }));
+        };
+
+        processBuy();
+    };
+
+    const handleQuantityChange = (itemId: string, delta: number) => {
+        setBuyQuantities(prev => {
+            const current = prev[itemId] || 1;
+            const newVal = Math.max(1, current + delta);
+            return { ...prev, [itemId]: newVal };
+        });
+    };
+
+    const handleStartCraft = (itemId: string) => {
+        if (!currentUser) return;
+        try {
+            MockDB.startCrafting(currentUser.id, itemId);
+            setRefreshTrigger(prev => prev + 1);
+        } catch (e: any) {
+            alert(e.message);
+        }
+    };
+
+    const handleClaimCraft = (queueId: string) => {
+        if (!currentUser) return;
+        try {
+            const item = MockDB.claimCraftedItem(currentUser.id, queueId);
+            setRefreshTrigger(prev => prev + 1);
+            if (item) {
+                setClaimedItem(item);
+            }
+        } catch (e: any) {
+            alert(e.message);
+        }
+    };
+
+    const getIcon = (iconName: string, className: string, itemId?: string) => {
+        if (itemId === 'auto_excavator') {
+            return (
+                <div className="relative">
+                    <Truck className={className} />
+                    <Zap size={14} className="absolute -top-1 -right-1 text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse" />
+                </div>
+            );
+        }
+
+        // Special handling for Hourglasses to make them distinct
+        if (itemId === 'hourglass_small') {
+            return <Hourglass className={`${className} text-stone-400`} />;
+        }
+        if (itemId === 'hourglass_medium') {
+            return (
+                <div className="relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-orange-500/20 rounded-full scale-150 blur-md animate-pulse"></div>
+                    <div className="absolute inset-0 border border-orange-500/30 rounded-full scale-125"></div>
+                    <Hourglass className={`${className} text-orange-400 relative z-10`} />
+                </div>
+            );
+        }
+        if (itemId === 'hourglass_large') {
+            return (
+                <div className="relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-yellow-500/30 rounded-full scale-[1.8] blur-xl animate-pulse"></div>
+                    <div className="absolute inset-0 border-2 border-yellow-500/20 rounded-full scale-[1.4] animate-[spin_10s_linear_infinite] border-dashed"></div>
+                    <div className="absolute inset-0 border border-white/20 rounded-full scale-[1.6] animate-[spin_15s_linear_infinite_reverse] border-dotted"></div>
+                    <Sparkles className="absolute -top-4 -right-4 text-yellow-300 animate-bounce" size={20} />
+                    <Hourglass className={`${className} text-yellow-400 drop-shadow-[0_0_10px_gold] relative z-10`} />
+                </div>
+            );
+        }
+
+        switch (iconName) {
+            case 'Key': return <Key className={className} />;
+            case 'Factory': return <Factory className={className} />;
+            case 'Search': return <Search className={className} />;
+            case 'HardHat': return <HardHat className={className} />;
+            case 'Glasses': return <Glasses className={className} />;
+            case 'Shirt': return <Shirt className={className} />;
+            case 'Backpack': return <Backpack className={className} />;
+            case 'Footprints': return <Footprints className={className} />;
+            case 'Smartphone': return <Smartphone className={className} />;
+            case 'Monitor': return <Monitor className={className} />;
+            case 'Bot': return <Bot className={className} />;
+            case 'Truck': return <Truck className={className} />;
+            case 'Zap': return <Zap className={className} />;
+            case 'Cpu': return <Cpu className={className} />;
+            case 'Hourglass': return <Hourglass className={className} />;
+            default: return <InfinityGlove className={className} />;
+        }
+    };
+
+    const renderTooltip = (item: typeof SHOP_ITEMS[0]) => {
+        const series = EQUIPMENT_SERIES[item.id];
+
+        return (
+            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-64 bg-stone-950 border border-stone-700 rounded-xl shadow-2xl p-3 z-50 opacity-0 group-hover/icon:opacity-100 transition-opacity duration-200 pointer-events-none">
+                {series ? (
+                    <>
+                        <div className="text-center mb-2 border-b border-stone-800 pb-1">
+                            <div className="text-yellow-500 font-bold text-xs uppercase tracking-widest">{series.title}</div>
+                            <div className="text-[9px] text-stone-500">{series.desc}</div>
+                        </div>
+                        <div className="space-y-1.5">
+                            {series.tiers.map((tier, idx) => {
+                                const style = RARITY_SETTINGS[tier.rarity];
+                                return (
+                                    <div key={idx} className={`flex items-center justify-between text-[10px] p-1.5 rounded border bg-opacity-20 ${style.color.replace('text-', 'bg-')} ${style.border}`}>
+                                        <span className={`font-bold ${style.color} uppercase`}>{tier.rarity.substring(0, 3)}</span>
+                                        <div className="text-right">
+                                            <div className="text-stone-300 font-bold">{tier.name}</div>
+                                            <div className="text-white font-mono">{tier.stat}</div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </>
+                ) : (
+                    <div className="text-center">
+                        <div className="text-yellow-500 font-bold text-xs uppercase tracking-widest mb-1">{item.name}</div>
+                        <div className="text-[10px] text-stone-300 leading-relaxed">{item.description || 'ไอเทมพิเศษสำหรับใช้งานในกิจกรรมต่างๆ'}</div>
+                    </div>
+                )}
+                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-stone-950 border-t border-l border-stone-700 transform rotate-45"></div>
+            </div>
+        );
+    };
+
+    const specialIds = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'dungeon_ticket_magma', 'ancient_blueprint'];
+    const specialItems = SHOP_ITEMS.filter(i => specialIds.includes(i.id) && i.buyable !== false);
+    const shopEquipment = SHOP_ITEMS.filter(i => !specialIds.includes(i.id) && i.buyable !== false);
+    const craftableItems = SHOP_ITEMS.filter(i => i.craftingRecipe);
+
+    const renderItemCard = (item: typeof SHOP_ITEMS[0], isSpecial: boolean = false) => {
+        const canAfford = walletBalance >= item.price;
+        const isBuying = buyingId === item.id;
+
+        let bonusRange = '';
+        if (item.id === 'chest_key') bonusRange = 'ใช้เปิดหีบ';
+        else if (item.id === 'mixer') bonusRange = 'ใช้ผสมแร่';
+        else if (item.id === 'magnifying_glass') bonusRange = 'ส่องน้ำมัน';
+        else if (item.id === 'robot') bonusRange = 'ผู้ช่วยอเนกประสงค์';
+        else if (item.id === 'upgrade_chip') bonusRange = 'ใช้ตีบวกอุปกรณ์';
+        else if (item.id.includes('hourglass')) bonusRange = 'ลดเวลาสำรวจ';
+        else bonusRange = `${item.minBonus}-${item.maxBonus}`;
+
+        let rarityStyle = RARITY_SETTINGS.COMMON;
+        if (item.price >= 500) rarityStyle = RARITY_SETTINGS.LEGENDARY;
+        else if (item.price >= 350) rarityStyle = RARITY_SETTINGS.EPIC;
+        else if (item.price >= 120) rarityStyle = RARITY_SETTINGS.RARE;
+
+        if (isSpecial) rarityStyle = RARITY_SETTINGS.LEGENDARY;
+
+        return (
+            <div key={item.id} className={`group relative bg-stone-900/80 border ${rarityStyle.border} rounded-xl overflow-visible shadow-lg transition-all duration-300 sm:hover:-translate-y-2 hover:shadow-[0_0_25px_rgba(0,0,0,0.5)] flex flex-col ${isSpecial ? 'h-full' : ''}`}>
+
+                <div className={`h-1 w-full bg-gradient-to-r ${rarityStyle.bgGradient} rounded-t-xl`}></div>
+
+                <div className={`flex items-center justify-center relative overflow-visible bg-stone-950/50 ${isSpecial ? 'p-6' : 'p-8'}`}>
+                    <div className={`absolute inset-0 bg-gradient-to-b ${rarityStyle.bgGradient} opacity-5 group-hover:opacity-10 transition-opacity rounded-t-xl`}></div>
+
+                    <div className={`group/icon relative rounded-full border-2 ${rarityStyle.border} bg-stone-900 flex items-center justify-center shadow-inner z-10 group-hover:scale-110 transition-transform duration-500 cursor-help ${isSpecial ? 'w-20 h-20' : 'w-24 h-24'}`}>
+                        {getIcon(item.icon, `${isSpecial ? 'w-10 h-10' : 'w-12 h-12'} ${rarityStyle.color} drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]`, item.id)}
+                        {renderTooltip(item)}
+                    </div>
+                </div>
+
+                <div className="p-4 flex-1 flex flex-col items-center text-center border-t border-stone-800">
+                    <h3 className={`font-display font-bold text-lg mb-1 text-white`}>{item.name}</h3>
+
+                    <div className="text-xs text-stone-400 mb-1">
+                        โบนัส: <span className="text-yellow-500 font-bold">{bonusRange}</span> {item.maxBonus > 0 ? `${CURRENCY}/วัน` : ''}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 justify-center mb-2 mt-2">
+                        {['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large'].includes(item.id) ? (
+                            <div className="text-[9px] text-stone-400 flex items-center gap-1 bg-stone-800 px-2 py-0.5 rounded border border-stone-700">
+                                <Zap size={10} className="text-yellow-500" /> ใช้แล้วหมดไป
+                            </div>
+                        ) : (
+                            <div className="text-[9px] text-stone-400 flex items-center gap-1 bg-stone-800 px-2 py-0.5 rounded border border-stone-700">
+                                <CalendarDays size={10} /> อายุ {item.lifespanDays} วัน
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="p-4 pt-0">
+                    <div className="flex items-center justify-between mb-3 bg-stone-950 p-1 rounded-lg border border-stone-800">
+                        <button onClick={() => handleQuantityChange(item.id, -1)} className="p-2 hover:bg-stone-800 rounded text-stone-400 hover:text-white transition-colors">-</button>
+                        <span className="font-mono font-bold text-white text-sm">{buyQuantities[item.id] || 1}</span>
+                        <button onClick={() => handleQuantityChange(item.id, 1)} className="p-2 hover:bg-stone-800 rounded text-stone-400 hover:text-white transition-colors">+</button>
+                    </div>
+
+                    <button
+                        onClick={() => handleBuyClick(item.id, item.price)}
+                        disabled={!canAfford || isBuying}
+                        className={`w-full py-3 rounded-lg font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 transition-all
+                        ${isBuying ? 'bg-stone-700 text-stone-400 cursor-wait' :
+                                canAfford
+                                    ? `bg-gradient-to-r from-stone-800 to-stone-700 hover:from-yellow-700 hover:to-yellow-600 border border-stone-600 hover:border-yellow-500 text-white shadow-lg`
+                                    : 'bg-stone-900 text-stone-600 border border-stone-800 cursor-not-allowed opacity-70'
+                            }
+                    `}
+                    >
+                        {isBuying ? 'กำลังซื้อ...' : (
+                            <>
+                                <span>{(item.price * (buyQuantities[item.id] || 1)).toLocaleString()}</span>
+                                <span className="text-[10px]">{CURRENCY}</span>
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    const renderCraftCard = (item: typeof SHOP_ITEMS[0]) => {
+        if (!item.craftingRecipe) return null;
+
+        const fee = item.craftingFee || 0;
+        const canAffordFee = walletBalance >= fee;
+
+        let hasAllMats = true;
+        const matsList = Object.entries(item.craftingRecipe).map(([tierStr, needed]) => {
+            const tier = parseInt(tierStr);
+            const owned = userMaterials[tier] || 0;
+            if (owned < needed) hasAllMats = false;
+            return { tier, needed, owned };
+        });
+
+        const canCraft = canAffordFee && hasAllMats;
+
+        let rarityStyle = RARITY_SETTINGS.COMMON;
+        if (item.price >= 500) rarityStyle = RARITY_SETTINGS.LEGENDARY;
+        else if (item.price >= 350) rarityStyle = RARITY_SETTINGS.EPIC;
+        else if (item.price >= 120) rarityStyle = RARITY_SETTINGS.RARE;
+
+        return (
+            <div key={item.id} className="bg-stone-900 border border-stone-800 rounded-xl p-4 flex flex-col gap-4 relative overflow-visible">
+                <div className="flex gap-4">
+                    <div className={`group/icon relative w-16 h-16 rounded-lg border-2 ${rarityStyle.border} bg-stone-950 flex items-center justify-center shrink-0 cursor-help`}>
+                        {getIcon(item.icon, `w-8 h-8 ${rarityStyle.color}`, item.id)}
+                        {renderTooltip(item)}
+                    </div>
+
+                    <div className="flex-1">
+                        <div className="flex justify-between items-start mb-1">
+                            <div>
+                                <h3 className="text-base font-bold text-white leading-tight">{item.name}</h3>
+                                {item.lifespanDays && (
+                                    <div className="flex items-center gap-1 text-[10px] text-stone-500 mt-0.5">
+                                        <Clock size={10} />
+                                        <span>อายุใช้งาน {item.lifespanDays} วัน</span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded text-[10px] sm:text-xs font-bold border border-blue-500/30 flex flex-col items-end leading-none gap-0.5">
+                                <span className="flex items-center gap-1"><Clock size={10} /> {item.craftDurationMinutes / 60} ชม.</span>
+                            </div>
+                        </div>
+                        <div className="text-xs text-stone-400 mt-1">
+                            โบนัส: <span className="text-yellow-500">+{item.maxBonus} {CURRENCY}/วัน</span>
+                        </div>
+                        {item.specialEffect && (
+                            <div className="text-[10px] text-emerald-400 mt-1 font-bold">
+                                {item.specialEffect}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-stone-950 px-2 py-1 rounded border border-stone-800 flex justify-between text-[10px]">
+                    <span className="text-stone-400">Success: <span className="text-white font-bold">90%</span></span>
+                    <span className="text-yellow-600">Great Success: <span className="text-yellow-400 font-bold animate-pulse">10%</span></span>
+                </div>
+
+                <div className="bg-stone-950 p-3 rounded-lg border border-stone-800 space-y-2">
+                    <div className="text-[10px] text-stone-500 uppercase font-bold tracking-wider">วัตถุดิบที่ต้องใช้</div>
+                    <div className="grid grid-cols-2 gap-2">
+                        {matsList.map((m, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs bg-stone-900 p-1.5 rounded">
+                                <div className="flex items-center gap-2">
+                                    <MaterialIcon id={m.tier} size="w-4 h-4" iconSize={12} />
+                                    <span className="text-stone-300">{MATERIAL_CONFIG.NAMES[m.tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span>
+                                </div>
+                                <span className={m.owned >= m.needed ? 'text-green-400' : 'text-red-400'}>
+                                    {m.owned}/{m.needed}
+                                </span>
+                            </div>
+                        ))}
+                        <div className="flex items-center justify-between text-xs bg-stone-900 p-1.5 rounded col-span-2">
+                            <div className="flex items-center gap-2">
+                                <Coins size={14} className="text-yellow-500" />
+                                <span className="text-stone-300">ค่าธรรมเนียม</span>
+                            </div>
+                            <span className={canAffordFee ? 'text-green-400' : 'text-red-400'}>
+                                {fee.toLocaleString()} {CURRENCY}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <button
+                    onClick={() => handleStartCraft(item.id)}
+                    disabled={!canCraft}
+                    className={`w-full py-2.5 rounded font-bold text-sm flex items-center justify-center gap-2 transition-all
+                      ${canCraft ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg' : 'bg-stone-800 text-stone-600 cursor-not-allowed border border-stone-700'}
+                  `}
+                >
+                    <Hammer size={16} /> เริ่มคราฟต์
+                </button>
+            </div>
+        );
+    };
+
+    const renderQueue = () => {
+        if (craftingQueue.length === 0) return (
+            <div className="text-center py-8 text-stone-500 text-sm border-2 border-dashed border-stone-800 rounded-xl">
+                ไม่มีรายการที่กำลังสร้าง
+            </div>
+        );
+
+        return (
+            <div className="space-y-3 mb-6">
+                <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">กำลังดำเนินการ ({craftingQueue.length})</h4>
+                {craftingQueue.map(q => {
+                    const item = SHOP_ITEMS.find(i => i.id === q.itemId);
+                    if (!item) return null;
+
+                    const now = Date.now();
+                    const totalTime = q.finishAt - q.startedAt;
+                    const elapsed = now - q.startedAt;
+                    const progress = Math.min(100, (elapsed / totalTime) * 100);
+                    const isReady = now >= q.finishAt;
+                    const timeLeft = Math.max(0, q.finishAt - now);
+                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                    const mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+                    return (
+                        <div key={q.id} className="bg-stone-900 border border-stone-700 p-3 rounded-lg flex items-center gap-4 relative overflow-hidden">
+                            <div className="absolute inset-0 bg-stone-800 z-0" style={{ width: `${progress}%`, transition: 'width 1s linear', opacity: 0.2 }}></div>
+
+                            <div className="relative z-10 w-10 h-10 bg-stone-950 rounded flex items-center justify-center border border-stone-600">
+                                {getIcon(item.icon, "w-6 h-6 text-stone-400", item.id)}
+                            </div>
+
+                            <div className="relative z-10 flex-1">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="font-bold text-stone-200 text-sm">{item.name}</span>
+                                    {isReady ? (
+                                        <span className="text-green-400 text-xs font-bold animate-pulse">เสร็จสิ้น!</span>
+                                    ) : (
+                                        <span className="text-stone-500 text-xs font-mono">{hours}h {mins}m</span>
+                                    )}
+                                </div>
+                                <div className="w-full h-1.5 bg-stone-950 rounded-full overflow-hidden">
+                                    <div className={`h-full ${isReady ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${progress}%` }}></div>
+                                </div>
+                            </div>
+
+                            <div className="relative z-10">
+                                {isReady ? (
+                                    <button onClick={() => handleClaimCraft(q.id)} className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded flex items-center gap-1 shadow-lg animate-bounce">
+                                        <CheckCircle2 size={12} /> รับของ
+                                    </button>
+                                ) : (
+                                    <div className="text-xs text-stone-500 font-mono"><Clock size={14} className="animate-spin-slow" /></div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md p-4">
+            <div className="bg-stone-950 border border-yellow-900/50 w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 border-b border-stone-800 shrink-0">
+                    <div className="p-4 flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-yellow-600/20 p-2 rounded-xl border border-yellow-600/50 text-yellow-500">
+                                <ShoppingBag size={24} />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-display font-bold text-white">คลังอุปกรณ์</h2>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="hidden sm:flex bg-stone-900 px-4 py-2 rounded-lg border border-stone-700 items-center gap-2">
+                                <Coins size={18} className="text-emerald-500" />
+                                <span className="font-mono font-bold text-emerald-400">{walletBalance.toLocaleString()} {CURRENCY}</span>
+                            </div>
+                            <button onClick={onClose} className="text-stone-500 hover:text-white bg-stone-900 p-2 rounded-full hover:bg-stone-800"><X size={24} /></button>
+                        </div>
+                    </div>
+                    <div className="flex px-4 gap-4">
+                        <button
+                            onClick={() => setActiveTab('SHOP')}
+                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'SHOP' ? 'text-yellow-500 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
+                        >
+                            <ShoppingBag size={16} /> ร้านค้า (Shop)
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('WORKSHOP')}
+                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'WORKSHOP' ? 'text-orange-500 border-orange-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
+                        >
+                            <Hammer size={16} /> โรงงานผลิต (Workshop)
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] pb-24 sm:pb-6">
+                    {activeTab === 'SHOP' ? (
+                        <>
+                            <div className="mb-8">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Star className="text-yellow-500" size={20} />
+                                    <h3 className="text-lg font-bold text-stone-200 uppercase tracking-wider">ไอเทมพิเศษ (Special Items)</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {specialItems.map(item => renderItemCard(item, true))}
+                                </div>
+                            </div>
+                            <div className="h-px bg-stone-800 w-full mb-8"></div>
+                            <div>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <ShoppingBag className="text-blue-500" size={20} />
+                                    <h3 className="text-lg font-bold text-stone-200 uppercase tracking-wider">อุปกรณ์สวมใส่ (Equipment)</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {shopEquipment.map((item) => renderItemCard(item))}
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex flex-col h-full">
+                            {renderQueue()}
+                            <div className="flex items-center gap-2 mb-4">
+                                <Factory className="text-orange-500" size={20} />
+                                <h3 className="text-lg font-bold text-stone-200 uppercase tracking-wider">รายการผลิต (Blueprints)</h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {craftableItems.map(item => renderCraftCard(item))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* CRAFTING SUCCESS MODAL */}
+            {claimedItem && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur p-4 animate-in fade-in zoom-in duration-300">
+                    <div className="bg-stone-900 border border-yellow-500/50 rounded-2xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(234,179,8,0.3)] flex flex-col items-center relative overflow-hidden">
+
+                        {/* Background Effects */}
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent"></div>
+                        <div className="absolute -top-[100px] left-1/2 -translate-x-1/2 w-[200px] h-[200px] bg-yellow-500/20 blur-[50px] rounded-full"></div>
+
+                        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 mb-6 drop-shadow-md tracking-wider">CRAFTING SUCCESS!</h2>
+
+                        <div className="w-32 h-32 bg-stone-950 rounded-full border-4 border-yellow-600/50 flex items-center justify-center mb-6 shadow-inner relative group">
+                            <div className="absolute inset-0 bg-yellow-500/10 rounded-full animate-pulse"></div>
+                            {getIcon(SHOP_ITEMS.find(i => i.id === claimedItem.typeId)?.icon || 'Box', "w-16 h-16 text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]", claimedItem.typeId)}
+                            <Sparkles className="absolute top-0 right-0 text-yellow-200 animate-bounce" />
+                        </div>
+
+                        <div className="text-center mb-6 w-full">
+                            <h3 className="text-xl font-bold text-white mb-2">{claimedItem.name}</h3>
+                            <div className={`inline-block px-3 py-1 rounded text-xs font-bold uppercase mb-4 border ${RARITY_SETTINGS.RARE.border} ${RARITY_SETTINGS.RARE.color} bg-stone-950`}>
+                                CRAFTED ITEM
+                            </div>
+
+                            <div className="bg-stone-950/50 rounded-xl p-4 space-y-3 border border-stone-800 text-sm w-full">
+                                <div className="flex justify-between items-center text-stone-400">
+                                    <span>Bonus</span>
+                                    <span className="text-yellow-400 font-bold">+{claimedItem.dailyBonus.toFixed(1)} {CURRENCY}/วัน</span>
+                                </div>
+                                <div className="flex justify-between items-center text-stone-400">
+                                    <span>Duration</span>
+                                    <span className="text-white font-bold">{claimedItem.lifespanDays} Days</span>
+                                </div>
+                                {claimedItem.specialEffect && (
+                                    <div className="pt-2 border-t border-stone-800 text-xs text-emerald-400 text-center font-bold">
+                                        Effect: {claimedItem.specialEffect}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setClaimedItem(null)}
+                            className="w-full py-3 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-stone-900 font-bold rounded-xl shadow-lg transform hover:-translate-y-1 transition-all"
+                        >
+                            เก็บเข้ากระเป๋า (COLLECT)
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};

@@ -1,0 +1,329 @@
+// Prisma Schema for Gold Rush Backend
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  MINING_YIELD
+  CRAFT
+  REPAIR
+  MARKET_BUY
+  MARKET_SELL
+  MARKET_TAX
+  REFERRAL_COMMISSION
+  SLOT_UNLOCK
+  ADMIN_ADJUSTMENT
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+  EXPIRED
+}
+
+enum ItemType {
+  MATERIAL
+  CONSUMABLE
+  EQUIPMENT
+  BLUEPRINT
+  SPECIAL
+}
+
+// ============================================
+// USER & AUTH
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String?   @unique
+  passwordHash  String    @map("password_hash")
+  pinHash       String?   @map("pin_hash")
+  role          UserRole  @default(USER)
+  
+  // Referral System
+  referralCode  String    @unique @default(cuid()) @map("referral_code")
+  uplineId      String?   @map("upline_id")
+  upline        User?     @relation("ReferralTree", fields: [uplineId], references: [id])
+  downlines     User[]    @relation("ReferralTree")
+  
+  // Status
+  isBanned      Boolean   @default(false) @map("is_banned")
+  banReason     String?   @map("ban_reason")
+  lastLoginAt   DateTime? @map("last_login_at")
+  
+  // Relations
+  wallet        Wallet?
+  machines      Machine[]
+  inventory     InventoryItem[]
+  marketListings MarketListing[]
+  transactions  Transaction[]
+  
+  // VIP & Progress
+  vipExp        Int       @default(0) @map("vip_exp")
+  miningPoints  Int       @default(0) @map("mining_points")
+  unlockedSlots Int       @default(3) @map("unlocked_slots")
+  
+  // Daily Check-in
+  checkInDay    Int       @default(0) @map("check_in_day")
+  lastCheckIn   DateTime? @map("last_check_in")
+  
+  // Quest Progress (JSON for flexibility)
+  questProgress Json?     @map("quest_progress")
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+// ============================================
+// WALLET
+// ============================================
+
+model Wallet {
+  id            String   @id @default(cuid())
+  userId        String   @unique @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  cashBalance   Decimal  @default(0) @map("cash_balance") @db.Decimal(18, 2)
+  coinBalance   Int      @default(0) @map("coin_balance") // Premium currency (Diamonds)
+  frozenBalance Decimal  @default(0) @map("frozen_balance") @db.Decimal(18, 2) // Locked in pending transactions
+  
+  // Energy System
+  energy        Float    @default(100) @db.DoublePrecision
+  lastEnergyUpdate DateTime @default(now()) @map("last_energy_update")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("wallets")
+}
+
+// ============================================
+// MACHINES (Mining Rigs)
+// ============================================
+
+model Machine {
+  id            String   @id @default(cuid())
+  ownerId       String   @map("owner_id")
+  owner         User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  name          String
+  tier          Int      @default(1) // 1-6
+  slotIndex     Int      @map("slot_index") // Position in user's slots
+  
+  // Stats
+  dailyProfit   Decimal  @map("daily_profit") @db.Decimal(10, 2)
+  bonusProfit   Decimal  @default(0) @map("bonus_profit") @db.Decimal(10, 2)
+  rarity        String   @default("COMMON")
+  
+  // Durability (0-100)
+  durability    Float    @default(100) @db.DoublePrecision
+  lastRepairAt  DateTime @default(now()) @map("last_repair_at")
+  
+  // Special Properties
+  isInfiniteDurability Boolean @default(false) @map("is_infinite_durability")
+  isZeroEnergy  Boolean  @default(false) @map("is_zero_energy")
+  
+  // Timing
+  purchasedAt   DateTime @default(now()) @map("purchased_at")
+  expiresAt     DateTime @map("expires_at")
+  lastClaimAt   DateTime @default(now()) @map("last_claim_at")
+  
+  // Gift System
+  lastGiftAt    DateTime? @map("last_gift_at")
+  
+  // Equipped Accessories (5 slots)
+  equippedSlots Json?    @map("equipped_slots") // Array of inventory item IDs
+  
+  // Current unclaimed materials
+  pendingMaterials Int   @default(0) @map("pending_materials")
+  
+  isActive      Boolean  @default(true) @map("is_active")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerId, slotIndex])
+  @@map("machines")
+}
+
+// ============================================
+// INVENTORY
+// ============================================
+
+model InventoryItem {
+  id            String   @id @default(cuid())
+  ownerId       String   @map("owner_id")
+  owner         User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  itemId        String   @map("item_id") // Reference to GameConfig item
+  itemType      ItemType @map("item_type")
+  quantity      Int      @default(1)
+  
+  // For equipment/accessories
+  rarity        String?
+  level         Int      @default(1)
+  dailyBonus    Decimal? @map("daily_bonus") @db.Decimal(10, 2)
+  
+  // Expiration
+  expiresAt     DateTime? @map("expires_at")
+  
+  // Equipped state
+  equippedToMachineId String? @map("equipped_to_machine_id")
+  equippedSlotIndex   Int?    @map("equipped_slot_index")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerId, itemId])
+  @@map("inventory_items")
+}
+
+// ============================================
+// MARKET
+// ============================================
+
+model MarketListing {
+  id            String        @id @default(cuid())
+  sellerId      String        @map("seller_id")
+  seller        User          @relation(fields: [sellerId], references: [id])
+  
+  itemId        String        @map("item_id") // GameConfig item reference
+  itemType      ItemType      @map("item_type")
+  quantity      Int           @default(1)
+  
+  price         Decimal       @db.Decimal(18, 2)
+  taxRate       Float         @default(0.15) @map("tax_rate") @db.DoublePrecision
+  taxAmount     Decimal       @default(0) @map("tax_amount") @db.Decimal(18, 2)
+  
+  status        ListingStatus @default(ACTIVE)
+  
+  // Buyer info (when sold)
+  buyerId       String?       @map("buyer_id")
+  soldAt        DateTime?     @map("sold_at")
+  
+  expiresAt     DateTime      @map("expires_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@index([status, itemId])
+  @@map("market_listings")
+}
+
+// ============================================
+// TRANSACTIONS (Audit Log)
+// ============================================
+
+model Transaction {
+  id            String          @id @default(cuid())
+  userId        String          @map("user_id")
+  user          User            @relation(fields: [userId], references: [id])
+  
+  type          TransactionType
+  amount        Decimal         @db.Decimal(18, 2)
+  
+  // Balance tracking
+  balanceBefore Decimal         @map("balance_before") @db.Decimal(18, 2)
+  balanceAfter  Decimal         @map("balance_after") @db.Decimal(18, 2)
+  
+  description   String?
+  metadata      Json?           // Extra info (item IDs, market listing ID, etc.)
+  
+  // Related entities
+  relatedUserId String?         @map("related_user_id") // For referral/market
+  machineId     String?         @map("machine_id")
+  listingId     String?         @map("listing_id")
+  
+  status        String          @default("COMPLETED")
+  
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  @@index([userId, type])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+// ============================================
+// GAME CONFIG (Admin Editable)
+// ============================================
+
+model GameConfig {
+  id            String   @id @default(cuid())
+  key           String   @unique
+  value         Json
+  category      String   // 'items', 'machines', 'rates', 'market', 'energy', etc.
+  description   String?
+  
+  updatedBy     String?  @map("updated_by") // Admin user ID
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("game_config")
+}
+
+// ============================================
+// DUNGEON RUNS
+// ============================================
+
+model DungeonRun {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  machineId     String   @map("machine_id")
+  
+  dungeonId     Int      @map("dungeon_id")
+  startedAt     DateTime @default(now()) @map("started_at")
+  endsAt        DateTime @map("ends_at")
+  
+  // Rewards (calculated on completion)
+  rewards       Json?
+  isClaimed     Boolean  @default(false) @map("is_claimed")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([userId, isClaimed])
+  @@map("dungeon_runs")
+}
+
+// ============================================
+// ADMIN LOGS
+// ============================================
+
+model AdminLog {
+  id            String   @id @default(cuid())
+  adminId       String   @map("admin_id")
+  action        String   // 'BAN_USER', 'GIVE_ITEM', 'UPDATE_CONFIG', etc.
+  targetUserId  String?  @map("target_user_id")
+  
+  details       Json
+  ipAddress     String?  @map("ip_address")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([adminId])
+  @@index([action])
+  @@map("admin_logs")
+}
