@@ -100,6 +100,16 @@ export const processDepositRequest = async (req: AuthRequest, res: Response) => 
     }
 };
 
+// Get Pending Withdrawals
+export const getPendingWithdrawals = async (req: AuthRequest, res: Response) => {
+    try {
+        const withdrawals = await WithdrawalRequest.find({ status: 'PENDING' }).sort({ createdAt: -1 });
+        res.json(withdrawals);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
 // Process Withdrawal (Approve/Reject)
 export const processWithdrawalRequest = async (req: AuthRequest, res: Response) => {
     try {
