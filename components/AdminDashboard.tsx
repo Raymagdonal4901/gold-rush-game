@@ -48,6 +48,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         const interval = setInterval(() => {
             refreshData();
 
+            /*
             // Notifications (Keep MockDB for now until Backend Notification Implemented)
             const msgs = MockDB.getUserNotifications(currentUser.id);
             if (msgs.length > 0) {
@@ -59,6 +60,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                     }, 8000);
                 });
             }
+            */
         }, 5000); // Slower polling for API
 
         return () => clearInterval(interval);
@@ -192,8 +194,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 MockDB.processClaim(confirmAction.id, confirmAction.action); // Still Mock for now
                 // TODO: Implement Claim API
             } else if (confirmAction.type === 'WITHDRAWAL') {
-                MockDB.processWithdrawal(confirmAction.id, confirmAction.action); // Still Mock for now
-                // TODO: Implement Withdrawal API
+                await api.admin.processWithdrawal(confirmAction.id, confirmAction.action);
+                alert(`ดำเนินการถอนเงิน (${confirmAction.action}) เรียบร้อย ✅`);
             } else if (confirmAction.type === 'DEPOSIT') {
                 await api.admin.processDeposit(confirmAction.id, confirmAction.action);
                 alert(`ดำเนินรายการฝากเงิน (${confirmAction.action}) เรียบร้อย ✅`);

@@ -65,6 +65,14 @@ export const api = {
         const res = await client.post('/transactions/deposit', { amount, slipImage });
         return res.data;
     },
+    createWithdrawalRequest: async (amount: number): Promise<any> => {
+        const res = await client.post('/transactions/withdraw', { amount });
+        return res.data;
+    },
+    claimReward: async (rigId: string, amount: number): Promise<any> => {
+        const res = await client.post('/transactions/claim', { rigId, amount });
+        return res.data;
+    },
 
     // Admin API
     admin: {
@@ -99,6 +107,10 @@ export const api = {
         },
         processDeposit: async (id: string, status: 'APPROVED' | 'REJECTED'): Promise<any> => {
             const res = await client.post(`/admin/deposits/${id}/process`, { status });
+            return res.data;
+        },
+        processWithdrawal: async (id: string, status: 'APPROVED' | 'REJECTED'): Promise<any> => {
+            const res = await client.post(`/admin/withdrawals/${id}/process`, { status });
             return res.data;
         }
     }

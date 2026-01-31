@@ -411,14 +411,22 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         setLootResult({ ...loot, itemName: gloveName, itemTypeId: 'glove' });
     };
 
-    const handleClaim = (rigId: string, claimedAmount: number) => {
-        const rig = rigs.find(r => r.id === rigId);
-        if (!rig) return;
-        MockDB.createClaimRequest({ userId: user.id, username: user.username, rigId: rig.id, rigName: rig.name, amount: claimedAmount });
-        const updatedRig = { ...rig, lastClaimAt: Date.now() };
-        MockDB.updateRig(updatedRig);
-        refreshData();
-        addNotification({ id: Date.now().toString(), userId: user.id, message: `เก็บเกี่ยวสำเร็จ: ${claimedAmount.toFixed(4)} ${CURRENCY}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+    const handleClaim = async (rigId: string, claimedAmount: number) => {
+        try {
+            const rig = rigs.find(r => r.id === rigId);
+            if (!rig) return;
+
+            await api.claimReward(rigId, claimedAmount); // Backend handles balance update and logging
+
+            // Optimistic UI Update (or rely on refreshData)
+            // Ideally backend returns updated Rig or we fetch it.
+            // refreshData() will fetch logic.
+            refreshData();
+            addNotification({ id: Date.now().toString(), userId: user.id, message: `เก็บเกี่ยวสำเร็จ: ${claimedAmount.toFixed(4)} ${CURRENCY}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+        } catch (e: any) {
+            console.error("Claim failed", e);
+            alert("เคลมเหรียญไม่สำเร็จ: " + (e.response?.data?.message || e.message));
+        }
     };
 
     const handleGiftClaim = (rigId: string) => {
@@ -511,7 +519,16 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     };
 
     // ... rest of the component ...
-    const handleWithdraw = (amount: number) => { try { MockDB.createWithdrawalRequest(user.id, user.username, amount); refreshData(); triggerGoldRain(); addNotification({ id: Date.now().toString(), userId: user.id, message: `ส่งคำร้องขอถอนเงินจำนวน ${amount.toLocaleString()} ${CURRENCY} แล้ว`, type: 'INFO', read: false, timestamp: Date.now() }); } catch (e: any) { alert(e.message); } };
+    const handleWithdraw = async (amount: number) => {
+        try {
+            await api.createWithdrawalRequest(amount);
+            refreshData();
+            triggerGoldRain();
+            addNotification({ id: Date.now().toString(), userId: user.id, message: `ส่งคำร้องขอถอนเงินจำนวน ${amount.toLocaleString()} ${CURRENCY} แล้ว`, type: 'INFO', read: false, timestamp: Date.now() });
+        } catch (e: any) {
+            alert(e.response?.data?.message || e.message);
+        }
+    };
     const handleSaveQr = (base64: string) => { MockDB.updateUserQr(user.id, base64); refreshData(); };
     const handleDepositSuccess = () => { refreshData(); addNotification({ id: Date.now().toString(), userId: user.id, message: `ส่งคำร้องฝากเงินแล้ว กรุณารออนุมัติ`, type: 'INFO', read: false, timestamp: Date.now() }); };
 

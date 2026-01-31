@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import User from '../models/User';
 import Rig from '../models/Rig';
+import WithdrawalRequest from '../models/WithdrawalRequest';
 
 // Get All Users
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
@@ -99,11 +100,43 @@ export const processDepositRequest = async (req: AuthRequest, res: Response) => 
     }
 };
 
-// Stub endpoints for dashboard stats (Claims/Withdrawals not implemented yet fully)
-export const getPendingClaims = async (req: AuthRequest, res: Response) => {
-    res.json([]);
+// Process Withdrawal (Approve/Reject)
+export const processWithdrawalRequest = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body; // APPROVED or REJECTED
+
+        const withdrawal = await WithdrawalRequest.findById(id);
+        if (!withdrawal) return res.status(404).json({ message: 'Withdrawal request not found' });
+        if (withdrawal.status !== 'PENDING') return res.status(400).json({ message: 'Request already processed' });
+
+        withdrawal.status = status;
+        withdrawal.processedAt = new Date();
+        await withdrawal.save();
+
+        if (status === 'REJECTED') {
+            // Refund the user if rejected
+            const user = await User.findById(withdrawal.userId);
+            if (user) {
+                user.balance += withdrawal.amount;
+                await user.save();
+            }
+        }
+
+        res.json({ message: `Withdrawal ${status}`, withdrawal });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
 };
 
-export const getPendingWithdrawals = async (req: AuthRequest, res: Response) => {
-    res.json([]);
+import ClaimRequest from '../models/ClaimRequest';
+
+// Get Pending Claims
+export const getPendingClaims = async (req: AuthRequest, res: Response) => {
+    try {
+        const claims = await ClaimRequest.find({ status: 'PENDING' }).sort({ createdAt: -1 });
+        res.json(claims);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
 };
