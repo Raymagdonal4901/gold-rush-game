@@ -65,9 +65,12 @@ import DepositRequest from '../models/DepositRequest';
 // Get Pending Deposits
 export const getPendingDeposits = async (req: AuthRequest, res: Response) => {
     try {
+        console.log('Fetching pending deposits...');
         const deposits = await DepositRequest.find({ status: 'PENDING' }).sort({ createdAt: -1 });
+        console.log('Found deposits:', deposits.length);
         res.json(deposits);
     } catch (error) {
+        console.error('Error fetching deposits:', error);
         res.status(500).json({ message: 'Server error', error });
     }
 };

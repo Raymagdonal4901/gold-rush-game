@@ -64,6 +64,16 @@ export const getMyHistory = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
+
+// Get My Deposit History (User)
+export const getMyDeposits = async (req: AuthRequest, res: Response) => {
+    try {
+        const deposits = await DepositRequest.find({ userId: req.userId }).sort({ createdAt: -1 });
+        res.json(deposits);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
 export const createDepositRequest = async (req: AuthRequest, res: Response) => {
     try {
         const { amount, slipImage } = req.body;
