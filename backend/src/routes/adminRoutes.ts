@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticate, authorizeAdmin } from '../middleware/auth';
 import {
-    getAllUsers, getAllRigs, getSystemConfig,
+    getAllUsers, getAllRigs, getSystemConfig, updateSystemConfig,
     getPendingClaims, getPendingWithdrawals, getPendingDeposits
 } from '../controllers/adminController';
 
@@ -13,6 +13,7 @@ router.use(authenticate, authorizeAdmin);
 router.get('/users', getAllUsers);
 router.get('/rigs', getAllRigs);
 router.get('/config', getSystemConfig);
+router.post('/config', updateSystemConfig);
 
 // Claims / Finance
 router.get('/claims', getPendingClaims);

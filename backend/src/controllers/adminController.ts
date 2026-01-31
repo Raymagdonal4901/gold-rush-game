@@ -23,14 +23,37 @@ export const getAllRigs = async (req: AuthRequest, res: Response) => {
     }
 };
 
-// Get System Config (Stub)
+import SystemConfig from '../models/SystemConfig';
+
+// Get System Config (Real)
 export const getSystemConfig = async (req: AuthRequest, res: Response) => {
     try {
-        // In a real app, this would be fetched from a Config model
-        res.json({
-            receivingQrCode: null,
-            isMaintenanceMode: false
-        });
+        let config = await SystemConfig.findOne();
+        if (!config) {
+            config = await SystemConfig.create({});
+        }
+        res.json(config);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+// Update System Config
+export const updateSystemConfig = async (req: AuthRequest, res: Response) => {
+    try {
+        const { receivingQrCode, isMaintenanceMode } = req.body;
+
+        // Upsert logic
+        let config = await SystemConfig.findOne();
+        if (!config) {
+            config = new SystemConfig({});
+        }
+
+        if (receivingQrCode !== undefined) config.receivingQrCode = receivingQrCode;
+        if (isMaintenanceMode !== undefined) config.isMaintenanceMode = isMaintenanceMode;
+
+        await config.save();
+        res.json(config);
     } catch (error) {
         res.status(500).json({ message: 'Server error', error });
     }

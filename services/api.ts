@@ -75,6 +75,10 @@ export const api = {
             const res = await client.get('/admin/config');
             return res.data;
         },
+        updateSystemConfig: async (data: { receivingQrCode?: string, isMaintenanceMode?: boolean }): Promise<any> => {
+            const res = await client.post('/admin/config', data);
+            return res.data;
+        },
         getPendingClaims: async (): Promise<any[]> => {
             const res = await client.get('/admin/claims');
             return res.data;

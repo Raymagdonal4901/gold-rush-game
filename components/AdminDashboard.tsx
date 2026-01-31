@@ -102,21 +102,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             const reader = new FileReader();
-            reader.onloadend = () => {
+            reader.onloadend = async () => {
                 const base64 = reader.result as string;
-                setSystemQr(base64);
-                MockDB.updateSystemQr(base64);
-                alert("อัปเดต QR Code ระบบเรียบร้อยแล้ว");
+                try {
+                    await api.admin.updateSystemConfig({ receivingQrCode: base64 });
+                    setSystemQr(base64);
+                    alert("อัปเดต QR Code ขึ้น Server เรียบร้อยแล้ว ✅");
+                } catch (error) {
+                    console.error("Failed to upload QR", error);
+                    alert("เกิดข้อผิดพลาดในการอัปโหลด");
+                }
             };
             reader.readAsDataURL(file);
         }
     };
 
-    const toggleMaintenance = () => {
+    const toggleMaintenance = async () => {
         const newState = !isMaintenance;
-        setIsMaintenance(newState);
-        MockDB.setMaintenanceMode(newState);
-        MockDB.sendNotification('ALL', newState ? 'ระบบกำลังเข้าสู้ช่วงปิดปรับปรุง' : 'ระบบเปิดให้บริการตามปกติแล้ว', 'INFO');
+        try {
+            await api.admin.updateSystemConfig({ isMaintenanceMode: newState });
+            setIsMaintenance(newState);
+            alert(`เปลี่ยนสถานะ Server เป็น: ${newState ? 'ปิดปรับปรุง' : 'เปิดออนไลน์'} แล้ว`);
+        } catch (error) {
+            console.error("Failed to update maintenance mode", error);
+            alert("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ");
+        }
     };
 
     const handleBanUser = (userId: string) => {
