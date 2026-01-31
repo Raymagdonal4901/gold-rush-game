@@ -6,6 +6,7 @@ export interface IUser extends Document {
     balance: number;
     energy: number;
     role: string;
+    inventory: any[]; // Array of AccessoryItem
     createdAt: Date;
     lastEnergyUpdate: Date;
 }
@@ -16,6 +17,7 @@ const UserSchema = new Schema<IUser>({
     balance: { type: Number, default: 0 },
     energy: { type: Number, default: 100 },
     role: { type: String, default: 'USER' },
+    inventory: { type: [], default: [] }, // Simplified for Mixed array
     createdAt: { type: Date, default: Date.now },
     lastEnergyUpdate: { type: Date, default: Date.now }
 });
