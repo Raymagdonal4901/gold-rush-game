@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2 } from 'lucide-react';
 import { MockDB } from '../services/db';
+import { api } from '../services/api';
 import { User, OilRig, ClaimRequest, WithdrawalRequest, DepositRequest, Notification } from '../services/types';
 import { CURRENCY, SHOP_ITEMS, MATERIAL_CONFIG } from '../constants';
 
@@ -47,6 +48,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         const interval = setInterval(() => {
             refreshData();
 
+            // Notifications (Keep MockDB for now until Backend Notification Implemented)
             const msgs = MockDB.getUserNotifications(currentUser.id);
             if (msgs.length > 0) {
                 msgs.forEach(n => {
@@ -57,21 +59,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                     }, 8000);
                 });
             }
-        }, 3000);
+        }, 5000); // Slower polling for API
 
         return () => clearInterval(interval);
     }, [currentUser.id]);
 
-    const refreshData = () => {
-        setUsers(MockDB.getAllUsers());
-        setRigs(MockDB.getAllRigs());
-        setPendingClaims(MockDB.getPendingClaims());
-        setPendingWithdrawals(MockDB.getPendingWithdrawals());
-        setPendingDeposits(MockDB.getPendingDeposits()); // New
+    const refreshData = async () => {
+        try {
+            const [
+                fetchedUsers,
+                fetchedRigs,
+                config,
+                claims,
+                withdrawals,
+                deposits
+            ] = await Promise.all([
+                api.admin.getUsers(),
+                api.admin.getRigs(),
+                api.admin.getSystemConfig(),
+                api.admin.getPendingClaims(),
+                api.admin.getPendingWithdrawals(),
+                api.admin.getPendingDeposits()
+            ]);
 
-        const sysConfig = MockDB.getSystemConfig();
-        setSystemQr(sysConfig.receivingQrCode || null);
-        setIsMaintenance(sysConfig.isMaintenanceMode || false);
+            setUsers(fetchedUsers);
+            setRigs(fetchedRigs);
+
+            // Map keys if necessary, my api stubs return []
+            setPendingClaims(claims);
+            setPendingWithdrawals(withdrawals);
+            setPendingDeposits(deposits);
+
+            setSystemQr(config.receivingQrCode || null);
+            setIsMaintenance(config.isMaintenanceMode || false);
+
+        } catch (error) {
+            console.error("Failed to fetch admin data", error);
+        }
     };
 
     const handleQrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

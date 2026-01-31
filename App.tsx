@@ -3,8 +3,7 @@ import { AuthPage } from './components/AuthPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { PlayerDashboard } from './components/PlayerDashboard';
 import { User } from './services/types';
-import { MockDB } from './services/db';
-import { ShieldCheck } from 'lucide-react';
+import { api } from './services/api';
 
 const App: React.FC = () => {
   // --- Auth State ---
@@ -13,11 +12,21 @@ const App: React.FC = () => {
 
   // Initialize: Check for session
   useEffect(() => {
-    const session = MockDB.getSession();
-    if (session) {
-      setUser(session);
-    }
-    setIsLoading(false);
+    const checkSession = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const userData = await api.getMe();
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error('Session check failed', error);
+        localStorage.removeItem('token');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkSession();
   }, []);
 
   const handleLogin = (u: User) => {
@@ -25,7 +34,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    MockDB.logout();
+    api.logout();
     setUser(null);
   };
 
@@ -50,8 +59,9 @@ const App: React.FC = () => {
   }
 
   // 3. Maintenance Check (For Regular Users)
-  const sysConfig = MockDB.getSystemConfig();
-  if (sysConfig.isMaintenanceMode) {
+  // const sysConfig = MockDB.getSystemConfig();
+  // if (sysConfig.isMaintenanceMode) {
+  if (false) {
     return (
       <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center p-4 text-center">
         <div className="w-24 h-24 mb-6 rounded-full bg-red-900/20 flex items-center justify-center border-4 border-red-500/30 animate-pulse">

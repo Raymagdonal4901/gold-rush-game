@@ -9,36 +9,43 @@ interface AuthPageProps {
   onLogin: (user: User) => void;
 }
 
+import { api } from '../services/api';
+
+// ... (imports)
+
 export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    // PIN Validation
-    if (pin.length !== 4 || isNaN(Number(pin))) {
+    // PIN Validation (Frontend check)
+    if (pin && (pin.length !== 4 || isNaN(Number(pin)))) {
       setError("กรุณากรอกรหัส PIN เป็นตัวเลข 4 หลัก");
+      setLoading(false);
       return;
     }
 
     try {
+      let user;
       if (isLogin) {
-        const user = MockDB.login(username, password, pin);
-        onLogin(user);
+        user = await api.login(username, password, pin);
       } else {
-        // Register as USER
-        const user = MockDB.register(username, password, pin);
-        // Auto login after register
-        MockDB.login(username, password, pin);
-        onLogin(user);
+        user = await api.register(username, password, pin);
       }
+      onLogin(user);
     } catch (err: any) {
-      setError(err.message);
+      console.error(err);
+      setError(err.response?.data?.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
     }
   };
 
