@@ -56,8 +56,14 @@ export const api = {
         const res = await client.post('/rigs/buy', { name, investment, dailyProfit, durationDays });
         return {
             rig: mapBackendRigToFrontend(res.data.rig),
-            glove: res.data.glove
+            glove: mapBackendGloveToFrontend(res.data.glove)
         };
+    },
+
+    // Transactions
+    createDepositRequest: async (amount: number, slipImage: string): Promise<any> => {
+        const res = await client.post('/transactions/deposit', { amount, slipImage });
+        return res.data;
     },
 
     // Admin API
@@ -90,6 +96,10 @@ export const api = {
         getPendingDeposits: async (): Promise<any[]> => {
             const res = await client.get('/admin/deposits');
             return res.data;
+        },
+        processDeposit: async (id: string, status: 'APPROVED' | 'REJECTED'): Promise<any> => {
+            const res = await client.post(`/admin/deposits/${id}/process`, { status });
+            return res.data;
         }
     }
 };
@@ -105,11 +115,27 @@ const mapBackendRigToFrontend = (backendRig: any): OilRig => {
         durationMonths: 1, // Default or calculate from expiresAt
         dailyProfit: backendRig.dailyProfit,
         ratePerSecond: backendRig.dailyProfit / 86400,
-        purchasedAt: new Date(backendRig.purchaseDate).getTime(),
+        purchasedAt: new Date(backendRig.purchasedAt || backendRig.createdAt).getTime(),
         lastClaimAt: Date.now(),
         rarity: backendRig.rarity as any,
         bonusProfit: 0,
         status: backendRig.status,
         slots: backendRig.slots || []
     } as OilRig;
+};
+
+const mapBackendGloveToFrontend = (backendGlove: any): AccessoryItem => {
+    if (!backendGlove) return {} as AccessoryItem;
+    return {
+        id: backendGlove._id || backendGlove.id,
+        name: backendGlove.name,
+        type: backendGlove.type,
+        effect: backendGlove.effect,
+        value: backendGlove.value,
+        rarity: backendGlove.rarity,
+        durability: backendGlove.durability,
+        maxDurability: backendGlove.maxDurability,
+        level: backendGlove.level,
+        equippedSlot: backendGlove.equippedSlot
+    } as AccessoryItem;
 };

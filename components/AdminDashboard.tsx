@@ -184,15 +184,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         });
     };
 
-    const handleConfirmAction = () => {
+    const handleConfirmAction = async () => {
         if (!confirmAction) return;
 
-        if (confirmAction.type === 'CLAIM') {
-            MockDB.processClaim(confirmAction.id, confirmAction.action);
-        } else if (confirmAction.type === 'WITHDRAWAL') {
-            MockDB.processWithdrawal(confirmAction.id, confirmAction.action);
-        } else if (confirmAction.type === 'DEPOSIT') {
-            MockDB.processDepositRequest(confirmAction.id, confirmAction.action);
+        try {
+            if (confirmAction.type === 'CLAIM') {
+                MockDB.processClaim(confirmAction.id, confirmAction.action); // Still Mock for now
+                // TODO: Implement Claim API
+            } else if (confirmAction.type === 'WITHDRAWAL') {
+                MockDB.processWithdrawal(confirmAction.id, confirmAction.action); // Still Mock for now
+                // TODO: Implement Withdrawal API
+            } else if (confirmAction.type === 'DEPOSIT') {
+                await api.admin.processDeposit(confirmAction.id, confirmAction.action);
+                alert(`ดำเนินรายการฝากเงิน (${confirmAction.action}) เรียบร้อย ✅`);
+            }
+        } catch (error) {
+            console.error("Failed to process request", error);
+            alert("เกิดข้อผิดพลาดในการทำรายการ");
         }
 
         setConfirmAction(null);

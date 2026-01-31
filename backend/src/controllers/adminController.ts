@@ -59,15 +59,51 @@ export const updateSystemConfig = async (req: AuthRequest, res: Response) => {
     }
 };
 
-// Stub endpoints for dashboard stats
+import DepositRequest from '../models/DepositRequest';
+
+// Get Pending Deposits
+export const getPendingDeposits = async (req: AuthRequest, res: Response) => {
+    try {
+        const deposits = await DepositRequest.find({ status: 'PENDING' }).sort({ createdAt: -1 });
+        res.json(deposits);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+// Process Deposit (Approve/Reject)
+export const processDepositRequest = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body; // APPROVED or REJECTED
+
+        const deposit = await DepositRequest.findById(id);
+        if (!deposit) return res.status(404).json({ message: 'Deposit request not found' });
+        if (deposit.status !== 'PENDING') return res.status(400).json({ message: 'Request already processed' });
+
+        deposit.status = status;
+        deposit.processedAt = new Date();
+        await deposit.save();
+
+        if (status === 'APPROVED') {
+            const user = await User.findById(deposit.userId);
+            if (user) {
+                user.balance += deposit.amount;
+                await user.save();
+            }
+        }
+
+        res.json({ message: `Deposit ${status}`, deposit });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+// Stub endpoints for dashboard stats (Claims/Withdrawals not implemented yet fully)
 export const getPendingClaims = async (req: AuthRequest, res: Response) => {
     res.json([]);
 };
 
 export const getPendingWithdrawals = async (req: AuthRequest, res: Response) => {
-    res.json([]);
-};
-
-export const getPendingDeposits = async (req: AuthRequest, res: Response) => {
     res.json([]);
 };
