@@ -275,11 +275,11 @@ export const RIG_PRESETS: RigPreset[] = [
         bonusProfit: 0,
         durationMonths: 12,
         repairCost: 500,
-        energyCostPerDay: 2,
+        energyCostPerDay: 50,
         craftingRecipe: {
             materials: { 7: 1, 8: 2, 9: 3 }
         },
-        specialProperties: { infiniteDurability: true, zeroEnergy: false, maxAllowed: 1 },
+        specialProperties: { infiniteDurability: false, zeroEnergy: false, maxAllowed: 1 },
         type: 'ULTRA_LEGENDARY'
     }
 ];
