@@ -8,10 +8,7 @@ import { MAX_RIGS_PER_USER, RIG_PRESETS } from '../constants';
 interface AuthPageProps {
   onLogin: (user: User) => void;
 }
-
 import { api } from '../services/api';
-
-// ... (imports)
 
 export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,10 +18,41 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  React.useEffect(() => {
+    console.log("--- SYSTEM DIAGNOSTICS ---");
+    const errorHandler = (event: ErrorEvent) => {
+      alert(`[BROWSER ERROR] ${event.message}\nAt: ${event.filename}:${event.lineno}`);
+    };
+    window.addEventListener('error', errorHandler);
+
+    // Global helper to debug from console
+    (window as any).forceLoginAdmin = async () => {
+      console.log("Forcing Admin Login...");
+      alert("กำลังสั่งระบบ Login อัตโนมัติ...");
+      try {
+        const user = await api.login('admin', 'bleach', '4901');
+        onLogin(user);
+      } catch (e: any) {
+        alert("Force login failed: " + (e.message || "Network Error"));
+      }
+    };
+    return () => window.removeEventListener('error', errorHandler);
+  }, []);
+
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e && e.preventDefault) e.preventDefault();
+    alert("🚀 เริ่มขั้นตอนการเข้าสู่ระบบ...");
     setError('');
     setLoading(true);
+
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedUsername || !trimmedPassword) {
+      setError("กรุณากรอกไอดีและรหัสผ่าน");
+      setLoading(false);
+      return;
+    }
 
     // PIN Validation (Frontend check)
     if (pin && (pin.length !== 4 || isNaN(Number(pin)))) {
@@ -34,16 +62,22 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
     }
 
     try {
+      console.log(`[AUTH] Attempting ${isLogin ? 'login' : 'register'} for: ${trimmedUsername}`);
       let user;
       if (isLogin) {
-        user = await api.login(username, password, pin);
+        user = await api.login(trimmedUsername, trimmedPassword, pin);
       } else {
-        user = await api.register(username, password, pin);
+        user = await api.register(trimmedUsername, trimmedPassword, pin);
       }
+
+      console.log('[AUTH] Login successful:', user.username);
       onLogin(user);
     } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data?.message || 'Authentication failed');
+      console.error('[AUTH ERROR]', err);
+      const msg = err.response?.data?.message || err.message || 'Authentication failed';
+      const status = err.response?.status ? `(Status: ${err.response.status})` : '';
+      setError(`${msg} ${status}`);
+      alert(`❌ Login Error: ${msg}\n${status}\n\nกรุณาเช็คว่ารัน Backend อยู่ที่พอร์ต 5001 หรือไม่`);
     } finally {
       setLoading(false);
     }
@@ -93,7 +127,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
         currentMaterials: 0,
         expiresAt: Date.now() + ((preset.durationDays || 30) * 24 * 60 * 60 * 1000),
         repairCost: preset.repairCost || 0,
-        energyCostPerDay: preset.energyCostPerDay || 0
+        energyCostPerDay: preset.energyCostPerDay || 0,
+        energy: 100
       };
       MockDB.addRig(newRig);
 
@@ -116,10 +151,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-stone-950/90 backdrop-blur-sm"></div>
+      <div className="absolute inset-0 bg-stone-950/95 backdrop-blur-md z-[10]"></div>
 
-      <div className="relative bg-stone-900/80 border border-yellow-600/30 w-full max-w-md p-10 shadow-[0_0_40px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+      <div className="relative z-[100] bg-stone-900/90 border border-yellow-600/30 w-full max-w-md p-10 shadow-[0_0_60px_rgba(0,0,0,0.9)] backdrop-blur-2xl">
         {/* Decorative Lines */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent"></div>
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent"></div>
@@ -130,6 +164,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           </div>
           <h1 className="text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-700 drop-shadow-md">GOLD RUSH</h1>
           <p className="text-yellow-600/80 text-sm tracking-[0.2em] font-bold mt-2 uppercase">เกมจำลองธุรกิจเหมืองแร่</p>
+
+          {/* TOTAL BYPASS BUTTON */}
+          <button
+            onClick={() => (window as any).forceLoginAdmin()}
+            className="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded shadow-xl border-2 border-white/20 animate-bounce"
+          >
+            ⚡ AUTO-LOGIN ADMIN (BYPASS)
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -194,10 +236,22 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           </div>
 
           <button
-            type="submit"
-            className="w-full bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-stone-950 font-bold py-4 shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 font-display text-lg tracking-widest border border-yellow-500/20"
+            type="button"
+            onClick={(e) => {
+              alert("👆 คุณกดปุ่มเข้าสู่ระบบแล้ว!");
+              handleSubmit(e);
+            }}
+            disabled={loading}
+            className={`w-full cursor-pointer bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-stone-950 font-bold py-4 shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 font-display text-lg tracking-widest border border-yellow-500/20 flex items-center justify-center gap-3 ${loading ? 'opacity-70 cursor-wait' : ''}`}
           >
-            {isLogin ? 'เข้าสู่ระบบ' : 'ลงทะเบียนและตั้งรหัส PIN'}
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-stone-950 border-t-white rounded-full animate-spin"></div>
+                <span>กำลังดำเนินการ...</span>
+              </>
+            ) : (
+              isLogin ? 'เข้าสู่ระบบ (LOGIN)' : 'ลงทะเบียนและตั้งรหัส PIN'
+            )}
           </button>
         </form>
 
@@ -222,6 +276,42 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
               className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-red-900/50 animate-pulse"
             >
               <Bug size={18} /> ทดลองเล่น (Play Demo) - Speed x720
+            </button>
+          </div>
+
+          {/* EMERGENCY LOGIN FOR ADMIN */}
+          <div className="pt-6 border-t border-red-900/30">
+            <button
+              onClick={async () => {
+                if (window.confirm("ทดลองเข้าสู่ระบบ Admin โดยอัตโนมัติ (เฉพาะการแก้ไขปัญหา)?")) {
+                  try {
+                    setLoading(true);
+                    const user = await api.login('admin', 'bleach', '4901');
+                    onLogin(user);
+                  } catch (err: any) {
+                    alert("Emergency Login Failed: " + (err.response?.data?.message || err.message));
+                  } finally {
+                    setLoading(false);
+                  }
+                }
+              }}
+              className="w-full bg-red-900/40 hover:bg-red-800 text-red-200 py-3 rounded text-[10px] font-bold uppercase tracking-widest border border-red-500/30 transition-all"
+            >
+              🆘 EMERGENCY ADMIN ENTRANCE
+            </button>
+            <p className="text-[9px] text-red-500/60 mt-2">กดปุ่มนี้หากพิมพ์แล้วเข้าไม่ได้ เพื่อบังคับเข้าด้วยระบบ Admin สำรอง</p>
+          </div>
+
+          <div className="pt-2 text-center">
+            <button
+              onClick={() => {
+                if (window.confirm("ต้องการซิงค์ข้อมูลบัญชีใหม่หรือไม่?\n(ระบบจะทำการรีเซ็ตรหัสผ่าน Admin เป็นค่าเริ่มต้น)")) {
+                  window.location.href = "http://localhost:5001/api/auth/seed-admin";
+                }
+              }}
+              className="text-[10px] text-stone-600 hover:text-stone-400 uppercase tracking-tighter"
+            >
+              ระบบขัดข้อง? (System Sync)
             </button>
           </div>
 

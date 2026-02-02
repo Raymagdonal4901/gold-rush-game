@@ -449,6 +449,13 @@ export const RigCard: React.FC<RigCardProps> = ({
         // Define glow color based on health/energy
         const glowColor = percent <= 20 ? 'rgba(239, 68, 68, 0.8)' : percent <= 50 ? 'rgba(234, 179, 8, 0.8)' : isEnergy ? 'rgba(34, 197, 94, 0.8)' : 'rgba(16, 185, 129, 0.8)';
 
+        // Calculate time left (24h basis)
+        const totalSeconds = (percent / 100) * 24 * 60 * 60;
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = Math.floor(totalSeconds % 60);
+        const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
         return (
             <div className="w-11 h-11 rounded-xl border border-white/10 bg-black/60 flex items-center justify-center relative group shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
                 {/* Robust Battery Shell with Thick White Border */}
@@ -477,11 +484,17 @@ export const RigCard: React.FC<RigCardProps> = ({
                 {/* Overall Neon Glow */}
                 <div className={`absolute inset-0 rounded-xl -z-10 blur-[10px] opacity-30 transition-all ${colorClass}`}></div>
 
-                {/* Percent Overlay on Hover */}
-                <div className="absolute inset-0 bg-black/90 rounded-xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                    <span className="text-[10px] font-black text-white leading-none">{percent.toFixed(1)}%</span>
-                    <span className="text-[6px] font-bold text-stone-500 uppercase mt-0.5">Energy</span>
-                </div>
+                {/* COUNTDOWN OVERLAY (Always visible for Energy, Hover for Durability) */}
+                {isEnergy ? (
+                    <div className="absolute inset-0 bg-black/80 rounded-xl flex flex-col items-center justify-center z-20 backdrop-blur-[1px]">
+                        <span className="text-[9px] font-black text-white leading-none tracking-tighter scale-90">{timeString}</span>
+                    </div>
+                ) : (
+                    <div className="absolute inset-0 bg-black/90 rounded-xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                        <span className="text-[10px] font-black text-white leading-none">{percent.toFixed(1)}%</span>
+                        <span className="text-[6px] font-bold text-stone-500 uppercase mt-0.5">Health</span>
+                    </div>
+                )}
             </div>
         );
     };

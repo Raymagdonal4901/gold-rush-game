@@ -35,7 +35,21 @@ export const api = {
         if (res.data.token) {
             localStorage.setItem('token', res.data.token);
         }
-        return res.data.user;
+        const user = res.data.user;
+        return {
+            ...user,
+            id: user.id || user._id,
+            inventory: user.inventory || [],
+            notifications: user.notifications || [],
+            claimedRanks: user.claimedRanks || [],
+            stats: user.stats || {
+                totalMaterialsMined: 0,
+                totalMoneySpent: 0,
+                totalLogins: 0,
+                luckyDraws: 0,
+                questsCompleted: 0
+            }
+        } as User;
     },
 
     login: async (username: string, password?: string, pin?: string): Promise<User> => {
@@ -43,12 +57,42 @@ export const api = {
         if (res.data.token) {
             localStorage.setItem('token', res.data.token);
         }
-        return res.data.user;
+
+        // Ensure user object has all required fields to satisfy the 'User' interface
+        const user = res.data.user;
+        return {
+            ...user,
+            id: user.id || user._id,
+            inventory: user.inventory || [],
+            notifications: user.notifications || [],
+            claimedRanks: user.claimedRanks || [],
+            stats: user.stats || {
+                totalMaterialsMined: 0,
+                totalMoneySpent: 0,
+                totalLogins: 0,
+                luckyDraws: 0,
+                questsCompleted: 0
+            }
+        } as User;
     },
 
     getMe: async (): Promise<User> => {
         const res = await client.get('/auth/me');
-        return res.data;
+        const user = res.data;
+        return {
+            ...user,
+            id: user.id || user._id,
+            inventory: user.inventory || [],
+            notifications: user.notifications || [],
+            claimedRanks: user.claimedRanks || [],
+            stats: user.stats || {
+                totalMaterialsMined: 0,
+                totalMoneySpent: 0,
+                totalLogins: 0,
+                luckyDraws: 0,
+                questsCompleted: 0
+            }
+        } as User;
     },
 
     refillEnergy: async (): Promise<{ cost: number, balance: number, energy: number }> => {
@@ -117,7 +161,21 @@ export const api = {
     admin: {
         getUsers: async (): Promise<User[]> => {
             const res = await client.get('/admin/users');
-            return res.data;
+            // Ensure every user in the list has required fields
+            return res.data.map((user: any) => ({
+                ...user,
+                id: user.id || user._id,
+                inventory: user.inventory || [],
+                notifications: user.notifications || [],
+                claimedRanks: user.claimedRanks || [],
+                stats: user.stats || {
+                    totalMaterialsMined: 0,
+                    totalMoneySpent: 0,
+                    totalLogins: 0,
+                    luckyDraws: 0,
+                    questsCompleted: 0
+                }
+            })) as User[];
         },
         getRigs: async (): Promise<OilRig[]> => {
             const res = await client.get('/admin/rigs');

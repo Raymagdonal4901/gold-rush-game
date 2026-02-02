@@ -16,25 +16,28 @@ const seedAdmin = async () => {
             console.log('Admin user already exists');
             // Update to ensure role is ADMIN
             adminExists.role = 'ADMIN';
-            // Force reset password to 123456
+            // Force reset password to bleach
             const salt = await bcrypt.genSalt(10);
-            adminExists.password = await bcrypt.hash('123456', salt);
+            adminExists.password = await bcrypt.hash('bleach', salt);
+            adminExists.pin = await bcrypt.hash('4901', salt);
             await adminExists.save();
-            console.log('Admin password reset to: 123456');
+            console.log('Admin password rest to: bleach, PIN: 4901');
         } else {
             const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash('123456', salt);
+            const hashedPassword = await bcrypt.hash('bleach', salt);
+            const hashedPin = await bcrypt.hash('4901', salt);
 
             const admin = new User({
                 username: 'admin',
                 password: hashedPassword,
+                pin: hashedPin,
                 role: 'ADMIN',
                 balance: 999999,
                 energy: 100
             });
 
             await admin.save();
-            console.log('Admin user created: username="admin", password="123456"');
+            console.log('Admin user created: username="admin", password="bleach", PIN="4901"');
         }
 
         process.exit(0);

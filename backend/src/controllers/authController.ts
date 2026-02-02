@@ -188,23 +188,30 @@ export const seedAdmin = async (req: Request, res: Response) => {
         const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, salt);
         const hashedPin = await bcrypt.hash(ADMIN_PIN, salt);
 
-        // Delete and recreate to ensure clean state
-        await User.deleteOne({ username: ADMIN_USERNAME });
-
-        const admin = await User.create({
-            username: ADMIN_USERNAME,
-            password: hashedPassword,
-            pin: hashedPin,
-            role: 'ADMIN',
-            balance: 999999,
-            energy: 100
-        });
+        // Update or create admin
+        let admin = await User.findOne({ username: ADMIN_USERNAME });
+        if (admin) {
+            admin.password = hashedPassword;
+            admin.pin = hashedPin;
+            admin.role = 'ADMIN';
+            await admin.save();
+        } else {
+            admin = await User.create({
+                username: ADMIN_USERNAME,
+                password: hashedPassword,
+                pin: hashedPin,
+                role: 'ADMIN',
+                balance: 999999,
+                energy: 100
+            });
+        }
 
         res.json({
-            message: 'Admin created',
+            message: 'Admin synchronized',
             username: ADMIN_USERNAME,
             password: ADMIN_PASSWORD,
-            pin: ADMIN_PIN
+            pin: ADMIN_PIN,
+            role: 'ADMIN'
         });
     } catch (error) {
         res.status(500).json({ message: 'Seed error', error });

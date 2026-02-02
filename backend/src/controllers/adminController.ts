@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthRequest } from '../middleware/auth';
 import User from '../models/User';
@@ -91,17 +92,18 @@ export const adminAddItem = async (req: AuthRequest, res: Response) => {
 export const getUserStats = async (req: AuthRequest, res: Response) => {
     try {
         const { userId } = req.params;
+        const objId = new mongoose.Types.ObjectId(userId);
 
         // Total Deposits (APPROVED only)
         const depositStats = await DepositRequest.aggregate([
-            { $match: { userId: userId, status: 'APPROVED' } },
+            { $match: { userId: objId, status: 'APPROVED' } },
             { $group: { _id: null, total: { $sum: '$amount' } } }
         ]);
         const totalDeposits = depositStats.length > 0 ? depositStats[0].total : 0;
 
         // Total Withdrawals (APPROVED only)
         const withdrawalStats = await WithdrawalRequest.aggregate([
-            { $match: { userId: userId, status: 'APPROVED' } },
+            { $match: { userId: objId, status: 'APPROVED' } },
             { $group: { _id: null, total: { $sum: '$amount' } } }
         ]);
         const totalWithdrawals = withdrawalStats.length > 0 ? withdrawalStats[0].total : 0;

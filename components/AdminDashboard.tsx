@@ -21,6 +21,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     // Notifications
     const [notifications, setNotifications] = useState<Notification[]>([]);
 
+    // Status State
+    const [isLoading, setIsLoading] = useState(true);
+    const [fetchError, setFetchError] = useState<string | null>(null);
+
     // System Config State
     const [systemQr, setSystemQr] = useState<string | null>(null);
     const [isMaintenance, setIsMaintenance] = useState(false); // New
@@ -90,6 +94,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
     const refreshData = async () => {
         try {
+            setIsLoading(true);
+            setFetchError(null);
+
+            // Fetch data with individual error handling to prevent dashboard crash
+            const fetchSafe = async (fn: () => Promise<any>, fallback: any) => {
+                try {
+                    return await fn();
+                } catch (e) {
+                    console.error("Partial fetch error:", e);
+                    return fallback;
+                }
+            };
+
             const [
                 fetchedUsers,
                 fetchedRigs,
@@ -98,27 +115,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 withdrawals,
                 deposits
             ] = await Promise.all([
-                api.admin.getUsers(),
-                api.admin.getRigs(),
-                api.admin.getSystemConfig(),
-                api.admin.getPendingClaims(),
-                api.admin.getPendingWithdrawals(),
-                api.admin.getPendingDeposits()
+                fetchSafe(() => api.admin.getUsers(), []),
+                fetchSafe(() => api.admin.getRigs(), []),
+                fetchSafe(() => api.admin.getSystemConfig(), {}),
+                fetchSafe(() => api.admin.getPendingClaims(), []),
+                fetchSafe(() => api.admin.getPendingWithdrawals(), []),
+                fetchSafe(() => api.admin.getPendingDeposits(), [])
             ]);
 
             setUsers(fetchedUsers);
-            setRigs(fetchedRigs);
+            setRigs(fetchedRigs || []);
+            setPendingClaims(claims || []);
+            setPendingWithdrawals(withdrawals || []);
+            setPendingDeposits(deposits || []);
 
-            // Map keys if necessary, my api stubs return []
-            setPendingClaims(claims);
-            setPendingWithdrawals(withdrawals);
-            setPendingDeposits(deposits);
+            if (config) {
+                setSystemQr(config.receivingQrCode || null);
+                setIsMaintenance(config.isMaintenanceMode || false);
+            }
 
-            setSystemQr(config.receivingQrCode || null);
-            setIsMaintenance(config.isMaintenanceMode || false);
-
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to fetch admin data", error);
+            setFetchError(error.message || "เกิดข้อผิดพลาดในการดึงข้อมูลจาก Server");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -284,8 +304,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     const getDailyProfitForUser = (userId: string) =>
         getRigsForUser(userId).reduce((acc, r) => acc + r.dailyProfit + (r.bonusProfit || 0), 0);
 
-    // --- View Slips Modal (Optional implementation, reusing confirmation modal for now) ---
-    // We'll show the slip in the pending list directly for simplicity in Phase 1
+    if (isLoading && users.length === 0) {
+        return (
+            <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center gap-4">
+                <div className="w-12 h-12 border-4 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin"></div>
+                <div className="text-yellow-500 font-display animate-pulse uppercase tracking-widest text-sm">กำลังโหลดข้อมูลระบบจัดการ...</div>
+            </div>
+        );
+    }
+
+    if (fetchError && users.length === 0) {
+        return (
+            <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center p-4 text-center">
+                <div className="w-20 h-20 mb-6 rounded-full bg-red-900/20 flex items-center justify-center border-2 border-red-500/50 text-red-500">
+                    <AlertTriangle size={40} />
+                </div>
+                <h1 className="text-2xl font-display font-bold text-white mb-2 uppercase">เกิดข้อผิดพลาดในการดึงข้อมูล</h1>
+                <p className="text-stone-400 max-w-md mx-auto mb-8 font-mono text-sm">{fetchError}</p>
+                <div className="flex gap-4">
+                    <button onClick={refreshData} className="px-8 py-3 bg-yellow-600 hover:bg-yellow-500 text-stone-900 font-bold rounded shadow-lg transition-all flex items-center gap-2">
+                        ลองใหม่อีกครั้ง
+                    </button>
+                    <button onClick={onLogout} className="px-8 py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold rounded transition-colors">
+                        ออกจากระบบ
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-stone-950 text-stone-200 font-sans relative">
