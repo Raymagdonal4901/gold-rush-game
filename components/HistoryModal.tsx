@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { X, History, ArrowUpRight, ArrowDownLeft, ShoppingCart, RefreshCw, AlertCircle, Coins, Factory, Wrench } from 'lucide-react';
-import { Transaction } from '../types';
+import { X, History, ArrowUpRight, ArrowDownLeft, ShoppingCart, RefreshCw, AlertCircle, Coins, Factory, Wrench, Gift, Target, Trophy, Sparkles } from 'lucide-react';
+import { Transaction } from '../services/types';
+import { api } from '../services/api';
 import { MockDB } from '../services/db';
 import { CURRENCY } from '../constants';
 
@@ -14,8 +15,31 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
-    if (isOpen && userId) {
-      setTransactions(MockDB.getTransactions(userId));
+    if (isOpen) {
+      const fetchHistory = async () => {
+        try {
+          const remoteData = await api.getMyHistory();
+          const localData = MockDB.getTransactions(userId);
+
+          // Merge and remove potential duplicates by ID
+          const seenIds = new Set();
+          const merged = [...remoteData, ...localData]
+            .filter(tx => {
+              if (seenIds.has(tx.id)) return false;
+              seenIds.add(tx.id);
+              return true;
+            })
+            .sort((a, b) => b.timestamp - a.timestamp);
+
+          setTransactions(merged);
+        } catch (err) {
+          console.error("Failed to fetch history:", err);
+          // Fallback to local only if remote fails
+          setTransactions(MockDB.getTransactions(userId).sort((a, b) => b.timestamp - a.timestamp));
+        }
+      };
+
+      fetchHistory();
     }
   }, [isOpen, userId]);
 
@@ -26,18 +50,37 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
       case 'DEPOSIT':
       case 'REFUND':
       case 'MINING_CLAIM':
+      case 'MINING_REVENUE':
+      case 'DUNGEON_REWARD':
+      case 'DAILY_BONUS':
+      case 'REFERRAL_BONUS':
+      case 'COMPENSATION':
         return <ArrowDownLeft className="text-emerald-500" size={18} />;
       case 'WITHDRAWAL':
         return <ArrowUpRight className="text-red-500" size={18} />;
       case 'ASSET_PURCHASE':
       case 'ACCESSORY_PURCHASE':
+      case 'SLOT_EXPANSION':
+      case 'MATERIAL_BUY':
         return <ShoppingCart className="text-yellow-500" size={18} />;
       case 'MATERIAL_SELL':
-        return <Coins className="text-emerald-400" size={18} />; // Changed to Money Icon
+      case 'ACCESSORY_SELL':
+        return <Coins className="text-emerald-400" size={18} />;
       case 'MATERIAL_CRAFT':
-        return <Factory className="text-purple-400" size={18} />; // Changed to Factory Icon
+      case 'ACCESSORY_CRAFT':
+      case 'ACCESSORY_UPGRADE':
+        return <Factory className="text-purple-400" size={18} />;
       case 'REPAIR':
+      case 'ENERGY_REFILL':
         return <Wrench className="text-orange-500" size={18} />;
+      case 'GIFT_CLAIM':
+        return <Gift className="text-pink-500" size={18} />;
+      case 'QUEST_REWARD':
+        return <Target className="text-blue-500" size={18} />;
+      case 'RANK_REWARD':
+        return <Trophy className="text-yellow-400" size={18} />;
+      case 'LUCKY_DRAW':
+        return <Sparkles className="text-purple-400" size={18} />;
       default:
         return <RefreshCw className="text-stone-500" size={18} />;
     }
@@ -101,7 +144,12 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
 
                   <div className="flex flex-col items-end gap-1">
                     <div className={`font-mono font-bold ${getAmountColor(tx)}`}>
-                      {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}
+                      {tx.amount !== 0 && (
+                        <>
+                          {tx.amount > 0 ? '+' : ''}
+                          {tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}
+                        </>
+                      )}
                     </div>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider font-bold ${getStatusColor(tx.status)}`}>
                       {tx.status}

@@ -26,8 +26,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     const [isMaintenance, setIsMaintenance] = useState(false); // New
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Game Config State
+    const [gameConfig, setGameConfig] = useState({
+        dropRate: 5,
+        taxRate: 15,
+        repairCost: 1.0
+    });
+
+    const handleConfigChange = (key: keyof typeof gameConfig, value: number) => {
+        setGameConfig(prev => ({ ...prev, [key]: value }));
+    };
+
     // User Details Modal State
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [userStats, setUserStats] = useState<{ totalDeposits: number; totalWithdrawals: number } | null>(null);
+
+    // Economy Control State
+    const [economyForm, setEconomyForm] = useState({
+        targetUser: '', // Username or ID
+        itemId: 'mobile_rig',
+        itemAmount: 1,
+        compUser: '',
+        compAmount: 0,
+        compReason: 'Server Maintenance'
+    });
 
     // Confirmation Modal State
     const [confirmAction, setConfirmAction] = useState<{
@@ -166,6 +188,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         });
     };
 
+    const handleAddItem = async () => {
+        if (!economyForm.targetUser || !economyForm.itemId) return;
+        if (!confirm(`Confirm send ${economyForm.itemAmount}x ${economyForm.itemId} to ${economyForm.targetUser}?`)) return;
+
+        try {
+            await api.admin.addItem(economyForm.targetUser, economyForm.itemId, economyForm.itemAmount);
+            alert('ส่งไอเทมเรียบร้อยแล้ว! (Item sent successfully)');
+            setEconomyForm(prev => ({ ...prev, targetUser: '', itemAmount: 1 }));
+        } catch (error) {
+            console.error(error);
+            alert('เกิดข้อผิดพลาดในการส่งไอเทม (Failed to send item)');
+        }
+    };
+
+    const handleGiveCompensation = async () => {
+        if (!economyForm.compUser || economyForm.compAmount <= 0) return;
+        if (!confirm(`ยืนยันการชดเชยเงิน ${economyForm.compAmount.toLocaleString()} THB ให้กับ ${economyForm.compUser}?`)) return;
+
+        try {
+            await api.admin.giveCompensation(economyForm.compUser, economyForm.compAmount, economyForm.compReason);
+            alert('ส่งเงินชดเชยเรียบร้อยแล้ว! (Compensation sent successfully)');
+            setEconomyForm(prev => ({ ...prev, compUser: '', compAmount: 0 }));
+            // Refresh data to show updated balance if user is in list, though this is global refresh
+            // Ideally we just refresh users but let's assume specific user might be viewed
+            refreshData();
+        } catch (error) {
+            console.error(error);
+            alert('เกิดข้อผิดพลาดในการส่งเงินชดเชย (Failed to send compensation)');
+        }
+    };
+
     const initiateProcessWithdrawal = (w: WithdrawalRequest, status: 'APPROVED' | 'REJECTED') => {
         setConfirmAction({
             type: 'WITHDRAWAL',
@@ -200,9 +253,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 await api.admin.processDeposit(confirmAction.id, confirmAction.action);
                 alert(`ดำเนินรายการฝากเงิน (${confirmAction.action}) เรียบร้อย ✅`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to process request", error);
-            alert("เกิดข้อผิดพลาดในการทำรายการ");
+            const errorMsg = error.response?.data?.message || error.message || "Unknown error";
+            const errorDetail = error.response?.data?.error || "";
+            alert(`เกิดข้อผิดพลาดในการทำรายการ: ${errorMsg} ${errorDetail}`);
         }
 
         setConfirmAction(null);
@@ -331,40 +386,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     <div className="text-xs text-stone-500 uppercase">Energy</div>
                                     <div className="text-lg font-bold text-orange-500">{selectedUser.energy}/100</div>
                                 </div>
-                                <div className="bg-stone-900 p-3 rounded border border-stone-800">
-                                    <div className="text-xs text-stone-500 uppercase">Role</div>
-                                    <div className="text-sm font-bold text-white">{selectedUser.role}</div>
-                                </div>
+                                <div className="text-sm font-bold text-white">{selectedUser.role}</div>
                             </div>
+                            <div className="bg-stone-950 p-3 rounded border border-stone-800">
+                                <div className="text-xs text-stone-500 uppercase">ยอดฝากรวม</div>
+                                <div className="text-lg font-bold text-emerald-400">+{userStats?.totalDeposits.toLocaleString()}</div>
+                            </div>
+                            <div className="bg-stone-900 p-3 rounded border border-stone-800">
+                                <div className="text-xs text-stone-500 uppercase">ยอดถอนรวม</div>
+                                <div className="text-lg font-bold text-red-500">-{userStats?.totalWithdrawals.toLocaleString()}</div>
+                            </div>
+                        </div>
 
-                            {/* Action Buttons */}
-                            <div className="flex gap-4 pt-4 border-t border-stone-800">
-                                {selectedUser.isBanned ? (
-                                    <button
-                                        onClick={() => handleUnbanUser(selectedUser.id)}
-                                        className="flex-1 bg-emerald-900/40 hover:bg-emerald-800 text-emerald-400 border border-emerald-900 py-3 rounded font-bold transition-colors"
-                                    >
-                                        ปลดแบน (UNBAN)
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => handleBanUser(selectedUser.id)}
-                                        className="flex-1 bg-red-900/40 hover:bg-red-800 text-red-500 border border-red-900 py-3 rounded font-bold transition-colors"
-                                    >
-                                        ระงับการใช้งาน (BAN)
-                                    </button>
-                                )}
+                        {/* Action Buttons */}
+                        <div className="flex gap-4 pt-4 border-t border-stone-800">
+                            {selectedUser.isBanned ? (
                                 <button
-                                    onClick={() => handleDeleteUser(selectedUser.id)}
-                                    className="px-4 bg-stone-950 hover:bg-red-950 text-stone-600 hover:text-red-600 border border-stone-800 hover:border-red-900 py-3 rounded font-bold transition-colors"
-                                    title="Delete User Permanently"
+                                    onClick={() => handleUnbanUser(selectedUser.id)}
+                                    className="flex-1 bg-emerald-900/40 hover:bg-emerald-800 text-emerald-400 border border-emerald-900 py-3 rounded font-bold transition-colors"
                                 >
-                                    <Trash2 size={24} />
+                                    ปลดแบน (UNBAN)
                                 </button>
-                                <button className="flex-1 bg-stone-800 hover:bg-stone-700 text-stone-300 py-3 rounded font-bold transition-colors">
-                                    รีเซ็ตรหัสผ่าน
+                            ) : (
+                                <button
+                                    onClick={() => handleBanUser(selectedUser.id)}
+                                    className="flex-1 bg-red-900/40 hover:bg-red-800 text-red-500 border border-red-900 py-3 rounded font-bold transition-colors"
+                                >
+                                    ระงับการใช้งาน (BAN)
                                 </button>
-                            </div>
+                            )}
+                            <button
+                                onClick={() => handleDeleteUser(selectedUser.id)}
+                                className="px-4 bg-stone-950 hover:bg-red-950 text-stone-600 hover:text-red-600 border border-stone-800 hover:border-red-900 py-3 rounded font-bold transition-colors"
+                                title="Delete User Permanently"
+                            >
+                                <Trash2 size={24} />
+                            </button>
+                            <button className="flex-1 bg-stone-800 hover:bg-stone-700 text-stone-300 py-3 rounded font-bold transition-colors">
+                                รีเซ็ตรหัสผ่าน
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -538,41 +598,53 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
                 {/* System Overview Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-stone-900 p-5 border border-stone-800 shadow-lg">
+                    <div
+                        onClick={() => document.getElementById('user-management')?.scrollIntoView({ behavior: 'smooth' })}
+                        className="bg-stone-900 p-5 border border-stone-800 shadow-lg cursor-pointer hover:bg-stone-800 transition-all transform hover:scale-[1.02] active:scale-95 group"
+                    >
                         <div className="flex justify-between items-start mb-2">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest">ผู้ใช้งานทั้งหมด</span>
+                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-blue-400 transition-colors">ผู้ใช้งานทั้งหมด</span>
                             <Users size={16} className="text-blue-400" />
                         </div>
-                        <div className="text-3xl font-display font-bold text-white">{users.length}</div>
+                        <div className="text-3xl font-display font-bold text-white group-hover:text-blue-200">{users.length}</div>
                     </div>
 
-                    <div className="bg-stone-900 p-5 border border-stone-800 shadow-lg">
+                    <div
+                        onClick={() => document.getElementById('user-management')?.scrollIntoView({ behavior: 'smooth' })}
+                        className="bg-stone-900 p-5 border border-stone-800 shadow-lg cursor-pointer hover:bg-stone-800 transition-all transform hover:scale-[1.02] active:scale-95 group"
+                    >
                         <div className="flex justify-between items-start mb-2">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest">เหมืองทั้งหมด</span>
+                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-yellow-500 transition-colors">เหมืองทั้งหมด</span>
                             <Hammer size={16} className="text-yellow-500" />
                         </div>
-                        <div className="text-3xl font-display font-bold text-white">{rigs.length}</div>
+                        <div className="text-3xl font-display font-bold text-white group-hover:text-yellow-200">{rigs.length}</div>
                     </div>
 
-                    <div className="bg-stone-900 p-5 border border-stone-800 shadow-lg">
+                    <div
+                        onClick={() => document.getElementById('economy-control')?.scrollIntoView({ behavior: 'smooth' })}
+                        className="bg-stone-900 p-5 border border-stone-800 shadow-lg cursor-pointer hover:bg-stone-800 transition-all transform hover:scale-[1.02] active:scale-95 group"
+                    >
                         <div className="flex justify-between items-start mb-2">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest">ยอดเงินลงทุนรวม</span>
+                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-emerald-500 transition-colors">ยอดเงินลงทุนรวม</span>
                             <Coins size={16} className="text-emerald-500" />
                         </div>
-                        <div className="text-3xl font-display font-bold text-white tracking-tight">{totalInvestment.toLocaleString()} <span className="text-sm font-sans font-normal text-stone-600">{CURRENCY}</span></div>
+                        <div className="text-3xl font-display font-bold text-white tracking-tight group-hover:text-emerald-200">{totalInvestment.toLocaleString()} <span className="text-sm font-sans font-normal text-stone-600">{CURRENCY}</span></div>
                     </div>
 
-                    <div className="bg-stone-900 p-5 border border-stone-800 shadow-lg">
+                    <div
+                        onClick={() => document.getElementById('game-config')?.scrollIntoView({ behavior: 'smooth' })}
+                        className="bg-stone-900 p-5 border border-stone-800 shadow-lg cursor-pointer hover:bg-stone-800 transition-all transform hover:scale-[1.02] active:scale-95 group"
+                    >
                         <div className="flex justify-between items-start mb-2">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest">ผลผลิตรายวันรวม</span>
+                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-purple-400 transition-colors">ผลผลิตรายวันรวม</span>
                             <LayoutDashboard size={16} className="text-purple-400" />
                         </div>
-                        <div className="text-3xl font-display font-bold text-white">+{totalDailyProduction.toFixed(1)}</div>
+                        <div className="text-3xl font-display font-bold text-white group-hover:text-purple-200">+{totalDailyProduction.toFixed(1)}</div>
                     </div>
                 </div>
 
                 {/* === USERS MANAGEMENT === */}
-                <div className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg overflow-hidden">
+                <div id="user-management" className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg overflow-hidden">
                     <div className="p-4 border-b border-stone-800 flex justify-between items-center bg-stone-950">
                         <div className="flex items-center gap-2">
                             <Users size={20} className="text-blue-400" />
@@ -620,8 +692,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             </div>
                                         </td>
                                         <td className="p-4 text-right">
-                                            <div className="font-mono font-bold text-emerald-400 text-sm">{u.balance.toLocaleString()}</div>
-                                            <div className="text-[10px] text-stone-600">THB</div>
+                                            {u.role?.includes('ADMIN') ? (
+                                                <span className="text-stone-600 font-bold">-</span>
+                                            ) : (
+                                                <>
+                                                    <div className="font-mono font-bold text-emerald-400 text-sm">{u.balance.toLocaleString()}</div>
+                                                    <div className="text-[10px] text-stone-600">THB</div>
+                                                </>
+                                            )}
                                         </td>
                                         <td className="p-4 text-center">
                                             <div className="inline-flex items-center gap-1 bg-stone-900 px-2 py-1 rounded border border-stone-800">
@@ -642,7 +720,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             <button
                                                 className="text-stone-500 hover:text-white p-2 rounded hover:bg-stone-800 transition-colors"
                                                 title="View Details"
-                                                onClick={() => setSelectedUser(u)}
+                                                onClick={() => {
+                                                    setSelectedUser(u);
+                                                    api.admin.getUserStats(u.id).then(setUserStats).catch(() => setUserStats({ totalDeposits: 0, totalWithdrawals: 0 }));
+                                                }}
                                             >
                                                 <ChevronRight size={16} />
                                             </button>
@@ -662,7 +743,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
 
                 {/* === ECONOMY CONTROL === */}
-                <div className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6">
+                <div id="economy-control" className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6">
                     <div className="flex items-center gap-2 mb-6 border-b border-stone-800 pb-4">
                         <Coins size={24} className="text-yellow-500" />
                         <h3 className="text-xl font-bold text-white">ควบคุมระบบเศรษฐกิจ (Economy Control)</h3>
@@ -673,8 +754,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         <div className="space-y-4">
                             <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">เพิ่มไอเทมให้ผู้เล่น</h4>
                             <div className="space-y-3">
-                                <input type="text" placeholder="User ID / Username" className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none" />
-                                <select className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none">
+                                <input
+                                    type="text"
+                                    placeholder="User ID / Username"
+                                    className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                    value={economyForm.targetUser}
+                                    onChange={e => setEconomyForm({ ...economyForm, targetUser: e.target.value })}
+                                />
+                                <select
+                                    className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                    value={economyForm.itemId}
+                                    onChange={e => setEconomyForm({ ...economyForm, itemId: e.target.value })}
+                                >
                                     <option value="">เลือกไอเทม...</option>
                                     <optgroup label="Items & Equipment">
                                         {SHOP_ITEMS.map(item => (
@@ -687,28 +778,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                         ))}
                                     </optgroup>
                                 </select>
-                                <input type="number" placeholder="จำนวน" className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none" />
-                                <button className="w-full bg-yellow-600 hover:bg-yellow-500 text-stone-900 font-bold py-3 rounded transition-colors" onClick={() => alert('Feature coming soon')}>
+                                <input
+                                    type="number"
+                                    placeholder="จำนวน"
+                                    className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                    value={economyForm.itemAmount}
+                                    onChange={e => setEconomyForm({ ...economyForm, itemAmount: parseInt(e.target.value) || 1 })}
+                                />
+                                <button
+                                    className="w-full bg-yellow-600 hover:bg-yellow-500 text-stone-900 font-bold py-3 rounded transition-colors"
+                                    onClick={handleAddItem}
+                                >
                                     ส่งไอเทม
                                 </button>
                             </div>
                         </div>
 
-                        {/* Adjust Balance Form */}
+                        {/* Give Compensation Form */}
                         <div className="space-y-4">
-                            <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">ปรับยอดเงิน (Emergency Only)</h4>
+                            <div className="flex justify-between items-center">
+                                <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">ชดเชยค่าเสียหาย (Compensation)</h4>
+                                <span className="text-xs text-emerald-500 font-mono">Server Issues / Refunds</span>
+                            </div>
                             <div className="space-y-3">
-                                <input type="text" placeholder="User ID / Username" className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none" />
+                                <input
+                                    type="text"
+                                    placeholder="User ID / Username"
+                                    className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                    value={economyForm.compUser}
+                                    onChange={e => setEconomyForm({ ...economyForm, compUser: e.target.value })}
+                                />
                                 <div className="flex gap-2">
-                                    <select className="w-1/3 bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none">
-                                        <option value="ADD">เพิ่ม (+)</option>
-                                        <option value="REMOVE">ลด (-)</option>
-                                    </select>
-                                    <input type="number" placeholder="จำนวนเงิน (THB)" className="flex-1 bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none" />
+                                    <div className="w-1/3 bg-emerald-900/20 border border-emerald-900/50 rounded p-3 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                                        ADD FUNDS (+)
+                                    </div>
+                                    <input
+                                        type="number"
+                                        placeholder="จำนวนเงิน (THB)"
+                                        className="flex-1 bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                        value={economyForm.compAmount || ''}
+                                        onChange={e => setEconomyForm({ ...economyForm, compAmount: parseFloat(e.target.value) || 0 })}
+                                    />
                                 </div>
-                                <input type="text" placeholder="เหตุผลการปรับยอด..." className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none" />
-                                <button className="w-full bg-red-900/50 hover:bg-red-900 text-red-400 font-bold py-3 rounded border border-red-800 transition-colors" onClick={() => alert('Feature coming soon')}>
-                                    ยืนยันการปรับยอด
+                                <input
+                                    type="text"
+                                    placeholder="เหตุผลการชดเชย (เช่น ปิดปรับปรุง)"
+                                    className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                    value={economyForm.compReason}
+                                    onChange={e => setEconomyForm({ ...economyForm, compReason: e.target.value })}
+                                />
+                                <button
+                                    className="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-3 rounded border border-emerald-600 transition-colors"
+                                    onClick={handleGiveCompensation}
+                                >
+                                    ยืนยันการชดเชย (Send Compensation)
                                 </button>
                             </div>
                         </div>
@@ -716,33 +839,79 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 </div>
 
                 {/* === GAME CONFIG === */}
-                <div className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6">
+                <div id="game-config" className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6">
                     <div className="flex items-center gap-2 mb-6 border-b border-stone-800 pb-4">
                         <LayoutDashboard size={24} className="text-purple-400" />
                         <h3 className="text-xl font-bold text-white">ตั้งค่าระบบเกม (Game Configuration)</h3>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Drop Rate */}
                         <div className="bg-stone-950 p-4 rounded border border-stone-800">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-stone-400 font-bold">อัตราดรอป (Drop Rate)</span>
-                                <span className="text-emerald-400 font-mono">5%</span>
+                            <div className="flex justify-between items-center mb-4">
+                                <span className="text-stone-400 font-bold text-sm">อัตราดรอป (Drop Rate)</span>
+                                <div className="flex items-center gap-1">
+                                    <input
+                                        type="number"
+                                        value={gameConfig.dropRate}
+                                        onChange={(e) => handleConfigChange('dropRate', Number(e.target.value))}
+                                        className="w-16 bg-stone-900 border border-stone-700 rounded px-2 py-1 text-right font-mono text-emerald-400 focus:border-emerald-500 outline-none text-sm"
+                                    />
+                                    <span className="text-stone-600 text-xs">%</span>
+                                </div>
                             </div>
-                            <input type="range" className="w-full accent-emerald-500" />
+                            <input
+                                type="range"
+                                min="0" max="100"
+                                value={gameConfig.dropRate}
+                                onChange={(e) => handleConfigChange('dropRate', Number(e.target.value))}
+                                className="w-full accent-emerald-500 h-2 bg-stone-800 rounded-lg appearance-none cursor-pointer"
+                            />
+                        </div>
+
+                        {/* Tax Rate */}
+                        <div className="bg-stone-950 p-4 rounded border border-stone-800">
+                            <div className="flex justify-between items-center mb-4">
+                                <span className="text-stone-400 font-bold text-sm">ภาษีตลาดกลาง (Tax)</span>
+                                <div className="flex items-center gap-1">
+                                    <input
+                                        type="number"
+                                        value={gameConfig.taxRate}
+                                        onChange={(e) => handleConfigChange('taxRate', Number(e.target.value))}
+                                        className="w-16 bg-stone-900 border border-stone-700 rounded px-2 py-1 text-right font-mono text-red-400 focus:border-red-500 outline-none text-sm"
+                                    />
+                                    <span className="text-stone-600 text-xs">%</span>
+                                </div>
+                            </div>
+                            <input
+                                type="range"
+                                min="0" max="50"
+                                value={gameConfig.taxRate}
+                                onChange={(e) => handleConfigChange('taxRate', Number(e.target.value))}
+                                className="w-full accent-red-500 h-2 bg-stone-800 rounded-lg appearance-none cursor-pointer"
+                            />
                         </div>
                         <div className="bg-stone-950 p-4 rounded border border-stone-800">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-stone-400 font-bold">ภาษีตลาดกลาง (Tax)</span>
-                                <span className="text-red-400 font-mono">15%</span>
+                            <div className="flex justify-between items-center mb-4">
+                                <span className="text-stone-400 font-bold text-sm">ค่าซ่อมเครื่องจักร</span>
+                                <div className="flex items-center gap-1">
+                                    <span className="text-stone-600 text-xs">x</span>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        value={gameConfig.repairCost}
+                                        onChange={(e) => handleConfigChange('repairCost', Number(e.target.value))}
+                                        className="w-16 bg-stone-900 border border-stone-700 rounded px-2 py-1 text-right font-mono text-yellow-400 focus:border-yellow-500 outline-none text-sm"
+                                    />
+                                </div>
                             </div>
-                            <input type="range" className="w-full accent-red-500" />
-                        </div>
-                        <div className="bg-stone-950 p-4 rounded border border-stone-800">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-stone-400 font-bold">ค่าซ่อมเครื่องจักร</span>
-                                <span className="text-yellow-400 font-mono">x1.0</span>
-                            </div>
-                            <input type="range" className="w-full accent-yellow-500" />
+                            <input
+                                type="range"
+                                min="0.1" max="5.0" step="0.1"
+                                value={gameConfig.repairCost}
+                                onChange={(e) => handleConfigChange('repairCost', Number(e.target.value))}
+                                className="w-full accent-yellow-500 h-2 bg-stone-800 rounded-lg appearance-none cursor-pointer"
+                            />
                         </div>
                     </div>
                     <div className="mt-4 flex justify-end">

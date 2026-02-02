@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, TrendingUp, TrendingDown, Minus, RefreshCw, BarChart2, DollarSign, ShoppingCart, CheckCircle2, History, ArrowRight, Bot } from 'lucide-react';
 import { MockDB } from '../services/db';
-import { MarketState, Transaction, MarketItemData } from '../types';
+import { MarketState, Transaction, MarketItemData } from '../services/types';
 import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, ROBOT_CONFIG } from '../constants';
 import { MaterialIcon } from './MaterialIcon';
 
@@ -11,9 +11,10 @@ interface MarketModalProps {
     onClose: () => void;
     userId: string;
     onSuccess: () => void;
+    initialTier?: number;
 }
 
-export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userId, onSuccess }) => {
+export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userId, onSuccess, initialTier }) => {
     const [market, setMarket] = useState<MarketState | null>(null);
     const [selectedTier, setSelectedTier] = useState<number>(1);
     const [amount, setAmount] = useState<number>(0);
@@ -33,8 +34,9 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
         if (isOpen) {
             refreshMarket();
             refreshHistory();
+            if (initialTier) setSelectedTier(initialTier);
         }
-    }, [isOpen]);
+    }, [isOpen, initialTier]);
 
     const refreshMarket = () => {
         const m = MockDB.getMarketStatus();
@@ -113,15 +115,21 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
         if (!hist || hist.length < 2) return null;
 
         let data = [...hist];
+
+        // Simulate different timeframes using current history data
         if (timeframe === '1H') {
-            const last = data[data.length - 1];
-            data = data.map(v => v * 0.9 + last * 0.1);
+            // Last 8 points with some micro-fluctuations for "real-time" feel
+            data = data.slice(-8).map(v => v * (1 + (Math.random() - 0.5) * 0.002));
+        } else if (timeframe === '4H') {
+            // Last 14 points with slight smoothing
+            data = data.slice(-14).map(v => v * (1 + (Math.random() - 0.5) * 0.001));
         }
+        // 1D uses the full 20 point history
 
         const height = 60;
         const width = 100;
-        const min = Math.min(...data) * 0.98;
-        const max = Math.max(...data) * 1.02;
+        const min = Math.min(...data) * 0.99;
+        const max = Math.max(...data) * 1.01;
 
         const points = data.map((val, i) => {
             const x = (i / (data.length - 1)) * width;
@@ -133,7 +141,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
         const color = isUp ? '#10b981' : '#ef4444';
 
         return (
-            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible preserve-3d">
+            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
                 <polyline
                     fill="none"
                     stroke={color}
@@ -272,8 +280,8 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                     </div>
                                 )}
 
-                                <div className="h-64 p-6 border-b border-stone-800 relative">
-                                    <div className="flex justify-between items-start mb-4">
+                                <div className="h-auto p-4 border-b border-stone-800 relative">
+                                    <div className="flex justify-between items-start mb-2">
                                         <div className="flex items-center gap-4">
                                             <div className="p-2 bg-stone-900 border border-stone-800 rounded-lg"><MaterialIcon id={selectedTier} size="w-10 h-10" iconSize={20} /></div>
                                             <div>
@@ -290,25 +298,25 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                         </div>
                                         <div className="flex gap-1 bg-stone-900 p-1 rounded-lg border border-stone-800">
                                             {['1H', '4H', '1D'].map(t => (
-                                                <button key={t} onClick={() => setTimeframe(t as any)} className={`text-xs px-3 py-1 rounded transition-colors font-bold ${timeframe === t ? 'bg-blue-600 text-white' : 'text-stone-500 hover:text-stone-300'}`}>{t}</button>
+                                                <button key={t} onClick={() => setTimeframe(t as any)} className={`text-xs px-3 py-1 rounded transition-colors font-bold ${timeframe === t ? 'bg-blue-600 text-white ring-2 ring-white ring-inset' : 'text-stone-500 hover:text-stone-300'}`}>{t}</button>
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="h-40 w-full relative group">{renderGraph(item.history)}<div className="absolute top-2 right-2 text-[10px] text-stone-600 opacity-0 group-hover:opacity-100 transition-opacity">Real-time System Data</div></div>
+                                    <div className="h-32 w-full relative group">{renderGraph(item.history)}<div className="absolute top-2 right-2 text-[10px] text-stone-600 opacity-0 group-hover:opacity-100 transition-opacity">Real-time System Data</div></div>
                                 </div>
 
-                                <div className="flex-1 p-6 flex flex-col justify-between overflow-y-auto">
-                                    <div className="grid grid-cols-2 gap-4 mb-6 bg-stone-900 p-1.5 rounded-xl border border-stone-800">
-                                        <button onClick={() => setAction('BUY')} className={`py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="rotate-45" /> ซื้อ (BUY)</button>
-                                        <button onClick={() => setAction('SELL')} className={`py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'SELL' ? 'bg-red-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="-rotate-[135deg]" /> ขาย (SELL)</button>
+                                <div className="flex-1 p-4 flex flex-col justify-between overflow-y-auto custom-scrollbar">
+                                    <div className="grid grid-cols-2 gap-3 mb-4 bg-stone-900 p-1 rounded-xl border border-stone-800">
+                                        <button onClick={() => setAction('BUY')} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="rotate-45" /> ซื้อ (BUY)</button>
+                                        <button onClick={() => setAction('SELL')} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'SELL' ? 'bg-red-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="-rotate-[135deg]" /> ขาย (SELL)</button>
                                     </div>
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between text-sm text-stone-400 bg-stone-900/50 p-3 rounded-lg border border-stone-800"><span>Available Balance:</span><span className="font-bold text-white">{action === 'SELL' ? `${maxSell} Units` : `${userBalance.toLocaleString()} ${CURRENCY}`}</span></div>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between text-xs text-stone-400 bg-stone-900/50 p-2.5 rounded-lg border border-stone-800"><span>Available Balance:</span><span className="font-bold text-white">{action === 'SELL' ? `${maxSell} Units` : `${userBalance.toLocaleString()} ${CURRENCY}`}</span></div>
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center"><label className="text-xs text-stone-500 uppercase font-bold">จำนวนที่ต้องการ (Amount)</label><span className="text-xs text-blue-400 cursor-pointer hover:underline" onClick={() => setAmount(action === 'SELL' ? maxSell : maxBuy)}>Max Available</span></div>
                                             <div className="relative">
-                                                <input type="number" value={amount === 0 ? '' : amount} onChange={(e) => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setAmount(isNaN(val) ? 0 : val); }} className="w-full bg-stone-900 border border-stone-700 rounded-xl p-4 text-white font-mono text-lg focus:border-blue-500 outline-none transition-colors" placeholder="0" />
-                                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 text-xs font-bold">UNITS</span>
+                                                <input type="number" value={amount === 0 ? '' : amount} onChange={(e) => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setAmount(isNaN(val) ? 0 : val); }} className="w-full bg-stone-900 border border-stone-700 rounded-xl p-3 text-white font-mono text-base focus:border-blue-500 outline-none transition-colors" placeholder="0" />
+                                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 text-[10px] font-bold">UNITS</span>
                                             </div>
                                         </div>
                                         <div className="bg-stone-900 p-4 rounded-xl border border-stone-800 space-y-2">
@@ -317,7 +325,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                             <div className="h-px bg-stone-800 my-2"></div>
                                             <div className="flex justify-between text-lg font-bold"><span className="text-stone-200">รวมสุทธิ (Total)</span><span className={action === 'BUY' ? 'text-red-400' : 'text-emerald-400'}>{totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}</span></div>
                                         </div>
-                                        <button onClick={() => setShowConfirm(true)} disabled={loading || amount <= 0 || (action === 'SELL' && amount > maxSell) || (action === 'BUY' && totalPrice > userBalance)} className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-stone-800`}>{action === 'BUY' ? 'ตรวจสอบคำสั่งซื้อ' : 'ตรวจสอบคำสั่งขาย'}</button>
+                                        <button onClick={() => setShowConfirm(true)} disabled={loading || amount <= 0 || (action === 'SELL' && amount > maxSell) || (action === 'BUY' && totalPrice > userBalance)} className={`w-full py-3 rounded-xl font-bold text-base shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-stone-800`}>{action === 'BUY' ? 'ตรวจสอบคำสั่งซื้อ' : 'ตรวจสอบคำสั่งขาย'}</button>
                                     </div>
                                 </div>
                             </>

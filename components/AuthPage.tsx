@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Pickaxe, Lock, User as UserIcon, ShieldAlert, Mountain, KeyRound, Bug } from 'lucide-react';
 import { MockDB } from '../services/db';
-import { User, OilRig } from '../types';
+import { User, OilRig } from '../services/types';
 import { MAX_RIGS_PER_USER, RIG_PRESETS } from '../constants';
 
 interface AuthPageProps {
@@ -80,7 +80,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
         ownerId: newUser.id,
         name: preset.name,
         investment: preset.price,
-        durationMonths: preset.durationMonths,
+        durationMonths: preset.durationMonths || (preset.durationDays ? preset.durationDays / 30 : 1),
         dailyProfit: preset.dailyProfit,
         bonusProfit: 0,
         rarity: 'COMMON',
@@ -90,7 +90,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
         lastGiftAt: Date.now(),
         renewalCount: 0,
         lastRepairAt: Date.now(),
-        currentMaterials: 0
+        currentMaterials: 0,
+        expiresAt: Date.now() + ((preset.durationDays || 30) * 24 * 60 * 60 * 1000),
+        repairCost: preset.repairCost || 0,
+        energyCostPerDay: preset.energyCostPerDay || 0
       };
       MockDB.addRig(newRig);
 
@@ -211,7 +214,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
             <button
               type="button"
               onClick={() => {
-                if (window.confirm("เข้าสู่โหมดทดลองเล่น (Demo Mode)\n\n• เงินเริ่มต้น 50,000 บาท\n• ความเร็วเกม x720 (1 วัน = 2 นาที)\n• รีเฟรชหน้าเว็บข้อมูลจะหายไป\n• หมดเวลาใน 10 นาที")) {
+                if (window.confirm("เข้าสู่โหมดทดลองเล่น (Demo Mode)\n\n• เงินเริ่มต้น 50,000 บาท\n• ความเร็วเกม x720 (1 วัน = 2 นาที)\n• รีเฟรชหน้าเว็บข้อมูลจะหายไป")) {
                   const demoUser = MockDB.createDemoUser();
                   onLogin(demoUser);
                 }

@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, CheckCircle2, ChevronRight, Hourglass, Sparkles } from 'lucide-react';
+import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText } from 'lucide-react';
 import { SHOP_ITEMS, CURRENCY, RARITY_SETTINGS, MATERIAL_CONFIG, EQUIPMENT_SERIES } from '../constants';
-import { CraftingQueueItem } from '../types';
+import { CraftingQueueItem } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
 import { MockDB } from '../services/db';
@@ -17,9 +17,11 @@ interface AccessoryShopModalProps {
 export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, onClose, walletBalance, onBuy }) => {
     const [activeTab, setActiveTab] = useState<'SHOP' | 'WORKSHOP'>('SHOP');
     const [buyingId, setBuyingId] = useState<string | null>(null);
+    const [confirmItem, setConfirmItem] = useState<{ id: string, price: number, quantity: number, name: string } | null>(null);
 
     const [craftingQueue, setCraftingQueue] = useState<CraftingQueueItem[]>([]);
     const [userMaterials, setUserMaterials] = useState<Record<number, number>>({});
+    const [userInventory, setUserInventory] = useState<any[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [buyQuantities, setBuyQuantities] = useState<Record<string, number>>({});
     const [claimedItem, setClaimedItem] = useState<any>(null);
@@ -32,6 +34,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
             if (user) {
                 setCraftingQueue(user.craftingQueue || []);
                 setUserMaterials(user.materials || {});
+                setUserInventory(user.inventory || []);
             }
         }
     }, [isOpen, refreshTrigger, currentUser]);
@@ -46,7 +49,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
 
     if (!isOpen) return null;
 
-    const handleBuyClick = (itemId: string, price: number) => {
+    const handleBuyClick = (itemId: string, price: number, name: string) => {
         const quantity = buyQuantities[itemId] || 1;
         const totalCost = price * quantity;
 
@@ -55,22 +58,26 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
             return;
         }
 
-        setBuyingId(itemId);
-        // Simulate buying specific quantity (MockDB needs loop or update)
-        // Since MockDB.buyItem takes just ID, we loop here or assume singular.
-        // Ideally we update MockDB to take quantity, but for now loop is safer without changing backend too much.
+        setConfirmItem({ id: itemId, price, quantity, name });
+    };
 
+    const handleConfirmBuy = () => {
+        if (!confirmItem) return;
+        const { id, quantity } = confirmItem;
+
+        setBuyingId(id);
         const processBuy = async () => {
             for (let i = 0; i < quantity; i++) {
-                onBuy(itemId); // This calls MockDB.buyItem(userId, itemId)
-                await new Promise(r => setTimeout(r, 100)); // Small delay to prevent race
+                onBuy(id);
+                await new Promise(r => setTimeout(r, 50));
             }
             setBuyingId(null);
-            // Reset quantity
-            setBuyQuantities(prev => ({ ...prev, [itemId]: 1 }));
+            setBuyQuantities(prev => ({ ...prev, [id]: 1 }));
+            setRefreshTrigger(prev => prev + 1);
         };
 
         processBuy();
+        setConfirmItem(null);
     };
 
     const handleQuantityChange = (itemId: string, delta: number) => {
@@ -79,6 +86,10 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
             const newVal = Math.max(1, current + delta);
             return { ...prev, [itemId]: newVal };
         });
+    };
+
+    const setQuantity = (itemId: string, amount: number) => {
+        setBuyQuantities(prev => ({ ...prev, [itemId]: amount }));
     };
 
     const handleStartCraft = (itemId: string) => {
@@ -116,14 +127,20 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
 
         // Special handling for Hourglasses to make them distinct
         if (itemId === 'hourglass_small') {
-            return <Hourglass className={`${className} text-stone-400`} />;
+            return (
+                <div className="relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-blue-500/10 rounded-full scale-125 blur-sm"></div>
+                    <Hourglass className={`${className} text-blue-400 relative z-10`} />
+                </div>
+            );
         }
         if (itemId === 'hourglass_medium') {
             return (
                 <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-orange-500/20 rounded-full scale-150 blur-md animate-pulse"></div>
-                    <div className="absolute inset-0 border border-orange-500/30 rounded-full scale-125"></div>
-                    <Hourglass className={`${className} text-orange-400 relative z-10`} />
+                    <div className="absolute inset-0 bg-purple-500/20 rounded-full scale-150 blur-md animate-pulse"></div>
+                    <div className="absolute inset-0 border border-purple-500/30 rounded-full scale-125"></div>
+                    <Sparkles className="absolute -top-2 -right-2 text-purple-300 animate-pulse" size={14} />
+                    <Hourglass className={`${className} text-purple-400 relative z-10`} />
                 </div>
             );
         }
@@ -134,7 +151,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                     <div className="absolute inset-0 border-2 border-yellow-500/20 rounded-full scale-[1.4] animate-[spin_10s_linear_infinite] border-dashed"></div>
                     <div className="absolute inset-0 border border-white/20 rounded-full scale-[1.6] animate-[spin_15s_linear_infinite_reverse] border-dotted"></div>
                     <Sparkles className="absolute -top-4 -right-4 text-yellow-300 animate-bounce" size={20} />
-                    <Hourglass className={`${className} text-yellow-400 drop-shadow-[0_0_10px_gold] relative z-10`} />
+                    <Hourglass className={`${className} text-yellow-400 drop-shadow-[0_0_15px_gold] relative z-10`} />
                 </div>
             );
         }
@@ -155,6 +172,8 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
             case 'Zap': return <Zap className={className} />;
             case 'Cpu': return <Cpu className={className} />;
             case 'Hourglass': return <Hourglass className={className} />;
+            case 'Shield': return <FileText className={className} />;
+            case 'FileText': return <FileText className={className} />;
             default: return <InfinityGlove className={className} />;
         }
     };
@@ -196,14 +215,36 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         );
     };
 
-    const specialIds = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'dungeon_ticket_magma', 'ancient_blueprint'];
+    const specialIds = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'dungeon_ticket_magma', 'ancient_blueprint', 'insurance_card'];
     const specialItems = SHOP_ITEMS.filter(i => specialIds.includes(i.id) && i.buyable !== false);
     const shopEquipment = SHOP_ITEMS.filter(i => !specialIds.includes(i.id) && i.buyable !== false);
     const craftableItems = SHOP_ITEMS.filter(i => i.craftingRecipe);
 
     const renderItemCard = (item: typeof SHOP_ITEMS[0], isSpecial: boolean = false) => {
-        const canAfford = walletBalance >= item.price;
+        let canAfford = walletBalance >= item.price * (buyQuantities[item.id] || 1);
         const isBuying = buyingId === item.id;
+
+        // Robot Limits check
+        let isCooldown = false;
+        let cooldownText = '';
+        if (item.id === 'robot') {
+            const existingRobot = userInventory.find(i => i.typeId === 'robot');
+            if (existingRobot) {
+                // Check remaining time
+                // lifespanDays: 30.
+                // We need creation time, but MockDB item might not store exact creation time in 'inventory' usually?
+                // Assuming `expireAt` exists on inventory items.
+                if (existingRobot.expireAt) {
+                    const diff = existingRobot.expireAt - Date.now();
+                    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                    if (days > 0) {
+                        isCooldown = true;
+                        cooldownText = `คูลดาวน์ ${days} วัน`;
+                        canAfford = false; // Disable buy
+                    }
+                }
+            }
+        }
 
         let bonusRange = '';
         if (item.id === 'chest_key') bonusRange = 'ใช้เปิดหีบ';
@@ -211,15 +252,41 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         else if (item.id === 'magnifying_glass') bonusRange = 'ส่องน้ำมัน';
         else if (item.id === 'robot') bonusRange = 'ผู้ช่วยอเนกประสงค์';
         else if (item.id === 'upgrade_chip') bonusRange = 'ใช้ตีบวกอุปกรณ์';
-        else if (item.id.includes('hourglass')) bonusRange = 'ลดเวลาสำรวจ';
+        else if (item.id === 'insurance_card') bonusRange = 'ป้องกันอุปกรณ์แตก';
+        else if (item.id === 'hourglass_small') bonusRange = '- 30 นาที';
+        else if (item.id === 'hourglass_medium') bonusRange = '- 2 ชั่วโมง';
+        else if (item.id === 'hourglass_large') bonusRange = '- 6 ชั่วโมง';
         else bonusRange = `${item.minBonus}-${item.maxBonus}`;
 
         let rarityStyle = RARITY_SETTINGS.COMMON;
-        if (item.price >= 500) rarityStyle = RARITY_SETTINGS.LEGENDARY;
-        else if (item.price >= 350) rarityStyle = RARITY_SETTINGS.EPIC;
-        else if (item.price >= 120) rarityStyle = RARITY_SETTINGS.RARE;
 
-        if (isSpecial) rarityStyle = RARITY_SETTINGS.LEGENDARY;
+        // Define Rarity based on Item ID for clear visual differentiation
+        if (item.id === 'hat') rarityStyle = RARITY_SETTINGS.UNCOMMON;
+        else if (item.id === 'uniform') rarityStyle = RARITY_SETTINGS.RARE;
+        else if (item.id === 'bag') rarityStyle = RARITY_SETTINGS.SUPER_RARE;
+        else if (item.id === 'boots') rarityStyle = RARITY_SETTINGS.EPIC;
+        else if (item.id === 'glasses') rarityStyle = RARITY_SETTINGS.LEGENDARY;
+        else if (item.id === 'mobile') rarityStyle = RARITY_SETTINGS.ULTRA_LEGENDARY;
+        else if (item.id === 'pc') rarityStyle = RARITY_SETTINGS.MYTHIC;
+        else if (item.id === 'auto_excavator') rarityStyle = RARITY_SETTINGS.DIVINE;
+        else if (item.id === 'robot') rarityStyle = RARITY_SETTINGS.MYTHIC;
+        else if (item.id === 'insurance_card') rarityStyle = RARITY_SETTINGS.ULTRA_LEGENDARY;
+        else if (item.id === 'upgrade_chip') rarityStyle = RARITY_SETTINGS.RARE;
+        else if (item.id === 'mixer') rarityStyle = RARITY_SETTINGS.SUPER_RARE;
+        else if (item.id === 'chest_key') rarityStyle = RARITY_SETTINGS.EPIC;
+        else if (item.id === 'magnifying_glass') rarityStyle = RARITY_SETTINGS.RARE;
+        else if (item.id === 'hourglass_small') rarityStyle = RARITY_SETTINGS.UNCOMMON;
+        else if (item.id === 'hourglass_medium') rarityStyle = RARITY_SETTINGS.EPIC;
+        else if (item.id === 'hourglass_large') rarityStyle = RARITY_SETTINGS.LEGENDARY;
+        else {
+            // Default pricing logic for any other items
+            if (item.price >= 500) rarityStyle = RARITY_SETTINGS.LEGENDARY;
+            else if (item.price >= 350) rarityStyle = RARITY_SETTINGS.EPIC;
+            else if (item.price >= 120) rarityStyle = RARITY_SETTINGS.RARE;
+            else if (item.price >= 50) rarityStyle = RARITY_SETTINGS.UNCOMMON;
+        }
+
+        const isBulkItem = ['upgrade_chip', 'mixer', 'insurance_card', 'hourglass_small', 'hourglass_medium', 'hourglass_large'].includes(item.id);
 
         return (
             <div key={item.id} className={`group relative bg-stone-900/80 border ${rarityStyle.border} rounded-xl overflow-visible shadow-lg transition-all duration-300 sm:hover:-translate-y-2 hover:shadow-[0_0_25px_rgba(0,0,0,0.5)] flex flex-col ${isSpecial ? 'h-full' : ''}`}>
@@ -243,7 +310,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                     </div>
 
                     <div className="flex flex-wrap gap-2 justify-center mb-2 mt-2">
-                        {['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large'].includes(item.id) ? (
+                        {['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'insurance_card'].includes(item.id) ? (
                             <div className="text-[9px] text-stone-400 flex items-center gap-1 bg-stone-800 px-2 py-0.5 rounded border border-stone-700">
                                 <Zap size={10} className="text-yellow-500" /> ใช้แล้วหมดไป
                             </div>
@@ -256,30 +323,94 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                 </div>
 
                 <div className="p-4 pt-0">
-                    <div className="flex items-center justify-between mb-3 bg-stone-950 p-1 rounded-lg border border-stone-800">
-                        <button onClick={() => handleQuantityChange(item.id, -1)} className="p-2 hover:bg-stone-800 rounded text-stone-400 hover:text-white transition-colors">-</button>
-                        <span className="font-mono font-bold text-white text-sm">{buyQuantities[item.id] || 1}</span>
-                        <button onClick={() => handleQuantityChange(item.id, 1)} className="p-2 hover:bg-stone-800 rounded text-stone-400 hover:text-white transition-colors">+</button>
-                    </div>
+                    {/* Only show quantity for special bulk items, hide for equipment and robot */}
+                    {isSpecial && item.id !== 'robot' && (
+                        <div className="flex items-center justify-between mb-3 bg-stone-950 p-1 rounded-lg border border-stone-800">
+                            <button onClick={() => handleQuantityChange(item.id, -1)} className="p-2 hover:bg-stone-800 rounded text-stone-400 hover:text-white transition-colors">-</button>
+                            <span className="font-mono font-bold text-white text-sm">{buyQuantities[item.id] || 1}</span>
+                            <button onClick={() => handleQuantityChange(item.id, 1)} className="p-2 hover:bg-stone-800 rounded text-stone-400 hover:text-white transition-colors">+</button>
+                        </div>
+                    )}
+
+                    {isBulkItem && (
+                        <div className="flex gap-1 mb-3 justify-center">
+                            <button onClick={() => setQuantity(item.id, 10)} className="px-2 py-1 bg-stone-800 hover:bg-stone-700 rounded text-[10px] text-stone-400 hover:text-white border border-stone-700">x10</button>
+                            <button onClick={() => setQuantity(item.id, 50)} className="px-2 py-1 bg-stone-800 hover:bg-stone-700 rounded text-[10px] text-stone-400 hover:text-white border border-stone-700">x50</button>
+                        </div>
+                    )}
 
                     <button
-                        onClick={() => handleBuyClick(item.id, item.price)}
-                        disabled={!canAfford || isBuying}
+                        onClick={() => handleBuyClick(item.id, item.price, item.name)}
+                        disabled={!canAfford || isBuying || isCooldown}
                         className={`w-full py-3 rounded-lg font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 transition-all
                         ${isBuying ? 'bg-stone-700 text-stone-400 cursor-wait' :
-                                canAfford
-                                    ? `bg-gradient-to-r from-stone-800 to-stone-700 hover:from-yellow-700 hover:to-yellow-600 border border-stone-600 hover:border-yellow-500 text-white shadow-lg`
-                                    : 'bg-stone-900 text-stone-600 border border-stone-800 cursor-not-allowed opacity-70'
+                                isCooldown ? 'bg-red-900/20 text-red-500 border border-red-900 cursor-not-allowed' :
+                                    canAfford
+                                        ? `bg-gradient-to-r from-stone-800 to-stone-700 hover:from-yellow-700 hover:to-yellow-600 border border-stone-600 hover:border-yellow-500 text-white shadow-lg`
+                                        : 'bg-stone-900 text-stone-600 border border-stone-800 cursor-not-allowed opacity-70'
                             }
                     `}
                     >
-                        {isBuying ? 'กำลังซื้อ...' : (
+                        {isBuying ? 'กำลังซื้อ...' : isCooldown ? cooldownText : (
                             <>
                                 <span>{(item.price * (buyQuantities[item.id] || 1)).toLocaleString()}</span>
                                 <span className="text-[10px]">{CURRENCY}</span>
                             </>
                         )}
                     </button>
+                </div>
+            </div>
+        );
+    };
+
+    const renderConfirmationModal = () => {
+        if (!confirmItem) return null;
+        const total = confirmItem.price * confirmItem.quantity;
+
+        return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                <div className="bg-stone-900 border-2 border-yellow-600/50 rounded-2xl w-full max-w-sm p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-900/10 to-stone-900/50 pointer-events-none"></div>
+
+                    <h3 className="text-2xl font-black text-white text-center uppercase tracking-wider mb-2 font-display">
+                        ยืนยันการซื้อไอเทม
+                    </h3>
+                    <div className="w-full h-px bg-gradient-to-r from-transparent via-yellow-600 to-transparent mb-6"></div>
+
+                    <div className="space-y-4 mb-8">
+                        <div className="bg-stone-950/80 rounded-xl p-4 border border-stone-800 flex items-center gap-4">
+                            <div className="w-16 h-16 bg-stone-900 rounded-lg flex items-center justify-center border border-stone-700">
+                                {getIcon(SHOP_ITEMS.find(i => i.id === confirmItem.id)?.icon || 'Box', "w-8 h-8 text-yellow-500", confirmItem.id)}
+                            </div>
+                            <div>
+                                <div className="text-stone-400 text-xs uppercase tracking-widest font-bold">ไอเทม</div>
+                                <div className="text-white font-bold text-lg">{confirmItem.name}</div>
+                                <div className="text-stone-500 text-xs">x{confirmItem.quantity} ชิ้น</div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-end bg-stone-950/50 p-4 rounded-xl border border-stone-800">
+                            <div className="text-stone-400 font-bold text-xs uppercase tracking-widest mb-1">ยอดรวมราคา</div>
+                            <div className="text-yellow-400 font-mono font-bold text-2xl flex items-baseline gap-1">
+                                {total.toLocaleString()} <span className="text-xs text-yellow-600 font-sans">บาท</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => setConfirmItem(null)}
+                            className="flex-1 py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold uppercase tracking-wider rounded-xl transition-colors border border-stone-700"
+                        >
+                            ยกเลิก
+                        </button>
+                        <button
+                            onClick={handleConfirmBuy}
+                            className="flex-1 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:shadow-[0_0_30px_rgba(234,179,8,0.4)] border border-yellow-500"
+                        >
+                            ยืนยันการซื้อ
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -302,84 +433,98 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         const canCraft = canAffordFee && hasAllMats;
 
         let rarityStyle = RARITY_SETTINGS.COMMON;
-        if (item.price >= 500) rarityStyle = RARITY_SETTINGS.LEGENDARY;
-        else if (item.price >= 350) rarityStyle = RARITY_SETTINGS.EPIC;
-        else if (item.price >= 120) rarityStyle = RARITY_SETTINGS.RARE;
+        if (item.id === 'hat') rarityStyle = RARITY_SETTINGS.UNCOMMON;
+        else if (item.id === 'uniform') rarityStyle = RARITY_SETTINGS.RARE;
+        else if (item.id === 'bag') rarityStyle = RARITY_SETTINGS.SUPER_RARE;
+        else if (item.id === 'boots') rarityStyle = RARITY_SETTINGS.EPIC;
+        else if (item.id === 'glasses') rarityStyle = RARITY_SETTINGS.LEGENDARY;
+        else if (item.id === 'mobile') rarityStyle = RARITY_SETTINGS.ULTRA_LEGENDARY;
+        else if (item.id === 'pc') rarityStyle = RARITY_SETTINGS.MYTHIC;
+        else if (item.id === 'auto_excavator') rarityStyle = RARITY_SETTINGS.DIVINE;
+        else {
+            if (item.price >= 500) rarityStyle = RARITY_SETTINGS.LEGENDARY;
+            else if (item.price >= 350) rarityStyle = RARITY_SETTINGS.EPIC;
+            else if (item.price >= 200) rarityStyle = RARITY_SETTINGS.RARE;
+            else if (item.price >= 50) rarityStyle = RARITY_SETTINGS.UNCOMMON;
+        }
 
         return (
-            <div key={item.id} className="bg-stone-900 border border-stone-800 rounded-xl p-4 flex flex-col gap-4 relative overflow-visible">
-                <div className="flex gap-4">
-                    <div className={`group/icon relative w-16 h-16 rounded-lg border-2 ${rarityStyle.border} bg-stone-950 flex items-center justify-center shrink-0 cursor-help`}>
-                        {getIcon(item.icon, `w-8 h-8 ${rarityStyle.color}`, item.id)}
-                        {renderTooltip(item)}
-                    </div>
-
-                    <div className="flex-1">
-                        <div className="flex justify-between items-start mb-1">
-                            <div>
-                                <h3 className="text-base font-bold text-white leading-tight">{item.name}</h3>
-                                {item.lifespanDays && (
-                                    <div className="flex items-center gap-1 text-[10px] text-stone-500 mt-0.5">
-                                        <Clock size={10} />
-                                        <span>อายุใช้งาน {item.lifespanDays} วัน</span>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded text-[10px] sm:text-xs font-bold border border-blue-500/30 flex flex-col items-end leading-none gap-0.5">
-                                <span className="flex items-center gap-1"><Clock size={10} /> {item.craftDurationMinutes / 60} ชม.</span>
-                            </div>
+            <div key={item.id} className={`bg-stone-900 border ${rarityStyle.border} rounded-xl overflow-hidden flex flex-col gap-4 relative shadow-lg`}>
+                <div className={`h-1 w-full bg-gradient-to-r ${rarityStyle.bgGradient}`}></div>
+                <div className="p-4 flex flex-col gap-4">
+                    <div className="flex gap-4">
+                        <div className={`group/icon relative w-16 h-16 rounded-lg border-2 ${rarityStyle.border} bg-stone-950 flex items-center justify-center shrink-0 cursor-help`}>
+                            {getIcon(item.icon, `w-8 h-8 ${rarityStyle.color}`, item.id)}
+                            {renderTooltip(item)}
                         </div>
-                        <div className="text-xs text-stone-400 mt-1">
-                            โบนัส: <span className="text-yellow-500">+{item.maxBonus} {CURRENCY}/วัน</span>
-                        </div>
-                        {item.specialEffect && (
-                            <div className="text-[10px] text-emerald-400 mt-1 font-bold">
-                                {item.specialEffect}
-                            </div>
-                        )}
-                    </div>
-                </div>
 
-                <div className="bg-stone-950 px-2 py-1 rounded border border-stone-800 flex justify-between text-[10px]">
-                    <span className="text-stone-400">Success: <span className="text-white font-bold">90%</span></span>
-                    <span className="text-yellow-600">Great Success: <span className="text-yellow-400 font-bold animate-pulse">10%</span></span>
-                </div>
-
-                <div className="bg-stone-950 p-3 rounded-lg border border-stone-800 space-y-2">
-                    <div className="text-[10px] text-stone-500 uppercase font-bold tracking-wider">วัตถุดิบที่ต้องใช้</div>
-                    <div className="grid grid-cols-2 gap-2">
-                        {matsList.map((m, i) => (
-                            <div key={i} className="flex items-center justify-between text-xs bg-stone-900 p-1.5 rounded">
-                                <div className="flex items-center gap-2">
-                                    <MaterialIcon id={m.tier} size="w-4 h-4" iconSize={12} />
-                                    <span className="text-stone-300">{MATERIAL_CONFIG.NAMES[m.tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span>
+                        <div className="flex-1">
+                            <div className="flex justify-between items-start mb-1">
+                                <div>
+                                    <h3 className="text-base font-bold text-white leading-tight">{item.name}</h3>
+                                    {item.lifespanDays && (
+                                        <div className="flex items-center gap-1 text-[10px] text-stone-500 mt-0.5">
+                                            <Clock size={10} />
+                                            <span>อายุใช้งาน {item.lifespanDays} วัน</span>
+                                        </div>
+                                    )}
                                 </div>
-                                <span className={m.owned >= m.needed ? 'text-green-400' : 'text-red-400'}>
-                                    {m.owned}/{m.needed}
+                                <div className="bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded text-[10px] sm:text-xs font-bold border border-blue-500/30 flex flex-col items-end leading-none gap-0.5">
+                                    <span className="flex items-center gap-1"><Clock size={10} /> {item.craftDurationMinutes / 60} ชม.</span>
+                                </div>
+                            </div>
+                            <div className="text-xs text-stone-400 mt-1">
+                                โบนัส: <span className="text-yellow-500">+{item.maxBonus} {CURRENCY}/วัน</span>
+                            </div>
+                            {item.specialEffect && (
+                                <div className="text-[10px] text-emerald-400 mt-1 font-bold">
+                                    {item.specialEffect}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-stone-950 px-2 py-1 rounded border border-stone-800 flex justify-between text-[10px]">
+                        <span className="text-stone-400">Success: <span className="text-white font-bold">90%</span></span>
+                        <span className="text-yellow-600">Great Success: <span className="text-yellow-400 font-bold animate-pulse">10%</span></span>
+                    </div>
+
+                    <div className="bg-stone-950 p-3 rounded-lg border border-stone-800 space-y-2">
+                        <div className="text-[10px] text-stone-500 uppercase font-bold tracking-wider">วัตถุดิบที่ต้องใช้</div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {matsList.map((m, i) => (
+                                <div key={i} className="flex items-center justify-between text-xs bg-stone-900 p-1.5 rounded">
+                                    <div className="flex items-center gap-2">
+                                        <MaterialIcon id={m.tier} size="w-4 h-4" iconSize={12} />
+                                        <span className="text-stone-300">{MATERIAL_CONFIG.NAMES[m.tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span>
+                                    </div>
+                                    <span className={m.owned >= m.needed ? 'text-green-400' : 'text-red-400'}>
+                                        {m.owned}/{m.needed}
+                                    </span>
+                                </div>
+                            ))}
+                            <div className="flex items-center justify-between text-xs bg-stone-900 p-1.5 rounded col-span-2">
+                                <div className="flex items-center gap-2">
+                                    <Coins size={14} className="text-yellow-500" />
+                                    <span className="text-stone-300">ค่าธรรมเนียม</span>
+                                </div>
+                                <span className={canAffordFee ? 'text-green-400' : 'text-red-400'}>
+                                    {fee.toLocaleString()} {CURRENCY}
                                 </span>
                             </div>
-                        ))}
-                        <div className="flex items-center justify-between text-xs bg-stone-900 p-1.5 rounded col-span-2">
-                            <div className="flex items-center gap-2">
-                                <Coins size={14} className="text-yellow-500" />
-                                <span className="text-stone-300">ค่าธรรมเนียม</span>
-                            </div>
-                            <span className={canAffordFee ? 'text-green-400' : 'text-red-400'}>
-                                {fee.toLocaleString()} {CURRENCY}
-                            </span>
                         </div>
                     </div>
-                </div>
 
-                <button
-                    onClick={() => handleStartCraft(item.id)}
-                    disabled={!canCraft}
-                    className={`w-full py-2.5 rounded font-bold text-sm flex items-center justify-center gap-2 transition-all
+                    <button
+                        onClick={() => handleStartCraft(item.id)}
+                        disabled={!canCraft}
+                        className={`w-full py-2.5 rounded font-bold text-sm flex items-center justify-center gap-2 transition-all
                       ${canCraft ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg' : 'bg-stone-800 text-stone-600 cursor-not-allowed border border-stone-700'}
                   `}
-                >
-                    <Hammer size={16} /> เริ่มคราฟต์
-                </button>
+                    >
+                        <Hammer size={16} /> เริ่มคราฟต์
+                    </button>
+                </div>
             </div>
         );
     };
@@ -407,12 +552,22 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                     const hours = Math.floor(timeLeft / (1000 * 60 * 60));
                     const mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
 
+                    let rarityStyle = RARITY_SETTINGS.COMMON;
+                    if (item.id === 'hat') rarityStyle = RARITY_SETTINGS.UNCOMMON;
+                    else if (item.id === 'uniform') rarityStyle = RARITY_SETTINGS.RARE;
+                    else if (item.id === 'bag') rarityStyle = RARITY_SETTINGS.SUPER_RARE;
+                    else if (item.id === 'boots') rarityStyle = RARITY_SETTINGS.EPIC;
+                    else if (item.id === 'glasses') rarityStyle = RARITY_SETTINGS.LEGENDARY;
+                    else if (item.id === 'mobile') rarityStyle = RARITY_SETTINGS.ULTRA_LEGENDARY;
+                    else if (item.id === 'pc') rarityStyle = RARITY_SETTINGS.MYTHIC;
+                    else if (item.id === 'auto_excavator') rarityStyle = RARITY_SETTINGS.MYTHIC;
+
                     return (
                         <div key={q.id} className="bg-stone-900 border border-stone-700 p-3 rounded-lg flex items-center gap-4 relative overflow-hidden">
                             <div className="absolute inset-0 bg-stone-800 z-0" style={{ width: `${progress}%`, transition: 'width 1s linear', opacity: 0.2 }}></div>
 
-                            <div className="relative z-10 w-10 h-10 bg-stone-950 rounded flex items-center justify-center border border-stone-600">
-                                {getIcon(item.icon, "w-6 h-6 text-stone-400", item.id)}
+                            <div className={`relative z-10 w-10 h-10 bg-stone-950 rounded flex items-center justify-center border ${rarityStyle.border}`}>
+                                {getIcon(item.icon, `w-6 h-6 ${rarityStyle.color}`, item.id)}
                             </div>
 
                             <div className="relative z-10 flex-1">
@@ -432,7 +587,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             <div className="relative z-10">
                                 {isReady ? (
                                     <button onClick={() => handleClaimCraft(q.id)} className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded flex items-center gap-1 shadow-lg animate-bounce">
-                                        <CheckCircle2 size={12} /> รับของ
+                                        <Star size={12} /> รับของ
                                     </button>
                                 ) : (
                                     <div className="text-xs text-stone-500 font-mono"><Clock size={14} className="animate-spin-slow" /></div>
@@ -471,7 +626,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             onClick={() => setActiveTab('SHOP')}
                             className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'SHOP' ? 'text-yellow-500 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
                         >
-                            <ShoppingBag size={16} /> ร้านค้า (Shop)
+                            <ShoppingBag size={16} /> ร้านค้า (SHOP)
                         </button>
                         <button
                             onClick={() => setActiveTab('WORKSHOP')}
@@ -529,7 +684,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent"></div>
                         <div className="absolute -top-[100px] left-1/2 -translate-x-1/2 w-[200px] h-[200px] bg-yellow-500/20 blur-[50px] rounded-full"></div>
 
-                        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 mb-6 drop-shadow-md tracking-wider">CRAFTING SUCCESS!</h2>
+                        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 mb-6 drop-shadow-md tracking-wider">ผลิตไอเทมสำเร็จ!</h2>
 
                         <div className="w-32 h-32 bg-stone-950 rounded-full border-4 border-yellow-600/50 flex items-center justify-center mb-6 shadow-inner relative group">
                             <div className="absolute inset-0 bg-yellow-500/10 rounded-full animate-pulse"></div>
@@ -540,21 +695,21 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                         <div className="text-center mb-6 w-full">
                             <h3 className="text-xl font-bold text-white mb-2">{claimedItem.name}</h3>
                             <div className={`inline-block px-3 py-1 rounded text-xs font-bold uppercase mb-4 border ${RARITY_SETTINGS.RARE.border} ${RARITY_SETTINGS.RARE.color} bg-stone-950`}>
-                                CRAFTED ITEM
+                                ไอเทมที่ผลิตได้
                             </div>
 
                             <div className="bg-stone-950/50 rounded-xl p-4 space-y-3 border border-stone-800 text-sm w-full">
                                 <div className="flex justify-between items-center text-stone-400">
-                                    <span>Bonus</span>
-                                    <span className="text-yellow-400 font-bold">+{claimedItem.dailyBonus.toFixed(1)} {CURRENCY}/วัน</span>
+                                    <span>โบนัสรายวัน</span>
+                                    <span className="text-yellow-400 font-bold">+{(claimedItem.dailyBonus || 0).toFixed(1)} {CURRENCY}/วัน</span>
                                 </div>
                                 <div className="flex justify-between items-center text-stone-400">
-                                    <span>Duration</span>
-                                    <span className="text-white font-bold">{claimedItem.lifespanDays} Days</span>
+                                    <span>ระยะเวลาใช้งาน</span>
+                                    <span className="text-white font-bold">{claimedItem.lifespanDays} วัน</span>
                                 </div>
                                 {claimedItem.specialEffect && (
                                     <div className="pt-2 border-t border-stone-800 text-xs text-emerald-400 text-center font-bold">
-                                        Effect: {claimedItem.specialEffect}
+                                        คุณสมบัติ: {claimedItem.specialEffect}
                                     </div>
                                 )}
                             </div>
@@ -564,11 +719,13 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             onClick={() => setClaimedItem(null)}
                             className="w-full py-3 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-stone-900 font-bold rounded-xl shadow-lg transform hover:-translate-y-1 transition-all"
                         >
-                            เก็บเข้ากระเป๋า (COLLECT)
+                            เก็บเข้ากระเป๋า (ยืนยัน)
                         </button>
                     </div>
                 </div>
             )}
+            {/* CONFIRMATION POPUP */}
+            {renderConfirmationModal()}
         </div>
     );
 };

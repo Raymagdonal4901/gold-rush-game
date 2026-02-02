@@ -1,8 +1,8 @@
-
 import React from 'react';
-import { X, AlertCircle, CheckCircle2, Pickaxe, Sparkles, Gem, Hammer, HelpCircle, Coins, Lock, Hexagon, Cable, TowerControl } from 'lucide-react';
+import { X, AlertCircle, CheckCircle2, Pickaxe, Sparkles, Gem, Hammer, HelpCircle, Coins, Lock, Hexagon, Cable, TowerControl, Cpu } from 'lucide-react';
 import { CURRENCY, RIG_PRESETS, RigPreset, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
-import { AccessoryItem, OilRig } from '../types';
+import { AccessoryItem, OilRig } from '../services/types';
+import { MaterialIcon } from './MaterialIcon';
 
 interface InvestmentModalProps {
   isOpen: boolean;
@@ -62,55 +62,45 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
     }
   };
 
-  // Helper to render premium icons based on tier ID (Materials) - COMPACT SIZE
+  // Helper to render premium icons based on tier ID - Using custom images
   const renderTierIcon = (id: number) => {
-    // Reduced sizes from w-16/20/24 to w-10/12/14
-    const baseClass = "relative flex items-center justify-center transition-transform group-hover:scale-110 duration-500 shrink-0";
+    const baseClass = "relative flex items-center justify-center transition-transform group-hover:scale-110 duration-500 shrink-0 bg-white border-2";
+    const tierColors = {
+      1: 'border-stone-400',
+      2: 'border-blue-500',
+      3: 'border-stone-600',
+      4: 'border-orange-500',
+      5: 'border-slate-500',
+      6: 'border-yellow-500',
+      7: 'border-cyan-400',
+      8: 'border-purple-500'
+    };
+    const colorClass = tierColors[id as keyof typeof tierColors] || 'border-stone-200';
 
-    switch (id) {
-      case 1: // Tier 1: Coal
-        return (
-          <div className={`${baseClass} w-10 h-10 rounded-full border-2 bg-gradient-to-br from-stone-800 to-black border-stone-600 text-stone-400 shadow-lg shadow-black/50`}>
-            <Pickaxe size={20} strokeWidth={1.5} />
-          </div>
-        );
-      case 2: // Tier 2: Copper
-        return (
-          <div className={`${baseClass} w-10 h-10 rounded-full border-2 bg-gradient-to-br from-orange-900 to-stone-900 border-orange-600 text-orange-500 shadow-lg shadow-orange-900/40`}>
-            <Cable size={20} strokeWidth={2} />
-          </div>
-        );
-      case 3: // Tier 3: Iron
-        return (
-          <div className={`${baseClass} w-12 h-12 rounded-full border-2 bg-gradient-to-br from-slate-600 to-slate-900 border-slate-400 text-slate-200 shadow-lg shadow-slate-500/40`}>
-            <Hammer size={24} strokeWidth={1.5} />
-          </div>
-        );
-      case 4: // Tier 4: Gold
-        return (
-          <div className={`${baseClass} w-12 h-12 rounded-full border-2 bg-gradient-to-br from-yellow-700 via-yellow-900 to-stone-900 border-yellow-500 text-yellow-400 shadow-lg shadow-yellow-600/40`}>
-            <Coins size={24} strokeWidth={1.5} />
-          </div>
-        );
-      case 5: // Tier 5: Diamond
-        return (
-          <div className={`${baseClass} w-14 h-14 rounded-full border-2 bg-gradient-to-br from-cyan-900 via-blue-900 to-stone-900 border-cyan-400 text-cyan-300 shadow-lg shadow-cyan-500/50`}>
-            <TowerControl size={28} strokeWidth={1.5} />
-            <Sparkles className="absolute top-0 right-0 text-white animate-spin" size={10} />
-          </div>
-        );
-      default:
-        return null;
-    }
+    // Size based on tier level for premium feel
+    const sizeClass = id <= 2 ? "w-10 h-10" : id <= 5 ? "w-12 h-12" : "w-14 h-14";
+
+    return (
+      <div className={`${baseClass} ${sizeClass} ${colorClass} rounded-lg overflow-hidden`}>
+        <img
+          src={`/assets/rigs/rig_${id}.png`}
+          alt={`Rig Tier ${id}`}
+          className="w-full h-full object-contain p-1"
+        />
+      </div>
+    );
   };
 
   const getTierStyles = (id: number) => {
     switch (id) {
       case 1: return { border: "border-stone-600", text: "text-stone-400", bg: "from-stone-800/50 to-stone-950/80" };
-      case 2: return { border: "border-orange-600", text: "text-orange-500", bg: "from-orange-900/20 to-stone-950/80" };
-      case 3: return { border: "border-slate-400", text: "text-slate-300", bg: "from-slate-800/50 to-stone-950/80" };
-      case 4: return { border: "border-yellow-500", text: "text-yellow-400", bg: "from-yellow-900/20 to-stone-950/80" };
-      case 5: return { border: "border-cyan-400", text: "text-cyan-300", bg: "from-cyan-900/20 to-stone-950/80" };
+      case 2: return { border: "border-blue-600", text: "text-blue-400", bg: "from-blue-900/20 to-stone-950/80" };
+      case 3: return { border: "border-stone-500", text: "text-stone-300", bg: "from-stone-800/50 to-stone-950/80" };
+      case 4: return { border: "border-orange-500", text: "text-orange-400", bg: "from-orange-900/20 to-stone-950/80" };
+      case 5: return { border: "border-slate-400", text: "text-slate-300", bg: "from-slate-800/50 to-stone-950/80" };
+      case 6: return { border: "border-yellow-500", text: "text-yellow-400", bg: "from-yellow-900/20 to-stone-950/80" };
+      case 7: return { border: "border-cyan-400", text: "text-cyan-300", bg: "from-cyan-900/20 to-stone-950/80" };
+      case 8: return { border: "border-purple-500", text: "text-purple-400", bg: "from-purple-900/30 to-stone-950/80" };
       default: return { border: "border-stone-800", text: "text-stone-400", bg: "bg-stone-900" };
     }
   };
@@ -174,18 +164,19 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
               }
 
               const canBuy = isAffordable && !isSlotLimitReached && !isMaxReached;
-              const netProfit = (preset.dailyProfit * 30 * preset.durationMonths) - preset.price;
+              // Use bonusProfit for Tier 1-2, calculate for others
+              const netProfit = preset.bonusProfit !== undefined ? preset.bonusProfit : (preset.dailyProfit * 30 * (preset.durationMonths || 1)) - preset.price;
               const styles = getTierStyles(preset.id);
               const isCrafting = !!preset.craftingRecipe;
 
               return (
-                <div key={preset.id} className={`bg-stone-900/60 backdrop-blur border rounded-lg overflow-hidden flex flex-col transition-all duration-300 group relative shadow-lg hover:shadow-xl hover:bg-stone-900 ${styles.border}`}>
+                <div key={preset.id} className={`bg-stone-900/60 backdrop-blur border rounded-lg overflow-hidden flex flex-col transition-all duration-300 group relative hover:bg-stone-900 ${styles.border}`}>
 
                   {/* Compact Header */}
                   <div className={`p-3 flex items-center gap-3 bg-gradient-to-r ${styles.bg} border-b border-stone-800/50`}>
                     {renderTierIcon(preset.id)}
                     <div className="min-w-0">
-                      <div className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-0.5">LVL {preset.id}</div>
+                      <div className="text-xs font-black text-white uppercase tracking-widest mb-0.5">Tier {preset.id}</div>
                       <h3 className={`font-display font-bold text-sm leading-tight truncate ${styles.text}`}>
                         {preset.name}
                       </h3>
@@ -201,30 +192,43 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
                     <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
                       <span className="text-stone-500">สัญญา</span>
                       <span className="text-stone-300 font-mono">
-                        {preset.specialProperties?.infiniteDurability ? 'ถาวร (∞)' : `${preset.durationMonths} เดือน`}
+                        {preset.specialProperties?.infiniteDurability ? 'ถาวร (∞)' : preset.durationDays ? `${preset.durationDays} วัน` : `${preset.durationMonths} เดือน`}
                       </span>
+                    </div>
+                    <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
+                      <span className="text-stone-500">ค่าพลังงาน</span>
+                      <span className="text-orange-400 font-mono">-{preset.energyCostPerDay}/{CURRENCY} 24h</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
+                      <span className="text-stone-500">ค่าซ่อม</span>
+                      <span className="text-red-400 font-mono">{preset.id === 8 ? '-' : `-${preset.repairCost} ${CURRENCY} (15 วัน)`}</span>
                     </div>
 
                     {isCrafting ? (
                       <div className="mt-auto pt-2 border-t border-dashed border-stone-800">
                         <div className="text-[10px] text-stone-400 mb-1">วัตถุดิบที่ต้องใช้:</div>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-2">
                           {preset.craftingRecipe?.materials && Object.entries(preset.craftingRecipe.materials).map(([tierStr, amt]) => {
                             const tier = parseInt(tierStr);
                             const has = materials[tier] || 0;
+                            const enough = has >= amt;
                             return (
-                              <span key={`mat-${tier}`} className={`text-[10px] px-1.5 py-0.5 rounded border ${has >= amt ? 'bg-emerald-900/30 border-emerald-800 text-emerald-400' : 'bg-red-900/30 border-red-800 text-red-400'}`}>
-                                {MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES]}: {has}/{amt}
-                              </span>
+                              <div key={`mat-${tier}`} className={`flex items-center gap-1.5 px-2 py-1 rounded border ${enough ? 'bg-emerald-900/30 border-emerald-800' : 'bg-red-900/30 border-red-800'}`}>
+                                <div className="w-10 h-10 flex items-center justify-center bg-stone-900/50 rounded-lg">
+                                  <MaterialIcon id={tier} size="w-8 h-8" iconSize={16} />
+                                </div>
+                                <span className={`text-[10px] font-mono ${enough ? 'text-emerald-400' : 'text-red-400'}`}>{has}/{amt}</span>
+                              </div>
                             )
                           })}
                           {preset.craftingRecipe?.items && Object.entries(preset.craftingRecipe.items).map(([id, amt]) => {
                             const has = inventory.filter(i => i.typeId === id).length;
-                            const label = SHOP_ITEMS.find(i => i.id === id)?.name || id;
+                            const enough = has >= amt;
                             return (
-                              <span key={`item-${id}`} className={`text-[10px] px-1.5 py-0.5 rounded border ${has >= amt ? 'bg-emerald-900/30 border-emerald-800 text-emerald-400' : 'bg-red-900/30 border-red-800 text-red-400'}`}>
-                                {label}: {has}/{amt}
-                              </span>
+                              <div key={`item-${id}`} className={`flex items-center gap-1 px-1.5 py-0.5 rounded border ${enough ? 'bg-emerald-900/30 border-emerald-800' : 'bg-red-900/30 border-red-800'}`}>
+                                <Cpu size={14} className={enough ? 'text-emerald-400' : 'text-red-400'} />
+                                <span className={`text-[10px] font-mono ${enough ? 'text-emerald-400' : 'text-red-400'}`}>{has}/{amt}</span>
+                              </div>
                             )
                           })}
                         </div>
@@ -232,7 +236,7 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
                     ) : (
                       <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded border border-emerald-900/10">
                         <span className="text-stone-500">กำไรสุทธิ</span>
-                        <span className="text-emerald-400 font-bold font-mono">+{netProfit.toLocaleString()}</span>
+                        <span className="text-emerald-400 font-bold font-mono">+{(netProfit || 0).toLocaleString()}</span>
                       </div>
                     )}
                   </div>
@@ -257,11 +261,11 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
                         <span>ครบจำกัด ({preset.specialProperties?.maxAllowed})</span>
                       ) : (
                         <>
-                          {isAffordable ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                          {isAffordable ? null : <AlertCircle size={12} />}
                           {isCrafting ? (
                             <span>ผลิตเครื่องจักร</span>
                           ) : (
-                            <span className="font-mono">{preset.price.toLocaleString()}</span>
+                            <span className="font-mono">฿ {preset.price.toLocaleString()}</span>
                           )}
                         </>
                       )}

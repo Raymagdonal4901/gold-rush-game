@@ -1,7 +1,16 @@
 import axios from 'axios';
-import { User, OilRig, AccessoryItem } from './types';
+export interface GlobalStats {
+    onlineMiners: number;
+    totalOreMined: number;
+    marketVolume: number;
+}
+export interface UserStats {
+    totalDeposits: number;
+    totalWithdrawals: number;
+}
+import { User, OilRig, AccessoryItem, ClaimRequest, WithdrawalRequest, DepositRequest, Transaction } from './types';
 
-const API_URL = (import.meta as any).env.VITE_API_URL || 'http://192.168.100.234:5000/api';
+const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api';
 
 const client = axios.create({
     baseURL: API_URL,
@@ -42,6 +51,16 @@ export const api = {
         return res.data;
     },
 
+    refillEnergy: async (): Promise<{ cost: number, balance: number, energy: number }> => {
+        const res = await client.post('/auth/refill-energy');
+        return res.data;
+    },
+
+    refillRigEnergy: async (rigId: string): Promise<{ cost: number, balance: number, energy: number }> => {
+        const res = await client.post(`/rigs/${rigId}/refill`);
+        return res.data;
+    },
+
     logout: () => {
         localStorage.removeItem('token');
     },
@@ -52,8 +71,8 @@ export const api = {
         return res.data.map(mapBackendRigToFrontend);
     },
 
-    buyRig: async (name: string, investment: number, dailyProfit: number, durationDays: number): Promise<{ rig: OilRig, glove: AccessoryItem }> => {
-        const res = await client.post('/rigs/buy', { name, investment, dailyProfit, durationDays });
+    buyRig: async (name: string, investment: number, dailyProfit: number, durationDays: number, repairCost?: number, energyCostPerDay?: number, bonusProfit?: number): Promise<{ rig: OilRig, glove: AccessoryItem }> => {
+        const res = await client.post('/rigs/buy', { name, investment, dailyProfit, durationDays, repairCost, energyCostPerDay, bonusProfit });
         return {
             rig: mapBackendRigToFrontend(res.data.rig),
             glove: mapBackendGloveToFrontend(res.data.glove)
@@ -65,12 +84,32 @@ export const api = {
         const res = await client.post('/transactions/deposit', { amount, slipImage });
         return res.data;
     },
-    createWithdrawalRequest: async (amount: number): Promise<any> => {
-        const res = await client.post('/transactions/withdraw', { amount });
+    createWithdrawalRequest: async (amount: number, pin: string): Promise<any> => {
+        const res = await client.post('/transactions/withdraw', { amount, pin });
         return res.data;
     },
     claimReward: async (rigId: string, amount: number): Promise<any> => {
         const res = await client.post('/transactions/claim', { rigId, amount });
+        return res.data;
+    },
+    getMyHistory: async (): Promise<Transaction[]> => {
+        const res = await client.get('/transactions/history');
+        return res.data.map(mapBackendTransactionToFrontend);
+    },
+    getGlobalStats: async (): Promise<GlobalStats> => {
+        const res = await client.get('/transactions/stats');
+        return res.data;
+    },
+
+
+    // Quests
+    getQuestStatus: async (): Promise<{ weeklyStats: any, lastQuestReset: number, claimedQuests: string[] }> => {
+        const res = await client.get('/quests/status');
+        return res.data;
+    },
+
+    claimQuestReward: async (questId: string): Promise<any> => {
+        const res = await client.post('/quests/claim', { questId });
         return res.data;
     },
 
@@ -93,17 +132,17 @@ export const api = {
             const res = await client.post('/admin/config', data);
             return res.data;
         },
-        getPendingClaims: async (): Promise<any[]> => {
+        getPendingClaims: async (): Promise<ClaimRequest[]> => {
             const res = await client.get('/admin/claims');
-            return res.data;
+            return res.data.map(mapBackendClaimToFrontend);
         },
-        getPendingWithdrawals: async (): Promise<any[]> => {
+        getPendingWithdrawals: async (): Promise<WithdrawalRequest[]> => {
             const res = await client.get('/admin/withdrawals');
-            return res.data;
+            return res.data.map(mapBackendWithdrawalToFrontend);
         },
-        getPendingDeposits: async (): Promise<any[]> => {
+        getPendingDeposits: async (): Promise<DepositRequest[]> => {
             const res = await client.get('/admin/deposits');
-            return res.data;
+            return res.data.map(mapBackendDepositToFrontend);
         },
         processDeposit: async (id: string, status: 'APPROVED' | 'REJECTED'): Promise<any> => {
             const res = await client.post(`/admin/deposits/${id}/process`, { status });
@@ -111,6 +150,18 @@ export const api = {
         },
         processWithdrawal: async (id: string, status: 'APPROVED' | 'REJECTED'): Promise<any> => {
             const res = await client.post(`/admin/withdrawals/${id}/process`, { status });
+            return res.data;
+        },
+        getUserStats: async (userId: string): Promise<UserStats> => {
+            const res = await client.get(`/admin/users/${userId}/stats`);
+            return res.data;
+        },
+        giveCompensation: async (userId: string, amount: number, reason: string): Promise<any> => {
+            const res = await client.post('/admin/users/compensation', { userId, amount, reason });
+            return res.data;
+        },
+        addItem: async (userId: string, itemId: string, amount: number): Promise<any> => {
+            const res = await client.post('/admin/users/items', { userId, itemId, amount });
             return res.data;
         }
     }
@@ -130,9 +181,14 @@ const mapBackendRigToFrontend = (backendRig: any): OilRig => {
         purchasedAt: new Date(backendRig.purchasedAt || backendRig.createdAt).getTime(),
         lastClaimAt: Date.now(),
         rarity: backendRig.rarity as any,
-        bonusProfit: 0,
+        bonusProfit: backendRig.bonusProfit || 0,
         status: backendRig.status,
-        slots: backendRig.slots || []
+        slots: backendRig.slots || [],
+        repairCost: backendRig.repairCost || 0,
+        energyCostPerDay: backendRig.energyCostPerDay || 0,
+        expiresAt: new Date(backendRig.expiresAt).getTime(),
+        energy: backendRig.energy !== undefined ? backendRig.energy : 100,
+        lastEnergyUpdate: backendRig.lastEnergyUpdate ? new Date(backendRig.lastEnergyUpdate).getTime() : new Date(backendRig.purchaseDate || backendRig.createdAt || Date.now()).getTime()
     } as OilRig;
 };
 
@@ -140,14 +196,66 @@ const mapBackendGloveToFrontend = (backendGlove: any): AccessoryItem => {
     if (!backendGlove) return {} as AccessoryItem;
     return {
         id: backendGlove._id || backendGlove.id,
+        typeId: backendGlove.typeId || backendGlove.type || 'glove_common',
         name: backendGlove.name,
-        type: backendGlove.type,
-        effect: backendGlove.effect,
-        value: backendGlove.value,
+        price: backendGlove.price || 0,
+        dailyBonus: backendGlove.dailyBonus || 0,
+        durationBonus: backendGlove.durationBonus || 0,
         rarity: backendGlove.rarity,
-        durability: backendGlove.durability,
-        maxDurability: backendGlove.maxDurability,
-        level: backendGlove.level,
-        equippedSlot: backendGlove.equippedSlot
+        purchasedAt: new Date(backendGlove.purchasedAt || Date.now()).getTime(),
+        lifespanDays: backendGlove.lifespanDays || 30,
+        expireAt: new Date(backendGlove.expireAt || Date.now() + 30 * 24 * 60 * 60 * 1000).getTime(),
+        level: backendGlove.level || 1,
+        // Optional fields that might be in backendGlove or not
+        isHandmade: backendGlove.isHandmade,
+        specialEffect: backendGlove.specialEffect
     } as AccessoryItem;
 };
+
+const mapBackendDepositToFrontend = (d: any): DepositRequest => ({
+    id: d._id || d.id,
+    userId: d.userId,
+    username: d.username,
+    amount: d.amount,
+    slipImage: d.slipImage,
+    timestamp: new Date(d.createdAt || d.timestamp).getTime(),
+    status: d.status,
+    transactionId: d.transactionId
+});
+
+const mapBackendWithdrawalToFrontend = (w: any): WithdrawalRequest => ({
+    id: w._id || w.id,
+    userId: w.userId,
+    username: w.username,
+    amount: w.amount,
+    timestamp: new Date(w.createdAt || w.timestamp).getTime(),
+    status: w.status,
+    transactionId: w.transactionId
+});
+
+const mapBackendClaimToFrontend = (c: any): ClaimRequest => ({
+    id: c._id || c.id,
+    userId: c.userId,
+    username: c.username,
+    rigId: c.rigId,
+    rigName: c.rigName,
+    amount: c.amount,
+    timestamp: new Date(c.createdAt || c.timestamp).getTime(),
+    status: c.status,
+    transactionId: c.transactionId
+});
+
+const mapBackendTransactionToFrontend = (tx: any): Transaction => ({
+    id: tx._id || tx.id,
+    userId: tx.userId,
+    type: tx.type,
+    amount: tx.amount,
+    timestamp: new Date(tx.createdAt || tx.timestamp).getTime(),
+    status: tx.status === 'APPROVED' ? 'COMPLETED' : tx.status,
+    description: tx.description || (
+        tx.type === 'DEPOSIT' ? 'ฝากเงินเข้าระบบ' :
+            tx.type === 'WITHDRAWAL' ? 'ถอนเงินออกจากระบบ' :
+                tx.type === 'MINING_CLAIM' ? `รับรายได้จาก ${tx.rigName || 'เครื่องขุด'}` :
+                    'รายการอื่นๆ'
+    )
+});

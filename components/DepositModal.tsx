@@ -3,7 +3,7 @@ import { X, QrCode, ArrowRight, CheckCircle, Upload, AlertCircle, ScanLine, Cloc
 import { CURRENCY, TRANSACTION_LIMITS } from '../constants';
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
-import { User } from '../types';
+import { User } from '../services/types';
 
 interface DepositModalProps {
     isOpen: boolean;
@@ -17,6 +17,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, onD
     const [systemQr, setSystemQr] = useState<string | null>(null);
     const [slipFile, setSlipFile] = useState<File | null>(null);
     const [slipPreview, setSlipPreview] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const currentUser: User | null = MockDB.getSession();
@@ -52,7 +53,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, onD
     };
 
     const handleConfirmPayment = () => {
-        if (!slipPreview || !currentUser) return;
+        if (!slipPreview || !currentUser || isLoading) return;
+
+        setIsLoading(true);
 
         // Create Pending Request
         api.createDepositRequest(
@@ -64,6 +67,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, onD
         }).catch(err => {
             console.error("Deposit failed", err);
             alert("เกิดข้อผิดพลาดในการแจ้งฝาก: " + (err.response?.data?.message || err.message));
+        }).finally(() => {
+            setIsLoading(false);
         });
     };
 
@@ -208,10 +213,19 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, onD
 
                                     <button
                                         onClick={handleConfirmPayment}
-                                        disabled={!slipFile}
+                                        disabled={!slipFile || isLoading}
                                         className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-800 disabled:text-stone-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
                                     >
-                                        <FileText size={18} /> ยืนยันการแจ้งโอน
+                                        {isLoading ? (
+                                            <>
+                                                <div className="animate-spin h-4 w-4 border-2 border-white/50 border-t-white rounded-full"></div>
+                                                <span>กำลังส่งข้อมูล...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FileText size={18} /> ยืนยันการแจ้งโอน
+                                            </>
+                                        )}
                                     </button>
 
                                     <button

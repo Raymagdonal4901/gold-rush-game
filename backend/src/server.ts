@@ -5,6 +5,7 @@ import { connectDB } from './config/database';
 import authRoutes from './routes/authRoutes';
 import rigRoutes from './routes/rigRoutes';
 import adminRoutes from './routes/adminRoutes';
+import questRoutes from './routes/questRoutes';
 // โหลด Environment Variables
 dotenv.config();
 const app = express();
@@ -17,6 +18,7 @@ import transactionRoutes from './routes/transactionRoutes';
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rigs', rigRoutes);
+app.use('/api/quests', questRoutes); // Add Quests API
 app.use('/api/admin', adminRoutes);
 app.use('/api/transactions', transactionRoutes);
 // Health Check

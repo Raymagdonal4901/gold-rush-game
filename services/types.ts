@@ -3,7 +3,8 @@ export type Rarity = 'COMMON' | 'RARE' | 'SUPER_RARE' | 'EPIC' | 'LEGENDARY';
 
 export interface RigConfig {
   investment: number;
-  durationMonths: number;
+  durationMonths?: number;
+  durationDays?: number;
 }
 
 export interface OilRig {
@@ -20,8 +21,13 @@ export interface OilRig {
   lastRepairAt?: number;
   bonusProfit: number;
   rarity: Rarity;
+  expiresAt: number;
   renewalCount?: number;
   currentMaterials?: number;
+  repairCost: number;
+  energyCostPerDay: number;
+  energy: number;
+  lastEnergyUpdate?: number;
   slots?: (string | null)[]; // Index 0 is reserved for Glove
   explorationEnd?: number; // Timestamp when dungeon exploration ends
 }
@@ -126,6 +132,8 @@ export interface User {
 
   // Complex Objects
   stats: UserStats;
+  weeklyStats?: UserStats; // New: Weekly stats for quest tracking
+  lastQuestReset?: number; // New: Timestamp of last weekly reset
   activeExpedition?: {
     dungeonId: number;
     rigId: string;
@@ -171,13 +179,14 @@ export interface WithdrawalRequest {
 export interface Notification {
   id: string;
   userId: string;
+  title?: string;
   message: string;
   type: 'SUCCESS' | 'ERROR' | 'INFO';
   read: boolean;
   timestamp: number;
 }
 
-export type TransactionType = 'DEPOSIT' | 'WITHDRAWAL' | 'MINING_CLAIM' | 'ASSET_PURCHASE' | 'REFUND' | 'ACCESSORY_PURCHASE' | 'ACCESSORY_SELL' | 'ACCESSORY_UPGRADE' | 'ACCESSORY_CRAFT' | 'EQUIPMENT_CLAIM' | 'RIG_RENEWAL' | 'REPAIR' | 'MATERIAL_SELL' | 'MATERIAL_BUY' | 'MATERIAL_CRAFT' | 'ENERGY_REFILL' | 'REFERRAL_BONUS' | 'DAILY_BONUS' | 'QUEST_REWARD' | 'LUCKY_DRAW' | 'SLOT_EXPANSION' | 'DUNGEON_ENTRY' | 'DUNGEON_REWARD' | 'RANK_REWARD' | 'GIFT_CLAIM';
+export type TransactionType = 'DEPOSIT' | 'WITHDRAWAL' | 'MINING_CLAIM' | 'ASSET_PURCHASE' | 'REFUND' | 'ACCESSORY_PURCHASE' | 'ACCESSORY_SELL' | 'ACCESSORY_UPGRADE' | 'ACCESSORY_CRAFT' | 'EQUIPMENT_CLAIM' | 'RIG_RENEWAL' | 'REPAIR' | 'MATERIAL_SELL' | 'MATERIAL_BUY' | 'MATERIAL_CRAFT' | 'ENERGY_REFILL' | 'REFERRAL_BONUS' | 'DAILY_BONUS' | 'QUEST_REWARD' | 'LUCKY_DRAW' | 'SLOT_EXPANSION' | 'DUNGEON_ENTRY' | 'DUNGEON_REWARD' | 'RANK_REWARD' | 'GIFT_CLAIM' | 'MINING_REVENUE' | 'COMPENSATION';
 
 export interface Transaction {
   id: string;

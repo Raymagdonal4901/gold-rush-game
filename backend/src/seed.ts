@@ -16,12 +16,11 @@ const seedAdmin = async () => {
             console.log('Admin user already exists');
             // Update to ensure role is ADMIN
             adminExists.role = 'ADMIN';
-            // Optional: Reset password if needed, but let's assume if it exists, they know it. 
-            // Or force reset:
-            // const salt = await bcrypt.genSalt(10);
-            // adminExists.password = await bcrypt.hash('123456', salt);
+            // Force reset password to 123456
+            const salt = await bcrypt.genSalt(10);
+            adminExists.password = await bcrypt.hash('123456', salt);
             await adminExists.save();
-            console.log('Admin role updated');
+            console.log('Admin password reset to: 123456');
         } else {
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash('123456', salt);

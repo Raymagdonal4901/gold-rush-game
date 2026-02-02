@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Skull, Flame, Rocket, Clock, Coins, Key, ArrowRight, Timer, CheckCircle2, AlertCircle, Sparkles, Pickaxe, Hammer, Info, Hourglass } from 'lucide-react';
 import { DUNGEON_CONFIG, CURRENCY, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
 import { MockDB } from '../services/db';
-import { User, Expedition, OilRig, AccessoryItem } from '../types';
+import { User, Expedition, OilRig, AccessoryItem } from '../services/types';
 
 interface DungeonModalProps {
     isOpen: boolean;
@@ -101,11 +101,15 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
         setIsProcessing(true);
         try {
             const res = MockDB.claimExpedition(user.id);
-            setClaimResult(res);
-            onRefresh();
+            // IMPORTANT: Update local state BEFORE triggering refresh
+            // This ensures React batches these updates together
             setActiveExpedition(null);
+            setClaimResult(res);
+            // Now refresh parent data
+            onRefresh();
         } catch (e: any) {
-            alert(e.message);
+            console.error("Claim Expedition Error:", e);
+            alert(e.message || "Failed to claim reward");
         } finally {
             setIsProcessing(false);
         }
@@ -230,57 +234,37 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                         </div>
                     ) : claimResult ? (
                         // Claim Result View
-                        // Claim Result View (Luxury Edition)
-                        <div className="flex flex-col items-center justify-center h-full relative overflow-hidden animate-in zoom-in duration-500">
+                        // Claim Result View (Compact Edition)
+                        <div className="flex flex-col items-center justify-center h-full relative overflow-hidden animate-in zoom-in duration-300 p-4">
                             {/* Ambient Background Effects */}
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-yellow-500/20 via-transparent to-transparent animate-pulse"></div>
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-yellow-500/10 via-transparent to-transparent"></div>
 
-                            {/* Particles/Confetti (Pre-defined positions for performance) */}
-                            <div className="absolute inset-0 pointer-events-none">
-                                {[...Array(20)].map((_, i) => (
-                                    <div
-                                        key={i}
-                                        className="absolute rounded-full animate-bounce"
-                                        style={{
-                                            left: `${Math.random() * 100}%`,
-                                            top: `${Math.random() * 100}%`,
-                                            width: `${Math.random() * 6 + 2}px`,
-                                            height: `${Math.random() * 6 + 2}px`,
-                                            backgroundColor: ['#fbbf24', '#f59e0b', '#d97706', '#ffffff'][Math.floor(Math.random() * 4)],
-                                            animationDuration: `${Math.random() * 2 + 1}s`,
-                                            animationDelay: `${Math.random()}s`,
-                                            opacity: 0.6
-                                        }}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Main Icon with Glow */}
-                            <div className="relative mb-6">
-                                <div className="absolute inset-0 bg-yellow-500 blur-xl opacity-50 animate-pulse rounded-full"></div>
-                                <div className={`relative w-32 h-32 rounded-full flex items-center justify-center border-4 shadow-[0_0_30px_rgba(234,179,8,0.5)] z-10 bg-stone-900 ${claimResult.type === 'rare' ? 'border-yellow-400' : 'border-stone-500'}`}>
+                            {/* Main Icon with Glow - Reduced Size */}
+                            <div className="relative mb-4">
+                                <div className="absolute inset-0 bg-yellow-500 blur-lg opacity-40 animate-pulse rounded-full"></div>
+                                <div className={`relative w-24 h-24 rounded-full flex items-center justify-center border-4 shadow-[0_0_20px_rgba(234,179,8,0.3)] z-10 bg-stone-900 ${claimResult.type === 'rare' ? 'border-yellow-400' : 'border-stone-500'}`}>
                                     {claimResult.type === 'rare' ? (
-                                        <Sparkles size={64} className="text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)] animate-[spin_3s_linear_infinite]" />
+                                        <Sparkles size={40} className="text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.8)] animate-[spin_4s_linear_infinite]" />
                                     ) : claimResult.type === 'salt' ? (
-                                        <AlertCircle size={64} className="text-stone-500" />
+                                        <AlertCircle size={40} className="text-stone-500" />
                                     ) : (
-                                        <CheckCircle2 size={64} className="text-emerald-500" />
+                                        <CheckCircle2 size={40} className="text-emerald-500" />
                                     )}
                                 </div>
                             </div>
 
-                            {/* Text Content */}
-                            <div className="z-10 text-center space-y-4 px-4 w-full max-w-2xl">
-                                <h3 className="text-3xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-200 animate-pulse tracking-wider shadow-sm">
+                            {/* Text Content - Compact */}
+                            <div className="z-10 text-center space-y-3 px-4 w-full max-w-lg">
+                                <h3 className="text-xl md:text-2xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-200 animate-pulse tracking-wider shadow-sm">
                                     CONGRATULATIONS!
                                 </h3>
 
-                                <div className="bg-stone-900/80 backdrop-blur-sm border border-yellow-500/30 p-6 rounded-2xl shadow-xl transform transition-all hover:scale-105 duration-300">
-                                    <div className="text-sm text-yellow-500/80 uppercase font-bold tracking-widest mb-2">Rewards Obtained</div>
-                                    <div className="text-2xl md:text-3xl font-bold text-white leading-relaxed drop-shadow-md whitespace-pre-line">
-                                        {claimResult.reward.split('+').map((part, idx) => (
-                                            <div key={idx} className={part.includes('JACKPOT') ? 'text-yellow-400 font-extrabold text-3xl mt-2 animate-bounce' : 'text-white'}>
-                                                {part.trim()}
+                                <div className="bg-stone-900/80 backdrop-blur-sm border border-yellow-500/30 p-4 rounded-xl shadow-lg transform transition-all duration-300">
+                                    <div className="text-xs text-yellow-500/80 uppercase font-bold tracking-widest mb-1">Rewards Obtained</div>
+                                    <div className="font-bold text-white leading-relaxed drop-shadow-md whitespace-pre-line">
+                                        {(claimResult.reward || 'Unknown Reward').split('+').map((part, idx) => (
+                                            <div key={idx} className={(part || '').includes('JACKPOT') ? 'text-yellow-400 font-extrabold text-lg md:text-xl mt-1 animate-pulse' : 'text-base md:text-lg text-white'}>
+                                                {(part || '').trim() || 'N/A'}
                                             </div>
                                         ))}
                                     </div>
@@ -289,9 +273,9 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
 
                             <button
                                 onClick={() => setClaimResult(null)}
-                                className="mt-8 px-10 py-3 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white rounded-full font-bold shadow-[0_0_20px_rgba(234,179,8,0.4)] transition-all transform hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.6)] z-20 flex items-center gap-2"
+                                className="mt-6 px-8 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white rounded-full font-bold shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all transform hover:scale-105 z-20 flex items-center gap-2 text-sm"
                             >
-                                <ArrowRight size={20} /> ไปต่อ (Continue)
+                                <ArrowRight size={16} /> ไปต่อ (Continue)
                             </button>
                         </div>
                     ) : selectedDungeonId ? (

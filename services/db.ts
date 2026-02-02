@@ -2,14 +2,14 @@
 import {
     User, OilRig, ClaimRequest, WithdrawalRequest, DepositRequest,
     Notification, Transaction, SystemConfig, MarketState, AccessoryItem,
-    CraftingQueueItem, MarketItemData, UserRole, Expedition, UserStats, ChatMessage
+    CraftingQueueItem, MarketItemData, UserRole, Expedition, UserStats, ChatMessage, Rarity
 } from './types';
 import {
     STORAGE_KEYS, MATERIAL_CONFIG, SHOP_ITEMS, RIG_PRESETS,
     RARITY_SETTINGS, UPGRADE_REQUIREMENTS, UPGRADE_CONFIG,
     LUCKY_DRAW_CONFIG, DAILY_CHECKIN_REWARDS, ENERGY_CONFIG,
     REPAIR_CONFIG, RENEWAL_CONFIG, GIFT_CYCLE_DAYS, MARKET_CONFIG,
-    VIP_TIERS, SLOT_EXPANSION_CONFIG, DUNGEON_CONFIG, QUESTS, MINING_RANKS, ACHIEVEMENTS, MATERIAL_RECIPES, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ROBOT_CONFIG
+    VIP_TIERS, SLOT_EXPANSION_CONFIG, DUNGEON_CONFIG, QUESTS, MINING_RANKS, ACHIEVEMENTS, MATERIAL_RECIPES, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ROBOT_CONFIG, GLOVE_DETAILS, EQUIPMENT_UPGRADE_CONFIG
 } from '../constants';
 
 const getStore = <T>(key: string, defaultValue: T): T => {
@@ -99,6 +99,75 @@ export const MockDB = {
 
     logout: () => {
         localStorage.removeItem(STORAGE_KEYS.SESSION);
+    },
+
+    buyRig: (userId: string, name: string, investment: number, dailyProfit: number, durationDays: number, repairCost: number, energyCostPerDay: number, bonusProfit: number) => {
+        const users = getStore<User[]>(STORAGE_KEYS.USERS, []);
+        const user = users.find(u => u.id === userId);
+        if (!user) throw new Error('User not found');
+
+        if (user.balance < investment) throw new Error('Insufficient funds');
+
+        user.balance -= investment;
+        if (user.stats) user.stats.totalMoneySpent += investment;
+
+        // Create Rig
+        const rigId = Math.random().toString(36).substr(2, 9);
+        const newRig: OilRig = {
+            id: rigId,
+            ownerId: userId,
+            name,
+            investment,
+            durationMonths: durationDays / 30,
+            dailyProfit,
+            ratePerSecond: dailyProfit / 86400,
+            purchasedAt: Date.now(),
+            lastClaimAt: Date.now(),
+            rarity: investment >= 3000 ? 'LEGENDARY' : investment >= 2000 ? 'EPIC' : investment >= 1000 ? 'RARE' : 'COMMON',
+            bonusProfit: bonusProfit || 0,
+            repairCost,
+            energyCostPerDay,
+            energy: 100,
+            lastEnergyUpdate: Date.now(),
+            expiresAt: Date.now() + (durationDays * 24 * 60 * 60 * 1000),
+            slots: [null, null, null, null, null, null]
+        };
+
+        // Create Glove
+        const rand = Math.random();
+        const gloveRarity = rand > 0.95 ? 'LEGENDARY' : rand > 0.8 ? 'EPIC' : rand > 0.5 ? 'RARE' : 'COMMON';
+
+        const details = GLOVE_DETAILS[gloveRarity] || GLOVE_DETAILS['COMMON'];
+        const raritySettings = RARITY_SETTINGS[gloveRarity] || RARITY_SETTINGS['COMMON'];
+
+        const newGlove: AccessoryItem = {
+            id: Math.random().toString(36).substr(2, 9),
+            typeId: `glove_${gloveRarity.toLowerCase()}`,
+            name: details.name,
+            price: 0,
+            dailyBonus: raritySettings.bonus,
+            durationBonus: 0,
+            rarity: gloveRarity as Rarity,
+            purchasedAt: Date.now(),
+            lifespanDays: 30,
+            expireAt: Date.now() + (30 * 24 * 60 * 60 * 1000)
+        };
+
+        if (!user.inventory) user.inventory = [];
+        user.inventory.push(newGlove);
+
+        // Auto-equip to slot 0
+        newRig.slots![0] = newGlove.id;
+
+        MockDB.addRig(newRig);
+
+        const updatedUsers = users.map(u => u.id === user.id ? user : u);
+        setStore(STORAGE_KEYS.USERS, updatedUsers);
+        syncSession(user);
+
+        MockDB.logTransaction({ userId, type: 'ASSET_PURCHASE', amount: -investment, description: `Buy Rig (Demo): ${name}`, status: 'COMPLETED' });
+
+        return { rig: newRig, glove: newGlove };
     },
 
     deleteUser: (userId: string) => {
@@ -264,6 +333,29 @@ export const MockDB = {
     getTransactions: (userId: string): Transaction[] => {
         const txs = getStore<Transaction[]>(STORAGE_KEYS.TRANSACTIONS, []);
         return txs.filter(t => t.userId === userId);
+    },
+
+    claimRigReward: (userId: string, rigId: string, amount: number) => {
+        const users = getStore<User[]>(STORAGE_KEYS.USERS, []);
+        const user = users.find(u => u.id === userId);
+        if (!user) throw new Error('User not found');
+
+        const rigs = getStore<OilRig[]>(STORAGE_KEYS.RIGS, []);
+        const rig = rigs.find(r => r.id === rigId);
+        if (!rig) throw new Error('Rig not found');
+
+        if ((rig.energy || 0) <= 0) throw new Error('No energy');
+
+        // Logic
+        user.balance += amount;
+        rig.lastClaimAt = Date.now();
+
+        setStore(STORAGE_KEYS.USERS, users);
+        setStore(STORAGE_KEYS.RIGS, rigs);
+        syncSession(user);
+
+        MockDB.logTransaction({ userId, type: 'MINING_CLAIM', amount, description: `Collected from ${rig.name}`, status: 'COMPLETED' });
+        return { success: true, newBalance: user.balance };
     },
 
     createClaimRequest: (claim: Omit<ClaimRequest, 'id' | 'timestamp' | 'status'>) => {
@@ -513,35 +605,42 @@ export const MockDB = {
 
         const rigs = getStore<OilRig[]>(STORAGE_KEYS.RIGS, []);
         const userRigs = rigs.filter(r => r.ownerId === userId);
-        const rigCount = userRigs.length;
 
-        // No rigs = no drain
-        if (rigCount === 0) return user.energy ?? 100;
+        if (userRigs.length === 0) return user.energy ?? 100;
 
-        // Check for special rigs with zero energy consumption
-        let zeroEnergyRigCount = 0;
-        userRigs.forEach(r => {
-            const preset = RIG_PRESETS.find(p => p.price === r.investment);
-            if (preset?.specialProperties?.zeroEnergy) zeroEnergyRigCount++;
+        const now = Date.now();
+        let updated = false;
+
+        userRigs.forEach(rig => {
+            const preset = RIG_PRESETS.find(p => p.name === rig.name);
+            if (preset?.specialProperties?.zeroEnergy) return;
+
+            const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || now;
+            const elapsedHours = (now - lastUpdate) / (1000 * 60 * 60);
+
+            // Constant drain speed: 100% in 24 hours
+            const drain = elapsedHours * 4.166666666666667;
+            const currentEnergy = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
+
+            if (rig.energy !== currentEnergy) {
+                rig.energy = currentEnergy;
+                rig.lastEnergyUpdate = now;
+                updated = true;
+            }
         });
 
-        const effectiveRigCount = Math.max(0, rigCount - zeroEnergyRigCount);
-        if (effectiveRigCount === 0) return user.energy ?? 100;
-
-        // Calculate drain based on elapsed time
-        const now = Date.now();
-        const lastUpdate = user.lastEnergyUpdate || user.createdAt || now;
-        const elapsedHours = (now - lastUpdate) / (1000 * 60 * 60);
-
-        const drain = elapsedHours * effectiveRigCount * ENERGY_CONFIG.DRAIN_PER_RIG_PER_HOUR;
-        const currentEnergy = Math.max(0, Math.min(100, (user.energy ?? 100) - drain));
-
-        // Persist updated energy value
-        user.energy = currentEnergy;
+        // Still update global user energy for UI compatibility (min of all rigs)
+        const avgEnergy = userRigs.reduce((acc, r) => acc + (r.energy ?? 100), 0) / userRigs.length;
+        user.energy = avgEnergy;
         user.lastEnergyUpdate = now;
-        setStore(STORAGE_KEYS.USERS, users);
 
-        return currentEnergy;
+        if (updated) {
+            setStore(STORAGE_KEYS.RIGS, rigs);
+            setStore(STORAGE_KEYS.USERS, users);
+            syncSession(user);
+        }
+
+        return avgEnergy;
     },
 
     refillEnergy: (userId: string) => {
@@ -549,24 +648,82 @@ export const MockDB = {
         const user = users.find(u => u.id === userId);
         if (!user) throw new Error('User not found');
 
-        const currentEnergy = user.energy ?? 100;
-        const needed = 100 - currentEnergy;
+        const rigs = getStore<OilRig[]>(STORAGE_KEYS.RIGS, []);
+        const userRigs = rigs.filter(r => r.ownerId === userId);
+
+        let totalCost = 0;
+        let updated = false;
+
+        userRigs.forEach(rig => {
+            const preset = RIG_PRESETS.find(p => p.name === rig.name);
+            if (preset?.specialProperties?.zeroEnergy) return;
+
+            const current = rig.energy ?? 100;
+            const needed = 100 - current;
+            if (needed <= 0) return;
+
+            const baseCost = rig.energyCostPerDay || preset?.energyCostPerDay || 0;
+            totalCost += (needed / 100) * baseCost;
+
+            rig.energy = 100;
+            rig.lastEnergyUpdate = Date.now();
+            updated = true;
+        });
+
+        if (totalCost < ENERGY_CONFIG.MIN_REFILL_FEE && updated) {
+            totalCost = ENERGY_CONFIG.MIN_REFILL_FEE;
+        }
+
+        if (user.balance < totalCost) throw new Error('ยอดเงินในวอลเลทไม่เพียงพอสำหรับเติมพลังงาน');
+
+        if (updated) {
+            user.balance -= totalCost;
+            user.energy = 100;
+            user.lastEnergyUpdate = Date.now();
+
+            setStore(STORAGE_KEYS.USERS, users);
+            setStore(STORAGE_KEYS.RIGS, rigs);
+            syncSession(user);
+
+            MockDB.logTransaction({ userId, type: 'ENERGY_REFILL', amount: -totalCost, description: 'ชำระค่าไฟ (ทั้งหมด)', status: 'COMPLETED' });
+        }
+        return totalCost;
+    },
+
+    refillRigEnergy: (userId: string, rigId: string) => {
+        const users = getStore<User[]>(STORAGE_KEYS.USERS, []);
+        const user = users.find(u => u.id === userId);
+        if (!user) throw new Error('User not found');
+
+        const rigs = getStore<OilRig[]>(STORAGE_KEYS.RIGS, []);
+        const rig = rigs.find(r => r.id === rigId && r.ownerId === userId);
+        if (!rig) throw new Error('Rig not found');
+
+        const preset = RIG_PRESETS.find(p => p.name === rig.name);
+        const current = rig.energy ?? 100;
+        const needed = 100 - current;
+
         if (needed <= 0) return 0;
 
-        const cost = needed * ENERGY_CONFIG.COST_PER_UNIT;
-        if (user.balance < cost) throw new Error('Insufficient balance');
+        const baseCost = rig.energyCostPerDay || preset?.energyCostPerDay || 0;
+        let cost = (needed / 100) * baseCost;
+        if (cost < 0.1) cost = 0.1; // Minimum per-rig fee
+
+        if (user.balance < cost) throw new Error('ยอดเงินในวอลเลทไม่เพียงพอ');
 
         user.balance -= cost;
-        user.energy = 100;
-        user.lastEnergyUpdate = Date.now();
+        rig.energy = 100;
+        rig.lastEnergyUpdate = Date.now();
 
-        if (!user.stats) user.stats = { totalMaterialsMined: 0, totalMoneySpent: 0, totalLogins: 0, luckyDraws: 0, questsCompleted: 0 };
-        user.stats.totalMoneySpent += cost;
+        // Update global energy as average for UI
+        const userRigs = rigs.filter(r => r.ownerId === userId);
+        user.energy = userRigs.reduce((acc, r) => acc + (r.energy ?? 100), 0) / userRigs.length;
 
         setStore(STORAGE_KEYS.USERS, users);
+        setStore(STORAGE_KEYS.RIGS, rigs);
         syncSession(user);
 
-        MockDB.logTransaction({ userId, type: 'ENERGY_REFILL', amount: -cost, description: 'ชำระค่าไฟ', status: 'COMPLETED' });
+        MockDB.logTransaction({ userId, type: 'ENERGY_REFILL', amount: -cost, description: `ชำระค่าไฟ: ${rig.name}`, status: 'COMPLETED' });
         return cost;
     },
 
@@ -734,8 +891,8 @@ export const MockDB = {
         const rig = rigs.find(r => r.id === rigId && r.ownerId === userId);
         if (!rig) throw new Error('Rig not found');
 
-        const preset = RIG_PRESETS.find(p => p.price === rig.investment);
-        let repairCost = preset ? preset.repairCost : Math.floor(rig.investment * 0.06);
+        // Use stored repairCost or fallback to preset
+        let repairCost = rig.repairCost || RIG_PRESETS.find(p => p.name === rig.name)?.repairCost || Math.floor(rig.investment * 0.06);
 
         const users = getStore<User[]>(STORAGE_KEYS.USERS, []);
         const user = users.find(u => u.id === userId);
@@ -835,6 +992,8 @@ export const MockDB = {
                 syncSession(user);
             }
         }
+
+        if ((rig.energy || 0) <= 0) throw new Error('No energy');
 
         const count = rig.currentMaterials;
         rig.currentMaterials = 0;
@@ -1176,56 +1335,168 @@ export const MockDB = {
         MockDB.logTransaction({ userId, type: 'MATERIAL_BUY', amount: -cost, description: `ซื้อ ${MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES]} x${amount}`, status: 'COMPLETED' });
     },
 
-    upgradeAccessory: (userId: string, itemId: string) => {
+    upgradeAccessory: (userId: string, itemId: string, useInsurance: boolean = false) => {
         const users = getStore<User[]>(STORAGE_KEYS.USERS, []);
         const user = users.find(u => u.id === userId);
-        if (!user || !user.inventory) throw new Error('User not found');
+        if (!user || !user.inventory) throw new Error('ไม่พบข้อมูลผู้ใช้');
 
         const item = user.inventory.find(i => i.id === itemId);
-        if (!item) throw new Error('Item not found');
-
-        const shopConfig = SHOP_ITEMS.find(s => s.id === item.typeId);
-        const tier = shopConfig?.tier || 1;
+        if (!item) throw new Error('ไม่พบไอเทม');
 
         const currentLevel = item.level || 1;
-        if (currentLevel >= 5) throw new Error('Max level reached (+5)');
+        if (currentLevel >= 5) throw new Error('ไอเทมมีระดับสูงสุดแล้ว (Lv.5)');
 
-        const req = UPGRADE_REQUIREMENTS[currentLevel];
-        if (!req) throw new Error('Upgrade requirement not found');
-
-        if (!user.materials || (user.materials[req.matTier] || 0) < req.matAmount) {
-            throw new Error(`วัตถุดิบไม่พอ: ${MATERIAL_CONFIG.NAMES[req.matTier as keyof typeof MATERIAL_CONFIG.NAMES]}`);
+        // Insurance Check
+        let insuranceConsumed = false;
+        if (useInsurance) {
+            const cardIdx = user.inventory.findIndex(i => i.typeId === 'insurance_card');
+            if (cardIdx === -1) throw new Error('ไม่มีใบประกันความเสี่ยง');
+            // Consume card immediately
+            user.inventory.splice(cardIdx, 1);
+            insuranceConsumed = true;
         }
 
-        if (req.catalyst && req.catalyst > 0) {
-            const chips = user.inventory.filter(i => i.typeId === 'upgrade_chip');
-            if (chips.length < req.catalyst) {
-                throw new Error(`ต้องการชิปอัปเกรด (Catalyst) x${req.catalyst}`);
+        // Determine Config Series
+        let seriesKey: string | null = null;
+        let isNewSystem = false;
+        let req: any = null;
+
+        const typeId = item.typeId;
+
+        // Robust Mapping Logic
+        if (EQUIPMENT_UPGRADE_CONFIG[typeId]) seriesKey = typeId;
+        else {
+            seriesKey = Object.keys(EQUIPMENT_UPGRADE_CONFIG).find(key => typeId.startsWith(key)) || null;
+
+            if (!seriesKey) {
+                if (typeId.includes('shirt') || typeId.includes('uniform')) seriesKey = 'uniform';
+                else if (typeId.includes('hat') || typeId.includes('helmet')) seriesKey = 'hat';
+                else if (typeId.includes('glass') || typeId.includes('goggle')) seriesKey = 'glasses';
+                else if (typeId.includes('bag') || typeId.includes('backpack')) seriesKey = 'bag';
+                else if (typeId.includes('boot') || typeId.includes('shoe')) seriesKey = 'boots';
+                else if (typeId.includes('mobile') || typeId.includes('phone')) seriesKey = 'mobile';
+                else if (typeId.includes('pc') || typeId.includes('computer')) seriesKey = 'pc';
+                else if (typeId.includes('excavator') || typeId.includes('vehicle')) seriesKey = 'auto_excavator';
             }
-            for (let k = 0; k < req.catalyst; k++) {
+        }
+
+        if (seriesKey && EQUIPMENT_UPGRADE_CONFIG[seriesKey]) {
+            req = EQUIPMENT_UPGRADE_CONFIG[seriesKey][currentLevel];
+            isNewSystem = true;
+        } else {
+            req = UPGRADE_REQUIREMENTS[currentLevel];
+        }
+
+        if (!req) throw new Error('ไม่พบข้อมูลการอัปเกรดสำหรับระดับนี้');
+
+        // Normalize Requirements
+        const matTier = req.matTier || 1;
+        const matAmount = req.matAmount || 0;
+        const cost = req.cost || 0;
+        const chipAmount = isNewSystem ? (req.chipAmount || 0) : (req.catalyst || 0);
+        const chance = isNewSystem ? (req.chance !== undefined ? req.chance : 1.0) : 1.0;
+
+        // Validate Resources
+        if (!user.materials || (user.materials[matTier] || 0) < matAmount) {
+            throw new Error(`วัตถุดิบไม่พอ: ${MATERIAL_CONFIG.NAMES[matTier as keyof typeof MATERIAL_CONFIG.NAMES] || 'Unknown Material'}`);
+        }
+
+        if (chipAmount > 0) {
+            const chips = user.inventory.filter(i => i.typeId === 'upgrade_chip');
+            if (chips.length < chipAmount) {
+                throw new Error(`ชิปอัปเกรดไม่พอ (มี ${chips.length}/${chipAmount})`);
+            }
+        }
+
+        if (user.balance < cost) {
+            throw new Error(`เงินไม่พอ: ต้องการ ${cost.toLocaleString()} บาท`);
+        }
+
+        // Deduct Resources
+        user.materials[matTier] -= matAmount;
+        user.balance -= cost;
+
+        if (chipAmount > 0) {
+            for (let k = 0; k < chipAmount; k++) {
                 const cIdx = user.inventory.findIndex(i => i.typeId === 'upgrade_chip');
                 if (cIdx !== -1) user.inventory.splice(cIdx, 1);
             }
         }
 
-        if (req.cost && req.cost > 0) {
-            if (user.balance < req.cost) {
-                throw new Error(`เงินไม่พอ: ต้องการ ${req.cost} บาท`);
-            }
-            user.balance -= req.cost;
+        // RNG Check
+        const roll = Math.random();
+        if (roll > chance) {
+            // Failed
             if (!user.stats) user.stats = { totalMaterialsMined: 0, totalMoneySpent: 0, totalLogins: 0, luckyDraws: 0, questsCompleted: 0 };
-            user.stats.totalMoneySpent += req.cost;
+            user.stats.totalMoneySpent += cost;
+
+            let logMsg = `ตีบวก ${item.name} ล้มเหลว`;
+
+            if (insuranceConsumed) {
+                logMsg += ` (ป้องกันด้วยใบประกัน)`;
+            } else {
+                // Drop Level
+                if (currentLevel > 1) {
+                    item.level = currentLevel - 1;
+
+                    // Calc Downgraded Bonus
+                    if (isNewSystem) {
+                        let targetMult = 1.0;
+                        let currentMult = 1.0;
+                        if (currentLevel === 1) currentMult = 1.0;
+                        else {
+                            const cReq = EQUIPMENT_UPGRADE_CONFIG[seriesKey!][currentLevel - 1];
+                            if (cReq) currentMult = cReq.bonusMultiplier;
+                        }
+                        if (currentLevel - 1 === 1) targetMult = 1.0;
+                        else if (currentLevel - 1 > 1) {
+                            const tReq = EQUIPMENT_UPGRADE_CONFIG[seriesKey!][currentLevel - 2];
+                            if (tReq) targetMult = tReq.bonusMultiplier;
+                        }
+                        // If logic is flawed, fallback to a simpler reduction
+                        item.dailyBonus = item.dailyBonus * (targetMult / currentMult);
+                    } else {
+                        item.dailyBonus -= 0.44;
+                    }
+                    logMsg += ` (ลดระดับเหลือ ${item.level})`;
+                } else {
+                    logMsg += ` (ระดับต่ำสุดแล้ว)`;
+                }
+            }
+
+            setStore(STORAGE_KEYS.USERS, users);
+            syncSession(user);
+            MockDB.logTransaction({ userId, type: 'ACCESSORY_UPGRADE', amount: -cost, description: logMsg, status: 'COMPLETED' });
+
+            return { success: false, message: logMsg + (insuranceConsumed ? '' : ' และเงิน'), newItem: item };
         }
 
-        user.materials[req.matTier] -= req.matAmount;
-
+        // Success
         item.level = currentLevel + 1;
-        const boost = tier === 3 ? 2.0 : tier === 2 ? 1.0 : 0.44;
-        item.dailyBonus += boost;
+
+        if (isNewSystem && req.bonusMultiplier) {
+            let oldMultiplier = 1.0;
+            if (currentLevel > 1) {
+                const prevReq = EQUIPMENT_UPGRADE_CONFIG[seriesKey!][currentLevel - 1];
+                if (prevReq) oldMultiplier = prevReq.bonusMultiplier;
+            }
+            const factor = req.bonusMultiplier / oldMultiplier;
+            item.dailyBonus = item.dailyBonus * factor;
+
+        } else {
+            const shopConfig = SHOP_ITEMS.find(s => s.id === item.typeId);
+            const tier = shopConfig?.tier || 1;
+            const boost = tier === 3 ? 2.0 : tier === 2 ? 1.0 : 0.44;
+            item.dailyBonus += boost;
+        }
+
+        if (!user.stats) user.stats = { totalMaterialsMined: 0, totalMoneySpent: 0, totalLogins: 0, luckyDraws: 0, questsCompleted: 0 };
+        user.stats.totalMoneySpent += cost;
 
         setStore(STORAGE_KEYS.USERS, users);
         syncSession(user);
-        MockDB.logTransaction({ userId, type: 'ACCESSORY_UPGRADE', amount: req.cost ? -req.cost : 0, description: `ตีบวก ${item.name} เป็นระดับ +${item.level}`, status: 'COMPLETED' });
+        MockDB.logTransaction({ userId, type: 'ACCESSORY_UPGRADE', amount: -cost, description: `ตีบวก ${item.name} เป็นระดับ +${item.level}`, status: 'COMPLETED' });
+
         return { success: true, newItem: item };
     },
 
@@ -1246,10 +1517,28 @@ export const MockDB = {
         const reward = DAILY_CHECKIN_REWARDS.find(r => r.day === streak);
         if (reward) {
             if (reward.reward === 'grand_prize') {
-                user.balance += 100;
+                // Grand Prize: 1 Protection Scroll + 1 Diamond
                 if (!user.materials) user.materials = {};
                 user.materials[5] = (user.materials[5] || 0) + 1;
-                MockDB.logTransaction({ userId, type: 'DAILY_BONUS', amount: 100, description: `รางวัลใหญ่รายเดือน (Day 30)`, status: 'COMPLETED' });
+
+                if (!user.inventory) user.inventory = [];
+                const scrollConfig = SHOP_ITEMS.find(i => i.id === 'insurance_card');
+                if (scrollConfig) {
+                    user.inventory.push({
+                        id: Math.random().toString(36).substr(2, 9),
+                        typeId: 'insurance_card',
+                        name: scrollConfig.name,
+                        price: scrollConfig.price,
+                        dailyBonus: 0,
+                        durationBonus: 0,
+                        rarity: 'COMMON',
+                        purchasedAt: Date.now(),
+                        lifespanDays: 0,
+                        expireAt: 0,
+                        level: 1
+                    });
+                }
+                MockDB.logTransaction({ userId, type: 'DAILY_BONUS', amount: 0, description: `รางวัลใหญ่รายเดือน: ใบประกันความเสี่ยง + เพชร`, status: 'COMPLETED' });
             }
             else if (reward.reward === 'money') {
                 const amount = reward.amount || 0;
@@ -1579,7 +1868,6 @@ export const MockDB = {
         if (!dungeon) throw new Error('Invalid dungeon');
 
         const rigs = getStore<OilRig[]>(STORAGE_KEYS.RIGS, []);
-        // Error fix: replaced 'rigId' with 'user.activeExpedition.rigId' to correctly find the rig associated with the expedition.
         const rig = rigs.find(r => r.id === user.activeExpedition!.rigId);
 
         let luckMultiplier = 1.0;
@@ -1588,21 +1876,23 @@ export const MockDB = {
             luckMultiplier = 1 + (tier * 0.05);
         }
 
-        const roll = Math.random() * 100;
-        let selectedReward: any = null;
-
-
-        // --- LOGIC: Select 2 Rewards (1 Normal, 1 Jackpot) ---
-
         // 1. Normal Pool (Common + Salt + Rare)
         const normalPool = [
-            ...dungeon.rewards.common.map(r => ({ ...r, type: 'common' })),
-            ...dungeon.rewards.salt.map(r => ({ ...r, type: 'salt' })),
-            ...dungeon.rewards.rare.map(r => ({ ...r, type: 'rare' }))
+            ...(dungeon.rewards.common || []).map(r => ({ ...r, type: 'common' })),
+            ...(dungeon.rewards.salt || []).map(r => ({ ...r, type: 'salt' })),
+            ...(dungeon.rewards.rare || []).map(r => ({ ...r, type: 'rare' }))
         ];
 
         // 2. Jackpot Pool (Rare Only)
-        const jackpotPool = dungeon.rewards.rare.map(r => ({ ...r, type: 'rare' }));
+        const jackpotPool = (dungeon.rewards.rare || []).map(r => ({ ...r, type: 'rare' }));
+
+        if (normalPool.length === 0) {
+            user.activeExpedition = undefined;
+            setStore(STORAGE_KEYS.USERS, users);
+            syncSession(user);
+            MockDB.logTransaction({ userId: user.id, type: 'DUNGEON_REWARD', amount: 0, description: `Dungeon Loot: Nothing (Empty Pool)`, status: 'COMPLETED' });
+            return { success: true, reward: 'ไม่พบรางวัล (Nothing Found)', type: 'common' };
+        }
 
         // Selection 1: Normal Reward
         const totalWeight = normalPool.reduce((acc, r) => {
@@ -1624,19 +1914,20 @@ export const MockDB = {
             randomWeight -= chance;
         }
 
-        // Selection 2: Guaranteed Jackpot
-        const jackpotReward = jackpotPool[Math.floor(Math.random() * jackpotPool.length)];
+        let jackpotReward: any = null;
+        if (jackpotPool.length > 0) {
+            jackpotReward = jackpotPool[Math.floor(Math.random() * jackpotPool.length)];
+        }
 
-        // Helper to process adding item to user
         const processReward = (r: any) => {
+            if (!r) return "Nothing";
             let name = '';
             if (r.itemId) {
                 const shopItem = SHOP_ITEMS.find(i => i.id === r.itemId);
                 if (shopItem) {
                     if (!user.inventory) user.inventory = [];
-                    // Lifespan Logic
                     let lifespan = shopItem.lifespanDays;
-                    if (r.itemId === 'robot') lifespan = 30; // Fix standard lifespan
+                    if (r.itemId === 'robot') lifespan = 30;
 
                     const newItem: AccessoryItem = {
                         id: Math.random().toString(36).substr(2, 9),
@@ -1644,43 +1935,74 @@ export const MockDB = {
                         name: shopItem.name,
                         price: shopItem.price,
                         dailyBonus: (shopItem.minBonus + shopItem.maxBonus) / 2,
-                        durationBonus: shopItem.durationBonus,
+                        durationBonus: shopItem.durationBonus || 0,
                         rarity: 'RARE',
                         purchasedAt: Date.now(),
                         lifespanDays: lifespan,
-                        expireAt: Date.now() + (lifespan * 24 * 60 * 60 * 1000)
+                        expireAt: Date.now() + (lifespan * 24 * 60 * 60 * 1000),
+                        level: 1
                     };
                     user.inventory.push(newItem);
                     name = shopItem.name;
-                } else {
-                    name = r.itemId;
                 }
             } else if (r.tier !== undefined) {
-                // Material Drop
                 if (!user.materials) user.materials = {};
-                if (!user.materials[r.tier]) user.materials[r.tier] = 0;
-                user.materials[r.tier] += r.amount;
-                name = MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES];
+                user.materials[r.tier] = (user.materials[r.tier] || 0) + r.amount;
+                name = MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES] || `Unknown Ore (${r.tier})`;
             }
             return `${name} x${r.amount}`;
         };
 
         const result1 = processReward(normalReward);
-        const result2 = processReward(jackpotReward);
+        const result2 = jackpotReward ? processReward(jackpotReward) : "No Jackpot";
 
-        let rewardText = `${result1} + [JACKPOT] ${result2}`;
+        let rewardText = `${result1}`;
+        if (jackpotReward) rewardText += ` + [JACKPOT] ${result2}`;
 
-        // Return structured reward
         user.activeExpedition = undefined;
-        // End of logic block, continuing to cleanup...
-
-        // Logic already handled above in processReward
         setStore(STORAGE_KEYS.USERS, users);
-        //MockDB.logTransaction({ userId: user.id, type: 'DUNGEON_REWARD', amount: 0, description: `Dungeon Loot: ${rewardText} (Luck x${luckMultiplier.toFixed(2)})`, status: 'COMPLETED' });
+        syncSession(user);
+        MockDB.logTransaction({ userId: user.id, type: 'DUNGEON_REWARD', amount: 0, description: `Dungeon Loot: ${rewardText} (Luck x${luckMultiplier.toFixed(2)})`, status: 'COMPLETED' });
 
         return { success: true, reward: rewardText, type: 'rare' };
+    },
 
+    claimRigGift: (userId: string, rigId: string) => {
+        const rigs = getStore<OilRig[]>(STORAGE_KEYS.RIGS, []);
+        const rig = rigs.find(r => r.id === rigId && r.ownerId === userId);
+        if (!rig) throw new Error('Rig not found');
 
+        if ((rig.energy || 0) <= 0) throw new Error('No energy');
+
+        const preset = RIG_PRESETS.find(p => p.name === rig.name);
+        if (!preset) throw new Error('Preset not found');
+
+        let matTier = -1;
+        let minAmount = 0;
+        let maxAmount = 0;
+
+        if (preset.id === 3) { matTier = 1; minAmount = 5; maxAmount = 10; } // Coal Rig -> Coal
+        else if (preset.id === 4) { matTier = 2; minAmount = 5; maxAmount = 10; } // Copper Rig -> Copper
+        else if (preset.id === 5) { matTier = 3; minAmount = 3; maxAmount = 6; } // Iron Rig -> Iron
+        else if (preset.id === 6) { matTier = 4; minAmount = 3; maxAmount = 6; } // Gold Rig -> Gold
+        else if (preset.id === 7) { matTier = 5; minAmount = 1; maxAmount = 3; } // Diamond Rig -> Diamond
+
+        if (matTier === -1) {
+            const potentialRewards = ['hat', 'uniform', 'bag', 'boots'];
+            const rewardId = potentialRewards[Math.floor(Math.random() * potentialRewards.length)];
+            const newItem = MockDB.grantItem(userId, rewardId);
+
+            rig.lastGiftAt = Date.now();
+            setStore(STORAGE_KEYS.RIGS, rigs);
+            return { type: 'ITEM', item: newItem };
+        }
+
+        const amount = Math.floor(Math.random() * (maxAmount - minAmount + 1)) + minAmount;
+        const res = MockDB.grantMaterials(userId, matTier, amount);
+
+        rig.lastGiftAt = Date.now();
+        setStore(STORAGE_KEYS.RIGS, rigs);
+        return { type: 'MATERIAL', material: res, amount, tier: matTier };
     },
 
     processRobotLogic: (userId: string) => {
@@ -1697,168 +2019,96 @@ export const MockDB = {
         const rigs = getStore<OilRig[]>(STORAGE_KEYS.RIGS, []);
         const userRigs = rigs.filter(r => r.ownerId === userId);
         const now = Date.now();
-
-        // 1. Auto Collect
-        // Simplified Logic: Check if it's been more than 1 minute since last claim (simulated cycle)
-        // In reality, we should check accumulated profit. 
-        // We will call the internal calculation logic or just force a claim check if eligible.
-
-        // Global Speed Multiplier (for Demo Mode support)
         const speedMultiplier = (user.isDemo) ? DEMO_SPEED_MULTIPLIER : 1;
 
         userRigs.forEach(rig => {
             const lastClaim = rig.lastClaimAt || rig.purchasedAt;
-            const now = Date.now();
-
-            // Check Repair Status FIRST to determine if we need urgent funds
             const durabilityMs = (REPAIR_CONFIG.DURABILITY_DAYS * 24 * 60 * 60 * 1000) / speedMultiplier;
             const lastRepair = rig.lastRepairAt || rig.purchasedAt;
             const timeSinceRepair = now - lastRepair;
             const isBroken = timeSinceRepair >= durabilityMs;
-            const isUrgent = isBroken;
 
-            // 1. Auto Collect (Trigger if > 1 hour OR if Urgent/Broken to get funds)
-            // Use speedMultiplier for threshold check too (1 hour game time?)
-            // Usually "1 hour real time" is fine, but if demo, 1 hour game time = 5 seconds real time.
-            // Let's stick to Real Time 60 mins for normal, but for demo maybe faster?
-            // Actually, simply: If broken, force collect.
-            if ((now - lastClaim > 60 * 60 * 1000) || isUrgent) {
-                // Profit Calculation (Apply Speed Multiplier to elapsed time effectively)
-                // ratePerSecond is "Per Real Second".
-                // If game is 720x faster, we earn 720x more per real second?
-                // No. ratePerSecond is based on DailyProfit (Game Day).
-                // DailyProfit / 86400.
-                // If 1 real sec = 720 game sec.
-                // Mined value = elapsedRealSec * speedMultiplier * ratePerSecond.
+            const isPowered = (rig.energy || 0) > 0;
 
-                const elapsedRealSec = (now - lastClaim) / 1000;
-                const elapsedGameSec = elapsedRealSec * speedMultiplier;
+            // 1. Auto Collect Money
+            if (((now - lastClaim > 60 * 60 * 1000) || isBroken || !isPowered) && isPowered) {
+                const miningEndTime = isBroken ? (lastRepair + durabilityMs) : now;
+                const validDuration = Math.max(0, miningEndTime - lastClaim);
+                const validGameSec = (validDuration / 1000) * speedMultiplier;
+                const profit = Math.floor(rig.ratePerSecond * validGameSec);
 
-                if (elapsedGameSec > 0) {
-                    // STOP accumulating if broken!
-                    // If broken, effective time is capped at durability limit relative to lastClaim?
-                    // Complex. Simplified: Collect what we can.
-                    // Ideally: min(elapsed, timeUntilBroken).
-                    // But for simplicity, just collect full amount (assuming logic elsewhere handles cap, or we grant bonus).
-                    // db.ts `collectRigMaterials` doesn't calc money.
-                    // We are calculating money inline here.
+                if (profit > 0) {
+                    user.balance += profit;
+                    rig.lastClaimAt = now;
+                    actions.push(`Robot Collected: ${profit.toFixed(2)} THB from ${rig.name}`);
+                    MockDB.logTransaction({ userId, type: 'MINING_REVENUE', amount: profit, description: `Robot Collected: ${rig.name}`, status: 'COMPLETED' });
+                    updated = true;
+                }
+            }
 
-                    // Correct Logic:
-                    // If broken, we stopped mining at `lastRepair + durabilityMs`.
-                    // So effectiveEndTime is min(now, lastRepair + durabilityMs).
-                    // But `lastClaim` might be after `lastRepair`.
-                    const miningEndTime = isBroken ? (lastRepair + durabilityMs) : now;
-                    const validDuration = Math.max(0, miningEndTime - lastClaim);
-                    const validGameSec = (validDuration / 1000) * speedMultiplier;
+            // 1.5 Auto-Claim Mineral Gift
+            const giftCycleMs = GIFT_CYCLE_DAYS * 24 * 60 * 60 * 1000;
+            const timeSinceGift = now - (rig.lastGiftAt || rig.purchasedAt);
+            if (timeSinceGift >= giftCycleMs && isPowered) {
+                const keyIdx = user.inventory?.findIndex(i => i.typeId === 'chest_key');
+                if (keyIdx !== undefined && keyIdx !== -1) {
+                    try {
+                        const result = MockDB.claimRigGift(userId, rig.id);
+                        user.inventory?.splice(keyIdx, 1);
+                        const rewardName = result.type === 'ITEM' ? result.item.name : `${result.material.name} x${result.amount}`;
+                        actions.push(`Robot Auto-Opened Gift from ${rig.name}: ${rewardName}`);
+                        updated = true;
+                    } catch (e) { }
+                }
+            }
 
-                    const profit = Math.floor(rig.ratePerSecond * validGameSec);
-                    if (profit > 0) {
-                        user.balance += profit;
-                        rig.lastClaimAt = now; // Reset claim timer
-
-                        if (!user.stats) user.stats = { totalMaterialsMined: 0, totalMoneySpent: 0, totalLogins: 0, luckyDraws: 0, questsCompleted: 0 };
-                        // Chance for Keys/Items
-                        if (Math.random() < 0.3) {
-                            if (Math.random() < 0.05) {
-                                if (!user.inventory) user.inventory = [];
-                                user.inventory.push({
-                                    id: Math.random().toString(36).substr(2, 9),
-                                    typeId: 'chest_key',
-                                    name: 'กุญแจหีบสมบัติ',
-                                    price: 0,
-                                    dailyBonus: 0,
-                                    durationBonus: 0,
-                                    rarity: 'RARE',
-                                    purchasedAt: now,
-                                    lifespanDays: 999,
-                                    expireAt: 9999999999999
-                                });
-                                actions.push(`Robot Found: Chest Key`);
-                                updated = true;
-                            }
-                        }
-                        actions.push(`Robot Collected: ${profit.toFixed(2)} THB from ${rig.name}`);
+            // 1.8 Auto Refill Energy (Per Rig)
+            if (!isPowered || (rig.energy || 0) < ROBOT_CONFIG.ENERGY_THRESHOLD) {
+                try {
+                    const cost = MockDB.refillRigEnergy(userId, rig.id);
+                    if (cost > 0) {
+                        actions.push(`Robot Auto-Refilled Energy for ${rig.name} (-${cost.toFixed(2)} THB)`);
+                        // MockDB.refillRigEnergy already updates updated status via sync/setStore, 
+                        // but we are in a loop with common stores. 
+                        // Actually refillRigEnergy does setStore, which might be risky in a loop.
+                        // I'll assume it's okay for now since we are modifying rigs in this loop.
                         updated = true;
                     }
-                }
+                } catch (e) { }
             }
 
-            // 1.5 Auto Collect Pending Keys (currentMaterials) - Existing Logic
-            if (rig.currentMaterials && rig.currentMaterials > 0) {
-                const keyConfig = SHOP_ITEMS.find(i => i.id === 'chest_key');
-                if (keyConfig) {
-                    if (!user.inventory) user.inventory = [];
-                    const newKey: AccessoryItem = {
-                        id: Math.random().toString(36).substr(2, 9),
-                        typeId: keyConfig.id,
-                        name: keyConfig.name,
-                        price: keyConfig.price,
-                        dailyBonus: (keyConfig.minBonus + keyConfig.maxBonus) / 2,
-                        durationBonus: keyConfig.durationBonus,
-                        rarity: 'COMMON',
-                        purchasedAt: now,
-                        lifespanDays: keyConfig.lifespanDays,
-                        expireAt: now + keyConfig.lifespanDays * 86400000,
-                        level: 1
-                    };
-                    user.inventory.push(newKey);
-                }
-                rig.currentMaterials = 0;
-                actions.push(`Robot Collected: Chest Key from ${rig.name}`);
-                updated = true;
-            }
-
-            // 2. Auto Repair Logic (Now we have fresh funds)
-            if (isBroken) { // Calculated above
-                // Check if we can afford repair
+            // 2. Auto Repair
+            if (isBroken) {
                 const preset = RIG_PRESETS.find(p => p.price === rig.investment);
                 const baseRepairCost = preset ? preset.repairCost : Math.floor(rig.investment * 0.06);
-
                 let discountMultiplier = 0;
-                if (user && (user.masteryPoints || 0) >= 300) discountMultiplier += 0.05;
-
-                const hatIdFound = rig.slots ? rig.slots.find(id => {
-                    if (!id) return false;
-                    const item = user?.inventory?.find(i => i.id === id);
-                    return item && item.typeId === 'hat';
-                }) : null;
-
-                if (hatIdFound && user.inventory) {
-                    const hatItem = user.inventory.find(i => i.id === hatIdFound);
-                    if (hatItem) {
-                        const series = EQUIPMENT_SERIES.hat.tiers.find(t => t.rarity === hatItem.rarity);
-                        if (series) {
-                            const match = series.stat.match(/-(\d+)%/);
-                            if (match) discountMultiplier += (parseInt(match[1]) / 100);
-                        }
-                    }
+                if ((user.masteryPoints || 0) >= 300) discountMultiplier += 0.05;
+                const hatId = rig.slots?.find(id => user.inventory?.find(i => i.id === id)?.typeId === 'hat');
+                if (hatId) {
+                    const hatItem = user.inventory?.find(i => i.id === hatId);
+                    const series = hatItem ? EQUIPMENT_SERIES.hat.tiers.find(t => t.rarity === hatItem.rarity) : null;
+                    const match = series?.stat.match(/-(\d+)%/);
+                    if (match) discountMultiplier += (parseInt(match[1]) / 100);
                 }
-
                 const cost = Math.floor(baseRepairCost * (1 - discountMultiplier));
-
                 if (user.balance >= cost) {
                     user.balance -= cost;
                     rig.lastRepairAt = now;
-                    // Removing invalid property assignments: status, currentDurability
-
-                    if (user.stats) user.stats.totalMoneySpent += cost;
                     actions.push(`Robot Auto-Repaired ${rig.name} (-${cost} THB)`);
+                    MockDB.logTransaction({ userId, type: 'REPAIR', amount: -cost, description: `Robot Auto-Repaired ${rig.name}`, status: 'COMPLETED' });
                     updated = true;
-                } else {
-                    // Still broke, no money even after Collect.
-                    // (Optional: notify "Insufficient funds to repair")
                 }
             }
         });
 
-        // 3. Auto Energy Logic
+        // 3. Auto Refill Energy
         if ((user.energy || 0) < ROBOT_CONFIG.ENERGY_THRESHOLD) {
             const cost = 2;
             if (user.balance >= cost) {
                 user.balance -= cost;
                 user.energy = 100;
-                if (user.stats) user.stats.totalMoneySpent += cost;
                 actions.push(`Robot Auto-Refilled Energy (-${cost} THB)`);
+                MockDB.logTransaction({ userId, type: 'ENERGY_REFILL', amount: -cost, description: `Robot Auto-Refilled Energy`, status: 'COMPLETED' });
                 updated = true;
             }
         }
@@ -1868,7 +2118,6 @@ export const MockDB = {
             setStore(STORAGE_KEYS.RIGS, rigs);
             syncSession(user);
         }
-
         return { actions };
     },
 
@@ -1907,12 +2156,39 @@ export const MockDB = {
             level: 1
         };
 
+        if (shopItem.craftingRecipe) {
+            newItem.isHandmade = true;
+        }
+
         user.inventory.push(newItem);
         setStore(STORAGE_KEYS.USERS, users);
         syncSession(user);
 
         MockDB.logTransaction({ userId, type: 'GIFT_CLAIM', amount: 0, description: `ได้รับของขวัญ: ${shopItem.name}`, status: 'COMPLETED' });
         return newItem;
+    },
+
+    grantMaterials: (userId: string, tier: number, amount: number) => {
+        const users = getStore<User[]>(STORAGE_KEYS.USERS, []);
+        const user = users.find(u => u.id === userId);
+        if (!user) throw new Error('User not found');
+
+        if (!user.materials) user.materials = {};
+        user.materials[tier] = (user.materials[tier] || 0) + amount;
+
+        // Update stats
+        if (!user.stats) user.stats = {
+            totalMaterialsMined: 0, totalMoneySpent: 0, totalLogins: 0, luckyDraws: 0, questsCompleted: 0,
+            materialsCrafted: 0, dungeonsEntered: 0, itemsCrafted: 0, repairPercent: 0, rareLootCount: 0
+        };
+        user.stats.totalMaterialsMined = (user.stats.totalMaterialsMined || 0) + amount;
+
+        setStore(STORAGE_KEYS.USERS, users);
+        syncSession(user);
+
+        const matName = MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES] || `Tier ${tier}`;
+        MockDB.logTransaction({ userId, type: 'GIFT_CLAIM', amount: 0, description: `ได้รับวัตถุดิบ: ${matName} x${amount}`, status: 'COMPLETED' });
+        return { tier, amount, name: matName };
     },
 
     startCrafting: (userId: string, itemId: string) => {

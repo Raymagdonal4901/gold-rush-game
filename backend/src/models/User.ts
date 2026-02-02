@@ -7,6 +7,10 @@ export interface IUser extends Document {
     energy: number;
     role: string;
     inventory: any[]; // Array of AccessoryItem
+    weeklyStats: any; // Object for weekly progress
+    claimedQuests: any[]; // Array of strings (Quest IDs)
+    masteryPoints: number;
+    lastQuestReset: Date;
     createdAt: Date;
     lastEnergyUpdate: Date;
 }
@@ -18,6 +22,10 @@ const UserSchema = new Schema<IUser>({
     energy: { type: Number, default: 100 },
     role: { type: String, default: 'USER' },
     inventory: { type: [], default: [] }, // Simplified for Mixed array
+    weeklyStats: { type: Object, default: {} },
+    claimedQuests: { type: [], default: [] },
+    masteryPoints: { type: Number, default: 0 },
+    lastQuestReset: { type: Date, default: Date.now },
     createdAt: { type: Date, default: Date.now },
     lastEnergyUpdate: { type: Date, default: Date.now }
 });

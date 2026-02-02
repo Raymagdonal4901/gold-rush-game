@@ -1,8 +1,119 @@
 import { Response } from 'express';
+import { v4 as uuidv4 } from 'uuid';
 import { AuthRequest } from '../middleware/auth';
 import User from '../models/User';
 import Rig from '../models/Rig';
 import WithdrawalRequest from '../models/WithdrawalRequest';
+import DepositRequest from '../models/DepositRequest';
+import ClaimRequest from '../models/ClaimRequest';
+import SystemConfig from '../models/SystemConfig';
+import Transaction from '../models/Transaction';
+
+// Give Compensation (Add Balance)
+export const adminGiveCompensation = async (req: AuthRequest, res: Response) => {
+    try {
+        console.log('[ADMIN DEBUG] adminGiveCompensation called body:', req.body);
+        const { userId, amount, reason } = req.body;
+        let user;
+        if (userId.match(/^[0-9a-fA-F]{24}$/)) {
+            user = await User.findById(userId);
+        }
+        if (!user) {
+            user = await User.findOne({ username: userId });
+        }
+
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const amountNum = Number(amount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+            return res.status(400).json({ message: 'Invalid amount' });
+        }
+
+        user.balance += amountNum;
+        await user.save();
+
+        // Create Transaction Record
+        const transaction = new Transaction({
+            userId: user.id,
+            type: 'COMPENSATION',
+            amount: amountNum,
+            status: 'COMPLETED',
+            description: reason || 'Server Maintenance Compensation'
+        });
+        await transaction.save();
+
+        res.json({ message: 'Compensation successful', newBalance: user.balance });
+    } catch (error) {
+        console.error('[ADMIN ERROR] adminGiveCompensation failed:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+// Add Item to User
+export const adminAddItem = async (req: AuthRequest, res: Response) => {
+    try {
+        const { userId, itemId, amount } = req.body;
+        let user;
+        if (userId.match(/^[0-9a-fA-F]{24}$/)) {
+            user = await User.findById(userId);
+        }
+        if (!user) {
+            user = await User.findOne({ username: userId });
+        }
+
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const amountNum = Number(amount) || 1;
+
+        const newItem = {
+            id: uuidv4(),
+            typeId: itemId,
+            name: itemId,
+            rarity: 'COMMON',
+            purchasedAt: Date.now(),
+            lifespanDays: 30,
+            isHandmade: false
+        };
+
+        for (let i = 0; i < amountNum; i++) {
+            user.inventory.push({ ...newItem, id: uuidv4() });
+        }
+
+        await user.save();
+
+        res.json({ message: 'Item added successfully', inventory: user.inventory });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+// Get User Stats (Deposits/Withdrawals)
+export const getUserStats = async (req: AuthRequest, res: Response) => {
+    try {
+        const { userId } = req.params;
+
+        // Total Deposits (APPROVED only)
+        const depositStats = await DepositRequest.aggregate([
+            { $match: { userId: userId, status: 'APPROVED' } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
+        const totalDeposits = depositStats.length > 0 ? depositStats[0].total : 0;
+
+        // Total Withdrawals (APPROVED only)
+        const withdrawalStats = await WithdrawalRequest.aggregate([
+            { $match: { userId: userId, status: 'APPROVED' } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
+        const totalWithdrawals = withdrawalStats.length > 0 ? withdrawalStats[0].total : 0;
+
+        res.json({
+            totalDeposits,
+            totalWithdrawals
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
 
 // Get All Users
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
@@ -23,8 +134,6 @@ export const getAllRigs = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
-
-import SystemConfig from '../models/SystemConfig';
 
 // Get System Config (Real)
 export const getSystemConfig = async (req: AuthRequest, res: Response) => {
@@ -60,17 +169,12 @@ export const updateSystemConfig = async (req: AuthRequest, res: Response) => {
     }
 };
 
-import DepositRequest from '../models/DepositRequest';
-
 // Get Pending Deposits
 export const getPendingDeposits = async (req: AuthRequest, res: Response) => {
     try {
-        console.log('Fetching pending deposits...');
         const deposits = await DepositRequest.find({ status: 'PENDING' }).sort({ createdAt: -1 });
-        console.log('Found deposits:', deposits.length);
         res.json(deposits);
     } catch (error) {
-        console.error('Error fetching deposits:', error);
         res.status(500).json({ message: 'Server error', error });
     }
 };
@@ -98,8 +202,11 @@ export const processDepositRequest = async (req: AuthRequest, res: Response) => 
         }
 
         res.json({ message: `Deposit ${status}`, deposit });
-    } catch (error) {
-        res.status(500).json({ message: 'Server error', error });
+    } catch (error: any) {
+        res.status(500).json({
+            message: 'Server error processing deposit',
+            error: error.message || error
+        });
     }
 };
 
@@ -141,9 +248,6 @@ export const processWithdrawalRequest = async (req: AuthRequest, res: Response) 
         res.status(500).json({ message: 'Server error', error });
     }
 };
-
-import ClaimRequest from '../models/ClaimRequest';
-
 // Get Pending Claims
 export const getPendingClaims = async (req: AuthRequest, res: Response) => {
     try {

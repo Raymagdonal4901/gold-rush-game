@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import Rig from '../models/Rig';
 // Register
 export const register = async (req: Request, res: Response) => {
     try {
@@ -82,13 +83,15 @@ export const login = async (req: Request, res: Response) => {
             process.env.JWT_SECRET!,
             { expiresIn: '7d' }
         );
+        const updatedEnergy = await calculateAndSyncEnergy(user);
+
         res.json({
             token,
             user: {
                 id: user._id,
                 username: user.username,
                 balance: user.balance,
-                energy: user.energy,
+                energy: updatedEnergy,
                 role: user.role
             }
         });
@@ -103,12 +106,71 @@ export const getProfile = async (req: any, res: Response) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
+
+        const updatedEnergy = await calculateAndSyncEnergy(user);
         res.json({
             id: user._id,
             username: user.username,
             balance: user.balance,
-            energy: user.energy,
+            energy: updatedEnergy,
             role: user.role
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+const calculateAndSyncEnergy = async (user: any) => {
+    const now = new Date();
+    const lastUpdate = user.lastEnergyUpdate || user.createdAt || now;
+    const elapsedHours = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
+
+    // Constant drain: 100% in 24 hours (4.166% per hour)
+    const drain = elapsedHours * 4.166666666666667;
+    const currentEnergy = Math.max(0, Math.min(100, (user.energy ?? 100) - drain));
+
+    user.energy = currentEnergy;
+    user.lastEnergyUpdate = now;
+    await user.save();
+    return currentEnergy;
+};
+
+export const refillEnergy = async (req: any, res: Response) => {
+    try {
+        const userId = req.userId;
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const currentEnergy = user.energy ?? 100;
+        const needed = Math.max(0, 100 - currentEnergy);
+
+        const rigs = await Rig.find({ ownerId: userId });
+        let totalDailyCost = 0;
+        rigs.forEach(r => {
+            totalDailyCost += r.energyCostPerDay || 0;
+        });
+
+        // 0.02 Baht per 1%
+        let cost = (needed / 100) * totalDailyCost;
+        if (cost < 1.0) { // MIN_REFILL_FEE
+            cost = 1.0;
+        }
+
+        if (user.balance < cost) {
+            return res.status(400).json({ message: 'ยอดเงินในวอลเลทไม่เพียงพอสำหรับเติมพลังงาน' });
+        }
+
+        user.balance -= cost;
+        user.energy = 100;
+        // Buffer: Set last update 5 seconds in future so it stays 100% for a bit
+        user.lastEnergyUpdate = new Date(Date.now() + 5000);
+        await user.save();
+
+        res.json({
+            message: 'Refill successful',
+            cost,
+            balance: user.balance,
+            energy: user.energy
         });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error });

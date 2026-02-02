@@ -1,9 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown } from 'lucide-react';
+import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown, FileText } from 'lucide-react';
 import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, RARITY_SETTINGS, SHOP_ITEMS, MATERIAL_RECIPES } from '../constants';
 import { MockDB } from '../services/db';
-import { MarketState, AccessoryItem } from '../types';
+import { MarketState, AccessoryItem } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
 import { InfinityGlove } from './InfinityGlove';
 
@@ -15,9 +15,10 @@ interface WarehouseModalProps {
     onSell: (tier: number, amount: number) => void;
     onCraft: (sourceTier: number) => any;
     onPlayGoldRain?: () => void;
+    onOpenMarket?: (tier: number) => void;
 }
 
-export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose, userId, materials, onSell, onCraft, onPlayGoldRain }) => {
+export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose, userId, materials, onSell, onCraft, onPlayGoldRain, onOpenMarket }) => {
     const [hasMixer, setHasMixer] = useState(false); // Deprecated state, removing logic but keeping to avoid breaking if referenced elsewhere briefly. Actually, removing it.
     const [marketState, setMarketState] = useState<MarketState | null>(null);
     const [inventory, setInventory] = useState<AccessoryItem[]>([]);
@@ -57,7 +58,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
     const displayTiers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
     // Fix: Define consumable item IDs for grouping in the warehouse
-    const consumableIds = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'ancient_blueprint', 'mystery_ore', 'legendary_ore'];
+    const consumableIds = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'ancient_blueprint', 'mystery_ore', 'legendary_ore', 'insurance_card'];
 
     // Fix: Group consumable items by typeId to show stacks
     const grouped = consumableIds.map(id => {
@@ -132,6 +133,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
             case 'magnifying_glass': return <Search className={className} />;
             case 'mystery_ore': return <Sparkles className={className} />;
             case 'legendary_ore': return <Gem className={className} />;
+            case 'insurance_card': return <FileText className={className} />;
             default: return <InfinityGlove rarity={rarity} className={className} />;
         }
     };
@@ -231,7 +233,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
             {/* Confirmation UI (Processing Formula) */}
             {confirmState && (
                 <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-stone-900 border border-stone-700 w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+                    <div className="bg-stone-900 border border-stone-700 w-full max-w-2xl rounded-2xl p-6 shadow-2xl">
                         <div className="text-center mb-6">
                             <h3 className="text-xl font-bold text-white flex items-center justify-center gap-2">
                                 <Gem className="text-yellow-500" size={20} /> ยืนยันการสกัดแร่
@@ -239,26 +241,26 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
                             <p className="text-yellow-600/50 text-xs mt-1 uppercase tracking-widest font-bold">CONFIRM EXTRACTION</p>
                         </div>
 
-                        {/* VISUAL FORMULA BOX (Vertical Layout like screenshot) */}
-                        <div className="bg-stone-950 p-6 rounded-2xl border border-stone-800 mb-6 flex flex-col items-center">
+                        {/* VISUAL FORMULA BOX (Horizontal Layout) */}
+                        <div className="bg-stone-950 p-6 rounded-2xl border border-stone-800 mb-6 flex flex-col md:flex-row items-center justify-between gap-6">
 
                             {/* INPUT SECTION */}
-                            <div className="flex flex-wrap items-center justify-center gap-4 mb-6">
+                            <div className="flex-1 flex flex-wrap items-center justify-center gap-4">
                                 {confirmState.recipe && Object.entries(confirmState.recipe.ingredients).map(([tierStr, needed], idx, arr) => {
                                     const tier = parseInt(tierStr);
                                     const hasEnough = (materials[tier] || 0) >= (needed as number);
                                     return (
                                         <React.Fragment key={tier}>
                                             <div className="flex flex-col items-center gap-1.5">
-                                                <div className={`relative w-16 h-16 rounded-2xl bg-stone-900 border-2 flex items-center justify-center transition-all ${hasEnough ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/40 bg-red-500/5'}`}>
-                                                    <MaterialIcon id={tier} size="w-10 h-10" iconSize={20} />
+                                                <div className={`relative w-14 h-14 rounded-xl bg-stone-900 border-2 flex items-center justify-center transition-all ${hasEnough ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/40 bg-red-500/5'}`}>
+                                                    <MaterialIcon id={tier} size="w-8 h-8" iconSize={16} />
                                                     <span className={`absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[10px] font-black border border-stone-950 shadow-lg animate-in zoom-in ${hasEnough ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
                                                         x{needed as number}
                                                     </span>
                                                 </div>
-                                                <span className="text-[10px] text-stone-500 font-bold uppercase truncate max-w-[60px]">{MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span>
+                                                <span className="text-[9px] text-stone-500 font-bold uppercase truncate max-w-[50px]">{MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span>
                                             </div>
-                                            {idx < arr.length - 1 && <Plus size={14} className="text-stone-800" />}
+                                            {idx < arr.length - 1 && <Plus size={12} className="text-stone-800" />}
                                         </React.Fragment>
                                     );
                                 })}
@@ -266,32 +268,35 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
                                 {/* FEE SECTION */}
                                 {confirmState.recipe && confirmState.recipe.fee > 0 && (
                                     <>
-                                        <Plus size={14} className="text-stone-800" />
+                                        <Plus size={12} className="text-stone-800" />
                                         <div className="flex flex-col items-center gap-1.5">
-                                            <div className={`relative w-16 h-16 rounded-2xl bg-stone-900 border-2 flex items-center justify-center transition-all ${userBalance >= confirmState.recipe.fee ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/40 bg-red-500/5'}`}>
+                                            <div className={`relative w-14 h-14 rounded-xl bg-stone-900 border-2 flex items-center justify-center transition-all ${userBalance >= confirmState.recipe.fee ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/40 bg-red-500/5'}`}>
                                                 <div className="text-emerald-400">
-                                                    <Coins size={28} />
+                                                    <Coins size={24} />
                                                 </div>
                                                 <span className={`absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[10px] font-black border border-stone-950 shadow-lg animate-in zoom-in ${userBalance >= confirmState.recipe.fee ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
                                                     x{confirmState.recipe.fee}
                                                 </span>
                                             </div>
-                                            <span className="text-[10px] text-stone-500 font-bold uppercase">บาท</span>
+                                            <span className="text-[9px] text-stone-500 font-bold uppercase">บาท</span>
                                         </div>
                                     </>
                                 )}
                             </div>
 
                             {/* ARROW */}
-                            <div className="relative mb-6">
+                            <div className="relative shrink-0">
                                 <div className="absolute inset-0 bg-white/5 rounded-full blur-xl scale-150"></div>
-                                <div className="bg-stone-800/80 p-2 rounded-full border border-stone-700 shadow-inner relative z-10">
+                                <div className="bg-stone-800/80 p-2 rounded-full border border-stone-700 shadow-inner relative z-10 hidden md:block">
+                                    <ArrowRight size={24} className="text-stone-500" />
+                                </div>
+                                <div className="bg-stone-800/80 p-2 rounded-full border border-stone-700 shadow-inner relative z-10 block md:hidden">
                                     <ArrowDown size={24} className="text-stone-500" />
                                 </div>
                             </div>
 
                             {/* OUTPUT SECTION */}
-                            <div className="flex flex-col items-center gap-2">
+                            <div className="flex flex-col items-center gap-2 shrink-0 pr-4">
                                 <div className="relative group">
                                     <div className="absolute inset-0 bg-yellow-500/20 blur-2xl group-hover:bg-yellow-500/30 transition-all rounded-full"></div>
                                     <div className="p-4 rounded-3xl bg-stone-900 border-2 border-yellow-500/50 shadow-[0_0_25px_rgba(234,179,8,0.2)] relative z-10">
@@ -376,10 +381,31 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
                                                 </div>
                                                 <div className="flex-1">
                                                     <h3 className={`font-bold text-lg leading-tight ${getTierColor(tier)}`}>{name}</h3>
-                                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                                        <Tag size={10} className="text-stone-500" />
-                                                        <span className="text-[11px] text-emerald-400 font-mono font-bold">{currentPrice.toFixed(2)} {CURRENCY}</span>
-                                                    </div>
+                                                    {tier < 8 && (
+                                                        <div className="space-y-1 mt-1">
+                                                            <div className="flex items-center justify-between text-[10px] text-stone-500 font-bold uppercase tracking-wider">
+                                                                <span>ราคาเริ่มต้น</span>
+                                                                <span>{MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES].toFixed(2)}</span>
+                                                            </div>
+                                                            <div
+                                                                className="flex items-center justify-between cursor-pointer hover:bg-stone-800/50 p-1 -mx-1 rounded transition-colors group/price"
+                                                                onClick={() => onOpenMarket?.(tier)}
+                                                                title="คลิกเพื่อดูสถิติตลาด"
+                                                            >
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Tag size={10} className="text-stone-500 group-hover/price:text-emerald-400" />
+                                                                    <span className="text-[11px] text-emerald-400 font-mono font-bold">{currentPrice.toFixed(2)} {CURRENCY}</span>
+                                                                </div>
+                                                                {(() => {
+                                                                    const base = MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES];
+                                                                    const diff = currentPrice - base;
+                                                                    if (diff > 0.01) return <div className="flex items-center text-[10px] text-emerald-500 font-bold animate-pulse"><TrendingUp size={10} className="mr-0.5" /> ขึ้น</div>;
+                                                                    if (diff < -0.01) return <div className="flex items-center text-[10px] text-red-500 font-bold animate-pulse"><TrendingDown size={10} className="mr-0.5" /> ลง</div>;
+                                                                    return <div className="text-[10px] text-stone-600 font-bold">- คงที่</div>;
+                                                                })()}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="mt-auto pt-2">
@@ -456,7 +482,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
                                                             </div>
                                                             <div className="min-w-0">
                                                                 <div className={`text-sm font-bold truncate ${item.isHandmade ? 'text-yellow-400' : 'text-white'}`}>{item.name}</div>
-                                                                <div className="text-[10px] text-emerald-400 font-mono">+{item.dailyBonus.toFixed(1)} {CURRENCY}/วัน</div>
+                                                                <div className="text-[10px] text-emerald-400 font-mono">+{(item.dailyBonus || 0).toFixed(1)} {CURRENCY}/วัน</div>
                                                             </div>
                                                         </div>
                                                     ))}

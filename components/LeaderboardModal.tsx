@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Trophy, Medal, Crown, TrendingUp, Gift, Bot, Key, Wrench, Hourglass } from 'lucide-react';
+import { X, Trophy, Medal, Crown, TrendingUp, Gift, Truck, FileText, Monitor, Key, Smartphone, Diamond, Glasses, Cpu, Footprints, Wrench, Hourglass } from 'lucide-react';
 import { MockDB } from '../services/db';
 import { CURRENCY } from '../constants';
 
@@ -124,53 +124,102 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
                                 </div>
                                 <div className="space-y-2 pl-12">
                                     <div className="flex items-center gap-3 text-stone-300">
-                                        <Bot size={16} className="text-blue-400" />
-                                        <span className="text-sm">หุ่นยนต์ AI <span className="text-yellow-500 font-bold">(7 วัน)</span></span>
+                                        <Truck size={16} className="text-yellow-400" />
+                                        <span className="text-sm">รถขุดไฟฟ้า <span className="text-yellow-500 font-bold">(Electric)</span></span>
                                     </div>
                                     <div className="flex items-center gap-3 text-stone-300">
-                                        <Key size={16} className="text-purple-400" />
-                                        <span className="text-sm">กุญแจ <span className="text-emerald-400 font-bold">x3</span></span>
+                                        <FileText size={16} className="text-yellow-400" />
+                                        <span className="text-sm">ใบประกันความเสี่ยง <span className="text-yellow-500 font-bold">x2</span></span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Rank 2-3 */}
+                            {/* Rank 2 */}
                             <div className="bg-stone-900 border border-stone-800 p-4 rounded-xl relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-2 opacity-5"><Medal size={64} /></div>
+                                <div className="absolute top-0 right-0 p-2 opacity-10"><Medal size={64} className="text-stone-400" /></div>
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center border border-stone-600 text-stone-400">
-                                        <span className="font-bold">2-3</span>
+                                    <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center border border-stone-600 text-stone-300 font-bold text-sm">
+                                        2
                                     </div>
-                                    <h3 className="text-base font-bold text-stone-200">อันดับ 2 - 3</h3>
+                                    <h3 className="text-base font-bold text-stone-200">อันดับ 2</h3>
                                 </div>
-                                <div className="space-y-2 pl-12">
-                                    <div className="flex items-center gap-3 text-stone-400">
-                                        <Bot size={16} className="text-blue-400/70" />
-                                        <span className="text-xs">หุ่นยนต์ AI <span className="text-stone-300 font-bold">(3 วัน)</span></span>
+                                <div className="grid grid-cols-1 gap-2 pl-12">
+                                    <div className="flex items-center gap-3 text-xs text-stone-400">
+                                        <Monitor size={14} className="text-indigo-400" />
+                                        <span>พีซีสำนักงาน</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-stone-400">
-                                        <Key size={16} className="text-purple-400/70" />
-                                        <span className="text-xs">กุญแจ <span className="text-emerald-400/70 font-bold">x1</span></span>
+                                    <div className="flex items-center gap-3 text-xs text-stone-400">
+                                        <FileText size={14} className="text-yellow-500" />
+                                        <span>ใบประกันความเสี่ยง <span className="text-yellow-600 font-bold">x1</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-stone-400">
+                                        <Key size={14} className="text-purple-400" />
+                                        <span>กุญแจสุ่ม <span className="text-purple-500 font-bold">x3</span></span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Rank 4-10 */}
-                            <div className="bg-stone-900 border border-stone-800 p-4 rounded-xl relative overflow-hidden opacity-80">
+                            {/* Rank 3 */}
+                            <div className="bg-stone-900 border border-stone-800 p-4 rounded-xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-2 opacity-5"><Medal size={64} className="text-orange-500" /></div>
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center border border-stone-700 text-stone-500">
-                                        <span className="font-bold text-xs">4-10</span>
+                                    <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center border border-stone-600 text-orange-400 font-bold text-sm">
+                                        3
                                     </div>
-                                    <h3 className="text-base font-bold text-stone-400">อันดับ 4 - 10</h3>
+                                    <h3 className="text-base font-bold text-stone-200">อันดับ 3</h3>
                                 </div>
-                                <div className="space-y-2 pl-12">
-                                    <div className="flex items-center gap-3 text-stone-500">
-                                        <Wrench size={16} className="text-stone-400" />
-                                        <span className="text-xs">ชุดซ่อมแซมเต็มสูบ <span className="text-stone-300 font-bold">x5</span></span>
+                                <div className="grid grid-cols-1 gap-2 pl-12">
+                                    <div className="flex items-center gap-3 text-xs text-stone-400">
+                                        <Smartphone size={14} className="text-stone-300" />
+                                        <span>มือถือรุ่นปุ่มกด</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-stone-500">
-                                        <Hourglass size={16} className="text-stone-400" />
-                                        <span className="text-xs">นาฬิกาทราย (เล็ก) <span className="text-stone-300 font-bold">x2</span></span>
+                                    <div className="flex items-center gap-3 text-xs text-stone-400">
+                                        <Key size={14} className="text-purple-400" />
+                                        <span>กุญแจสุ่ม <span className="text-purple-500 font-bold">x3</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-stone-400">
+                                        <Diamond size={14} className="text-cyan-400" />
+                                        <span>เพชร <span className="text-cyan-500 font-bold">x2</span></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Rank 4-6 */}
+                            <div className="bg-stone-900/50 border border-stone-800 p-3 rounded-xl">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-stone-800 rounded text-stone-500 border border-stone-700">4-6</span>
+                                    <h4 className="text-xs font-bold text-stone-400 uppercase tracking-wider">รางวัลรองชนะเลิศ</h4>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pl-6">
+                                    <div className="flex items-center gap-2 text-[10px] text-stone-500">
+                                        <Glasses size={12} className="text-emerald-500" />
+                                        <span>แว่นตานิรภัยใส</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px] text-stone-500">
+                                        <Key size={12} className="text-purple-500" />
+                                        <span>กุญแจสุ่ม x1</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px] text-stone-500">
+                                        <Cpu size={12} className="text-indigo-400" />
+                                        <span>ชิปอัปเกรด x20</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Rank 7-10 */}
+                            <div className="bg-stone-900/30 border border-stone-800/50 p-3 rounded-xl">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-stone-800 rounded text-stone-600 border border-stone-800">7-10</span>
+                                    <h4 className="text-xs font-bold text-stone-500 uppercase tracking-wider font-mono">Miner Participation</h4>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6">
+                                    <div className="flex items-center gap-2 text-[10px] text-stone-600">
+                                        <Footprints size={12} className="text-stone-500" />
+                                        <span>รองเท้าบูทกันน้ำ</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px] text-stone-600">
+                                        <Hourglass size={12} className="text-stone-500" />
+                                        <span>นาฬิกาทราย x10</span>
                                     </div>
                                 </div>
                             </div>

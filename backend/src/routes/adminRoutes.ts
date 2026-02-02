@@ -2,7 +2,8 @@ import express from 'express';
 import { authenticate, authorizeAdmin } from '../middleware/auth';
 import {
     getAllUsers, getAllRigs, getSystemConfig, updateSystemConfig,
-    getPendingClaims, getPendingWithdrawals, getPendingDeposits, processDepositRequest, processWithdrawalRequest
+    getPendingClaims, getPendingWithdrawals, getPendingDeposits, processDepositRequest, processWithdrawalRequest, getUserStats,
+    adminGiveCompensation, adminAddItem
 } from '../controllers/adminController';
 
 const router = express.Router();
@@ -11,6 +12,9 @@ const router = express.Router();
 router.use(authenticate, authorizeAdmin);
 
 router.get('/users', getAllUsers);
+router.get('/users/:userId/stats', getUserStats);
+router.post('/users/compensation', adminGiveCompensation);
+router.post('/users/items', adminAddItem);
 router.get('/rigs', getAllRigs);
 router.get('/config', getSystemConfig);
 router.post('/config', updateSystemConfig);

@@ -29,7 +29,7 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
     if (!isOpen) return null;
 
     const availableGloves = inventory.filter(item =>
-        item.typeId === 'glove' &&
+        item.typeId.includes('glove') &&
         (!item.expireAt || item.expireAt > Date.now())
     );
 
@@ -153,7 +153,7 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
 
                             <div className="absolute bottom-0 w-full bg-stone-950/80 backdrop-blur-sm py-2 text-center border-t border-stone-800">
                                 <div className="text-stone-400 text-[10px] uppercase tracking-wider">โบนัสรายวัน</div>
-                                <div className="text-emerald-400 font-mono font-bold text-lg">+{equippedGlove.dailyBonus.toFixed(2)} {CURRENCY}</div>
+                                <div className="text-emerald-400 font-mono font-bold text-lg">+{(equippedGlove.dailyBonus || 0).toFixed(2)} {CURRENCY}</div>
                             </div>
                         </div>
                     ) : (
@@ -280,7 +280,7 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                                 </div>
                                 <div>
                                     <div className={`text-xs font-bold ${RARITY_SETTINGS[item.rarity].color}`}>{item.name}</div>
-                                    <div className="text-[10px] text-emerald-400 mt-1">+{item.dailyBonus} / วัน</div>
+                                    <div className="text-[10px] text-emerald-400 mt-1">+{item.dailyBonus || 0} / วัน</div>
                                 </div>
                             </div>
                         ))

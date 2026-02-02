@@ -16,7 +16,7 @@ export const getMyRigs = async (req: AuthRequest, res: Response) => {
 // Buy a rig
 export const buyRig = async (req: AuthRequest, res: Response) => {
     try {
-        const { name, investment, dailyProfit, durationDays } = req.body;
+        const { name, investment, dailyProfit, durationDays, repairCost, energyCostPerDay, bonusProfit } = req.body;
         const userId = req.userId;
 
         const user = await User.findById(userId);
@@ -73,15 +73,71 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
             dailyProfit,
             expiresAt,
             slots: [gloveId, null, null, null, null], // Equip glove
-            rarity // Rig rarity matches? Or Rig is always Common? Frontend uses Loot rarity for glove, Rig is standard. 
-            // Actually frontend sets Rig rarity = Loot rarity too (line 366 of PlayerDashboard).
-            // So we set rig.rarity = rarity
+            rarity,
+            repairCost: repairCost || 0,
+            energyCostPerDay: energyCostPerDay || 0,
+            bonusProfit: bonusProfit || 0
         });
         rig.rarity = rarity; // Update rig rarity
         await rig.save();
 
         // Return both
         res.status(201).json({ rig, glove: newGlove });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Refill a specific rig's energy
+export const refillRigEnergy = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.userId;
+        const { id: rigId } = req.params;
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
+        if (!rig) return res.status(404).json({ message: 'Rig not found' });
+
+        // Calculate needed energy (simplified drain logic matching frontend/MockDB for consistency)
+        const now = new Date();
+        const lastUpdate = rig.lastEnergyUpdate || rig.purchaseDate || now;
+        const elapsedHours = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
+
+        // 100% in 24 hours (4.166% per hour)
+        const drain = elapsedHours * 4.166666666666667;
+        const currentEnergy = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
+        const needed = 100 - currentEnergy;
+
+        if (needed <= 0) {
+            return res.status(400).json({ message: 'Energy is already full' });
+        }
+
+        // Cost is proportional to needed energy
+        const baseCost = rig.energyCostPerDay || 0;
+        let cost = (needed / 100) * baseCost;
+        if (cost < 0.1) cost = 0.1; // Minimum fee
+
+        if (user.balance < cost) {
+            return res.status(400).json({ message: 'ยอดเงินในวอลเลทไม่เพียงพอ' });
+        }
+
+        // Deduct balance and update rig
+        user.balance -= cost;
+        rig.energy = 100;
+        rig.lastEnergyUpdate = now;
+
+        await user.save();
+        await rig.save();
+
+        res.json({
+            message: 'Rig energy refilled',
+            cost,
+            balance: user.balance,
+            energy: rig.energy
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

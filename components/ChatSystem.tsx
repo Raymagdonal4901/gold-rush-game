@@ -9,6 +9,10 @@ interface ChatSystemProps {
 
 export const ChatSystem: React.FC<ChatSystemProps> = ({ currentUser }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isButtonVisible, setIsButtonVisible] = useState(() => {
+        const saved = localStorage.getItem('chatButtonVisible');
+        return saved !== 'false'; // Default to true if not set
+    });
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -62,18 +66,49 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ currentUser }) => {
         }
     };
 
-    if (!isOpen) {
+    const toggleButtonVisibility = () => {
+        const newState = !isButtonVisible;
+        setIsButtonVisible(newState);
+        localStorage.setItem('chatButtonVisible', String(newState));
+    };
+
+    // Show small toggle button when chat button is hidden
+    if (!isButtonVisible) {
         return (
             <button
-                onClick={() => setIsOpen(true)}
-                className="fixed bottom-24 right-6 z-40 bg-indigo-900/80 hover:bg-indigo-800 text-white p-4 rounded-full shadow-[0_0_20px_rgba(79,70,229,0.3)] border border-indigo-500/50 backdrop-blur-sm transition-all hover:scale-110 group"
+                onClick={toggleButtonVisibility}
+                className="fixed bottom-24 right-6 z-40 bg-stone-800/80 hover:bg-stone-700 text-stone-400 hover:text-white p-2 rounded-full shadow-lg border border-stone-700/50 backdrop-blur-sm transition-all hover:scale-110"
+                title="แสดงปุ่มแชท"
             >
-                <MessageSquare size={24} className="group-hover:animate-bounce" />
-                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
-                </span>
+                <MessageSquare size={16} />
             </button>
+        );
+    }
+
+    if (!isOpen) {
+        return (
+            <div className="fixed bottom-24 right-6 z-40 flex items-center gap-2">
+                {/* Hide Button */}
+                <button
+                    onClick={toggleButtonVisibility}
+                    className="bg-stone-800/80 hover:bg-stone-700 text-stone-500 hover:text-white p-2 rounded-full shadow-lg border border-stone-700/50 backdrop-blur-sm transition-all hover:scale-110"
+                    title="ซ่อนปุ่มแชท"
+                >
+                    <X size={14} />
+                </button>
+
+                {/* Chat Button */}
+                <button
+                    onClick={() => setIsOpen(true)}
+                    className="bg-indigo-900/80 hover:bg-indigo-800 text-white p-4 rounded-full shadow-[0_0_20px_rgba(79,70,229,0.3)] border border-indigo-500/50 backdrop-blur-sm transition-all hover:scale-110 group"
+                >
+                    <MessageSquare size={24} className="group-hover:animate-bounce" />
+                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
+                    </span>
+                </button>
+            </div>
         );
     }
 

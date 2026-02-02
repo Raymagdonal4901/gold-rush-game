@@ -3,8 +3,9 @@ import React, { useState } from 'react';
 import { X, Target, Trophy, Check, Star, Lock, Gift, Package, Coins, Medal, Sparkles, ChevronUp } from 'lucide-react';
 import { QUESTS, ACHIEVEMENTS, CURRENCY, MATERIAL_CONFIG, SHOP_ITEMS, MINING_RANKS } from '../constants';
 import { MockDB } from '../services/db';
-import { User } from '../types';
+import { User } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
+import { api } from '../services/api';
 
 interface MissionModalProps {
     isOpen: boolean;
@@ -15,18 +16,46 @@ interface MissionModalProps {
 
 export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, user, onRefresh }) => {
     const [activeTab, setActiveTab] = useState<'QUEST' | 'MASTERY'>('QUEST');
+    const [weeklyStats, setWeeklyStats] = useState<any>(null);
+    const [claimedQuests, setClaimedQuests] = useState<string[]>([]);
+    const [hasFetched, setHasFetched] = useState(false);
+
+    // Fetch quest status from API when modal opens
+    React.useEffect(() => {
+        if (isOpen) {
+            fetchQuestStatus();
+        }
+    }, [isOpen]);
+
+    const fetchQuestStatus = async () => {
+        try {
+            const data = await api.getQuestStatus();
+            setWeeklyStats(data.weeklyStats);
+            setClaimedQuests(data.claimedQuests);
+            setHasFetched(true);
+        } catch (error) {
+            console.error('Failed to fetch quest status:', error);
+        }
+    };
 
     if (!isOpen) return null;
 
+    if (!isOpen) return null;
+
+    // Use API data if available, fall back to user stats (lifetime) for simplicity if loading
+    // ideally, weekly quests should strictly use weeklyStats
+    const currentStats = weeklyStats || {};
     const stats = user.stats || { totalMaterialsMined: 0, totalMoneySpent: 0, totalLogins: 0, luckyDraws: 0, questsCompleted: 0 };
     const masteryPoints = user.masteryPoints || 0;
 
-    const handleClaimQuest = (id: string) => {
+    const handleClaimQuest = async (id: string) => {
         try {
-            MockDB.claimQuest(user.id, id);
-            onRefresh();
+            await api.claimQuestReward(id);
+            // MockDB.claimQuest(user.id, id); // Deprecated
+            fetchQuestStatus(); // Refresh local state
+            onRefresh(); // Refresh parent user state (balance/points)
         } catch (e: any) {
-            alert(e.message);
+            alert(e.response?.data?.message || e.message);
         }
     };
 
@@ -50,16 +79,18 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
     };
 
     const getProgress = (target: number, type: string) => {
+        // For Weekly Quests, use weeklyStats
+        if (type === 'materials_crafted') return Math.min(currentStats.materialsCrafted || 0, target);
+        if (type === 'spend') return Math.min(currentStats.moneySpent || 0, target);
+        if (type === 'dungeon') return Math.min(currentStats.dungeonsEntered || 0, target);
+        if (type === 'items_crafted') return Math.min(currentStats.itemsCrafted || 0, target);
+        if (type === 'rare_loot') return Math.min(currentStats.rareLootCount || 0, target);
+        if (type === 'repair') return Math.min(currentStats.repairAmount || 0, target);
+
+        // Fallback for Achievements (Lifetime)
         if (type === 'login') return Math.min(stats.totalLogins, target);
-        if (type === 'spend') return Math.min(stats.totalMoneySpent, target);
-        if (type === 'materials') return Math.min(stats.totalMaterialsMined, target);
         if (type === 'lucky') return Math.min(stats.luckyDraws, target);
-        if (type === 'vip') return Math.min(stats.totalMoneySpent, target);
-        if (type === 'materials_crafted') return Math.min(stats.materialsCrafted || 0, target);
-        if (type === 'dungeon') return Math.min(stats.dungeonsEntered || 0, target);
-        if (type === 'items_crafted') return Math.min(stats.itemsCrafted || 0, target);
-        if (type === 'repair') return Math.min(Math.floor(stats.repairPercent || 0), target);
-        if (type === 'rare_loot') return Math.min(stats.rareLootCount || 0, target);
+        // ... mixed logic for other types if needed, but primarily weekly quests use weeklyStats
 
         return 0;
     };
@@ -177,7 +208,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                             {QUESTS.map(quest => {
                                 const progress = getProgress(quest.target, quest.type);
                                 const percent = Math.min(100, (progress / quest.target) * 100);
-                                const isClaimed = user.claimedQuests?.includes(quest.id);
+                                const isClaimed = claimedQuests.includes(quest.id);
                                 const canClaim = percent >= 100 && !isClaimed;
 
                                 return (
