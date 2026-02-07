@@ -560,9 +560,17 @@ export const MockDB = {
         return messages.slice(-50);
     },
 
-    sendChatMessage: (userId: string, message: string) => {
+    sendChatMessage: (userId: string, message: string, currentUser?: User) => {
         const users = getStore<User[]>(STORAGE_KEYS.USERS, []);
-        const user = users.find(u => u.id === userId);
+        let user = users.find(u => u.id === userId);
+
+        // If user is not found in local storage but we have currentUser, add them
+        if (!user && currentUser) {
+            users.push(currentUser);
+            setStore(STORAGE_KEYS.USERS, users);
+            user = currentUser;
+        }
+
         if (!user) throw new Error('User not found');
 
         const messages = getStore<ChatMessage[]>(STORAGE_KEYS.CHAT, []);

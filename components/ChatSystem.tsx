@@ -56,7 +56,7 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ currentUser }) => {
         if (!canChat) return;
 
         try {
-            MockDB.sendChatMessage(currentUser.id, input.trim());
+            MockDB.sendChatMessage(currentUser.id, input.trim(), currentUser);
             setInput('');
             setError(null);
             // Immediate update
