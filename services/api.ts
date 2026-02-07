@@ -515,3 +515,33 @@ const mapBackendTransactionToFrontend = (tx: any): Transaction => ({
                     'รายการอื่นๆ'
     )
 });
+
+// Chat API methods
+export const chatApi = {
+    getChatMessages: async (): Promise<ChatMessage[]> => {
+        const res = await client.get('/chat');
+        return res.data.map((msg: any) => ({
+            id: msg._id || msg.id,
+            userId: msg.userId,
+            username: msg.username,
+            message: msg.message,
+            timestamp: new Date(msg.timestamp || msg.createdAt).getTime(),
+            role: msg.role,
+            isVip: msg.isVip
+        }));
+    },
+
+    sendChatMessage: async (message: string): Promise<ChatMessage> => {
+        const res = await client.post('/chat', { message });
+        const msg = res.data;
+        return {
+            id: msg._id || msg.id,
+            userId: msg.userId,
+            username: msg.username,
+            message: msg.message,
+            timestamp: new Date(msg.timestamp || msg.createdAt).getTime(),
+            role: msg.role,
+            isVip: msg.isVip
+        };
+    }
+};

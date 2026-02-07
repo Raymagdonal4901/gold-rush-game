@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, MessageSquare, Lock, X, Crown, ShieldAlert } from 'lucide-react';
-import { MockDB } from '../services/db';
+import { chatApi } from '../services/api';
 import { User, ChatMessage } from '../services/types';
 
 interface ChatSystemProps {
@@ -16,28 +16,31 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ currentUser }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Level Gate Check
     // Level Gate Check - UNLOCKED FOR EVERYONE
     const canChat = true;
+
+    // Fetch messages from backend
+    const fetchMessages = async () => {
+        try {
+            const msgs = await chatApi.getChatMessages();
+            setMessages(msgs);
+        } catch (err) {
+            console.error('Failed to fetch chat messages:', err);
+        }
+    };
 
     useEffect(() => {
         if (!isOpen) return;
 
         // Initial load
-        setMessages(MockDB.getChatMessages());
+        fetchMessages();
         scrollToBottom();
 
-        // Polling loop
-        const interval = setInterval(() => {
-            const latest = MockDB.getChatMessages();
-            setMessages(prev => {
-                if (prev.length !== latest.length) return latest;
-                if (latest.length > 0 && prev.length > 0 && latest[latest.length - 1].timestamp !== prev[prev.length - 1].timestamp) return latest;
-                return prev;
-            });
-        }, 2000);
+        // Polling loop - fetch from backend every 3 seconds
+        const interval = setInterval(fetchMessages, 3000);
 
         return () => clearInterval(interval);
     }, [isOpen]);
@@ -50,20 +53,24 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ currentUser }) => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    const handleSend = (e?: React.FormEvent) => {
+    const handleSend = async (e?: React.FormEvent) => {
         e?.preventDefault();
         if (!input.trim()) return;
         if (!canChat) return;
+        if (loading) return;
 
+        setLoading(true);
         try {
-            MockDB.sendChatMessage(currentUser.id, input.trim(), currentUser);
+            await chatApi.sendChatMessage(input.trim());
             setInput('');
             setError(null);
-            // Immediate update
-            setMessages(MockDB.getChatMessages());
+            // Immediate refresh
+            await fetchMessages();
         } catch (err: any) {
-            setError(err.message);
+            setError(err.response?.data?.message || err.message || 'ส่งข้อความไม่สำเร็จ');
             setTimeout(() => setError(null), 3000);
+        } finally {
+            setLoading(false);
         }
     };
 
