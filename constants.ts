@@ -1,7 +1,7 @@
 
 export const CURRENCY = 'บาท';
 export const BASE_CLAIM_AMOUNT = 0;
-export const DEMO_SPEED_MULTIPLIER = 720; // 24 hours -> 2 minutes
+export const DEMO_SPEED_MULTIPLIER = 10; // 10x Speed for simulation
 
 export const RARITY_SETTINGS: Record<string, { color: string; label: string; bonus: number; upgradeIncrement: number; border: string; bgGradient: string; shadow: string }> = {
     COMMON: { color: 'text-stone-400', label: 'Common', bonus: 0.5, upgradeIncrement: 0.2, border: 'border-stone-600', bgGradient: 'from-stone-800 to-stone-900', shadow: 'shadow-none' },
@@ -17,93 +17,93 @@ export const RARITY_SETTINGS: Record<string, { color: string; label: string; bon
 
 export const EQUIPMENT_SERIES: Record<string, { title: string; desc: string; tiers: { rarity: string; name: string; stat: string }[] }> = {
     hat: {
-        title: "Helmet Series",
-        desc: "ความปลอดภัย & การซ่อมบำรุง",
+        title: "Power Supply",
+        desc: "แหล่งจ่ายไฟ & ความเสถียร",
         tiers: [
-            { rarity: 'COMMON', name: 'หมวกนิรภัยมาตรฐาน', stat: 'ค่าซ่อม -5%' },
-            { rarity: 'RARE', name: 'หมวกวิศวกรคุมงาน', stat: 'ค่าซ่อม -10%' },
-            { rarity: 'EPIC', name: 'หมวกนิรภัยติดไฟฉาย LED', stat: 'ค่าซ่อม -15%' },
-            { rarity: 'LEGENDARY', name: 'หมวกสมาร์ทฮัด (HUD)', stat: 'ค่าซ่อม -20%' },
-        ]
-    },
-    glasses: {
-        title: "Goggles Series",
-        desc: "การมองเห็น & การค้นหา",
-        tiers: [
-            { rarity: 'COMMON', name: 'แว่นตานิรภัยใส', stat: 'ดรอป +2%' },
-            { rarity: 'RARE', name: 'แว่นกันแสงเชื่อม', stat: 'ดรอป +5%' },
-            { rarity: 'EPIC', name: 'แว่นสแกนความร้อน', stat: 'ดรอป +8%' },
-            { rarity: 'LEGENDARY', name: 'แว่นวิเคราะห์โครงสร้างแร่', stat: 'ดรอป +12%' },
+            { rarity: 'COMMON', name: 'แหล่งจ่ายไฟ 500W Standard', stat: 'ค่าซ่อม -5%' },
+            { rarity: 'RARE', name: 'แหล่งจ่ายไฟ 750W Gold', stat: 'ค่าซ่อม -10%' },
+            { rarity: 'EPIC', name: 'แหล่งจ่ายไฟ 1000W Platinum', stat: 'ค่าซ่อม -15%' },
+            { rarity: 'LEGENDARY', name: 'แหล่งจ่ายไฟ 1600W Titanium', stat: 'ค่าซ่อม -20%' },
         ]
     },
     uniform: {
-        title: "Suit Series",
-        desc: "ความทนทาน & อายุการใช้งาน",
+        title: "ระบบระบายความร้อน",
+        desc: "อุณหภูมิ & อายุการใช้งาน",
         tiers: [
-            { rarity: 'COMMON', name: 'ชุดหมีช่างกล', stat: 'อายุ +5 วัน' },
-            { rarity: 'RARE', name: 'ชุดกันความร้อนสูง', stat: 'อายุ +10 วัน' },
-            { rarity: 'EPIC', name: 'ชุดปฏิบัติการพิเศษ', stat: 'อายุ +20 วัน' },
-            { rarity: 'LEGENDARY', name: 'ชุดเกราะเอ็กโซสูท', stat: 'อายุ +30 วัน' },
+            { rarity: 'COMMON', name: 'พัดลมเคส 120mm', stat: 'สัญญา +5 วัน' },
+            { rarity: 'RARE', name: 'ฮีรตซิงค์ระบายความร้อน', stat: 'สัญญา +10 วัน' },
+            { rarity: 'EPIC', name: 'ชุดน้ำปิด (AIO Water Cool)', stat: 'สัญญา +20 วัน' },
+            { rarity: 'LEGENDARY', name: 'ห้องเย็น (Immersion Cooling)', stat: 'สัญญา +30 วัน' },
         ]
     },
     bag: {
-        title: "Bag Series",
-        desc: "การค้าขาย & มูลค่า",
+        title: "Hardware Wallet",
+        desc: "ความปลอดภัย & มูลค่า",
         tiers: [
-            { rarity: 'COMMON', name: 'กระเป๋าผ้าใบ', stat: 'ราคาขาย +1%' },
-            { rarity: 'RARE', name: 'กล่องเครื่องมือเหล็ก', stat: 'ราคาขาย +2%' },
-            { rarity: 'EPIC', name: 'เป้สนามเดินป่า', stat: 'ราคาขาย +3%' },
-            { rarity: 'LEGENDARY', name: 'กระเป๋ามิติควอนตัม', stat: 'ราคาขาย +5%' },
+            { rarity: 'COMMON', name: 'Paper Wallet', stat: 'ราคาขาย +1%' },
+            { rarity: 'RARE', name: 'USB Wallet', stat: 'ราคาขาย +2%' },
+            { rarity: 'EPIC', name: 'Crypto Steel', stat: 'ราคาขาย +3%' },
+            { rarity: 'LEGENDARY', name: 'Cold Storage Vault', stat: 'ราคาขาย +5%' },
         ]
     },
     boots: {
-        title: "Boots Series",
-        desc: "ความคล่องตัว & พลังงาน",
+        title: "สายไฟ & การเชื่อมต่อ",
+        desc: "ความเสถียร & ประหยัดไฟ",
         tiers: [
-            { rarity: 'COMMON', name: 'รองเท้าบูทกันน้ำ', stat: 'โอกาสประหยัดไฟ 5%' },
-            { rarity: 'RARE', name: 'รองเท้าหัวเหล็ก', stat: 'โอกาสประหยัดไฟ 10%' },
-            { rarity: 'EPIC', name: 'รองเท้าคอมแบท', stat: 'โอกาสประหยัดไฟ 20%' },
-            { rarity: 'LEGENDARY', name: 'รองเท้าต้านแรงโน้มถ่วง', stat: 'โอกาสประหยัดไฟ 30%' },
+            { rarity: 'COMMON', name: 'สายไฟมาตรฐาน', stat: 'ประหยัดค่าไฟ 5%' },
+            { rarity: 'RARE', name: 'สายถักทนความร้อน', stat: 'ประหยัดค่าไฟ 10%' },
+            { rarity: 'EPIC', name: 'รางไฟอุตสาหกรรม', stat: 'ประหยัดค่าไฟ 20%' },
+            { rarity: 'LEGENDARY', name: 'ระบบเดินไฟอัจฉริยะ', stat: 'ประหยัดค่าไฟ 30%' },
         ]
     },
     mobile: {
-        title: "Smartphone Series",
-        desc: "คอนเนกชั่น & ตลาดกลาง",
+        title: "Network Connection",
+        desc: "การเชื่อมต่อ & ความเร็ว",
         tiers: [
-            { rarity: 'COMMON', name: 'มือถือรุ่นปุ่มกด', stat: 'ลดภาษี 2%' },
-            { rarity: 'RARE', name: 'สมาร์ทโฟนจอสัมผัส', stat: 'ลดภาษี 5%' },
-            { rarity: 'EPIC', name: 'แท็บเล็ตควบคุมระยะไกล', stat: 'ลดภาษี 8%' },
-            { rarity: 'LEGENDARY', name: 'โฮโลแกรมคอมมูนิเตเตอร์', stat: 'ลดภาษี 12%' },
+            { rarity: 'COMMON', name: 'LAN Cable Cat5e', stat: 'ลดค่าใช้จ่าย 2%' },
+            { rarity: 'RARE', name: 'WiFi 6 Router', stat: 'ลดค่าใช้จ่าย 5%' },
+            { rarity: 'EPIC', name: 'Fiber Optic', stat: 'ลดค่าใช้จ่าย 8%' },
+            { rarity: 'LEGENDARY', name: 'Satellite Link (Starlink)', stat: 'ลดค่าใช้จ่าย 12%' },
         ]
     },
     pc: {
-        title: "Computer Series",
-        desc: "การประมวลผล & โบนัส",
+        title: "Control Board",
+        desc: "ควบคุม & ประมวลผล",
         tiers: [
-            { rarity: 'COMMON', name: 'พีซีสำนักงาน', stat: 'คริติคอล 1%' },
-            { rarity: 'RARE', name: 'เครื่องเซิร์ฟเวอร์ขุด', stat: 'คริติคอล 2%' },
-            { rarity: 'EPIC', name: 'ซูเปอร์คอมพิวเตอร์', stat: 'คริติคอล 4%' },
-            { rarity: 'LEGENDARY', name: 'ควอนตัมคอมพิวเตอร์', stat: 'คริติคอล 6%' },
+            { rarity: 'COMMON', name: 'Raspberry Pi', stat: 'โอกาสโบนัส 1%' },
+            { rarity: 'RARE', name: 'Mainboard BTC', stat: 'โอกาสโบนัส 2%' },
+            { rarity: 'EPIC', name: 'Industrial Controller', stat: 'โอกาสโบนัส 4%' },
+            { rarity: 'LEGENDARY', name: 'Quantum Controller', stat: 'โอกาสโบนัส 6%' },
+        ]
+    },
+    glasses: {
+        title: "Mining Firmware",
+        desc: "ซอฟต์แวร์ & ประสิทธิภาพ",
+        tiers: [
+            { rarity: 'COMMON', name: 'Stock Firmware', stat: 'โบนัส +2%' },
+            { rarity: 'RARE', name: 'Overclock BIOS', stat: 'โบนัส +5%' },
+            { rarity: 'EPIC', name: 'Custom Modded OS', stat: 'โบนัส +8%' },
+            { rarity: 'LEGENDARY', name: 'AI Optimized Kernel', stat: 'โบนัส +12%' },
         ]
     },
     auto_excavator: {
-        title: "Excavator Series",
-        desc: "ผลผลิตสูงสุด & Jackpot",
+        title: "Rig Frame",
+        desc: "โครงสร้าง & ความจุ",
         tiers: [
-            { rarity: 'COMMON', name: 'รถขุดไฟฟ้า (Electric)', stat: 'Jackpot 2%' },
-            { rarity: 'RARE', name: 'รถขุดไฟฟ้าหัวสว่าน', stat: 'Jackpot 5%' },
-            { rarity: 'EPIC', name: 'รถขุดเลเซอร์ไฮบริด', stat: 'Jackpot 8%' },
-            { rarity: 'LEGENDARY', name: 'รถขุดแม่เหล็กไฟฟ้า', stat: 'Jackpot 12%' },
+            { rarity: 'COMMON', name: 'โครงเหล็ก (Steel Frame)', stat: 'Jackpot 2%' },
+            { rarity: 'RARE', name: 'เคสอลูมิเนียม (Alu Case)', stat: 'Jackpot 5%' },
+            { rarity: 'EPIC', name: 'ตู้ Rack Server', stat: 'Jackpot 8%' },
+            { rarity: 'LEGENDARY', name: 'ตู้คอนเทนเนอร์ (Container)', stat: 'Jackpot 12%' },
         ]
     }
 };
 
 export const GLOVE_DETAILS: Record<string, { name: string }> = {
-    COMMON: { name: 'ถุงมือทำงาน (WORK)' },
-    RARE: { name: 'ถุงมือเสริมแรง (REINFORCED)' },
-    SUPER_RARE: { name: 'ถุงมือยุทธวิธี (TACTICAL)' },
-    EPIC: { name: 'ถุงมือพาวเวอร์ (POWER)' },
-    LEGENDARY: { name: 'ถุงมืออินฟินิตี้ (INFINITY)' },
+    COMMON: { name: 'คนงานทั่วไป (JUNIOR)' },
+    RARE: { name: 'หัวหน้าคนงาน (SENIOR)' },
+    SUPER_RARE: { name: 'วิศวกรเหมือง (ENGINEER)' },
+    EPIC: { name: 'ผู้เชี่ยวชาญ (EXPERT)' },
+    LEGENDARY: { name: 'ตำนานนักขุด (LEGEND)' },
 };
 
 export const GIFT_CYCLE_DAYS = 30;
@@ -119,12 +119,6 @@ export const REPAIR_CONFIG = {
     COST_DIVISOR: 5,
 };
 
-export const UPGRADE_REQUIREMENTS: Record<number, { matTier: number; matAmount: number; chance: number; label: string; catalyst?: number; maxBonus?: number; cost: number }> = {
-    1: { matTier: 1, matAmount: 1, chance: 1.0, label: '+1 (ใช้หิน)', catalyst: 0, maxBonus: 0.5, cost: 10 },
-    2: { matTier: 1, matAmount: 1, chance: 1.0, label: '+2 (ใช้หิน)', catalyst: 0, maxBonus: 1.0, cost: 20 },
-    3: { matTier: 2, matAmount: 1, chance: 1.0, label: '+3 (ใช้ทองแดง)', catalyst: 1, maxBonus: 2.0, cost: 30 },
-    4: { matTier: 2, matAmount: 1, chance: 0.8, label: '+4 (ใช้ทองแดง)', catalyst: 2, maxBonus: 3.5, cost: 50 },
-};
 
 export const UPGRADE_CONFIG = {
     CHIP_COST: 1,
@@ -137,16 +131,16 @@ export const MATERIAL_CONFIG = {
     DROP_CHANCE: 1.0, // Guaranteed drop when interval hits
     DROP_INTERVAL_MS: 72000000, // 20 Hours (20 * 60 * 60 * 1000)
     NAMES: {
-        0: 'แร่ปริศนา',
-        1: 'ถ่านหิน',
-        2: 'ทองแดง',
-        3: 'เหล็ก',
-        4: 'ทองคำ',
-        5: 'เพชร',
-        6: 'น้ำมันดิบสังเคราะห์',
-        7: 'ไวเบรเนียม',
-        8: 'แร่ลึกลับ',
-        9: 'แร่ในตำนาน',
+        0: 'วัสดุปริศนา', // Shifted
+        1: 'ถ่านหิน', // Coal (was Stone)
+        2: 'ทองแดง', // Copper (was Iron)
+        3: 'เหล็ก', // Iron (was Gold)
+        4: 'ทองคำ', // Gold (was Diamond)
+        5: 'เพชร', // Diamond (was Crude Oil)
+        6: 'น้ำมันดิบ', // Crude Oil (was Vibranium)
+        7: 'แร่วาเบรเนียม', // Vibranium (was Mysterious)
+        8: 'แร่ลึกลับ', // Mysterious (was Legendary)
+        9: 'แร่ในตำนาน', // Legendary
     },
     PRICES: {
         0: 0,
@@ -172,73 +166,77 @@ export const MATERIAL_CONFIG = {
     }
 };
 
-export const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, { matTier: number; matAmount: number; chance: number; chipAmount: number; cost: number; bonusMultiplier: number }>> = {
+export const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, { matTier: number; matAmount: number; chance: number; chipAmount: number; cost: number; targetBonus: number; risk: string }>> = {
     hat: {
-        1: { matTier: 1, matAmount: 3, chipAmount: 1, cost: 5, chance: 1.0, bonusMultiplier: 1.10 },
-        2: { matTier: 1, matAmount: 5, chipAmount: 2, cost: 10, chance: 0.8, bonusMultiplier: 1.25 },
-        3: { matTier: 1, matAmount: 10, chipAmount: 3, cost: 20, chance: 0.6, bonusMultiplier: 1.50 },
-        4: { matTier: 2, matAmount: 2, chipAmount: 5, cost: 50, chance: 0.4, bonusMultiplier: 1.80 },
-        5: { matTier: 2, matAmount: 4, chipAmount: 10, cost: 100, chance: 0.2, bonusMultiplier: 2.50 },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     uniform: {
-        1: { matTier: 1, matAmount: 5, chipAmount: 2, cost: 15, chance: 1.0, bonusMultiplier: 1.10 },
-        2: { matTier: 1, matAmount: 10, chipAmount: 4, cost: 30, chance: 0.8, bonusMultiplier: 1.25 },
-        3: { matTier: 1, matAmount: 20, chipAmount: 6, cost: 60, chance: 0.6, bonusMultiplier: 1.50 },
-        4: { matTier: 2, matAmount: 4, chipAmount: 8, cost: 120, chance: 0.4, bonusMultiplier: 1.80 },
-        5: { matTier: 2, matAmount: 8, chipAmount: 15, cost: 250, chance: 0.2, bonusMultiplier: 2.50 },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     bag: {
-        1: { matTier: 3, matAmount: 2, chipAmount: 2, cost: 20, chance: 1.0, bonusMultiplier: 1.10 },
-        2: { matTier: 3, matAmount: 4, chipAmount: 4, cost: 40, chance: 0.7, bonusMultiplier: 1.25 },
-        3: { matTier: 3, matAmount: 8, chipAmount: 6, cost: 80, chance: 0.5, bonusMultiplier: 1.50 },
-        4: { matTier: 4, matAmount: 1, chipAmount: 10, cost: 150, chance: 0.3, bonusMultiplier: 1.80 },
-        5: { matTier: 4, matAmount: 3, chipAmount: 20, cost: 300, chance: 0.15, bonusMultiplier: 2.50 },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     boots: {
-        1: { matTier: 3, matAmount: 3, chipAmount: 3, cost: 30, chance: 1.0, bonusMultiplier: 1.10 },
-        2: { matTier: 3, matAmount: 6, chipAmount: 6, cost: 60, chance: 0.7, bonusMultiplier: 1.25 },
-        3: { matTier: 3, matAmount: 12, chipAmount: 9, cost: 120, chance: 0.5, bonusMultiplier: 1.50 },
-        4: { matTier: 4, matAmount: 2, chipAmount: 15, cost: 250, chance: 0.3, bonusMultiplier: 1.80 },
-        5: { matTier: 4, matAmount: 5, chipAmount: 25, cost: 500, chance: 0.15, bonusMultiplier: 2.50 },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     glasses: {
-        1: { matTier: 3, matAmount: 5, chipAmount: 4, cost: 40, chance: 1.0, bonusMultiplier: 1.10 },
-        2: { matTier: 3, matAmount: 10, chipAmount: 8, cost: 80, chance: 0.7, bonusMultiplier: 1.25 },
-        3: { matTier: 3, matAmount: 20, chipAmount: 12, cost: 160, chance: 0.5, bonusMultiplier: 1.50 },
-        4: { matTier: 4, matAmount: 3, chipAmount: 20, cost: 350, chance: 0.3, bonusMultiplier: 1.80 },
-        5: { matTier: 4, matAmount: 7, chipAmount: 35, cost: 700, chance: 0.15, bonusMultiplier: 2.50 },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     mobile: {
-        1: { matTier: 4, matAmount: 3, chipAmount: 5, cost: 100, chance: 1.0, bonusMultiplier: 1.10 },
-        2: { matTier: 5, matAmount: 1, chipAmount: 10, cost: 200, chance: 0.6, bonusMultiplier: 1.25 },
-        3: { matTier: 5, matAmount: 2, chipAmount: 15, cost: 400, chance: 0.4, bonusMultiplier: 1.50 },
-        4: { matTier: 5, matAmount: 3, chipAmount: 25, cost: 800, chance: 0.25, bonusMultiplier: 1.80 },
-        5: { matTier: 7, matAmount: 1, chipAmount: 50, cost: 1500, chance: 0.1, bonusMultiplier: 2.50 },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     pc: {
-        1: { matTier: 4, matAmount: 5, chipAmount: 8, cost: 150, chance: 1.0, bonusMultiplier: 1.10 },
-        2: { matTier: 5, matAmount: 2, chipAmount: 16, cost: 300, chance: 0.6, bonusMultiplier: 1.25 },
-        3: { matTier: 5, matAmount: 4, chipAmount: 24, cost: 600, chance: 0.4, bonusMultiplier: 1.50 },
-        4: { matTier: 5, matAmount: 6, chipAmount: 40, cost: 1200, chance: 0.25, bonusMultiplier: 1.80 },
-        5: { matTier: 7, matAmount: 2, chipAmount: 80, cost: 2500, chance: 0.1, bonusMultiplier: 2.50 },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     auto_excavator: {
-        1: { matTier: 4, matAmount: 10, chipAmount: 20, cost: 500, chance: 1.0, bonusMultiplier: 1.10 },
-        2: { matTier: 5, matAmount: 5, chipAmount: 40, cost: 1000, chance: 0.6, bonusMultiplier: 1.25 },
-        3: { matTier: 5, matAmount: 10, chipAmount: 60, cost: 2500, chance: 0.4, bonusMultiplier: 1.50 },
-        4: { matTier: 7, matAmount: 2, chipAmount: 100, cost: 5000, chance: 0.25, bonusMultiplier: 1.80 },
-        5: { matTier: 7, matAmount: 5, chipAmount: 200, cost: 10000, chance: 0.1, bonusMultiplier: 2.50 },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+    },
+    glove: {
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     }
+};
+export const UPGRADE_REQUIREMENTS: Record<number, { matTier: number; matAmount: number; chance: number; label: string; catalyst?: number; chipAmount?: number; maxBonus?: number; cost: number; targetBonus?: number; risk?: string }> = {
+    1: { matTier: 1, matAmount: 10, chipAmount: 1, chance: 1.0, label: '+2', cost: 50, targetBonus: 0.5, risk: 'NONE' },
+    2: { matTier: 1, matAmount: 20, chipAmount: 5, chance: 0.8, label: '+3', cost: 100, targetBonus: 1.5, risk: 'DROP' },
+    3: { matTier: 2, matAmount: 20, chipAmount: 10, chance: 0.5, label: '+4', cost: 300, targetBonus: 3.0, risk: 'DROP' },
+    4: { matTier: 2, matAmount: 40, chipAmount: 20, chance: 0.25, label: '+5', cost: 1000, targetBonus: 6.0, risk: 'BREAK' },
 };
 
 // สูตรการแปรรูปวัตถุดิบ (Tier ทรัพยากรหลักที่กด -> สูตรและผลลัพธ์)
 export const MATERIAL_RECIPES: Record<number, { ingredients: Record<number, number>; fee: number; requiredItem?: string }> = {
-    1: { ingredients: { 1: 2 }, fee: 1, requiredItem: 'mixer' }, // Coal x2 + 1 Baht -> Copper
-    2: { ingredients: { 1: 1, 2: 1 }, fee: 2, requiredItem: 'mixer' }, // Coal x1 + Copper x1 + 2 Baht -> Iron
-    3: { ingredients: { 2: 1, 3: 1 }, fee: 3, requiredItem: 'mixer' }, // Copper x1 + Iron x1 + 3 Baht -> Gold
-    4: { ingredients: { 2: 1, 3: 1, 4: 1 }, fee: 5, requiredItem: 'mixer' }, // Copper x1 + Iron x1 + Gold x1 + 5 Baht -> Diamond
-    5: { ingredients: { 4: 1, 5: 1 }, fee: 10, requiredItem: 'mixer' }, // Gold x1 + Diamond x1 + 10 Baht -> Synthetic Oil
-    6: { ingredients: { 1: 15, 2: 10, 3: 10, 4: 5, 5: 3, 6: 1 }, fee: 50, requiredItem: 'magnifying_glass' }, // Multi-mix -> Vibranium (Updated to require Magnifying Glass)
+    1: { ingredients: { 1: 2 }, fee: 1, requiredItem: 'mixer' }, // ถ่านหิน x2 + 1 Baht -> ทองแดง
+    2: { ingredients: { 1: 1, 2: 1 }, fee: 2, requiredItem: 'mixer' }, // ถ่านหิน x1 + ทองแดง x1 + 2 Baht -> เหล็ก
+    3: { ingredients: { 2: 1, 3: 1 }, fee: 3, requiredItem: 'mixer' }, // ทองแดง x1 + เหล็ก x1 + 3 Baht -> ทองคำ
+    4: { ingredients: { 2: 1, 3: 1, 4: 1 }, fee: 5, requiredItem: 'mixer' }, // ทองแดง x1 + เหล็ก x1 + ทองคำ x1 + 5 Baht -> เพชร
+    5: { ingredients: { 4: 1, 5: 1 }, fee: 10, requiredItem: 'mixer' }, // ทองคำ x1 + เพชร x1 + 10 Baht -> น้ำมันดิบ
+    6: { ingredients: { 1: 15, 2: 10, 3: 10, 4: 5, 5: 3, 6: 1 }, fee: 50, requiredItem: 'magnifying_glass' }, // Multi-mix -> แร่วาเบรเนียม
 };
 
 export interface RigPreset {
@@ -260,10 +258,10 @@ export interface RigPreset {
 }
 
 export const RIG_PRESETS: RigPreset[] = [
-    { id: 1, name: 'พลั่วสนิมเขรอะ', price: 300, dailyProfit: 48, bonusProfit: 29, durationDays: 7, repairCost: 0, energyCostPerDay: 1, specialProperties: { infiniteDurability: true, noGift: true } },
-    { id: 2, name: 'สว่านพกพา', price: 500, dailyProfit: 40, bonusProfit: 70, durationDays: 15, repairCost: 0, energyCostPerDay: 2, image: '/images/rigs/drill.png', description: 'สว่านมือถือสำหรับนักขุดมือใหม่', type: 'UNCOMMON', materialChance: 0.1, specialProperties: { infiniteDurability: true, noGift: true } },
+    { id: 1, name: 'พลั่วสนิมเขรอะ', price: 300, dailyProfit: 48, bonusProfit: 29, durationDays: 7, repairCost: 0, energyCostPerDay: 1, specialProperties: { infiniteDurability: false, noGift: true } },
+    { id: 2, name: 'สว่านพกพา', price: 500, dailyProfit: 40, bonusProfit: 70, durationDays: 15, repairCost: 0, energyCostPerDay: 2, image: '/images/rooms/fan_room.png', description: 'พลั่วขุดมาตรฐานเพื่อเริ่มกิจการ', type: 'UNCOMMON', materialChance: 0.1, specialProperties: { infiniteDurability: false, noGift: true } },
     { id: 3, name: 'เครื่องขุดถ่านหิน', price: 1000, dailyProfit: 45, durationMonths: 1, repairCost: 60, energyCostPerDay: 3 },
-    { id: 4, name: 'เครื่องขุดทองแดง', price: 1500, dailyProfit: 55, durationMonths: 2, repairCost: 120, energyCostPerDay: 6, image: '/images/rigs/copper_rig.png', description: 'เครื่องขุดขนาดกลาง ทำจากทองแดงทนทาน', type: 'SUPER_RARE', materialChance: 0.2 },
+    { id: 4, name: 'เครื่องขุดทองแดง', price: 1500, dailyProfit: 55, durationMonths: 2, repairCost: 120, energyCostPerDay: 6, image: '/images/rooms/aircon_deluxe.png', description: 'สว่านแรงดันสูงเพื่อเจาะชั้นดินลึก', type: 'SUPER_RARE', materialChance: 0.2 },
     { id: 5, name: 'เครื่องขุดเหล็ก', price: 2000, dailyProfit: 65, durationMonths: 3, repairCost: 180, energyCostPerDay: 10, type: 'EPIC' },
     { id: 6, name: 'เครื่องขุดทองคำ', price: 2500, dailyProfit: 75, durationMonths: 4, repairCost: 250, energyCostPerDay: 15, type: 'MYTHIC' },
     { id: 7, name: 'เครื่องขุดเพชร', price: 3000, dailyProfit: 90, durationMonths: 5, repairCost: 300, energyCostPerDay: 22, type: 'LEGENDARY' },
@@ -274,7 +272,7 @@ export const RIG_PRESETS: RigPreset[] = [
         dailyProfit: 100,
         bonusProfit: 0,
         durationMonths: 12,
-        repairCost: 500,
+        repairCost: 0,
         energyCostPerDay: 50,
         craftingRecipe: {
             materials: { 7: 1, 8: 2, 9: 3 }
@@ -285,17 +283,23 @@ export const RIG_PRESETS: RigPreset[] = [
 ];
 
 export const SLOT_EXPANSION_CONFIG: Record<number, { title: string; cost: number; mats: Record<number, number>; item?: string; itemCount?: number }> = {
-    4: { title: 'โรงงานมาตรฐาน', cost: 2000, mats: { 3: 30, 4: 10 }, item: 'chest_key', itemCount: 1 },
-    5: { title: 'อาณาจักรเหมือง', cost: 3000, mats: { 5: 10, 6: 5 }, item: 'upgrade_chip', itemCount: 5 },
-    6: { title: 'ติดตั้ง Dimensional Warp Core', cost: 5000, mats: { 7: 1, 8: 1, 9: 1 }, item: undefined, itemCount: 0 },
+    4: { title: 'ขยายพื้นที่ขุดเจาะช่องที่ 4', cost: 2000, mats: { 3: 30, 4: 10 }, item: 'chest_key', itemCount: 1 },
+    5: { title: 'ขยายพื้นที่ขุดเจาะช่องที่ 5', cost: 3000, mats: { 5: 10, 6: 5 }, item: 'upgrade_chip', itemCount: 5 },
+    6: { title: 'สร้างแท่นขุดเจาะพิเศษ (Master Wing)', cost: 5000, mats: { 7: 1, 8: 1, 9: 1 }, item: undefined, itemCount: 0 },
 };
 
 export const TRANSACTION_LIMITS = {
-    MIN: 100,
-    MAX: 1000,
+    DEPOSIT: {
+        MIN: 100,
+        MAX: 50000,
+    },
+    WITHDRAW: {
+        MIN: 100,
+        MAX: 1000,
+    }
 };
 
-export const WITHDRAWAL_FEE_PERCENT = 0.05;
+export const WITHDRAWAL_FEE_PERCENT = 0.10;
 
 export const STORAGE_KEYS = {
     USERS: 'oil_baron_users',
@@ -314,12 +318,19 @@ export const STORAGE_KEYS = {
 export const ENERGY_CONFIG = {
     DRAIN_PER_RIG_PER_HOUR: 4.166, // 100% / 24 Hours
     MAX_ENERGY: 100,
-    COST_PER_UNIT: 0.02, // 2 Baht for 100 Units
-    MIN_REFILL_FEE: 1.00,
+    FUEL_REFILL_COST: 2.0, // 2 Baht for 24 Hours
+    COST_PER_UNIT: 0.02, // 0.02 Baht per 1% energy refill
+    MIN_REFILL_FEE: 2.0, // Minimum 2 Baht fee
+    OVERCLOCK_REFILL_COST: 50.0, // Assuming 50 THB for 48 Hours of x2 Power
+    OVERCLOCK_DURATION_HOURS: 48,
+    PROFIT_BOOST: 1.0, // Base boost when powered (not used if Overclock x2 is active)
+    OVERCLOCK_PROFIT_BOOST: 2.0, // x2 Speed Booster
+    BOX_DROP_SPEED_BOOST: 1.1, // +10%
+    KEY_DROP_SPEED_BOOST: 1.05, // +5%
 };
 
 export const MARKET_CONFIG = {
-    UPDATE_INTERVAL_HOURS: 0.5, // Halved from 1
+    UPDATE_INTERVAL_HOURS: 0.016, // ~1 minute for demo (was 0.5 = 30min)
     MAX_FLUCTUATION: 0.3,
     BOT_INTERVENTION_THRESHOLD: 0.3, // 30% from base price
 };
@@ -355,51 +366,51 @@ export interface ShopItemConfig {
 }
 
 export const SHOP_ITEMS: ShopItemConfig[] = [
-    { id: 'upgrade_chip', name: 'ชิปอัปเกรด', price: 5, icon: 'Cpu', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: 'ใช้สำหรับอัปเกรดระดับของถุงมือเพื่อเพิ่มโบนัสรายได้' },
-    { id: 'chest_key', name: 'กุญแจไขหีบ', price: 5, icon: 'Key', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: 'ใช้ไขเปิดกล่องของขวัญที่ได้รับจากเครื่องจักรเพื่อลุ้นรับอุปกรณ์', buyable: false },
-    { id: 'mixer', name: 'เครื่องผสมอนุภาค', price: 5, icon: 'Factory', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: 'ใช้ผสมวัตถุดิบระดับต่ำ 5 ชิ้น ให้เป็นระดับสูงขึ้น 1 ชิ้น' },
-    { id: 'magnifying_glass', name: 'แว่นขยายส่องน้ำมัน', price: 5, icon: 'Search', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: 'ใช้ส่องตรวจสอบแร่ปริศนาหรือน้ำมันดิบเพื่อค้นหาไอเทมหายาก' },
-    { id: 'robot', name: 'หุ่นยนต์ AI', price: 100, icon: 'Bot', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 30, description: 'ผู้ช่วยอัตโนมัติ: เก็บผลผลิต ซ่อมเครื่อง และจ่ายค่าไฟให้คุณ (อายุ 30 วัน)' },
-    { id: 'insurance_card', name: 'ใบประกันความเสี่ยง', price: 300, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: 'ใช้ป้องกันไอเทมลดระดับเมื่อตีบวกล้มเหลว (ใช้ 1 ใบต่อการตี 1 ครั้ง)', buyable: true },
-    { id: 'ancient_blueprint', name: 'พิมพ์เขียวรถขุดโบราณ', price: 9999, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: 'ใช้แทนน้ำมันดิบในการคราฟต์รถขุดระดับสูง', buyable: false },
+    { id: 'upgrade_chip', name: 'ชิปอัปเกรด', price: 5, icon: 'Cpu', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: 'ใช้สำหรับอัปเกรดเครื่องจักรเพื่อเพิ่มกำลังการขุด' },
+    { id: 'chest_key', name: 'กุญแจเข้าเหมือง', price: 5, icon: 'Key', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: 'ใช้เปิดถ้ำสำรวจเพื่อลุ้นรับไอเทมหายาก', buyable: false },
+    { id: 'mixer', name: 'โต๊ะช่างสกัดแร่', price: 5, icon: 'Factory', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: 'ใช้สำหรับสกัดแร่ระดับต่ำให้เป็นแร่ระดับสูง' },
+    { id: 'magnifying_glass', name: 'แว่นขยายส่องแร่', price: 5, icon: 'Search', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: 'ใช้ตรวจสอบหาแร่หายากโดยอัตโนมัติ' },
+    { id: 'robot', name: 'หุ่นยนต์ AI', price: 100, icon: 'Bot', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 30, description: 'หุ่นยนต์อัจฉริยะ: เก็บของขวัญอัตโนมัติ, เติมพลังงาน/ซ่อมแซมอัตโนมัติ, แจ้งเตือนราคาตลาด' },
+    { id: 'insurance_card', name: 'ใบประกันความเสี่ยง', price: 300, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: 'ป้องกันระดับเครื่องจักรลดระดับเมื่ออัปเกรดล้มเหลว', buyable: true },
+    { id: 'ancient_blueprint', name: 'แผนที่ขุดทองโบราณ', price: 9999, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: 'ใช้แทนวัสดุหายากในการสร้างแท่นขุดระดับสูง', buyable: false },
 
-    { id: 'hourglass_small', name: 'นาฬิกาทราย (เล็ก)', price: 5, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: 'เร่งเวลาสำรวจเหมืองลับ 30 นาที (ใช้แล้วหมดไป)' },
-    { id: 'hourglass_medium', name: 'นาฬิกาทราย (กลาง)', price: 20, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: 'เร่งเวลาสำรวจเหมืองลับ 2 ชั่วโมง (ใช้แล้วหมดไป)' },
-    { id: 'hourglass_large', name: 'นาฬิกาทราย (ใหญ่)', price: 60, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: 'เร่งเวลาสำรวจเหมืองลับ 6 ชั่วโมง (ใช้แล้วหมดไป)' },
+    { id: 'hourglass_small', name: 'นาฬิกาทราย (เล็ก)', price: 5, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: 'เร่งเวลาการสำรวจ 30 นาที' },
+    { id: 'hourglass_medium', name: 'นาฬิกาทราย (กลาง)', price: 20, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: 'เร่งเวลาการสำรวจ 2 ชั่วโมง' },
+    { id: 'hourglass_large', name: 'นาฬิกาทราย (ใหญ่)', price: 60, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: 'เร่งเวลาการสำรวจ 6 ชั่วโมง' },
 
-    { id: 'repair_kit', name: 'ชุดซ่อมแซมเต็มสูบ', price: 50, icon: 'Tool', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: 'ซ่อมแซมเครื่องจักรฟรี 100% (ใช้แล้วหมดไป)', buyable: false },
+    { id: 'repair_kit', name: 'ชุดบำรุงรักษาพิเศษ', price: 50, icon: 'Tool', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: 'ซ่อมแซมเครื่องจักรจนเต็ม 100%', buyable: false },
 
     {
-        id: 'hat', name: 'หมวกนิรภัยมาตรฐาน', price: 50, icon: 'HardHat', minBonus: 0.1, maxBonus: 0.5, durationBonus: 1, lifespanDays: 15, tier: 1,
-        craftingRecipe: { 1: 3 }, craftingFee: 10, craftDurationMinutes: 30, specialEffect: 'ลดค่าซ่อม -5%'
+        id: 'hat', name: 'หมวกนิรภัยมาตรฐาน', price: 50, icon: 'HardHat', minBonus: 0.1, maxBonus: 0.5, durationBonus: 1, lifespanDays: 30, tier: 1,
+        craftingRecipe: { 1: 3 }, craftingFee: 10, craftDurationMinutes: 30, buyable: false, specialEffect: 'ลดค่าดูแล -5%'
     },
     {
-        id: 'uniform', name: 'ชุดหมีช่างกล', price: 120, icon: 'Shirt', minBonus: 0.5, maxBonus: 1.5, durationBonus: 3, lifespanDays: 30, tier: 1,
-        craftingRecipe: { 1: 4, 2: 3 }, craftingFee: 10, craftDurationMinutes: 60, specialEffect: 'อายุใช้งาน +5 วัน'
+        id: 'uniform', name: 'ชุดป้องกัน', price: 120, icon: 'Shirt', minBonus: 0.5, maxBonus: 1.5, durationBonus: 3, lifespanDays: 30, tier: 1,
+        craftingRecipe: { 1: 4, 2: 3 }, craftingFee: 10, craftDurationMinutes: 60, buyable: false, specialEffect: 'สัญญา +5 วัน'
     },
     {
-        id: 'bag', name: 'กระเป๋าผ้าใบ', price: 200, icon: 'Backpack', minBonus: 1.0, maxBonus: 2.0, durationBonus: 5, lifespanDays: 45, tier: 2,
-        craftingRecipe: { 2: 4, 3: 2 }, craftingFee: 20, craftDurationMinutes: 180, specialEffect: 'ราคาขาย +1%'
+        id: 'bag', name: 'เป้สนามอเนกประสงค์', price: 200, icon: 'Backpack', minBonus: 1.0, maxBonus: 2.0, durationBonus: 5, lifespanDays: 45, tier: 2,
+        craftingRecipe: { 2: 4, 3: 2 }, craftingFee: 20, craftDurationMinutes: 180, buyable: false, specialEffect: 'ราคาขาย +1%'
     },
     {
-        id: 'boots', name: 'รองเท้าบูทกันน้ำ', price: 350, icon: 'Footprints', minBonus: 2.0, maxBonus: 3.0, durationBonus: 5, lifespanDays: 45, tier: 2,
-        craftingRecipe: { 3: 5, 4: 2 }, craftingFee: 25, craftDurationMinutes: 300, specialEffect: 'โอกาสประหยัดไฟ 5%'
+        id: 'boots', name: 'รองเท้าเซฟตี้', price: 350, icon: 'Footprints', minBonus: 2.0, maxBonus: 3.0, durationBonus: 5, lifespanDays: 45, tier: 2,
+        craftingRecipe: { 3: 5, 4: 2 }, craftingFee: 25, craftDurationMinutes: 300, buyable: false, specialEffect: 'ประหยัดพลังงาน 5%'
     },
     {
-        id: 'glasses', name: 'แว่นตานิรภัยใส', price: 400, icon: 'Glasses', minBonus: 2.5, maxBonus: 3.5, durationBonus: 7, lifespanDays: 60, tier: 2,
-        craftingRecipe: { 4: 3, 3: 4 }, craftingFee: 80, craftDurationMinutes: 420, buyable: false, specialEffect: 'โอกาสดรอป +2%'
+        id: 'glasses', name: 'แว่นตากันฝุ่น', price: 400, icon: 'Glasses', minBonus: 2.5, maxBonus: 3.5, durationBonus: 7, lifespanDays: 60, tier: 2,
+        craftingRecipe: { 4: 3, 3: 4 }, craftingFee: 80, craftDurationMinutes: 420, buyable: false, specialEffect: 'โบนัส +2%'
     },
     {
-        id: 'mobile', name: 'มือถือรุ่นปุ่มกด', price: 450, icon: 'Smartphone', minBonus: 3.0, maxBonus: 4.0, durationBonus: 7, lifespanDays: 60, tier: 2,
-        craftingRecipe: { 5: 1, 4: 4 }, craftingFee: 120, craftDurationMinutes: 540, buyable: false, specialEffect: 'ลดภาษีตลาด 2%'
+        id: 'mobile', name: 'สมาทโฟน', price: 450, icon: 'Smartphone', minBonus: 3.0, maxBonus: 4.0, durationBonus: 7, lifespanDays: 90, tier: 2,
+        craftingRecipe: { 5: 1, 4: 4 }, craftingFee: 120, craftDurationMinutes: 540, buyable: false, specialEffect: 'ลดค่าใช้จ่าย 2%'
     },
     {
-        id: 'pc', name: 'พีซีสำนักงาน', price: 500, icon: 'Monitor', minBonus: 4.0, maxBonus: 5.0, durationBonus: 7, lifespanDays: 60, tier: 3,
-        craftingRecipe: { 5: 2, 4: 3 }, craftingFee: 180, craftDurationMinutes: 720, buyable: false, specialEffect: 'โอกาสเบิ้ลรายได้ 1%'
+        id: 'pc', name: 'โน๊ตบุ๊ค', price: 500, icon: 'Monitor', minBonus: 4.0, maxBonus: 5.0, durationBonus: 7, lifespanDays: 90, tier: 3,
+        craftingRecipe: { 5: 2, 4: 3 }, craftingFee: 180, craftDurationMinutes: 720, buyable: false, specialEffect: 'โอกาสโบนัส 1%'
     },
     {
-        id: 'auto_excavator', name: 'รถขุดไฟฟ้า (Electric)', price: 650, icon: 'Truck', minBonus: 10.0, maxBonus: 12.0, durationBonus: 0, lifespanDays: 120, tier: 3,
-        craftingRecipe: { 6: 1, 5: 2 }, craftingFee: 500, craftDurationMinutes: 1440, buyable: false, specialEffect: 'โอกาส Jackpot 2%'
+        id: 'auto_excavator', name: 'รถไฟฟ้า', price: 650, icon: 'TrainFront', minBonus: 10.0, maxBonus: 12.0, durationBonus: 0, lifespanDays: 120, tier: 3,
+        craftingRecipe: { 6: 1, 5: 2 }, craftingFee: 500, craftDurationMinutes: 1440, buyable: false, specialEffect: 'Jackpot 2%'
     }
 ];
 
@@ -409,31 +420,31 @@ export const DAILY_CHECKIN_REWARDS = [
     { day: 3, reward: 'money', amount: 15, label: '15 บาท' },
     { day: 4, reward: 'material', tier: 1, amount: 3, label: 'ถ่านหิน x3' },
     { day: 5, reward: 'money', amount: 20, label: '20 บาท' },
-    { day: 6, reward: 'item', id: 'chest_key', amount: 1, label: 'กุญแจหีบ x1' },
-    { day: 7, reward: 'item', id: 'chest_key', amount: 3, label: 'กุญแจหีบ x3', highlight: true },
+    { day: 6, reward: 'item', id: 'chest_key', amount: 1, label: 'กุญแจเข้าเหมือง x1' },
+    { day: 7, reward: 'item', id: 'chest_key', amount: 3, label: 'กุญแจเข้าเหมือง x3', highlight: true },
     { day: 8, reward: 'money', amount: 25, label: '25 บาท' },
     { day: 9, reward: 'material', tier: 2, amount: 2, label: 'ทองแดง x2' },
     { day: 10, reward: 'money', amount: 30, label: '30 บาท' },
     { day: 11, reward: 'material', tier: 3, amount: 1, label: 'เหล็ก x1' },
     { day: 12, reward: 'money', amount: 35, label: '35 บาท' },
-    { day: 13, reward: 'item', id: 'upgrade_chip', amount: 2, label: 'ชิป x2' },
+    { day: 13, reward: 'item', id: 'upgrade_chip', amount: 2, label: 'ชิปอัปเกรด x2' },
     { day: 14, reward: 'material', tier: 4, amount: 1, label: 'ทองคำ x1', highlight: true },
     { day: 15, reward: 'money', amount: 40, label: '40 บาท' },
     { day: 16, reward: 'material', tier: 3, amount: 2, label: 'เหล็ก x2' },
     { day: 17, reward: 'material', tier: 2, amount: 5, label: 'ทองแดง x5' },
     { day: 18, reward: 'money', amount: 45, label: '45 บาท' },
     { day: 19, reward: 'material', tier: 3, amount: 2, label: 'เหล็ก x2' },
-    { day: 20, reward: 'item', id: 'upgrade_chip', amount: 5, label: 'ชิป x5' },
-    { day: 21, reward: 'item', id: 'upgrade_chip', amount: 15, label: 'ชิป x15', highlight: true },
+    { day: 20, reward: 'item', id: 'upgrade_chip', amount: 5, label: 'ชิปอัปเกรด x5' },
+    { day: 21, reward: 'item', id: 'upgrade_chip', amount: 15, label: 'ชิปอัปเกรด x15', highlight: true },
     { day: 22, reward: 'money', amount: 50, label: '50 บาท' },
     { day: 23, reward: 'material', tier: 4, amount: 1, label: 'ทองคำ x1' },
-    { day: 24, reward: 'item', id: 'chest_key', amount: 5, label: 'กุญแจ x5' },
+    { day: 24, reward: 'item', id: 'chest_key', amount: 5, label: 'กุญแจเข้าเหมือง x5' },
     { day: 25, reward: 'money', amount: 60, label: '60 บาท' },
     { day: 26, reward: 'material', tier: 4, amount: 1, label: 'ทองคำ x1' },
-    { day: 27, reward: 'item', id: 'mixer', amount: 1, label: 'เครื่องผสม' },
+    { day: 27, reward: 'item', id: 'mixer', amount: 1, label: 'โต๊ะช่างสกัดแร่' },
     { day: 28, reward: 'money', amount: 100, label: 'Jackpot 100 บาท', highlight: true },
     { day: 29, reward: 'material', tier: 4, amount: 1, label: 'ทองคำ x1' },
-    { day: 30, reward: 'grand_prize', label: 'ใบประกันความเสี่ยง + เพชร', highlight: true, special: true },
+    { day: 30, reward: 'grand_prize', label: 'ใบประกันความเสี่ยง + แท่นขุดเจาะพิเศษ', highlight: true, special: true },
 ];
 
 export const VIP_TIERS = [
@@ -442,28 +453,28 @@ export const VIP_TIERS = [
     { level: 2, minExp: 5000, perk: 'เพิ่มอัตราดรอป 10%', bonusDrop: 0.10 },
     { level: 3, minExp: 20000, perk: 'เพิ่มอัตราดรอป 15% + ส่วนลดร้านค้า 5%', bonusDrop: 0.15 },
     { level: 4, minExp: 50000, perk: 'เพิ่มอัตราดรอป 20% + ส่วนลดร้านค้า 10%', bonusDrop: 0.20 },
-    { level: 5, minExp: 100000, perk: 'King of Mining (ดรอป +30%, ร้านค้า -15%)', bonusDrop: 0.30 },
+    { level: 5, minExp: 100000, perk: 'King of Dormitory (มาสเตอร์อาคาร: ดรอป +30%, ร้านค้า -15%)', bonusDrop: 0.30 },
 ];
 
 export const QUESTS = [
-    { id: 'q1', type: 'materials_crafted', target: 20, rewardType: 'points', rewardAmount: 20, title: 'นักเล่นแร่แปรธาตุ', desc: 'ผสมแร่ 20 ครั้ง' },
-    { id: 'q2', type: 'spend', target: 5000, rewardType: 'points', rewardAmount: 30, title: 'นักช้อป', desc: 'ซื้อขาย/ใช้จ่าย 5,000 บาท' },
-    { id: 'q3', type: 'dungeon', target: 30, rewardType: 'points', rewardAmount: 50, title: 'นักผจญภัย', desc: 'ลงดันเจี้ยน 30 รอบ' },
-    { id: 'q4', type: 'items_crafted', target: 20, rewardType: 'points', rewardAmount: 40, title: 'ช่างฝีมือ', desc: 'คราฟต์ของ 20 ชิ้น' },
-    { id: 'q5', type: 'repair', target: 100, rewardType: 'points', rewardAmount: 20, title: 'ช่างซ่อมบำรุง', desc: 'ซ่อมครบ 100 หน่วย (100%)' },
-    { id: 'q6', type: 'rare_loot', target: 1, rewardType: 'points', rewardAmount: 60, title: 'ดวงดีมีชัย', desc: 'ได้กล่อง Rare+' },
+    { id: 'q1', type: 'materials_crafted', target: 20, rewardType: 'points', rewardAmount: 20, title: 'นักสกัดแร่', desc: 'สกัดวัสดุสำเร็จ 20 ครั้ง' },
+    { id: 'q2', type: 'spend', target: 5000, rewardType: 'points', rewardAmount: 30, title: 'นักลงทุนเหมือง', desc: 'ใช้จ่าย 5,000 บาท' },
+    { id: 'q3', type: 'dungeon', target: 30, rewardType: 'points', rewardAmount: 50, title: 'นักสำรวจยอดเยี่ยม', desc: 'สำรวจแหล่งแร่ 30 รอบ' },
+    { id: 'q4', type: 'items_crafted', target: 20, rewardType: 'points', rewardAmount: 40, title: 'ช่างประกอบหัวเจาะ', desc: 'ประกอบหัวเจาะ 20 ชิ้น' },
+    { id: 'q5', type: 'repair', target: 100, rewardType: 'points', rewardAmount: 20, title: 'ผู้ดูแลเครื่องจักร', desc: 'ซ่อมบำรุงหัวเจาะครบ 100%' },
+    { id: 'q6', type: 'rare_loot', target: 1, rewardType: 'points', rewardAmount: 60, title: 'ดวงมหาเฮง', desc: 'ค้นพบแร่หายาก' },
 ];
 
 export const MINING_RANKS = [
-    { id: 'bronze', label: 'Bronze Miner', points: 100, rewardId: 'chest_key', amount: 5, buff: '', desc: 'ปลดล๊อครางวัล' },
-    { id: 'silver', label: 'Silver Miner', points: 300, rewardId: null, amount: 0, buff: 'ค่าซ่อม -5%', desc: 'ลดค่าซ่อมเครื่องจักร 5% (30 วัน)' },
-    { id: 'gold', label: 'Gold Miner', points: 600, rewardId: 'robot', amount: 1, buff: '', desc: 'หุ่นยนต์ AI (30 วัน)' },
-    { id: 'platinum', label: 'Platinum Miner', points: 1000, rewardId: null, amount: 0, buff: 'ภาษีตลาด 12%', desc: 'ลดภาษีตลาดเหลือ 12% (30 วัน)' },
-    { id: 'diamond', label: 'Diamond Miner', points: 1500, rewardId: null, amount: 0, buff: 'Craft Great Success +5%', desc: 'เพิ่มโอกาส Great Success +5% (30 วัน)' },
+    { id: 'bronze', label: 'นักขุดระดับบรอนซ์', points: 100, rewardId: 'chest_key', amount: 5, buff: '', desc: 'รับกุญแจเข้าเหมือง x5' },
+    { id: 'silver', label: 'นักขุดระดับซิลเวอร์', points: 300, rewardId: null, amount: 0, buff: 'ค่าซ่อมบำรุง -5%', desc: 'ลดค่าซ่อมบำรุงเครื่องจักร 5% (30 วัน)' },
+    { id: 'gold', label: 'นักขุดระดับโกลด์', points: 600, rewardId: 'robot', amount: 1, buff: '', desc: 'หุ่นยนต์ AI (30 วัน)' },
+    { id: 'platinum', label: 'นักขุดระดับแพลตตินัม', points: 1000, rewardId: null, amount: 0, buff: 'ภาษีตลาด 3%', desc: 'ลดภาษีขายแร่ 3% (30 วัน)' },
+    { id: 'diamond', label: 'นักขุดระดับแชมป์', points: 1500, rewardId: null, amount: 0, buff: 'Craft Great Success +5%', desc: 'เพิ่มโอกาสสกัดแร่สำเร็จ +5% (30 วัน)' },
 ];
 
 export const ACHIEVEMENTS = [
-    { id: 'a1', type: 'materials_crafted', target: 50, points: 50, title: 'นักรีไซเคิล', desc: 'ใช้เครื่องผสมอนุภาคผสมแร่สำเร็จ 50 ครั้ง' },
+    { id: 'a1', type: 'materials_crafted', target: 50, points: 50, title: 'ช่างฝีมือ', desc: 'แปรรูปวัสดุสำเร็จ 50 ครั้ง' },
     { id: 'a2', type: 'vip', target: 10000, points: 100, title: 'VIP Member', desc: 'สะสมยอดใช้จ่ายครบ 10,000 บาท' },
 ];
 
@@ -472,9 +483,9 @@ export const LUCKY_DRAW_CONFIG = {
     FREE_COOLDOWN_MS: 24 * 60 * 60 * 1000,
     PROBABILITIES: [
         { type: 'money', amount: 5, chance: 41, label: 'เงิน 5 บาท' },
-        { type: 'material', chance: 15, label: 'แร่สุ่ม (หิน/ทองแดง/เหล็ก)' },
-        { type: 'energy', amount: 50, chance: 30, label: 'พลังงาน 50%' },
-        { type: 'item', chance: 13, label: 'ไอเทมสุ่ม (กุญแจ/ชิป/เครื่องผสม)' },
+        { type: 'material', chance: 15, label: 'วัสดุสุ่ม (ถ่านหิน/ทองแดง/เหล็ก)' },
+        { type: 'energy', amount: 50, chance: 30, label: 'พลังงานเครื่องจักร +50%' },
+        { type: 'item', chance: 13, label: 'ไอเทมสุ่ม (กุญแจเข้าเหมือง/ชิป/โต๊ะช่าง)' },
         { type: 'robot', id: 'robot', chance: 1, label: 'หุ่นยนต์ AI' },
     ]
 };
@@ -496,67 +507,67 @@ export interface DungeonLevel {
 export const DUNGEON_CONFIG: DungeonLevel[] = [
     {
         id: 1,
-        name: 'เหมืองร้าง (Abandoned Mine)',
-        description: 'เหมาะสำหรับผู้เริ่มต้น',
-        cost: 100, // Updated 50 -> 100
-        keyCost: 2, // Added Key Cost
+        name: 'สำรวจแหล่งแร่พื้นฐาน (Online)',
+        description: 'ค้นหาแหล่งแร่ออนไลน์ระดับเริ่มต้น',
+        cost: 100,
+        keyCost: 2,
         durationHours: 2,
         rewards: {
             common: [
-                { tier: 1, amount: 10, chance: 50 }, // Coal x10
-                { tier: 2, amount: 5, chance: 50 }   // Copper x5
+                { tier: 1, amount: 10, chance: 50 }, // ถ่านหิน x10
+                { tier: 2, amount: 5, chance: 50 }   // ทองแดง x5
             ],
             salt: [
-                { tier: 1, amount: 5, chance: 100 } // Coal x5
+                { tier: 1, amount: 5, chance: 100 } // ถ่านหิน x5
             ],
             rare: [
-                { itemId: 'chest_key', amount: 1, chance: 0.1 },
-                { itemId: 'hourglass_small', amount: 1, chance: 0.1 },
-                { itemId: 'upgrade_chip', amount: 1, chance: 0.1 }
+                { itemId: 'chest_key', amount: 1, chance: 1 },
+                { itemId: 'hourglass_small', amount: 1, chance: 1 },
+                { itemId: 'upgrade_chip', amount: 1, chance: 1 }
             ]
         }
     },
     {
         id: 2,
-        name: 'ถ้ำคริสตัล (Crystal Cave)',
-        description: 'แหล่งทรัพยากรระดับกลาง',
-        cost: 300, // Updated 200 -> 300
-        keyCost: 10, // Added Key Cost
+        name: 'ทีมสำรวจมืออาชีพ (Expedition)',
+        description: 'ว่าจ้างทีมงานสำรวจหาแร่หายาก',
+        cost: 300,
+        keyCost: 10,
         durationHours: 6,
         rewards: {
             common: [
-                { tier: 3, amount: 10, chance: 50 }, // Iron x10
-                { tier: 4, amount: 5, chance: 50 }   // Gold x5
+                { tier: 3, amount: 10, chance: 50 }, // เหล็ก x10
+                { tier: 4, amount: 5, chance: 50 }   // ทองคำ x5
             ],
             salt: [
-                { tier: 3, amount: 5, chance: 50 }, // Iron x5
-                { tier: 1, amount: 5, chance: 50 }  // Coal x5
+                { tier: 3, amount: 5, chance: 50 }, // เหล็ก x5
+                { tier: 1, amount: 5, chance: 50 }  // ถ่านหิน x5
             ],
             rare: [
-                { itemId: 'upgrade_chip', amount: 1, chance: 0.2 },
-                { itemId: 'mixer', amount: 1, chance: 0.1 },
-                { itemId: 'magnifying_glass', amount: 1, chance: 0.1 },
-                { itemId: 'hourglass_medium', amount: 1, chance: 0.1 }
+                { itemId: 'upgrade_chip', amount: 1, chance: 1 },
+                { itemId: 'mixer', amount: 1, chance: 1 },
+                { itemId: 'magnifying_glass', amount: 1, chance: 1 },
+                { itemId: 'hourglass_medium', amount: 1, chance: 1 }
             ]
         }
     },
     {
         id: 3,
-        name: 'ซากยานต่างดาว (Alien Ruins)',
-        description: 'พื้นที่อันตรายสูงสุดสำหรับเศรษฐี',
+        name: 'มหกรรมขุดเหมืองโลก (Mining Expo)',
+        description: 'เข้าร่วมงานประมูลเหมืองระดับนานาชาติ',
         cost: 1000,
         durationHours: 12,
         rewards: {
             common: [
-                { tier: 5, amount: 15, chance: 50 }, // Diamond x15
-                { tier: 6, amount: 5, chance: 50 }   // Oil x5
+                { tier: 5, amount: 15, chance: 50 }, // เพชร x15
+                { tier: 6, amount: 5, chance: 50 }   // น้ำมันดิบ x5
             ],
             salt: [
-                { tier: 5, amount: 5, chance: 100 } // Diamond x5
+                { tier: 5, amount: 5, chance: 100 } // เพชร x5
             ],
             rare: [
-                { tier: 9, amount: 1, chance: 0.1 }, // Legendary Ore
-                { tier: 8, amount: 1, chance: 0.1 }  // Mystery Ore
+                { tier: 9, amount: 1, chance: 1 }, // แร่ในตำนาน
+                { tier: 8, amount: 1, chance: 1 }  // แร่ลึกลับ
             ]
         }
     }

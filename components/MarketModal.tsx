@@ -1,10 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { X, TrendingUp, TrendingDown, Minus, RefreshCw, BarChart2, DollarSign, ShoppingCart, CheckCircle2, History, ArrowRight, Bot } from 'lucide-react';
-import { MockDB } from '../services/db';
-import { MarketState, Transaction, MarketItemData } from '../services/types';
+import { MarketState, Transaction, MarketItemData, AccessoryItem } from '../services/types';
 import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, ROBOT_CONFIG } from '../constants';
 import { MaterialIcon } from './MaterialIcon';
+import { api } from '../services/api';
 
 interface MarketModalProps {
     isOpen: boolean;
@@ -12,9 +12,10 @@ interface MarketModalProps {
     userId: string;
     onSuccess: () => void;
     initialTier?: number;
+    addNotification?: (n: any) => void;
 }
 
-export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userId, onSuccess, initialTier }) => {
+export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userId, onSuccess, initialTier, addNotification }) => {
     const [market, setMarket] = useState<MarketState | null>(null);
     const [selectedTier, setSelectedTier] = useState<number>(1);
     const [amount, setAmount] = useState<number>(0);
@@ -22,6 +23,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
     const [userMats, setUserMats] = useState<Record<number, number>>({});
     const [userBalance, setUserBalance] = useState<number>(0);
     const [userMastery, setUserMastery] = useState<number>(0);
+    const [userInventory, setUserInventory] = useState<AccessoryItem[]>([]);
     const [loading, setLoading] = useState(false);
 
     const [activeTab, setActiveTab] = useState<'TRADE' | 'HISTORY'>('TRADE');
@@ -38,22 +40,39 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
         }
     }, [isOpen, initialTier]);
 
-    const refreshMarket = () => {
-        const m = MockDB.getMarketStatus();
-        setMarket(m);
-        const mats = MockDB.getUserMaterials(userId);
-        setUserMats(mats);
-        const bal = MockDB.getUserBalance(userId);
-        setUserBalance(bal);
+    const refreshMarket = async () => {
+        try {
+            const m = await api.getMarketStatus();
+            setMarket(m);
 
-        const u = MockDB.getAllUsers().find(u => u.id === userId);
-        setUserMastery(u?.masteryPoints || 0);
+            // Fetch real user data from backend
+            const user = await api.getMe();
+            if (user) {
+                // Ensure materials is a clean Record<number, number>
+                const mats: Record<number, number> = {};
+                if (user.materials) {
+                    Object.entries(user.materials).forEach(([k, v]) => {
+                        mats[parseInt(k)] = Number(v);
+                    });
+                }
+                setUserMats(mats);
+                setUserBalance(Number(user.balance) || 0);
+                setUserMastery(Number(user.masteryPoints) || 0);
+                setUserInventory(user.inventory || []);
+            }
+        } catch (error) {
+            console.error('Failed to refresh market data:', error);
+        }
     };
 
-    const refreshHistory = () => {
-        const txs = MockDB.getTransactions(userId);
-        const marketTxs = txs.filter(t => t.type === 'MATERIAL_BUY' || t.type === 'MATERIAL_SELL');
-        setHistory(marketTxs);
+    const refreshHistory = async () => {
+        try {
+            const txs = await api.getMyHistory();
+            const marketTxs = txs.filter(t => t.type === 'MATERIAL_BUY' || t.type === 'MATERIAL_SELL');
+            setHistory(marketTxs);
+        } catch (error) {
+            console.error('Failed to refresh transaction history:', error);
+        }
     };
 
     if (!isOpen || !market) return null;
@@ -65,27 +84,27 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
     const spreadLabel = (spreadPercent * 100).toFixed(0);
 
     const sellPrice = item.currentPrice;
-    const buyPrice = item.currentPrice * (1 + spreadPercent);
+    const buyPrice = parseFloat((item.currentPrice * (1 + spreadPercent)).toFixed(2));
+    const sellTax = parseFloat((sellPrice * amount * 0.15).toFixed(2));
+    const buyTax = parseFloat((item.currentPrice * spreadPercent * amount).toFixed(2));
+
     const unitPrice = action === 'BUY' ? buyPrice : sellPrice;
-    const totalPrice = unitPrice * amount;
+    const totalPrice = action === 'BUY'
+        ? parseFloat((unitPrice * amount).toFixed(2))
+        : parseFloat(((unitPrice * amount) - sellTax).toFixed(2));
 
     const maxSell = userMats[selectedTier] || 0;
     const maxBuy = Math.floor(userBalance / buyPrice);
 
-    const handleTransaction = () => {
+    const handleTransaction = async () => {
         setLoading(true);
         try {
             if (action === 'SELL') {
                 // --- SAFETY ADVISOR START ---
                 const deviation = ((item.currentPrice - item.basePrice) / item.basePrice);
-                const hasRobot = MockDB.getUserInventory(userId).some(i => i.typeId === 'robot');
-                console.log('Safety Check:', deviation, ROBOT_CONFIG.SAFE_SELL_THRESHOLD, hasRobot); // Debug
+                const hasRobot = userInventory.some(i => i.typeId === 'robot');
 
                 if (hasRobot && deviation < ROBOT_CONFIG.SAFE_SELL_THRESHOLD) {
-                    // Trigger Safety Warning
-                    // Since we are in a modal, we can show another confirmation or just use window.confirm for simplicity 
-                    // OR better, set a "safetyWarn" state to show a specific UI.
-                    // Let's use a nice UI state `showSafetyWarning`
                     if (!showSafetyWarning) {
                         setShowSafetyWarning(true);
                         setLoading(false);
@@ -94,9 +113,9 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                 }
                 // --- SAFETY ADVISOR END ---
 
-                MockDB.sellUserMaterial(userId, selectedTier, amount);
+                await api.sellMaterial(selectedTier, amount);
             } else {
-                MockDB.buyMaterialFromMarket(userId, selectedTier, amount);
+                await api.buyMaterial(selectedTier, amount);
             }
             setShowConfirm(false);
             setShowSafetyWarning(false);
@@ -104,8 +123,24 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
             onSuccess();
             refreshMarket();
             refreshHistory();
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: userId,
+                message: `${action === 'BUY' ? 'ซื้อ' : 'ขาย'}สำเร็จ!`,
+                type: 'SUCCESS',
+                read: false,
+                timestamp: Date.now()
+            });
         } catch (e: any) {
-            alert(e.message);
+            const errorMsg = e.response?.data?.message || e.message;
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: userId,
+                message: errorMsg,
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
         } finally {
             setLoading(false);
         }
@@ -169,14 +204,14 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
 
     return (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md p-4">
-            <div className="bg-stone-950 border border-stone-800 w-full max-w-5xl rounded-xl shadow-2xl flex flex-col h-[85vh] overflow-hidden">
+            <div className="bg-stone-950 border border-stone-800 w-full max-w-5xl rounded-xl shadow-2xl flex flex-col h-[90vh] md:h-[85vh] overflow-hidden">
                 <div className="flex justify-between items-center p-4 bg-stone-900 border-b border-stone-800 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="bg-blue-900/20 p-2 rounded text-blue-400">
                             <BarChart2 size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-display font-bold text-white">ตลาดซื้อขาย (Exchange)</h2>
+                            <h2 className="text-xl font-display font-bold text-white">ตลาดกลางวัสดุ (Material Exchange)</h2>
                             <div className="flex items-center gap-2 text-xs text-stone-500">
                                 <span className="flex items-center gap-1"><RefreshCw size={10} /> รีเซ็ตทุก {MARKET_CONFIG.UPDATE_INTERVAL_HOURS} ชม.</span>
                                 <span>•</span>
@@ -195,8 +230,8 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                     </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-                    <div className="w-full md:w-80 border-r border-stone-800 bg-stone-900/50 overflow-y-auto custom-scrollbar shrink-0">
+                <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
+                    <div className="w-full md:w-80 border-r border-stone-800 bg-stone-900/50 overflow-y-auto custom-scrollbar shrink-0 max-h-[35vh] md:max-h-full">
                         {Object.entries(market.trends).map(([key, rawData]) => {
                             const t = Number(key);
                             const data = rawData as MarketItemData;
@@ -247,13 +282,13 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                                 <div className="w-16 h-16 bg-red-900/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500 animate-pulse">
                                                     <Bot size={32} className="text-red-400" />
                                                 </div>
-                                                <h3 className="text-xl font-bold text-red-400 mb-2">เตือนความเสี่ยง!</h3>
+                                                <h3 className="text-xl font-bold text-red-400 mb-2">คำเตือนจากผู้ช่วย!</h3>
                                                 <p className="text-white text-sm mb-4">
-                                                    "นายครับ! ช่วงนี้ราคา <span className="text-yellow-500 font-bold">{matName}</span> ตกหนักมาก (<span className="text-red-400 font-bold">{(deviationFromBase * 100).toFixed(1)}%</span>) <br />
+                                                    "คุณผู้จัดการครับ! ช่วงนี้ราคา <span className="text-yellow-500 font-bold">{matName}</span> ตกหนักมาก (<span className="text-red-400 font-bold">{(deviationFromBase * 100).toFixed(1)}%</span>) <br />
                                                     แน่ใจนะครับว่าจะขายตอนนี้? ผมแนะนำให้รอก่อนครับ"
                                                 </p>
                                                 <div className="grid grid-cols-2 gap-3">
-                                                    <button onClick={() => setShowSafetyWarning(false)} className="py-3 rounded bg-stone-800 hover:bg-stone-700 text-white font-bold transition-colors">เชื่อบอท (ยกเลิก)</button>
+                                                    <button onClick={() => setShowSafetyWarning(false)} className="py-3 rounded bg-stone-800 hover:bg-stone-700 text-white font-bold transition-colors">เชื่อคำแนะนำ (ยกเลิก)</button>
                                                     <button onClick={handleTransaction} className="py-3 rounded bg-red-600 hover:bg-red-500 text-white font-bold transition-colors shadow-lg shadow-red-900/40">ขายเลย (ไม่สน)</button>
                                                 </div>
                                             </div>
@@ -264,17 +299,23 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                 {showConfirm && !showSafetyWarning && (
                                     <div className="absolute inset-0 z-20 bg-stone-950/90 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in zoom-in duration-200">
                                         <div className="bg-stone-900 border border-stone-700 w-full max-w-sm rounded-xl p-6 shadow-2xl">
-                                            <h3 className="text-lg font-bold text-white mb-4 text-center border-b border-stone-800 pb-2">ยืนยันคำสั่ง{action === 'BUY' ? 'ซื้อ' : 'ขาย'}</h3>
+                                            <h3 className="text-lg font-bold text-white mb-4 text-center border-b border-stone-800 pb-2">ยืนยันรายการ{action === 'BUY' ? 'ซื้อ' : 'ขาย'}</h3>
                                             <div className="space-y-3 mb-6 text-sm">
                                                 <div className="flex justify-between items-center"><span className="text-stone-400">รายการ</span><span className="text-white font-bold flex items-center gap-2"><MaterialIcon id={selectedTier} size="w-6 h-6" iconSize={12} /> {matName}</span></div>
                                                 <div className="flex justify-between items-center"><span className="text-stone-400">ราคาต่อหน่วย</span><span className="text-stone-300 font-mono">{unitPrice.toFixed(2)}</span></div>
                                                 <div className="flex justify-between items-center"><span className="text-stone-400">จำนวน</span><span className="text-white font-bold">x{amount}</span></div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-stone-400">{action === 'BUY' ? 'ค่าธรรมเนียม' : 'ภาษีตลาด'}</span>
+                                                    <span className="text-stone-500 font-mono">
+                                                        {action === 'BUY' ? `+${buyTax.toFixed(2)}` : `-${sellTax.toFixed(2)}`}
+                                                    </span>
+                                                </div>
                                                 <div className="h-px bg-stone-800 my-2"></div>
                                                 <div className="flex justify-between items-center text-base"><span className="text-stone-300">ราคารวมสุทธิ</span><span className={`font-mono font-bold ${action === 'BUY' ? 'text-red-400' : 'text-emerald-400'}`}>{totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}</span></div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <button onClick={() => setShowConfirm(false)} className="py-3 rounded bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold transition-colors">แก้ไข</button>
-                                                <button onClick={handleTransaction} disabled={loading} className={`py-3 rounded font-bold text-white shadow-lg flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'}`}>{loading ? <RefreshCw className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}ยืนยัน</button>
+                                                <button onClick={handleTransaction} disabled={loading} className={`py-3 rounded font-bold text-white shadow-lg flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'}`}>{loading ? <RefreshCw className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}{action === 'BUY' ? 'ยืนยันการสั่งซื้อ' : 'ยืนยันการขายออก'}</button>
                                             </div>
                                         </div>
                                     </div>
@@ -288,7 +329,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                                 <h3 className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
                                                     {matName}
                                                     <span className="text-sm font-normal text-stone-500">/ {CURRENCY}</span>
-                                                    {isBotActive && <div className="bg-emerald-900/40 text-emerald-400 text-[10px] px-2 py-0.5 rounded flex items-center gap-1 border border-emerald-500/30 animate-pulse"><Bot size={10} /> Market Bot Stabilizing</div>}
+                                                    {isBotActive && <div className="bg-emerald-900/40 text-emerald-400 text-[10px] px-2 py-0.5 rounded flex items-center gap-1 border border-emerald-500/30 animate-pulse"><Bot size={10} /> Assistant Monitoring</div>}
                                                 </h3>
                                                 <div className="flex gap-4 text-sm">
                                                     <span className="text-stone-500">Base: {item.basePrice}</span>
@@ -307,8 +348,8 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
 
                                 <div className="flex-1 p-4 flex flex-col justify-between overflow-y-auto custom-scrollbar">
                                     <div className="grid grid-cols-2 gap-3 mb-4 bg-stone-900 p-1 rounded-xl border border-stone-800">
-                                        <button onClick={() => setAction('BUY')} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="rotate-45" /> ซื้อ (BUY)</button>
-                                        <button onClick={() => setAction('SELL')} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'SELL' ? 'bg-red-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="-rotate-[135deg]" /> ขาย (SELL)</button>
+                                        <button onClick={() => setAction('BUY')} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="rotate-45" /> สั่งซื้อ (BUY)</button>
+                                        <button onClick={() => setAction('SELL')} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'SELL' ? 'bg-red-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="-rotate-[135deg]" /> ขายออก (SELL)</button>
                                     </div>
                                     <div className="space-y-4">
                                         <div className="flex justify-between text-xs text-stone-400 bg-stone-900/50 p-2.5 rounded-lg border border-stone-800"><span>Available Balance:</span><span className="font-bold text-white">{action === 'SELL' ? `${maxSell} Units` : `${userBalance.toLocaleString()} ${CURRENCY}`}</span></div>
@@ -321,11 +362,29 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                         </div>
                                         <div className="bg-stone-900 p-4 rounded-xl border border-stone-800 space-y-2">
                                             <div className="flex justify-between text-sm"><span className="text-stone-400">ราคาตลาด (Price)</span><span className="text-white font-mono">{item.currentPrice.toFixed(2)}</span></div>
-                                            <div className="flex justify-between text-sm"><span className="text-stone-400">ค่าธรรมเนียม (Spread)</span><span className={userMastery >= 1000 ? "text-cyan-400 font-bold font-mono" : "text-stone-500 font-mono"}>{action === 'BUY' ? `+${spreadLabel}%` : '0%'}</span></div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-stone-400">{action === 'BUY' ? 'ค่าธรรมเนียม (Spread)' : 'ภาษีตลาด (Market Tax)'}</span>
+                                                <span className={action === 'BUY' && userMastery >= 1000 ? "text-cyan-400 font-bold font-mono" : "text-stone-500 font-mono"}>
+                                                    {action === 'BUY' ? `+${spreadLabel}%` : '-15%'}
+                                                </span>
+                                            </div>
                                             <div className="h-px bg-stone-800 my-2"></div>
                                             <div className="flex justify-between text-lg font-bold"><span className="text-stone-200">รวมสุทธิ (Total)</span><span className={action === 'BUY' ? 'text-red-400' : 'text-emerald-400'}>{totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}</span></div>
                                         </div>
-                                        <button onClick={() => setShowConfirm(true)} disabled={loading || amount <= 0 || (action === 'SELL' && amount > maxSell) || (action === 'BUY' && totalPrice > userBalance)} className={`w-full py-3 rounded-xl font-bold text-base shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-stone-800`}>{action === 'BUY' ? 'ตรวจสอบคำสั่งซื้อ' : 'ตรวจสอบคำสั่งขาย'}</button>
+                                        <button
+                                            onClick={() => setShowConfirm(true)}
+                                            disabled={loading || amount <= 0 || (action === 'SELL' && amount > maxSell) || (action === 'BUY' && totalPrice > userBalance)}
+                                            className={`w-full py-3 rounded-xl font-bold text-base shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-stone-800`}
+                                        >
+                                            {loading ? <RefreshCw className="animate-spin" size={20} /> : (
+                                                <>
+                                                    {action === 'BUY' && totalPrice > userBalance ? 'ยอดเงินไม่เพียงพอ' :
+                                                        action === 'SELL' && amount > maxSell ? 'วัตถุดิบไม่เพียงพอ' :
+                                                            amount <= 0 ? 'ระบุจำนวนที่ต้องการ' :
+                                                                action === 'BUY' ? 'ตรวจสอบรายการสั่งซื้อ' : 'ตรวจสอบรายการขาย'}
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
                             </>
@@ -342,7 +401,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${tx.type === 'MATERIAL_BUY' ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-500' : 'bg-red-900/20 border-red-500/30 text-red-500'}`}>{tx.type === 'MATERIAL_BUY' ? <ShoppingCart size={14} /> : <DollarSign size={14} />}</div>
                                                         <div>
-                                                            <div className="text-sm font-bold text-stone-200 flex items-center gap-2">{tx.type === 'MATERIAL_BUY' ? 'ซื้อ (Buy)' : 'ขาย (Sell)'}<span className="text-[10px] bg-stone-800 text-stone-400 px-1.5 rounded">{tx.description.split(':')[1]?.split('x')[0]?.trim()}</span></div>
+                                                            <div className="text-sm font-bold text-stone-200 flex items-center gap-2">{tx.type === 'MATERIAL_BUY' ? 'ซื้อเข้า (Buy)' : 'ขายออก (Sell)'}<span className="text-[10px] bg-stone-800 text-stone-400 px-1.5 rounded">{tx.description.split(':')[1]?.split('x')[0]?.trim()}</span></div>
                                                             <div className="text-xs text-stone-500 font-mono">{new Date(tx.timestamp).toLocaleString()}</div>
                                                         </div>
                                                     </div>

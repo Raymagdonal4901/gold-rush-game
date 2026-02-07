@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Sparkles, XCircle, Hammer, Backpack, Glasses, Monitor, Smartphone, Truck, Footprints, Zap, TrendingUp, Rocket, Flame, CloudFog, Anvil, FileText, HardHat, Shirt, Bot, Key } from 'lucide-react';
+import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Sparkles, XCircle, Hammer, Backpack, Glasses, Monitor, Smartphone, Truck, Footprints, Zap, TrendingUp, Rocket, Flame, CloudFog, Anvil, FileText, HardHat, Shirt, Bot, Key, Factory, Search, Hourglass, Gem, Lock } from 'lucide-react';
 import { AccessoryItem, OilRig } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
 import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS } from '../constants';
-import { MockDB } from '../services/db';
+import { api } from '../services/api';
 import { MaterialIcon } from './MaterialIcon';
 
 interface AccessoryManagementModalProps {
@@ -17,10 +17,12 @@ interface AccessoryManagementModalProps {
     onEquip: (itemId: string) => void;
     onUnequip: () => void;
     onRefresh: () => void;
+    materials?: Record<number, number>;
+    addNotification?: (n: any) => void;
 }
 
 export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> = ({
-    isOpen, onClose, rig, slotIndex, equippedItem, inventory, userId, onEquip, onUnequip, onRefresh
+    isOpen, onClose, rig, slotIndex, equippedItem, inventory, userId, onEquip, onUnequip, onRefresh, materials = {}, addNotification
 }) => {
     const [view, setView] = useState<'MANAGE' | 'SELECT'>('MANAGE');
     const [isUpgrading, setIsUpgrading] = useState(false);
@@ -53,11 +55,18 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
     const insuranceCount = inventory.filter(i => i.typeId === 'insurance_card').length;
 
-    const handleUpgrade = () => {
+    const handleUpgrade = async () => {
         if (!equippedItem) return;
 
         if (useInsurance && insuranceCount === 0) {
-            alert('ไม่มีใบประกันความเสี่ยง!');
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: userId,
+                message: 'ไม่มีใบประกันความเสี่ยง!',
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
             setUseInsurance(false);
             return;
         }
@@ -77,17 +86,18 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             setUpgradePhase('COOLING');
         }, 3500);
 
-        setTimeout(() => {
-            try {
-                const res = MockDB.upgradeAccessory(userId, equippedItem.id, useInsurance);
+        try {
+            const res = await api.inventory.upgrade(equippedItem.id, useInsurance);
+
+            setTimeout(() => {
                 if (res.success) {
                     setUpgradeMsg({
                         type: 'SUCCESS',
                         text: 'UPGRADE SUCCESS!',
-                        level: res.newItem?.level,
+                        level: res.item?.level,
                         subtext: 'การตีบวกสำเร็จ!',
                         oldBonus,
-                        newBonus: res.newItem?.dailyBonus,
+                        newBonus: res.item?.dailyBonus,
                         itemName
                     });
                 } else {
@@ -95,22 +105,24 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                         type: 'ERROR',
                         text: 'UPGRADE FAILED!',
                         subtext: res.message || 'อุปกรณ์เสียหายจากการตีบวก',
-                        level: res.newItem?.level
+                        level: res.item?.level
                     });
                 }
                 onRefresh();
                 setIsUpgrading(false);
                 setUpgradePhase('IDLE');
-            } catch (e: any) {
+            }, 4500);
+        } catch (e: any) {
+            setTimeout(() => {
                 setUpgradeMsg({
                     type: 'ERROR',
                     text: 'SYSTEM ERROR',
-                    subtext: e.message || 'เกิดข้อผิดพลาด'
+                    subtext: e.response?.data?.message || e.message || 'เกิดข้อผิดพลาด'
                 });
                 setIsUpgrading(false);
                 setUpgradePhase('IDLE');
-            }
-        }, 4500);
+            }, 4500);
+        }
     };
 
     // ... (rendering code)
@@ -122,7 +134,8 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
     if (!isOpen) return null;
 
-    const getSeriesKey = (typeId: string) => {
+    const getSeriesKey = (typeIdRaw: string | null | undefined) => {
+        const typeId = typeIdRaw || '';
         if (typeId.includes('glove')) return 'glove';
         const series = Object.keys(EQUIPMENT_SERIES).find(key => typeId.startsWith(key));
         if (series) return series;
@@ -132,67 +145,137 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         return null;
     };
 
-    const isEquipable = (typeId: string) => {
+    const isEquipable = (item: AccessoryItem) => {
+        // 1. Check by ID config
+        const typeId = item.typeId || '';
         const itemConfig = SHOP_ITEMS.find(s => s.id === typeId);
-        // Only items with a defined 'tier' are considered wearable equipment
-        return itemConfig && itemConfig.tier !== undefined;
+        if (itemConfig && itemConfig.tier !== undefined) return true;
+
+        // 2. Fallback: Check by Name
+        const name = item.name || '';
+        if (name.includes('หมวก') || name.includes('Helmet')) return true;
+        if (name.includes('แว่นขยาย') || name.includes('Magnifying')) return false; // Auto-activate tool
+        if (name.includes('แว่น') || name.includes('Glasses')) return true;
+        if (name.includes('ชุด') || name.includes('Uniform') || name.includes('Suit')) return true;
+        if (name.includes('กระเป๋า') || name.includes('Bag') || name.includes('Backpack')) return true;
+        if (name.includes('รองเท้า') || name.includes('Boots')) return true;
+        if (name.includes('มือถือ') || name.includes('Mobile') || name.includes('Phone')) return true;
+        if (name.includes('คอม') || name.includes('PC') || name.includes('Computer')) return true;
+        if (name.includes('รถขุด') || name.includes('Excavator')) return true;
+
+        return false;
     };
 
     const availableItems = inventory.filter(item => {
-        const isGlove = item.typeId.includes('glove');
+        if (!item) return false;
+        const typeId = item.typeId || '';
+        const isGlove = typeId.includes('glove');
         if (slotIndex === 0) return isGlove;
-        return !isGlove && isEquipable(item.typeId);
+        return !isGlove && isEquipable(item);
     }).filter(item => !item.expireAt || item.expireAt > Date.now());
 
 
 
+    const getItemDisplayName = (item: any) => {
+        const typeId = item.typeId || '';
+        const name = item.name || '';
+        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return 'กุญแจเข้าเหมือง';
+        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return 'ชิปอัปเกรด';
+        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return 'โต๊ะช่างสกัดแร่';
+        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return 'แว่นขยายส่องแร่';
+        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return 'หุ่นยนต์ AI';
+        return name;
+    };
+
     const getAccessoryIcon = (item: AccessoryItem, size: number = 64) => {
-        if (item.typeId.includes('glove')) return <InfinityGlove rarity={item.rarity} size={size} />;
+        if (!item) return <InfinityGlove size={size} />;
+
+        // Fix: Force detecting type by name if typeId is generic or missing specific handling
+        let typeId = item.typeId || '';
+        const name = item.name || '';
+
+        // Name-based overrides to fix "Glove" icon issue
+        if (name.includes('ชิป') || name.includes('Chip')) typeId = 'upgrade_chip';
+        else if (name.includes('กุญแจ') || name.includes('Key')) typeId = 'chest_key';
+        else if (name.includes('เครื่องผสม') || name.includes('Mixer')) typeId = 'mixer';
+        else if (name.includes('แว่นขยาย') || name.includes('Magnifying')) typeId = 'magnifying_glass';
+        else if (name.includes('ใบประกัน') || name.includes('Insurance')) typeId = 'insurance_card';
+        else if (name.includes('นาฬิกาทราย') || name.includes('Hourglass')) typeId = 'hourglass_small';
+        else if (name.includes('แร่ปริศนา') || name.includes('Mystery Ore')) typeId = 'mystery_ore';
+        else if (name.includes('แร่ในตำนาน') || name.includes('Legendary Ore')) typeId = 'legendary_ore';
+        else if (name.includes('รถขุด') || name.includes('Excavator')) typeId = 'auto_excavator';
+        else if (name.includes('หุ่นยนต์') || name.includes('Robot')) typeId = 'robot';
+        // Classic Equipment Fallbacks
+        else if (name.includes('หมวก') || name.includes('Helmet')) typeId = 'hat';
+        else if (name.includes('แว่น') || name.includes('Glasses')) typeId = 'glasses'; // Note: Magnifying Glass handled above
+        else if (name.includes('ชุด') || name.includes('Uniform') || name.includes('Suit')) typeId = 'uniform';
+        else if (name.includes('กระเป๋า') || name.includes('Bag') || name.includes('Backpack')) typeId = 'bag';
+        else if (name.includes('รองเท้า') || name.includes('Boots')) typeId = 'boots';
+        else if (name.includes('มือถือ') || name.includes('Mobile') || name.includes('Phone')) typeId = 'mobile';
+        else if (name.includes('คอม') || name.includes('PC') || name.includes('Computer')) typeId = 'pc';
+
+        if (typeId.includes('glove')) return <InfinityGlove rarity={item.rarity} size={size} />;
 
         const getNeonIcon = (typeId: string) => {
+            if (!typeId) return <InfinityGlove size={size} />;
             const props = { size, className: "relative z-10" };
 
-            if (typeId.includes('hat') || typeId.includes('helmet')) {
+            if (typeId.startsWith('hat')) {
                 return <HardHat {...props} className={`${props.className} text-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,0.8)]`} />;
             }
-            if (typeId.includes('glass')) {
+            if (typeId.startsWith('glasses')) {
                 return <Glasses {...props} className={`${props.className} text-blue-400 drop-shadow-[0_0_12px_rgba(96,165,250,0.8)]`} />;
             }
-            if (typeId.includes('shirt') || typeId.includes('uniform')) {
+            if (typeId.startsWith('uniform') || typeId.startsWith('shirt')) {
                 return <Shirt {...props} className={`${props.className} text-orange-400 drop-shadow-[0_0_12px_rgba(251,146,60,0.8)]`} />;
             }
-            if (typeId.includes('bag')) {
+            if (typeId.startsWith('bag')) {
                 return <Backpack {...props} className={`${props.className} text-purple-400 drop-shadow-[0_0_12px_rgba(192,132,252,0.8)]`} />;
             }
-            if (typeId.includes('boot')) {
+            if (typeId.startsWith('boots')) {
                 return <Footprints {...props} className={`${props.className} text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]`} />;
             }
-            if (typeId.includes('mobile')) {
+            if (typeId.startsWith('mobile')) {
                 return <Smartphone {...props} className={`${props.className} text-cyan-400 drop-shadow-[0_0_12px_rgba(34,211,238,0.8)]`} />;
             }
-            if (typeId.includes('pc')) {
+            if (typeId.startsWith('pc')) {
                 return <Monitor {...props} className={`${props.className} text-rose-400 drop-shadow-[0_0_12px_rgba(251,113,133,0.8)]`} />;
             }
-            if (typeId.includes('excavator')) {
+            if (typeId === 'auto_excavator' || typeId.startsWith('truck')) {
                 return <Truck {...props} className={`${props.className} text-amber-500 drop-shadow-[0_0_12px_rgba(245,158,11,0.8)]`} />;
             }
-            if (typeId.includes('robot')) {
+            if (typeId.startsWith('robot')) {
                 return <Bot {...props} className={`${props.className} text-yellow-500 animate-pulse drop-shadow-[0_0_12px_rgba(234,179,8,0.8)]`} />;
             }
-            if (typeId.includes('upgrade_chip')) {
+            if (typeId === 'upgrade_chip' || typeId.startsWith('chip')) {
                 return <Cpu {...props} className={`${props.className} text-blue-500 drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]`} />;
             }
-            if (typeId.includes('chest_key') || typeId.includes('key')) {
+            if (typeId === 'chest_key' || typeId.startsWith('key')) {
                 return <Key {...props} className={`${props.className} text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]`} />;
             }
-            if (typeId.includes('insurance')) {
+            if (typeId === 'mixer') {
+                return <Factory {...props} className={`${props.className} text-pink-500 drop-shadow-[0_0_12px_rgba(236,72,153,0.8)]`} />;
+            }
+            if (typeId === 'magnifying_glass') {
+                return <Search {...props} className={`${props.className} text-cyan-300 drop-shadow-[0_0_12px_rgba(103,232,249,0.8)]`} />;
+            }
+            if (typeId === 'insurance_card' || typeId.includes('insurance')) {
                 return <FileText {...props} className={`${props.className} text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.5)]`} />;
             }
+            if (typeId.startsWith('hourglass')) {
+                return <Hourglass {...props} className={`${props.className} text-yellow-300 drop-shadow-[0_0_12px_rgba(253,224,71,0.8)]`} />;
+            }
+            if (typeId === 'mystery_ore') {
+                return <Sparkles {...props} className={`${props.className} text-purple-300 drop-shadow-[0_0_12px_rgba(216,180,254,0.8)]`} />;
+            }
+            if (typeId === 'legendary_ore') {
+                return <Gem {...props} className={`${props.className} text-red-400 drop-shadow-[0_0_12px_rgba(248,113,113,0.8)]`} />;
+            }
 
-            return <FileText {...props} className={`${props.className} text-stone-500`} />;
+            return <InfinityGlove size={size} className={props.className} />;
         };
 
-        return getNeonIcon(item.typeId);
+        return getNeonIcon(typeId);
     };
 
     // Cartoon Mining Animation Overlay
@@ -343,7 +426,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             const seriesKey = getSeriesKey(equippedItem.typeId);
             if (seriesKey && EQUIPMENT_UPGRADE_CONFIG[seriesKey]) {
                 upgradeReq = EQUIPMENT_UPGRADE_CONFIG[seriesKey][currentLevel];
-            } else if (equippedItem.typeId.includes('glove')) {
+            } else if (equippedItem.typeId && equippedItem.typeId.includes('glove')) {
                 const legacyReq = UPGRADE_REQUIREMENTS[currentLevel];
                 if (legacyReq) {
                     upgradeReq = {
@@ -364,8 +447,15 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         let nextBonusValue = currentBonus;
 
         if (upgradeReq) {
-            if (upgradeReq.bonusMultiplier > 0) {
-                nextBonusValue = currentBonus * 1.15;
+            if (upgradeReq.targetBonus !== undefined) {
+                // Refined Incremental Logic:
+                const currentLevel = equippedItem?.level || 1;
+                const currentTarget = UPGRADE_REQUIREMENTS[currentLevel - 1]?.targetBonus || 0;
+                const nextTarget = upgradeReq.targetBonus || 0;
+                const increase = nextTarget - currentTarget;
+                nextBonusValue = currentBonus + increase;
+            } else if (upgradeReq.bonusMultiplier > 0) {
+                nextBonusValue = currentBonus * upgradeReq.bonusMultiplier;
             } else {
                 const shopConfig = SHOP_ITEMS.find(s => s.id === equippedItem?.typeId);
                 const tier = shopConfig?.tier || 1;
@@ -375,6 +465,10 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         }
 
         const bonusDiff = nextBonusValue - currentBonus;
+
+        // Calculate owned chips
+        const ownedChips = inventory.filter(i => i.typeId === 'upgrade_chip').length;
+        const hasEnoughChips = ownedChips >= (upgradeReq?.chipAmount || 0);
 
         return (
             <div className="flex flex-col">
@@ -389,7 +483,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                 {getAccessoryIcon(equippedItem)}
                             </div>
                             <div className="relative z-10 text-center px-4">
-                                <h3 className={`font-bold text-lg leading-tight ${rarityConfig.color} drop-shadow-sm`}>{equippedItem.name}</h3>
+                                <h3 className={`font-bold text-lg leading-tight ${rarityConfig.color} drop-shadow-sm`}>{getItemDisplayName(equippedItem)}</h3>
                                 <div className="text-xs text-stone-400 mt-1 uppercase tracking-wide opacity-80">{rarityConfig.label}</div>
                                 {equippedItem.level && equippedItem.level > 1 && (
                                     <span className="inline-block mt-2 px-3 py-0.5 rounded-sm bg-stone-800 text-cyan-400 text-[10px] font-bold shadow-lg border border-cyan-500/30 backdrop-blur-sm font-mono tracking-widest">
@@ -410,8 +504,16 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                     {equippedItem ? (
                         <div className="space-y-4">
                             <div className="flex gap-2">
-                                <button onClick={() => setView('SELECT')} className="flex-1 py-3 bg-stone-800 hover:bg-stone-700 border border-stone-700 hover:border-stone-500 rounded-lg text-stone-300 font-bold text-xs uppercase tracking-wider transition-all">เปลี่ยนอุปกรณ์</button>
-                                <button onClick={onUnequip} className="px-4 py-3 bg-red-900/20 hover:bg-red-900/40 border border-red-900/50 rounded-lg text-red-500 font-bold text-xs uppercase tracking-wider transition-all">ถอดออก</button>
+                                {slotIndex !== 0 ? (
+                                    <>
+                                        <button onClick={() => setView('SELECT')} className="flex-1 py-3 bg-stone-800 hover:bg-stone-700 border border-stone-700 hover:border-stone-500 rounded-lg text-stone-300 font-bold text-xs uppercase tracking-wider transition-all">เปลี่ยนอุปกรณ์</button>
+                                        <button onClick={onUnequip} className="px-4 py-3 bg-red-900/20 hover:bg-red-900/40 border border-red-900/50 rounded-lg text-red-500 font-bold text-xs uppercase tracking-wider transition-all">ถอดออก</button>
+                                    </>
+                                ) : (
+                                    <div className="flex-1 py-3 text-center text-stone-500 font-bold text-xs uppercase tracking-widest bg-stone-900/50 rounded-lg border border-stone-800 flex items-center justify-center gap-2">
+                                        <Lock size={12} className="text-stone-600" /> อุปกรณ์ถาวร (ติดตัวเครื่อง)
+                                    </div>
+                                )}
                             </div>
 
                             <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 relative overflow-hidden">
@@ -441,11 +543,15 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                         <div className="flex items-center gap-2 mb-6 bg-stone-900 p-3 rounded-lg border border-stone-800 shadow-inner">
                                             <div className="flex-1 flex flex-col items-center justify-center gap-1 text-xs text-stone-300 border-r border-stone-800 pr-2">
                                                 <div className="flex items-center gap-1 text-purple-400 font-bold"><Cpu size={12} /> ชิป</div>
-                                                <span className="font-mono text-sm">x{upgradeReq.chipAmount}</span>
+                                                <span className={`font-mono text-sm ${hasEnoughChips ? 'text-white' : 'text-red-500'}`}>
+                                                    {ownedChips}/{upgradeReq.chipAmount}
+                                                </span>
                                             </div>
                                             <div className="flex-1 flex flex-col items-center justify-center gap-1 text-xs text-stone-300">
                                                 <div className="flex items-center gap-1 text-blue-400 font-bold"><MaterialIcon id={upgradeReq.matTier} size="w-3 h-3" iconSize={10} /> วัตถุดิบ</div>
-                                                <span className="font-mono text-sm">{matName} x{upgradeReq.matAmount}</span>
+                                                <span className={`font-mono text-sm ${((materials[upgradeReq.matTier] || 0) >= upgradeReq.matAmount) ? 'text-white' : 'text-red-500'}`}>
+                                                    {matName} {materials[upgradeReq.matTier] || 0}/{upgradeReq.matAmount}
+                                                </span>
                                             </div>
                                             <div className="flex-1 flex flex-col items-center justify-center gap-1 text-xs text-stone-300 border-l border-stone-800 pl-2">
                                                 <div className="text-yellow-600 font-bold">ค่าใช้จ่าย</div>
@@ -459,7 +565,14 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                                     className={`w-5 h-5 rounded border flex items-center justify-center cursor-pointer transition-colors ${useInsurance ? 'bg-cyan-500 border-cyan-400' : 'bg-stone-800 border-stone-600'}`}
                                                     onClick={() => {
                                                         if (insuranceCount > 0) setUseInsurance(!useInsurance);
-                                                        else alert('ไม่มีใบประกันความเสี่ยง');
+                                                        else if (addNotification) addNotification({
+                                                            id: Date.now().toString(),
+                                                            userId: userId,
+                                                            message: 'ไม่มีใบประกันความเสี่ยง',
+                                                            type: 'ERROR',
+                                                            read: false,
+                                                            timestamp: Date.now()
+                                                        });
                                                     }}
                                                 >
                                                     {useInsurance && <CheckCircle2 size={14} className="text-white" />}
@@ -477,7 +590,14 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                                 </div>
                                             ) : (
                                                 <div className="text-[10px] items-center flex gap-1 text-red-400 font-bold bg-red-950/10 px-2 py-1 rounded border border-red-900/20">
-                                                    <AlertTriangle size={10} /> ความเสี่ยง: ลดระดับ
+                                                    <AlertTriangle size={10} />
+                                                    {upgradeReq.risk === 'NONE' ? (
+                                                        <span className="text-emerald-500">ไม่มีความเสี่ยง</span>
+                                                    ) : upgradeReq.risk === 'BREAK' ? (
+                                                        <span className="text-red-500">ความเสี่ยง: อุปกรณ์แตก</span>
+                                                    ) : (
+                                                        <span>ความเสี่ยง: ลดระดับ</span>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -538,6 +658,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         );
     };
 
+
     const renderSelectView = () => (
         <div className="flex flex-col h-full bg-stone-950">
             <div className="p-4 border-b border-stone-800 bg-stone-900 flex items-center gap-2">
@@ -555,8 +676,11 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                 {getAccessoryIcon(item)}
                             </div>
                             <div>
-                                <div className={`text-xs font-bold ${RARITY_SETTINGS[item.rarity].color} font-mono tracking-tighter`}>{item.name}</div>
-                                <div className="text-[10px] text-cyan-400 mt-1 font-mono">+{item.dailyBonus || 0} / วัน</div>
+                                <div className={`text-xs font-bold ${RARITY_SETTINGS[item.rarity].color} font-mono tracking-tighter`}>{getItemDisplayName(item)}</div>
+                                <div className="flex flex-col items-center mt-1">
+                                    <div className="text-[10px] text-cyan-400 font-mono">+{item.dailyBonus || 0} / วัน</div>
+                                    <div className="text-[9px] text-yellow-500 font-bold uppercase tracking-widest mt-0.5">โบนัส: +{item.dailyBonus || 0} / วัน</div>
+                                </div>
                             </div>
                         </div>
                     ))
@@ -567,19 +691,6 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 text-sans">
-            <style jsx global>{`
-                @font-face {
-                    font-family: 'Geist Mono';
-                    src: url('https://rsms.me/inter/inter.css');
-                }
-                .font-display { font-family: 'Inter', sans-serif; }
-                .font-mono { font-family: monospace; }
-                @keyframes hammer {
-                    0% { transform: rotate(45deg); }
-                    50% { transform: rotate(-45deg); }
-                    100% { transform: rotate(45deg); }
-                }
-            `}</style>
             {renderMiningAnimation()}
             {renderResultPopup()}
             <div className="bg-stone-950 border border-stone-800 w-full max-w-sm rounded-xl shadow-2xl overflow-hidden flex flex-col h-auto max-h-[90vh] relative">

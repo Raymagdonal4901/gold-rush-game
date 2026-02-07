@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Pickaxe, Coins, Wrench, Hammer, Map, ArrowRight, Zap, RefreshCw, Skull, Hand, Trophy, BookOpen, Crown, Target, Users, HelpCircle, AlertTriangle } from 'lucide-react';
+import { X, Building2, Home, Coins, Wrench, Hammer, Map, ArrowRight, Zap, RefreshCw, Skull, Hand, Trophy, BookOpen, Crown, Target, Users, HelpCircle, AlertTriangle } from 'lucide-react';
 import { DUNGEON_CONFIG, MATERIAL_RECIPES, MATERIAL_CONFIG, VIP_TIERS } from '../constants';
 import { OilRigAnimation } from './OilRigAnimation';
 import { MaterialIcon } from './MaterialIcon';
@@ -16,28 +16,28 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
 
     const tabs = [
         { id: 'overview', label: 'ภาพรวม (Overview)', icon: <RefreshCw size={18} /> },
-        { id: 'mining', label: 'การขุด & พลังงาน', icon: <Pickaxe size={18} /> },
-        { id: 'equipment', label: 'อุปกรณ์สวมใส่', icon: <Hand size={18} /> },
-        { id: 'dungeon', label: 'ดันเจี้ยน (Dungeon)', icon: <Skull size={18} /> },
-        { id: 'crafting', label: 'โรงงาน & คราฟต์', icon: <Hammer size={18} /> },
+        { id: 'mining', label: 'แท่นขุด & การดูแล', icon: <Home size={18} /> },
+        { id: 'equipment', label: 'อุปกรณ์ & หุ่นยนต์', icon: <Hand size={18} /> },
+        { id: 'dungeon', label: 'สำรวจเหมือง (Exploration)', icon: <Skull size={18} /> },
+        { id: 'crafting', label: 'โรงงาน & สกัดแร่', icon: <Hammer size={18} /> },
         { id: 'economy', label: 'ตลาด & การเงิน', icon: <Coins size={18} /> },
         { id: 'systems', label: 'VIP & ภารกิจ', icon: <Crown size={18} /> },
     ];
 
     const renderOverview = () => {
         const steps = [
-            { id: 1, title: "ขุด (Mine)", desc: "ใช้เครื่องจักรขุดแร่ กดรับรายได้และกุญแจ", icon: <Pickaxe size={32} className="text-white" />, color: "bg-blue-600", borderColor: "border-blue-400" },
-            { id: 2, title: "ขาย (Trade)", desc: "ขายแร่ในตลาด (ระวังภาษี) หรือเก็บไว้คราฟต์", icon: <Coins size={32} className="text-yellow-400" />, color: "bg-yellow-600", borderColor: "border-yellow-400" },
-            { id: 3, title: "อัปเกรด (Upgrade)", desc: "สวมใส่อุปกรณ์ ตีบวกถุงมือ เพื่อเพิ่มกำไร", icon: <Zap size={32} className="text-orange-400" />, color: "bg-orange-600", borderColor: "border-orange-400" },
-            { id: 4, title: "ขยาย (Expand)", desc: "คราฟต์เครื่องจักรใหม่ ปลดล็อกช่องขุดเพิ่ม", icon: <Hammer size={32} className="text-purple-400" />, color: "bg-purple-600", borderColor: "border-purple-400" },
-            { id: 5, title: "ผจญภัย (Explore)", desc: "ลงดันเจี้ยนเพื่อหาแร่หายากและชิปอัปเกรด", icon: <Skull size={32} className="text-red-400" />, color: "bg-red-600", borderColor: "border-red-400" }
+            { id: 1, title: "ขุดแร่ (Mine)", desc: "จัดการแท่นขุดเพื่อผลิตเงินและแร่", icon: <Coins size={32} className="text-white" />, color: "bg-blue-600", borderColor: "border-blue-400" },
+            { id: 2, title: "ค้าขาย (Trade)", desc: "ขายวัสดุในตลาด (ระวังภาษี) หรือเก็บไว้สร้างของ", icon: <Coins size={32} className="text-yellow-400" />, color: "bg-yellow-600", borderColor: "border-yellow-400" },
+            { id: 3, title: "ติดตั้ง (Equip)", desc: "ติดตั้งอุปกรณ์เครื่องจักรและหุ่นยนต์ เพื่อเพิ่มกำไร", icon: <Zap size={32} className="text-orange-400" />, color: "bg-orange-600", borderColor: "border-orange-400" },
+            { id: 4, title: "สกัดแร่ (Extract)", desc: "สกัดวัสดุระดับสูง ปลดล็อกพื้นที่เพิ่ม", icon: <Hammer size={32} className="text-white" />, color: "bg-purple-600", borderColor: "border-purple-400" },
+            { id: 5, title: "สำรวจ (Explore)", desc: "ลงพื้นที่สำรวจแหล่งแร่หายากและไอเทมพิเศษ", icon: <Skull size={32} className="text-red-400" />, color: "bg-red-600", borderColor: "border-red-400" }
         ];
 
         return (
             <div className="relative pb-10">
                 <div className="text-center mb-10">
-                    <h3 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-600">ยินดีต้อนรับสู่ Oil Baron Tycoon</h3>
-                    <p className="text-stone-400 mt-2">เส้นทางสู่มหาเศรษฐีน้ำมันเริ่มที่นี่!</p>
+                    <h3 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-600">ยินดีต้อนรับสู่ Gold Rush</h3>
+                    <p className="text-stone-400 mt-2">เส้นทางสู่นักล่าทองคำผู้มั่งคั่งเริ่มที่นี่!</p>
                 </div>
 
                 <div className="hidden lg:block absolute top-[180px] left-12 right-12 h-2 bg-stone-800 rounded-full z-0"></div>
@@ -67,13 +67,13 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
     const renderMining = () => (
         <div className="space-y-8">
             <h3 className="text-2xl font-bold text-white mb-6 border-b border-stone-800 pb-2 flex items-center gap-2">
-                <Pickaxe className="text-blue-500" /> ระบบการขุดและพลังงาน
+                <Building2 className="text-blue-500" /> ระบบแท่นขุดและการดูแล
             </h3>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Rig Showcase */}
                 <div className="space-y-4">
-                    <h4 className="text-lg font-bold text-yellow-400 flex items-center gap-2"><Crown size={18} /> วิวัฒนาการเครื่องขุด</h4>
+                    <h4 className="text-lg font-bold text-yellow-400 flex items-center gap-2"><Crown size={18} /> ประเภทห้องพัก</h4>
                     <div className="bg-stone-950 p-6 rounded-2xl border border-stone-800 flex flex-col gap-6">
 
                         {/* Basic Rig */}
@@ -83,11 +83,11 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                                 <OilRigAnimation tier={1} isActive={true} />
                             </div>
                             <div>
-                                <h5 className="font-bold text-blue-400">Basic Rig (Tier 1)</h5>
-                                <p className="text-xs text-stone-400 mt-1">เครื่องเริ่มต้นสำหรับผู้เล่นใหม่</p>
+                                <h5 className="font-bold text-blue-400">Basic Shovel (Tier 1)</h5>
+                                <p className="text-xs text-stone-400 mt-1">เครื่องมือขุดเริ่มต้นสำหรับมือใหม่</p>
                                 <div className="flex gap-2 mt-2">
-                                    <span className="text-[10px] bg-stone-800 px-2 py-0.5 rounded text-stone-300">ROI ต่ำ</span>
-                                    <span className="text-[10px] bg-stone-800 px-2 py-0.5 rounded text-stone-300">ซ่อมถูก</span>
+                                    <span className="text-[10px] bg-stone-800 px-2 py-0.5 rounded text-stone-300">ขุดได้เรื่อยๆ</span>
+                                    <span className="text-[10px] bg-stone-800 px-2 py-0.5 rounded text-stone-300">ดูแลต่ำ</span>
                                 </div>
                             </div>
                         </div>
@@ -104,12 +104,12 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                                 </div>
                             </div>
                             <div className="relative z-10">
-                                <h5 className="font-bold text-purple-300 text-lg">Grand Vibranium Reactor</h5>
-                                <p className="text-xs text-purple-200/70 mt-1">สุดยอดเทคโนโลยีไวเบรเนียม</p>
+                                <h5 className="font-bold text-purple-300 text-lg">Legendary Mining Complex</h5>
+                                <p className="text-xs text-purple-200/70 mt-1">ที่สุดแห่งเทคโนโลยีการขุด</p>
                                 <ul className="text-[10px] text-stone-400 mt-2 space-y-1">
-                                    <li className="flex items-center gap-1"><span className="text-green-400">●</span> ROI สูงที่สุดในเกม</li>
-                                    <li className="flex items-center gap-1"><span className="text-green-400">●</span> <span className="text-yellow-400 font-bold">Infinite Durability</span> (ไม่ต้องซ่อม)</li>
-                                    <li className="flex items-center gap-1"><span className="text-green-400">●</span> เหมาะสำหรับผู้ครองจักรวาล</li>
+                                    <li className="flex items-center gap-1"><span className="text-green-400">●</span> อัตราขุดสูงที่สุดในเหมือง</li>
+                                    <li className="flex items-center gap-1"><span className="text-green-400">●</span> <span className="text-yellow-400 font-bold">Vabrenium Yield</span> (แร่แชมเปี้ยน)</li>
+                                    <li className="flex items-center gap-1"><span className="text-green-400">●</span> เหมาะสำหรับเจ้าสัวเหมือง</li>
                                 </ul>
                             </div>
                         </div>
@@ -120,11 +120,11 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                 {/* Mechanics */}
                 <div className="space-y-6">
                     <div className="bg-stone-900 p-5 rounded-xl border border-stone-800">
-                        <h4 className="font-bold text-orange-400 mb-2 flex items-center gap-2"><Zap size={18} /> ระบบพลังงาน (Energy)</h4>
+                        <h4 className="font-bold text-orange-400 mb-2 flex items-center gap-2"><Zap size={18} /> สภาพเครื่องจักร (Condition)</h4>
                         <p className="text-sm text-stone-300 mb-3">
-                            เครื่องขุดทุกเครื่องต้องใช้ไฟฟ้า! หากพลังงานหมด (0%) เครื่องจะหยุดทำงานทันที
+                            เครื่องจักรต้องได้รับการดูแล! หากสภาพแย่ (0%) เครื่องจะหยุดทำงานทันที
                         </p>
-                        <div className="bg-stone-950 p-3 rounded border border-stone-700 flex items-center justify-between gap-4">
+                        <div className="bg-stone-950 p-3 rounded border border-stone-700 flex items-center justify-between gap-4 mb-4">
                             <div className="flex flex-col items-center">
                                 <Zap className="text-red-500 animate-pulse" />
                                 <span className="text-[10px] text-red-400">0% = STOP</span>
@@ -132,23 +132,51 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                             <div className="flex-1 h-2 bg-stone-800 rounded-full overflow-hidden">
                                 <div className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 w-full opacity-50"></div>
                             </div>
-                            <div className="text-xs text-green-400">เติมไฟได้ที่ Dashboard</div>
+                            <div className="text-xs text-green-400">ซ่อมบำรุงประจำการ์ด</div>
+                        </div>
+
+                        {/* Energy Reactor Refill */}
+                        <div className="bg-orange-900/20 p-3 rounded-lg border border-orange-500/30 mb-3">
+                            <h5 className="text-orange-300 font-bold text-xs mb-2">⚡ Maintenance Service</h5>
+                            <ul className="text-[10px] text-stone-400 space-y-1">
+                                <li>• สภาพเครื่องเก่าลงตามเวลาใช้งาน</li>
+                                <li>• กดปุ่ม <span className="text-yellow-400">⚡ ซ่อมบำรุง</span> บน Rig Card</li>
+                                <li>• ค่าใช้จ่าย: <span className="text-green-400">0.05฿ / 1%</span> (ขั้นต่ำ 1฿)</li>
+                                <li>• ซ่อมได้ทั้งบางส่วนหรือเต็ม 100%</li>
+                            </ul>
+                        </div>
+
+                        {/* Battery System */}
+                        <div className="bg-cyan-900/20 p-3 rounded-lg border border-cyan-500/30">
+                            <h5 className="text-cyan-300 font-bold text-xs mb-2">🔋 Rig Status System</h5>
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="flex-1 h-3 bg-stone-800 rounded-full overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500" style={{ width: '60%' }}></div>
+                                </div>
+                                <span className="text-xs text-stone-400">60%</span>
+                            </div>
+                            <ul className="text-[10px] text-stone-400 space-y-1">
+                                <li>• <span className="text-red-400">0-20%</span> = พัง (ต้องซ่อมด่วน!)</li>
+                                <li>• <span className="text-yellow-400">21-40%</span> = เก่า (เริ่มลดประสิทธิภาพ)</li>
+                                <li>• <span className="text-green-400">41-100%</span> = สมบูรณ์/ปกติ</li>
+                                <li>• เครื่องจักรแต่ละแบบค่าดูแลต่างกัน</li>
+                            </ul>
                         </div>
                     </div>
 
                     <div className="bg-stone-900 p-5 rounded-xl border border-stone-800">
-                        <h4 className="font-bold text-yellow-400 mb-2 flex items-center gap-2"><Target size={18} /> รางวัล & การดรอป</h4>
+                        <h4 className="font-bold text-yellow-400 mb-2 flex items-center gap-2"><Target size={18} /> รายได้ & ของแถม</h4>
                         <ul className="space-y-3 text-sm text-stone-300">
                             <li className="flex items-start gap-2">
                                 <div className="bg-yellow-900/30 p-1 rounded text-yellow-500 mt-0.5"><Coins size={14} /></div>
                                 <div>
-                                    <strong className="text-white">รายได้หลัก:</strong> รับเป็นเงินบาท (THB) สะสมได้เรื่อยๆ กด Claim เมื่อไหร่ก็ได้
+                                    <strong className="text-white">รายได้หลัก (Profit):</strong> รับเป็นเงินบาท (THB) สะสมได้เรื่อยๆ กดเก็บเมื่อไหร่ก็ได้
                                 </div>
                             </li>
                             <li className="flex items-start gap-2">
                                 <div className="bg-purple-900/30 p-1 rounded text-purple-500 mt-0.5"><Users size={14} /></div>
                                 <div>
-                                    <strong className="text-white">Material Drop:</strong> ทุกๆ <span className="text-yellow-400 font-bold">20 ชั่วโมง</span> เครื่องขุดมีโอกาสดรอป <span className="text-purple-300">กุญแจ (Key)</span> หรือแร่หายาก เพื่อใช้ลงดันเจี้ยน
+                                    <strong className="text-white">Material Found:</strong> ทุกๆ <span className="text-yellow-400 font-bold">20 ชั่วโมง</span> เครื่องจักรจะสุ่มขุดพบ <span className="text-purple-300">กุญแจเข้าเหมือง (Key)</span> หรือวัสดุมีค่า
                                 </div>
                             </li>
                         </ul>
@@ -161,33 +189,33 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
     const renderEquipment = () => (
         <div className="space-y-8">
             <h3 className="text-2xl font-bold text-white mb-6 border-b border-stone-800 pb-2 flex items-center gap-2">
-                <Hand className="text-emerald-500" /> อุปกรณ์สวมใส่ (Accessories)
+                <Hand className="text-emerald-500" /> อุปกรณ์ & หุ่นยนต์
             </h3>
 
-            <p className="text-stone-400 text-sm">สวมใส่อุปกรณ์ให้กับเครื่องขุดเพื่อเพิ่มประสิทธิภาพในด้านต่างๆ</p>
+            <p className="text-stone-400 text-sm">ติดตั้งอุปกรณ์เครื่องจักรและจ้างหุ่นยนต์เพื่อเพิ่มประสิทธิภาพการขุด</p>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
                 {/* Equipment Type Cards */}
                 <div className="bg-stone-900 p-4 rounded-xl border border-stone-800 hover:border-emerald-500 transition-colors group">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 bg-emerald-900/20 rounded-lg flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform"><Hand /></div>
-                        <div className="font-bold text-white">Gloves</div>
+                        <div className="font-bold text-white">Robot</div>
                     </div>
-                    <p className="text-xs text-stone-400">เพิ่มค่า <span className="text-emerald-300">Luck Chance</span> โอกาสดรอปไอเทมพิเศษ</p>
+                    <p className="text-xs text-stone-400">เพิ่มค่า <span className="text-emerald-300">Luck Chance</span> โอกาสพบไอเทมหายาก</p>
                 </div>
                 <div className="bg-stone-900 p-4 rounded-xl border border-stone-800 hover:border-blue-500 transition-colors group">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 bg-blue-900/20 rounded-lg flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform"><Target /></div>
-                        <div className="font-bold text-white">Glasses</div>
+                        <div className="font-bold text-white">Sensors</div>
                     </div>
-                    <p className="text-xs text-stone-400">เพิ่ม <span className="text-blue-300">Drop Rate</span> ในการขุดแร่ทั่วไป</p>
+                    <p className="text-xs text-stone-400">เพิ่ม <span className="text-blue-300">Drop Rate</span> แร่ดิบระดับสูง</p>
                 </div>
                 <div className="bg-stone-900 p-4 rounded-xl border border-stone-800 hover:border-yellow-500 transition-colors group">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 bg-yellow-900/20 rounded-lg flex items-center justify-center text-yellow-400 group-hover:scale-110 transition-transform"><Users /></div>
-                        <div className="font-bold text-white">Uniform</div>
+                        <div className="font-bold text-white">Machinery</div>
                     </div>
-                    <p className="text-xs text-stone-400">ยืดอายุการใช้งาน <span className="text-yellow-300">(Durability)</span> ลดความถี่ในการซ่อม</p>
+                    <p className="text-xs text-stone-400">เพิ่มความทนทาน <span className="text-yellow-300">(Durability)</span> ลดค่าเสื่อมสภาพ</p>
                 </div>
             </div>
 
@@ -200,12 +228,12 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                             <Hand size={60} className="text-emerald-400 drop-shadow-lg" />
                             <div className="absolute -top-3 -right-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-lg border-2 border-stone-900">+5</div>
                         </div>
-                        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-stone-800 text-[10px] px-3 py-1 rounded-full border border-stone-600 whitespace-nowrap">Infinity Glove</div>
+                        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-stone-800 text-[10px] px-3 py-1 rounded-full border border-stone-600 whitespace-nowrap">หุ่นยนต์ AI (Lv.5)</div>
                     </div>
                     <div className="flex-1 space-y-4">
-                        <h4 className="text-lg font-bold text-white">ระบบตีบวก (Enhancement)</h4>
+                        <h4 className="text-lg font-bold text-white">ระบบอัปเกรด (Enhancement)</h4>
                         <p className="text-sm text-stone-400">
-                            ใช้วัตถุดิบและ <strong>Upgrade Chip</strong> เพื่อเพิ่มระดับของอุปกรณ์ ยิ่งบวกเยอะ ยิ่งได้รับโบนัสสูง!
+                            ใช้วัสดุและ <strong>Upgrade Chip</strong> เพื่ออัปเกรดหุ่นยนต์ ยิ่งเลเวลสูง ยิ่งช่วยขุดเก่ง!
                         </p>
                         <div className="grid grid-cols-3 gap-2 text-center">
                             <div className="bg-stone-900 p-2 rounded border border-stone-800">
@@ -218,10 +246,10 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                             </div>
                             <div className="bg-stone-900 p-2 rounded border border-stone-800 border-dashed border-red-500/50">
                                 <div className="text-xs text-red-400">Failure</div>
-                                <div className="text-stone-400 text-[10px]">Item Destroyed*</div>
+                                <div className="text-stone-400 text-[10px]">Level Drop*</div>
                             </div>
                         </div>
-                        <div className="text-[10px] text-stone-500">* ใช้ใบประกันความเสี่ยง (Insurance Card) เพื่อป้องกันไอเทมหายเมื่อตีบวกแตก</div>
+                        <div className="text-[10px] text-stone-500">* ใช้ใบประกันความเสี่ยง (Insurance Card) เพื่อป้องกันเลเวลลดเมื่อเลื่อนขั้นพลาด</div>
                     </div>
                 </div>
             </div>
@@ -231,7 +259,7 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
     const renderDungeon = () => (
         <div className="space-y-8">
             <h3 className="text-2xl font-bold text-white mb-6 border-b border-stone-800 pb-2 flex items-center gap-2">
-                <Skull className="text-red-500" /> ดันเจี้ยน (Dungeon Exploration)
+                <Skull className="text-red-500" /> สำรวจแหล่งแร่ (Exploration)
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -246,11 +274,11 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                             <div className="text-[10px] text-stone-500 mb-3">{d.description}</div>
 
                             <div className="flex justify-between items-center text-xs text-stone-300 bg-stone-950 p-2 rounded mb-2">
-                                <span>เวลาสำรวจ:</span>
+                                <span>เวลาดำเนินงาน:</span>
                                 <span className="text-yellow-400">{d.durationHours} ชม.</span>
                             </div>
                             <div className="flex justify-between items-center text-xs text-stone-300 bg-stone-950 p-2 rounded">
-                                <span>ค่าเข้า:</span>
+                                <span>ค่าบริการ:</span>
                                 <div className="flex gap-2">
                                     <span className="text-yellow-400">{d.cost}฿</span>
                                     {d.keyCost && <span className="text-purple-400">+{d.keyCost} Keys</span>}
@@ -266,8 +294,8 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                 <div>
                     <h4 className="font-bold text-red-400 text-sm">ข้อควรระวัง!</h4>
                     <p className="text-xs text-stone-400 mt-1">
-                        เมื่อส่งเครื่องขุดไปสำรวจดันเจี้ยน <strong>เครื่องจักรจะหยุดผลิตเหรียญชั่วคราว</strong> จนกว่าจะกลับมา <br />
-                        แต่คุณจะได้รับแร่หายาก (Rare Ores) และไอเทมคราฟต์ที่หาไม่ได้จากที่อื่นแทน
+                        เมื่อส่งเครื่องขุดไปสำรวจในแหล่งแร่ <strong>การผลิตเงินจะหยุดลง</strong> ชั่วคราว จนกว่าจะกลับมา <br />
+                        แต่คุณจะได้รับแร่หายาก (Rare Minerals) และกุญแจเข้าเหมืองที่หาไม่ได้จากการขุดปกติ
                     </p>
                 </div>
             </div>
@@ -277,13 +305,13 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
     const renderCrafting = () => (
         <div className="space-y-8">
             <h3 className="text-2xl font-bold text-white mb-6 border-b border-stone-800 pb-2 flex items-center gap-2">
-                <Hammer className="text-purple-500" /> โรงงาน & คราฟต์ (Factory)
+                <Hammer className="text-purple-500" /> โรงงานสกัดแร่ (Workshop)
             </h3>
 
             {/* Fusion Tree Visual */}
             <div className="bg-stone-900 p-8 rounded-2xl border border-stone-800 flex flex-col items-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 bg-stone-950 rounded-bl-2xl text-[10px] text-stone-500 border-b border-l border-stone-800">
-                    Material Fusion System
+                    Material Processing System
                 </div>
 
                 <div className="flex flex-col items-center w-full max-w-lg">
@@ -294,7 +322,7 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                                 <MaterialIcon id={1} size="w-12 h-12" />
                                 <span className="absolute -bottom-1 -right-1 bg-stone-900 text-[10px] px-2 py-0.5 rounded-lg border border-stone-700 font-bold text-white">x2</span>
                             </div>
-                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Coal</span>
+                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{MATERIAL_CONFIG.NAMES[1 as keyof typeof MATERIAL_CONFIG.NAMES]}</span>
                         </div>
                     </div>
 
@@ -309,29 +337,29 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                         <div className="w-20 h-20 bg-orange-900/20 rounded-3xl flex items-center justify-center border-2 border-orange-500 shadow-[0_0_30px_rgba(249,115,22,0.3)] animate-pulse overflow-hidden">
                             <MaterialIcon id={2} size="w-16 h-16" />
                         </div>
-                        <span className="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-600 mt-2">Copper (Tier 2)</span>
+                        <span className="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-600 mt-2">{MATERIAL_CONFIG.NAMES[2 as keyof typeof MATERIAL_CONFIG.NAMES]} (Tier 2)</span>
                     </div>
                 </div>
 
                 <p className="text-center text-xs text-stone-400 mt-8 max-w-sm">
-                    <strong>การผสมแร่ (Fusion):</strong> รวมแร่ระดับต่ำ 2 ชิ้น + เงินค่าธรรมเนียม เพื่อให้ได้แร่ระดับสูงขึ้น 1 ชิ้น <br />
-                    (ใช้ <strong>เครื่องผสมอนุภาค</strong> ในการทำธุรกรรม)
+                    <strong>การสกัดแร่ (Extraction):</strong> รวมวัสดุระดับต่ำ 2 ชิ้น + เงินค่าธรรมเนียม เพื่อให้ได้วัสดุระดับสูงขึ้น 1 ชิ้น <br />
+                    (ใช้ <strong>โต๊ะช่างสกัดแร่</strong> ในการดำเนินการ)
                 </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-stone-950 p-4 rounded-xl border border-stone-800">
+                <div className="bg-stone-900 p-4 rounded-xl border border-stone-800">
                     <h4 className="font-bold text-white mb-2">🏭 คราฟต์เครื่องจักร</h4>
                     <p className="text-xs text-stone-400">
-                        เก็บสะสมวัตถุดิบเพื่อสร้างเครื่องจักรระดับสูงโดยไม่ต้องใช้เงินซื้อ <br />
-                        ยิ่งเครื่องระดับสูง ยิ่งต้องใช้วัตถุดิบหายากจากดันเจี้ยน
+                        เก็บสะสมวัสดุเพื่อผลิตเครื่องจักรระดับสูงโดยไม่ต้องใช้เงินซื้อ <br />
+                        ยิ่งเครื่องระดับสูง ยิ่งต้องใช้แร่หายากจากกิจกรรมสำรวจ
                     </p>
                 </div>
-                <div className="bg-stone-950 p-4 rounded-xl border border-stone-800">
-                    <h4 className="font-bold text-white mb-2">🧪 คราฟต์อุปกรณ์</h4>
+                <div className="bg-stone-900 p-4 rounded-xl border border-stone-800">
+                    <h4 className="font-bold text-white mb-2">🧪 คราฟต์ไอเทม</h4>
                     <p className="text-xs text-stone-400">
-                        สร้าง `Helmet`, `Suit` หรือ `Gloves` จากวัตถุดิบ <br />
-                        อุปกรณ์ที่คราฟต์จะมีค่า Stat สุ่ม (ระดับ Common - Legendary)
+                        สร้าง `Sensors` หรือ `Automation` จากวัสดุ <br />
+                        อุปกรณ์ที่สร้างจะมีค่า Stat สุ่ม (ระดับ Common - Legendary)
                     </p>
                 </div>
             </div>
@@ -359,9 +387,9 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
 
                     {/* Tax Logic */}
                     <div className="flex flex-col items-center bg-red-950/30 p-4 rounded-lg border border-red-500/30 min-w-[120px] relative">
-                        <div className="absolute -top-3 bg-red-600 text-[10px] text-white px-2 rounded-full">TAX 15%</div>
+                        <div className="absolute -top-3 bg-red-600 text-[10px] text-white px-2 rounded-full">TAX 5%</div>
                         <div className="text-xs text-red-400 mb-1">หักภาษี</div>
-                        <div className="text-xl font-mono text-red-300">-15 ฿</div>
+                        <div className="text-xl font-mono text-red-300">-5 ฿</div>
                         <div className="text-[10px] text-stone-500 mt-1">*ลดได้ด้วย VIP</div>
                     </div>
 
@@ -370,7 +398,7 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                     {/* Net */}
                     <div className="flex flex-col items-center bg-green-950/30 p-4 rounded-lg border border-green-500/50 min-w-[120px] scale-110 shadow-lg shadow-green-900/20">
                         <div className="text-xs text-green-400 mb-1">ได้รับสุทธิ</div>
-                        <div className="text-2xl font-mono text-green-400 font-bold">85 ฿</div>
+                        <div className="text-2xl font-mono text-green-400 font-bold">95 ฿</div>
                     </div>
                 </div>
             </div>

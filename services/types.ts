@@ -13,6 +13,7 @@ export interface OilRig {
   name: string;
   investment: number;
   durationMonths: number;
+  durationDays?: number; // Added for shorter contracts
   dailyProfit: number;
   ratePerSecond: number;
   purchasedAt: number;
@@ -24,6 +25,7 @@ export interface OilRig {
   expiresAt: number;
   renewalCount?: number;
   currentMaterials?: number;
+  lastCollectionAt?: number;
   repairCost: number;
   energyCostPerDay: number;
   energy: number;
@@ -35,6 +37,7 @@ export interface OilRig {
 export interface AccessoryItem {
   id: string;
   typeId: string;
+  itemId?: string; // Add for API compatibility
   name: string;
   price: number;
   dailyBonus: number;
@@ -75,6 +78,7 @@ export interface UserStats {
   repairPercent?: number; // Accumulated percentage repaired (units)
   rareLootCount?: number;
   totalDeposited?: number; // New: Total amount deposited from real money
+  withdrawalHistory?: WithdrawalRequest[]; // New: History of approved withdrawals
 }
 
 export interface Expedition {
@@ -102,8 +106,13 @@ export interface User {
 
   // Resources
   materials?: Record<number, number>;
-  energy?: number;
+  energy: number;
   lastEnergyUpdate?: number;
+  overclockEnergy?: number;
+  isOverclockActive?: boolean;
+  lastOverclockUpdate?: number;
+  demoStartTime?: number;
+  isDemo?: boolean;
 
   // Game State
   unlockedSlots?: number;
@@ -121,7 +130,7 @@ export interface User {
   lastLoginDate?: string;
   consecutiveLoginDays?: number;
   dailyGiftClaimed?: boolean;
-  isDemo?: boolean;
+
 
   // Social
   referralCode?: string;
@@ -141,6 +150,15 @@ export interface User {
     endTime: number;
     isCompleted: boolean;
   } | null;
+
+  // Admin Dashboard Aggregated Stats
+  totalDeposits?: number;
+  totalWithdrawals?: number;
+  pendingWithdrawalsCount?: number;
+  pendingDepositsCount?: number;
+
+  // Overclock
+  overclockExpiresAt?: number;
 }
 
 export interface ClaimRequest {
@@ -173,6 +191,7 @@ export interface WithdrawalRequest {
   amount: number;
   timestamp: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  bankQrCode?: string;
   transactionId?: string;
 }
 
@@ -186,13 +205,14 @@ export interface Notification {
   timestamp: number;
 }
 
-export type TransactionType = 'DEPOSIT' | 'WITHDRAWAL' | 'MINING_CLAIM' | 'ASSET_PURCHASE' | 'REFUND' | 'ACCESSORY_PURCHASE' | 'ACCESSORY_SELL' | 'ACCESSORY_UPGRADE' | 'ACCESSORY_CRAFT' | 'EQUIPMENT_CLAIM' | 'RIG_RENEWAL' | 'REPAIR' | 'MATERIAL_SELL' | 'MATERIAL_BUY' | 'MATERIAL_CRAFT' | 'ENERGY_REFILL' | 'REFERRAL_BONUS' | 'DAILY_BONUS' | 'QUEST_REWARD' | 'LUCKY_DRAW' | 'SLOT_EXPANSION' | 'DUNGEON_ENTRY' | 'DUNGEON_REWARD' | 'RANK_REWARD' | 'GIFT_CLAIM' | 'MINING_REVENUE' | 'COMPENSATION';
+export type TransactionType = 'DEPOSIT' | 'WITHDRAWAL' | 'MINING_CLAIM' | 'ASSET_PURCHASE' | 'REFUND' | 'ACCESSORY_PURCHASE' | 'ACCESSORY_SELL' | 'ACCESSORY_UPGRADE' | 'ACCESSORY_CRAFT' | 'EQUIPMENT_CLAIM' | 'RIG_RENEWAL' | 'REPAIR' | 'MATERIAL_SELL' | 'MATERIAL_BUY' | 'MATERIAL_CRAFT' | 'ENERGY_REFILL' | 'REFERRAL_BONUS' | 'DAILY_BONUS' | 'QUEST_REWARD' | 'LUCKY_DRAW' | 'SLOT_EXPANSION' | 'DUNGEON_ENTRY' | 'DUNGEON_REWARD' | 'RANK_REWARD' | 'GIFT_CLAIM' | 'MINING_REVENUE' | 'COMPENSATION' | 'MARKET_TAX' | 'MATERIAL_MINED';
 
 export interface Transaction {
   id: string;
   userId: string;
   type: TransactionType;
   amount: number;
+  balanceAfter: number;
   timestamp: number;
   status: 'PENDING' | 'COMPLETED' | 'REJECTED';
   description: string;

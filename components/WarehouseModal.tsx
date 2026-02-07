@@ -1,9 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown, FileText } from 'lucide-react';
+import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Hourglass, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown, FileText } from 'lucide-react';
 import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, RARITY_SETTINGS, SHOP_ITEMS, MATERIAL_RECIPES } from '../constants';
-import { MockDB } from '../services/db';
-import { MarketState, AccessoryItem } from '../services/types';
+import { MarketState, MarketItemData, AccessoryItem } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
 import { InfinityGlove } from './InfinityGlove';
 
@@ -12,18 +11,20 @@ interface WarehouseModalProps {
     onClose: () => void;
     userId: string;
     materials: Record<number, number>;
+    inventory: AccessoryItem[];
+    balance: number;
+    marketState: MarketState | null;
     onSell: (tier: number, amount: number) => void;
     onCraft: (sourceTier: number) => any;
     onPlayGoldRain?: () => void;
     onOpenMarket?: (tier: number) => void;
 }
 
-export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose, userId, materials, onSell, onCraft, onPlayGoldRain, onOpenMarket }) => {
+export const WarehouseModal: React.FC<WarehouseModalProps> = ({
+    isOpen, onClose, userId, materials, inventory, balance, marketState, onSell, onCraft, onPlayGoldRain, onOpenMarket
+}) => {
     const [hasMixer, setHasMixer] = useState(false); // Deprecated state, removing logic but keeping to avoid breaking if referenced elsewhere briefly. Actually, removing it.
-    const [marketState, setMarketState] = useState<MarketState | null>(null);
-    const [inventory, setInventory] = useState<AccessoryItem[]>([]);
-    const [activeTab, setActiveTab] = useState<'MATERIALS' | 'ITEMS'>('MATERIALS');
-    const [userBalance, setUserBalance] = useState(0);
+    const [activeTab, setActiveTab] = useState<'MATERIALS' | 'ITEMS' | 'EQUIPMENT'>('MATERIALS');
 
     const [confirmState, setConfirmState] = useState<{
         type: 'SELL' | 'CRAFT' | 'INSPECT_ORE' | 'INSPECT_OIL';
@@ -39,36 +40,76 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
 
     useEffect(() => {
         if (isOpen) {
-            const inv = MockDB.getUserInventory(userId);
-            const bal = MockDB.getUserBalance(userId);
-            setInventory(inv);
-            setUserBalance(bal);
-            setInventory(inv);
-            setUserBalance(bal);
-
-            const market = MockDB.getMarketStatus();
-            setMarketState(market);
             setActiveTab('MATERIALS');
             setConfirmState(null);
             setIsAnimating(false);
         }
-    }, [isOpen, userId]);
+    }, [isOpen]);
 
-    // Fix: Define displayTiers to list available material tiers (Coal through Vibranium + Rare Ores)
+    // Fix: Define displayTiers to list available material tiers (Coal through Legendary)
     const displayTiers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-    // Fix: Define consumable item IDs for grouping in the warehouse
-    const consumableIds = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'ancient_blueprint', 'mystery_ore', 'legendary_ore', 'insurance_card'];
+    // Unified grouping logic for the warehouse
+    const groupInventoryItems = (items: AccessoryItem[], groupByTypeIdOnly: boolean = false) => {
+        const groups: Record<string, { representative: AccessoryItem, count: number, originalItems: AccessoryItem[] }> = {};
 
-    // Fix: Group consumable items by typeId to show stacks
-    const grouped = consumableIds.map(id => {
-        const itemsOfId = inventory.filter(i => i.typeId === id);
-        if (itemsOfId.length === 0) return null;
-        return { item: itemsOfId[0], count: itemsOfId.length };
-    }).filter((x): x is { item: AccessoryItem; count: number } => x !== null);
+        items.forEach(item => {
+            // For consumables (items), group by typeId only to combine all of the same type
+            // For equipment, group by typeId + rarity + level for differentiation
+            const key = groupByTypeIdOnly
+                ? item.typeId || item.name
+                : `${item.typeId}_${item.rarity}_${item.level || 1}_${item.isHandmade ? 'hm' : 'std'}`;
+            if (!groups[key]) {
+                groups[key] = { representative: item, count: 0, originalItems: [] };
+            }
+            groups[key].count++;
+            groups[key].originalItems.push(item);
+        });
 
-    // Fix: Filter individual equipment items (excluding consumables and gloves)
-    const individual = inventory.filter(i => !consumableIds.includes(i.typeId) && i.typeId !== 'glove');
+        return Object.values(groups);
+    };
+
+    // Equipment type definitions - wearable/attachable gear
+    const equipmentTypes = ['hat', 'glasses', 'uniform', 'bag', 'boots', 'mobile', 'pc', 'auto_excavator'];
+
+    // Consumable/utility items (non-equipment)
+    const itemTypes = ['mixer', 'magnifying_glass', 'chest_key', 'upgrade_chip', 'insurance_card', 'robot', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'repair_kit', 'ancient_blueprint'];
+
+    const isItem = (i: AccessoryItem) => {
+        if (!i.typeId && !i.name) return false;
+        if (i.typeId === 'glove' || i.name?.includes('หุ่นยนต์')) return false;
+
+        // Check by typeId
+        if (i.typeId && itemTypes.includes(i.typeId)) return true;
+
+        // Fallback check by name (Crucial for mismatched records)
+        const name = i.name || '';
+        if (name.includes('ชิป') || name.includes('Chip')) return true;
+        if (name.includes('กุญแจ') || name.includes('Key')) return true;
+        if (name.includes('ผสม') || name.includes('Mixer')) return true;
+        if (name.includes('แว่นขยาย') || name.includes('Magnifying')) return true;
+        if (name.includes('หุ่นยนต์') || name.includes('Robot')) return true;
+        if (name.includes('นาฬิกาทราย') || name.includes('Hourglass')) return true;
+        if (name.includes('ประกัน') || name.includes('Insurance')) return true;
+
+        return false;
+    };
+
+    // Robust filter logic: 
+    // - Items: in itemTypes list or matching item names
+    // - Equipment: Everything else that isn't a glove and isn't an item
+    const itemsList = inventory.filter(i => {
+        if (i.typeId === 'glove' || i.name?.includes('หุ่นยนต์')) return false;
+        return isItem(i);
+    });
+
+    const equipmentList = inventory.filter(i => {
+        if (i.typeId === 'glove' || i.name?.includes('หุ่นยนต์')) return false;
+        return !isItem(i);
+    });
+
+    const groupedItems = groupInventoryItems(itemsList, true);  // Group by typeId only for consumables
+    const groupedEquipment = groupInventoryItems(equipmentList, false);  // Full grouping for equipment
 
     if (!isOpen) return null;
 
@@ -92,50 +133,124 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
             setCraftingTargetTier(sourceTier + 1);
             setIsAnimating(true);
 
-            setTimeout(() => {
+            setTimeout(async () => {
                 try {
-                    const res = onCraft(sourceTier);
+                    const res = await onCraft(sourceTier);
                     if (res) {
                         setSuccessItem({ name: res.targetName, tier: res.targetTier, amount: res.amount || 1 });
                     }
                 } catch (e) {
-                    // Handled by parent
+                    console.error("Crafting failed in modal:", e);
+                    // Handled by parent, but we must stop animation
+                } finally {
+                    setIsAnimating(false);
+                    setCraftingTargetTier(0);
                 }
-                setIsAnimating(false);
-                setCraftingTargetTier(0);
             }, 2500);
         }
     };
 
     const getTierColor = (id: number) => {
         switch (id) {
-            case 0: return 'text-stone-400';
+            case 0: return 'text-stone-500';
             case 6: return 'text-purple-400';
             case 7: return 'text-fuchsia-400 drop-shadow-[0_0_5px_rgba(232,121,249,0.5)]';
+            case 8: return 'text-violet-400 drop-shadow-[0_0_8px_rgba(167,139,250,0.6)]';
+            case 9: return 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.7)]';
             default: return 'text-white';
         }
     };
 
-    const getIcon = (typeId: string, className: string, rarity: any) => {
-        switch (typeId) {
-            case 'hat': return <HardHat className={className} />;
-            case 'glasses': return <Glasses className={className} />;
-            case 'uniform': return <Shirt className={className} />;
-            case 'bag': return <Backpack className={className} />;
-            case 'boots': return <Footprints className={className} />;
-            case 'mobile': return <Smartphone className={className} />;
-            case 'pc': return <Monitor className={className} />;
-            case 'robot': return <Bot className={className} />;
-            case 'auto_excavator': return <Truck className={className} />;
-            case 'upgrade_chip': return <Cpu className={className} />;
-            case 'chest_key': return <Key className={className} />;
-            case 'mixer': return <Factory className={className} />;
-            case 'magnifying_glass': return <Search className={className} />;
-            case 'mystery_ore': return <Sparkles className={className} />;
-            case 'legendary_ore': return <Gem className={className} />;
-            case 'insurance_card': return <FileText className={className} />;
-            default: return <InfinityGlove rarity={rarity} className={className} />;
-        }
+    const renderSparkline = (data: number[]) => {
+        if (!data || data.length < 2) return null;
+        const height = 20;
+        const width = 60;
+        const min = Math.min(...data) * 0.98;
+        const max = Math.max(...data) * 1.02;
+
+        const points = data.map((val, i) => {
+            const x = (i / (data.length - 1)) * width;
+            const y = height - ((val - min) / (max - min || 1)) * height;
+            return `${x},${y}`;
+        }).join(' ');
+
+        const isUp = data[data.length - 1] >= data[0];
+        const color = isUp ? '#10b981' : '#ef4444';
+
+        return (
+            <svg viewBox={`0 0 ${width} ${height}`} className="w-16 h-6 opacity-80 group-hover/price:opacity-100 transition-opacity">
+                <polyline
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="1.5"
+                    points={points}
+                    vectorEffect="non-scaling-stroke"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                />
+            </svg>
+        );
+    };
+
+    const getItemDisplayName = (item: any) => {
+        const typeId = item.typeId || '';
+        const name = item.name || '';
+        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return 'กุญแจเข้าเหมือง';
+        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return 'ชิปอัปเกรด';
+        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return 'โต๊ะช่างสกัดแร่';
+        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return 'แว่นขยายส่องแร่';
+        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return 'หุ่นยนต์ AI';
+        return name;
+    };
+
+    const getIcon = (item: any, className: string) => {
+        let typeId = item.typeId || '';
+        const name = item.name || '';
+        const rarity = item.rarity;
+
+        // Name-based overrides
+        if (name.includes('ชิป') || name.includes('Chip')) typeId = 'upgrade_chip';
+        else if (name.includes('กุญแจ') || name.includes('Key')) typeId = 'chest_key';
+        else if (name.includes('โต๊ะช่าง') || name.includes('Mixer')) typeId = 'mixer';
+        else if (name.includes('แว่นขยาย') || name.includes('Magnifying')) typeId = 'magnifying_glass';
+        else if (name.includes('ใบประกัน') || name.includes('Insurance')) typeId = 'insurance_card';
+        else if (name.includes('นาฬิกาทราย') || name.includes('Hourglass')) typeId = 'hourglass_small';
+        else if (name.includes('วัสดุปริศนา') || name.includes('Mystery Item')) typeId = 'mystery_ore';
+        else if (name.includes('วัสดุหายาก') || name.includes('Legendary Item')) typeId = 'legendary_ore';
+        else if (name.includes('รถกอล์ฟ') || name.includes('Golf Cart')) typeId = 'auto_excavator';
+        else if (name.includes('หุ่นยนต์') || name.includes('Robot')) typeId = 'robot';
+        // Classic Equipment
+        else if (name.includes('หมวก') || name.includes('Helmet')) typeId = 'hat';
+        else if (name.includes('แว่น') || name.includes('Glasses')) typeId = 'glasses';
+        else if (name.includes('ชุด') || name.includes('Uniform') || name.includes('Suit')) typeId = 'uniform';
+        else if (name.includes('กระเป๋า') || name.includes('Bag') || name.includes('Backpack')) typeId = 'bag';
+        else if (name.includes('รองเท้า') || name.includes('Boots')) typeId = 'boots';
+        else if (name.includes('มือถือ') || name.includes('Mobile') || name.includes('Phone')) typeId = 'mobile';
+        else if (name.includes('คอม') || name.includes('PC') || name.includes('Computer')) typeId = 'pc';
+
+        if (!typeId) return <InfinityGlove rarity={rarity} className={className} />;
+        if (typeId.includes('glove')) return <InfinityGlove rarity={rarity} className={className} />;
+
+        if (typeId.includes('hat')) return <HardHat className={className} />;
+        if (typeId.includes('glasses')) return <Glasses className={className} />;
+        if (typeId.includes('uniform') || typeId.includes('shirt')) return <Shirt className={className} />;
+        if (typeId.includes('bag') || typeId.includes('backpack')) return <Backpack className={className} />;
+        if (typeId.includes('boots')) return <Footprints className={className} />;
+        if (typeId.includes('mobile') || typeId.includes('phone')) return <Smartphone className={className} />;
+        if (typeId.includes('pc') || typeId.includes('monitor')) return <Monitor className={className} />;
+        if (typeId.includes('robot')) return <Bot className={className} />;
+        if (typeId.includes('auto_excavator') || typeId.includes('truck')) return <Truck className={className} />;
+        if (typeId.includes('upgrade_chip') || typeId.includes('chip')) return <Cpu className={className} />;
+        if (typeId.includes('hourglass')) return <Hourglass className={className} />;
+        if (typeId.includes('chest_key') || typeId.includes('key')) return <Key className={className} />;
+        if (typeId.includes('mixer')) return <Factory className={className} />;
+        if (typeId.includes('magnifying_glass') || typeId.includes('search')) return <Search className={className} />;
+        if (typeId.includes('insurance_card') || typeId.includes('filetext')) return <FileText className={className} />;
+        if (typeId === 'FileText') return <FileText className={className} />;
+        if (typeId.includes('mystery_ore')) return <Sparkles className={className} />;
+        if (typeId.includes('legendary_ore')) return <Gem className={className} />;
+
+        return <InfinityGlove rarity={rarity} className={className} />;
     };
 
     const checkRecipeAvailability = (recipe: any) => {
@@ -143,7 +258,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
         for (const [tierStr, needed] of Object.entries(recipe.ingredients)) {
             if ((materials[parseInt(tierStr)] || 0) < (needed as number)) return false;
         }
-        if (userBalance < recipe.fee) return false;
+        if (balance < recipe.fee) return false;
 
         // Dynamic Requirement Check
         if (recipe.requiredItem) {
@@ -175,10 +290,10 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
                         </div>
 
                         <h2 className="text-4xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-200 animate-pulse tracking-widest uppercase drop-shadow-sm mb-2">
-                            สกัดแร่...
+                            กำลังสกัดแร่...
                         </h2>
                         <p className="text-yellow-600/80 text-sm tracking-[0.5em] font-bold uppercase animate-pulse">
-                            ORE EXTRACTION (TIER {craftingTargetTier})
+                            EXTRACTION PROCESSING (TIER {craftingTargetTier})
                         </p>
                     </div>
                 </div>
@@ -270,11 +385,11 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
                                     <>
                                         <Plus size={12} className="text-stone-800" />
                                         <div className="flex flex-col items-center gap-1.5">
-                                            <div className={`relative w-14 h-14 rounded-xl bg-stone-900 border-2 flex items-center justify-center transition-all ${userBalance >= confirmState.recipe.fee ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/40 bg-red-500/5'}`}>
+                                            <div className={`relative w-14 h-14 rounded-xl bg-stone-900 border-2 flex items-center justify-center transition-all ${balance >= confirmState.recipe.fee ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/40 bg-red-500/5'}`}>
                                                 <div className="text-emerald-400">
                                                     <Coins size={24} />
                                                 </div>
-                                                <span className={`absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[10px] font-black border border-stone-950 shadow-lg animate-in zoom-in ${userBalance >= confirmState.recipe.fee ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
+                                                <span className={`absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[10px] font-black border border-stone-950 shadow-lg animate-in zoom-in ${balance >= confirmState.recipe.fee ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
                                                     x{confirmState.recipe.fee}
                                                 </span>
                                             </div>
@@ -320,7 +435,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
                                 return (
                                     <div className="flex justify-between items-center text-xs">
                                         <span className="text-stone-500 font-bold uppercase tracking-wider flex items-center gap-2">
-                                            {getIcon(reqId, "text-stone-400", null)}
+                                            {getIcon({ typeId: reqId, name: itemInfo?.name || reqId }, "text-stone-400")}
                                             ต้องการ: {itemInfo?.name || reqId}
                                         </span>
                                         <span className={hasItem ? "text-emerald-500 font-bold flex items-center gap-1" : "text-red-500 font-bold flex items-center gap-1"}>
@@ -338,7 +453,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
                                 disabled={!checkRecipeAvailability(confirmState.recipe)}
                                 className="py-3.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold rounded-xl shadow-lg shadow-purple-900/40 transition-all disabled:grayscale disabled:opacity-50 text-sm uppercase tracking-wider"
                             >
-                                ยืนยันการผลิต
+                                ยืนยัน
                             </button>
                         </div>
                     </div>
@@ -350,20 +465,56 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
 
                     <div className="bg-stone-900 border-b border-stone-800 shrink-0">
                         <div className="p-5 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-blue-900/20 p-2 rounded text-blue-500"><Package size={24} /></div>
-                                <div><h2 className="text-xl font-display font-bold text-white uppercase tracking-tight">คลังสินค้า (Warehouse)</h2></div>
+                            <div className="flex items-center gap-4">
+                                <div className="bg-blue-900/20 p-2.5 rounded-xl text-blue-500 border border-blue-500/20 shadow-lg shadow-blue-900/10">
+                                    <Package size={24} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h2 className="text-xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
+                                        คลังสินค้า <span className="text-stone-600 font-medium">/ WAREHOUSE</span>
+                                    </h2>
+                                    {marketState?.trends && (() => {
+                                        const trends = Object.values(marketState.trends) as MarketItemData[];
+                                        const ups = trends.filter(t => t.trend === 'UP').length;
+                                        const downs = trends.filter(t => t.trend === 'DOWN').length;
+
+                                        if (ups > downs) return (
+                                            <div className="flex items-center gap-1.5 text-emerald-500 animate-pulse">
+                                                <TrendingUp size={12} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">ตลาดช่วงขาขึ้น (BULLISH MARKET)</span>
+                                            </div>
+                                        );
+                                        if (downs > ups) return (
+                                            <div className="flex items-center gap-1.5 text-red-500 animate-pulse">
+                                                <TrendingDown size={12} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">ตลาดช่วงขาลง (BEARISH MARKET)</span>
+                                            </div>
+                                        );
+                                        return (
+                                            <div className="flex items-center gap-1.5 text-stone-500">
+                                                <Minus size={12} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">ตลาดคงที่ (STABLE MARKET)</span>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
                             </div>
-                            <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors bg-stone-800 p-2 rounded-full"><X size={24} /></button>
+                            <button
+                                onClick={onClose}
+                                className="group relative overflow-hidden text-stone-500 hover:text-white transition-all bg-stone-900 hover:bg-red-600/20 p-2.5 rounded-xl border border-stone-800 hover:border-red-500/50"
+                            >
+                                <X size={20} className="relative z-10 transition-transform group-hover:rotate-90" />
+                            </button>
                         </div>
                         <div className="flex px-5 gap-8">
                             <button onClick={() => setActiveTab('MATERIALS')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${activeTab === 'MATERIALS' ? 'text-blue-400 border-blue-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>วัตถุดิบ</button>
                             <button onClick={() => setActiveTab('ITEMS')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${activeTab === 'ITEMS' ? 'text-yellow-500 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>ไอเทม</button>
+                            <button onClick={() => setActiveTab('EQUIPMENT')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${activeTab === 'EQUIPMENT' ? 'text-emerald-500 border-emerald-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>อุปกรณ์เครื่องจักร</button>
                         </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
-                        {activeTab === 'MATERIALS' ? (
+                        {activeTab === 'MATERIALS' && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {displayTiers.map((tier) => {
                                     const count = materials[tier] || 0;
@@ -392,17 +543,37 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
                                                                 onClick={() => onOpenMarket?.(tier)}
                                                                 title="คลิกเพื่อดูสถิติตลาด"
                                                             >
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <Tag size={10} className="text-stone-500 group-hover/price:text-emerald-400" />
-                                                                    <span className="text-[11px] text-emerald-400 font-mono font-bold">{currentPrice.toFixed(2)} {CURRENCY}</span>
+                                                                <div className="flex flex-col">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <Tag size={10} className="text-stone-500 group-hover/price:text-emerald-400" />
+                                                                        <span className="text-[11px] text-emerald-400 font-mono font-bold">{currentPrice.toFixed(2)} {CURRENCY}</span>
+                                                                    </div>
+                                                                    {marketState?.trends[tier]?.history && renderSparkline(marketState.trends[tier].history)}
                                                                 </div>
-                                                                {(() => {
-                                                                    const base = MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES];
-                                                                    const diff = currentPrice - base;
-                                                                    if (diff > 0.01) return <div className="flex items-center text-[10px] text-emerald-500 font-bold animate-pulse"><TrendingUp size={10} className="mr-0.5" /> ขึ้น</div>;
-                                                                    if (diff < -0.01) return <div className="flex items-center text-[10px] text-red-500 font-bold animate-pulse"><TrendingDown size={10} className="mr-0.5" /> ลง</div>;
-                                                                    return <div className="text-[10px] text-stone-600 font-bold">- คงที่</div>;
-                                                                })()}
+                                                                <div className="text-right">
+                                                                    {(() => {
+                                                                        const base = MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES] || 0;
+                                                                        const diffFromBase = currentPrice - base;
+                                                                        const percent = (base > 0) ? (diffFromBase / base) * 100 : 0;
+
+                                                                        if (percent >= 0) return (
+                                                                            <div className="flex flex-col items-end">
+                                                                                <div className="flex items-center text-[10px] text-emerald-500 font-bold animate-pulse">
+                                                                                    <TrendingUp size={10} className="mr-0.5" /> ขึ้น
+                                                                                </div>
+                                                                                <div className="text-[9px] text-emerald-400 font-bold">+{percent.toFixed(1)}%</div>
+                                                                            </div>
+                                                                        );
+                                                                        return (
+                                                                            <div className="flex flex-col items-end">
+                                                                                <div className="flex items-center text-[10px] text-red-500 font-bold animate-pulse">
+                                                                                    <TrendingDown size={10} className="mr-0.5" /> ลง
+                                                                                </div>
+                                                                                <div className="text-[9px] text-red-400 font-bold">{percent.toFixed(1)}%</div>
+                                                                            </div>
+                                                                        );
+                                                                    })()}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )}
@@ -414,7 +585,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
                                                         onClick={() => handleCraftClick(tier)}
                                                         className={`w-full text-xs font-bold py-2.5 rounded-xl border transition-all uppercase tracking-widest flex items-center justify-center gap-2 ${canCraft ? 'bg-stone-800 hover:bg-purple-900/40 text-purple-400 border-purple-500/50' : 'bg-stone-950 text-stone-700 border-stone-900'}`}
                                                     >
-                                                        <Hammer size={14} /> แปรรูป
+                                                        <Hammer size={14} /> สกัดแร่
                                                     </button>
                                                 ) : (
                                                     // Collection Items (Tier 8, 9) or Max Tier
@@ -431,65 +602,108 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
                                     );
                                 })}
                             </div>
-                        ) : (
+                        )}
+                        {activeTab === 'ITEMS' && (
                             <div className="space-y-6">
-                                {grouped.length === 0 && individual.length === 0 ? (
-                                    <div className="text-center py-20 text-stone-600 italic">ยังไม่มีไอเทมหรือเครื่องมือในขณะนี้</div>
+                                {groupedItems.length === 0 ? (
+                                    <div className="text-center py-20 text-stone-600 italic">ยังไม่มีไอเทมในขณะนี้</div>
                                 ) : (
-                                    <>
-                                        {grouped.length > 0 && (
-                                            <div className="space-y-3">
-                                                <h4 className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.3em]">Consumables & Tools</h4>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                    {grouped.map((g, idx) => {
-                                                        const isMystery = g.item.typeId === 'mystery_ore';
-                                                        const isLegendary = g.item.typeId === 'legendary_ore';
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {groupedItems.map((group, idx) => {
+                                            const item = group.representative;
+                                            const isSpecial = ['mystery_ore', 'legendary_ore'].includes(item.typeId);
+                                            const isMystery = item.typeId === 'mystery_ore';
+                                            const isLegendary = item.typeId === 'legendary_ore';
 
-                                                        let containerClass = `bg-stone-900/80 border ${RARITY_SETTINGS[g.item.rarity].border}`;
-                                                        if (isMystery) containerClass = "bg-gradient-to-r from-violet-900/40 via-fuchsia-900/40 to-orange-900/40 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]";
-                                                        if (isLegendary) containerClass = "bg-yellow-900/20 border-yellow-500/40 shadow-[0_0_15px_rgba(234,179,8,0.2)]";
+                                            // Get rarity style based on item typeId (matching shop colors)
+                                            const getItemRarityStyle = (typeId: string) => {
+                                                switch (typeId) {
+                                                    case 'upgrade_chip': return RARITY_SETTINGS.RARE;
+                                                    case 'mixer': return RARITY_SETTINGS.SUPER_RARE;
+                                                    case 'magnifying_glass': return RARITY_SETTINGS.RARE;
+                                                    case 'chest_key': return RARITY_SETTINGS.EPIC;
+                                                    case 'robot': return RARITY_SETTINGS.MYTHIC;
+                                                    case 'insurance_card': return RARITY_SETTINGS.ULTRA_LEGENDARY;
+                                                    case 'hourglass_small': return RARITY_SETTINGS.UNCOMMON;
+                                                    case 'hourglass_medium': return RARITY_SETTINGS.EPIC;
+                                                    case 'hourglass_large': return RARITY_SETTINGS.LEGENDARY;
+                                                    case 'repair_kit': return RARITY_SETTINGS.RARE;
+                                                    case 'ancient_blueprint': return RARITY_SETTINGS.DIVINE;
+                                                    default: return RARITY_SETTINGS[item.rarity] || RARITY_SETTINGS.COMMON;
+                                                }
+                                            };
+                                            const rarityStyle = getItemRarityStyle(item.typeId);
 
-                                                        return (
-                                                            <div key={idx} className={`${containerClass} rounded-xl p-4 flex items-center justify-between relative overflow-hidden group`}>
-                                                                {isMystery && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite]"></div>}
-                                                                {isLegendary && <div className="absolute inset-0 bg-yellow-400/5 animate-pulse"></div>}
+                                            let containerClass = `bg-stone-900/80 border ${rarityStyle.border}`;
+                                            if (isMystery) containerClass = "bg-gradient-to-r from-violet-900/40 via-fuchsia-900/40 to-orange-900/40 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]";
+                                            if (isLegendary) containerClass = "bg-yellow-900/20 border-yellow-500/40 shadow-[0_0_15px_rgba(234,179,8,0.2)]";
 
-                                                                <div className="flex items-center gap-3 relative z-10">
-                                                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${isMystery ? 'bg-stone-900 border-purple-500/50' : isLegendary ? 'bg-stone-900 border-yellow-500/50' : 'bg-stone-950 border-stone-800'}`}>
-                                                                        {getIcon(g.item.typeId, `w-6 h-6 ${isMystery ? 'text-fuchsia-400 animate-pulse' : isLegendary ? 'text-yellow-400 animate-pulse' : RARITY_SETTINGS[g.item.rarity].color}`, g.item.rarity)}
-                                                                    </div>
-                                                                    <div>
-                                                                        <div className={`text-sm font-bold ${isMystery ? 'text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-pink-400 to-yellow-300' : isLegendary ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]' : 'text-white'}`}>{g.item.name}</div>
-                                                                        <div className="text-[10px] text-stone-500">{g.item.specialEffect || 'ไอเทมใช้งาน'}</div>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="bg-stone-800 px-3 py-1 rounded-lg text-white font-mono font-bold relative z-10">x{g.count}</div>
+                                            return (
+                                                <div key={idx} className={`${containerClass} rounded-xl p-4 flex items-center justify-between relative overflow-hidden group`}>
+                                                    {(isMystery || isLegendary) && (
+                                                        <div className={`absolute inset-0 ${isMystery ? 'bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite]' : 'bg-yellow-400/5 animate-pulse'}`}></div>
+                                                    )}
+
+                                                    <div className="flex items-center gap-3 relative z-10 min-w-0 flex-1">
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 ${isSpecial ? 'bg-stone-900 border-purple-500/50' : `bg-stone-950 ${rarityStyle.border}`}`}>
+                                                            {getIcon(item, `w-6 h-6 ${isMystery ? 'text-fuchsia-400 animate-pulse' : isLegendary ? 'text-yellow-400 animate-pulse' : rarityStyle.color}`)}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className={`text-sm font-bold truncate ${isMystery ? 'text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-pink-400 to-yellow-300' : isLegendary ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]' : item.isHandmade ? 'text-yellow-400' : 'text-white'}`}>
+                                                                {getItemDisplayName(item)}
+                                                                {item.level && item.level > 1 && <span className="ml-1 text-[10px] text-yellow-500">+{item.level}</span>}
                                                             </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {individual.length > 0 && (
-                                            <div className="space-y-3 pt-4">
-                                                <h4 className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.3em]">Equipment</h4>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                    {individual.map((item, idx) => (
-                                                        <div key={idx} className={`bg-stone-900/80 border ${RARITY_SETTINGS[item.rarity].border} rounded-xl p-4 flex items-center gap-3`}>
-                                                            <div className="w-10 h-10 bg-stone-950 rounded-lg flex items-center justify-center border border-stone-800 shrink-0">
-                                                                {getIcon(item.typeId, `w-6 h-6 ${RARITY_SETTINGS[item.rarity].color}`, item.rarity)}
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                <div className={`text-sm font-bold truncate ${item.isHandmade ? 'text-yellow-400' : 'text-white'}`}>{item.name}</div>
-                                                                <div className="text-[10px] text-emerald-400 font-mono">+{(item.dailyBonus || 0).toFixed(1)} {CURRENCY}/วัน</div>
+                                                            <div className="text-[10px] text-stone-500 truncate">
+                                                                {item.dailyBonus > 0 ? `+${item.dailyBonus.toFixed(1)} ${CURRENCY}/วัน` : (item.specialEffect || 'ไอเทมใช้งาน')}
                                                             </div>
                                                         </div>
-                                                    ))}
+                                                    </div>
+                                                    <div className="bg-stone-800 px-3 py-1 rounded-lg text-white font-mono font-bold relative z-10 shrink-0 ml-2">
+                                                        x{group.count}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {activeTab === 'EQUIPMENT' && (
+                            <div className="space-y-6">
+                                {groupedEquipment.length === 0 ? (
+                                    <div className="text-center py-20 text-stone-600 italic">ยังไม่มีอุปกรณ์เครื่องจักรในขณะนี้</div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {groupedEquipment.map((group, idx) => {
+                                            const item = group.representative;
+                                            let containerClass = `bg-stone-900/80 border ${RARITY_SETTINGS[item.rarity].border}`;
+
+                                            return (
+                                                <div key={idx} className={`${containerClass} rounded-xl p-4 flex items-center justify-between relative overflow-hidden group hover:border-emerald-500/50 transition-all`}>
+                                                    <div className="flex items-center gap-3 relative z-10 min-w-0 flex-1">
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 bg-stone-950 border-stone-800`}>
+                                                            {getIcon(item, `w-6 h-6 ${RARITY_SETTINGS[item.rarity].color}`)}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className={`text-sm font-bold truncate ${item.isHandmade ? 'text-yellow-400' : 'text-white'}`}>
+                                                                {item.name}
+                                                                {item.level && item.level > 1 && <span className="ml-1 text-[10px] text-yellow-500">+{item.level}</span>}
+                                                            </div>
+                                                            <div className="text-[10px] text-stone-500 truncate">
+                                                                {item.dailyBonus > 0 ? `+${item.dailyBonus.toFixed(1)} ${CURRENCY}/วัน` : (item.specialEffect || 'อุปกรณ์เครื่องจักร')}
+                                                            </div>
+                                                            <div className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${RARITY_SETTINGS[item.rarity].color}`}>
+                                                                {item.rarity}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-emerald-800 px-3 py-1 rounded-lg text-white font-mono font-bold relative z-10 shrink-0 ml-2">
+                                                        x{group.count}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 )}
                             </div>
                         )}
@@ -499,10 +713,10 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({ isOpen, onClose,
                         <div className="flex items-center gap-2">
                             <Coins className="text-yellow-500" size={18} />
                             <span className="text-sm text-stone-400 font-bold uppercase tracking-widest">ยอดเงินทุน:</span>
-                            <span className="text-lg font-mono font-bold text-white">{userBalance.toLocaleString()} {CURRENCY}</span>
+                            <span className="text-lg font-mono font-bold text-white">{balance.toLocaleString()} {CURRENCY}</span>
                         </div>
                         <div className="flex items-center gap-2 bg-stone-950 px-3 py-1 rounded-lg border border-stone-800">
-                            <span className="text-[10px] font-bold text-stone-600 uppercase tracking-widest">สถานะเครื่องผสม:</span>
+                            <span className="text-[10px] font-bold text-stone-600 uppercase tracking-widest">สถานะโต๊ะช่าง:</span>
                             <span className={hasMixer ? "text-emerald-500 text-xs font-bold" : "text-red-500 text-xs font-bold"}>{hasMixer ? "เชื่อมต่ออยู่" : "ไม่ได้ติดตั้ง"}</span>
                         </div>
                     </div>

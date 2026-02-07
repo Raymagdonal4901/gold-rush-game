@@ -63,13 +63,22 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     // --- Mode 2: Withdraw Form ---
     const handleWithdrawClick = () => {
         const val = parseFloat(amount);
-        if (!isNaN(val) && val >= TRANSACTION_LIMITS.MIN && val <= TRANSACTION_LIMITS.MAX && val <= walletBalance) {
+        if (!isNaN(val) && val >= TRANSACTION_LIMITS.WITHDRAW.MIN && val <= TRANSACTION_LIMITS.WITHDRAW.MAX && val <= walletBalance) {
+            // Skips confirmation check and PIN for direct experience if desired, 
+            // but usually we keep Confirmation view and just skip PIN.
             setIsConfirming(true);
         }
     };
 
     const handleConfirmWithdraw = () => {
-        setShowPinModal(true);
+        // Direct call, bypass PIN
+        const val = parseFloat(amount);
+        if (!isNaN(val) && val > 0 && val <= walletBalance) {
+            onWithdraw(val, ""); // Pass empty string as PIN is removed
+            setAmount('');
+            setIsConfirming(false);
+            onClose();
+        }
     };
 
     const handlePinSuccess = (pin: string) => {
@@ -84,7 +93,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     };
 
     const setMaxAmount = () => {
-        const maxPossible = Math.min(walletBalance, TRANSACTION_LIMITS.MAX);
+        const maxPossible = Math.min(walletBalance, TRANSACTION_LIMITS.WITHDRAW.MAX);
         setAmount(maxPossible.toString());
     };
 
@@ -182,7 +191,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                                     <span>{rawAmount.toLocaleString()} {CURRENCY}</span>
                                 </div>
                                 <div className="flex justify-between text-red-400">
-                                    <span>ค่าธรรมเนียม (5%)</span>
+                                    <span>ค่าธรรมเนียม (10%)</span>
                                     <span>-{fee.toLocaleString()} {CURRENCY}</span>
                                 </div>
                                 <div className="h-px bg-slate-700 my-1"></div>
@@ -256,7 +265,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                                     </div>
                                     <div className="flex justify-between items-start text-[10px] text-slate-500">
                                         <span>ค่าธรรมเนียม {WITHDRAWAL_FEE_PERCENT * 100}%</span>
-                                        <span>Max: {TRANSACTION_LIMITS.MAX.toLocaleString()} {CURRENCY}</span>
+                                        <span>Max: {TRANSACTION_LIMITS.WITHDRAW.MAX.toLocaleString()} {CURRENCY}</span>
                                     </div>
 
                                     {rawAmount > 0 && (
@@ -273,7 +282,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
                             <button
                                 onClick={handleWithdrawClick}
-                                disabled={!amount || parseFloat(amount) > walletBalance || parseFloat(amount) < TRANSACTION_LIMITS.MIN || parseFloat(amount) > TRANSACTION_LIMITS.MAX}
+                                disabled={!amount || parseFloat(amount) > walletBalance || parseFloat(amount) < TRANSACTION_LIMITS.WITHDRAW.MIN || parseFloat(amount) > TRANSACTION_LIMITS.WITHDRAW.MAX}
                                 className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all mt-6"
                             >
                                 ถอนเงิน <Send size={18} />

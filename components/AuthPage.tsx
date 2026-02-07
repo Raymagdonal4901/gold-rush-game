@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Pickaxe, Lock, User as UserIcon, ShieldAlert, Mountain, KeyRound, Bug } from 'lucide-react';
+import { Pickaxe, Lock, User as UserIcon, ShieldAlert, Mountain, KeyRound } from 'lucide-react';
 import { MockDB } from '../services/db';
 import { User, OilRig } from '../services/types';
 import { MAX_RIGS_PER_USER, RIG_PRESETS } from '../constants';
@@ -21,27 +21,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   React.useEffect(() => {
     console.log("--- SYSTEM DIAGNOSTICS ---");
     const errorHandler = (event: ErrorEvent) => {
-      alert(`[BROWSER ERROR] ${event.message}\nAt: ${event.filename}:${event.lineno}`);
+      console.error(`[BROWSER ERROR] ${event.message}\nAt: ${event.filename}:${event.lineno}`);
     };
     window.addEventListener('error', errorHandler);
 
-    // Global helper to debug from console
-    (window as any).forceLoginAdmin = async () => {
-      console.log("Forcing Admin Login...");
-      alert("กำลังสั่งระบบ Login อัตโนมัติ...");
-      try {
-        const user = await api.login('admin', 'bleach', '4901');
-        onLogin(user);
-      } catch (e: any) {
-        alert("Force login failed: " + (e.message || "Network Error"));
-      }
-    };
     return () => window.removeEventListener('error', errorHandler);
   }, []);
 
   const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
     if (e && e.preventDefault) e.preventDefault();
-    alert("🚀 เริ่มขั้นตอนการเข้าสู่ระบบ...");
     setError('');
     setLoading(true);
 
@@ -77,69 +65,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
       const msg = err.response?.data?.message || err.message || 'Authentication failed';
       const status = err.response?.status ? `(Status: ${err.response.status})` : '';
       setError(`${msg} ${status}`);
-      alert(`❌ Login Error: ${msg}\n${status}\n\nกรุณาเช็คว่ารัน Backend อยู่ที่พอร์ต 5001 หรือไม่`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTestSystemLogin = () => {
-    try {
-      const randId = Math.floor(Math.random() * 10000);
-      const testUsername = `tester_${randId}`;
-      const testPass = '1234';
-      const testPin = '0000';
 
-      // 1. Create User
-      const newUser = MockDB.register(testUsername, testPass, testPin);
-
-      // 2. Add Money (50,000)
-      MockDB.updateBalance(newUser.id, 50000);
-
-      // Log the initial deposit for history
-      MockDB.logTransaction({
-        userId: newUser.id,
-        type: 'DEPOSIT',
-        amount: 50000,
-        status: 'COMPLETED',
-        description: 'เงินขวัญถุง (Test System)'
-      });
-
-      // 3. Add Rigs (1 Unit) - Adjusted to 1 as requested
-      const preset = RIG_PRESETS[0]; // Start with Coal Mining Rig
-      const ratePerSecond = preset.dailyProfit / 86400;
-
-      const newRig: OilRig = {
-        id: Math.random().toString(36).substr(2, 9),
-        ownerId: newUser.id,
-        name: preset.name,
-        investment: preset.price,
-        durationMonths: preset.durationMonths || (preset.durationDays ? preset.durationDays / 30 : 1),
-        dailyProfit: preset.dailyProfit,
-        bonusProfit: 0,
-        rarity: 'COMMON',
-        ratePerSecond: ratePerSecond,
-        purchasedAt: Date.now(),
-        lastClaimAt: Date.now(),
-        lastGiftAt: Date.now(),
-        renewalCount: 0,
-        lastRepairAt: Date.now(),
-        currentMaterials: 0,
-        expiresAt: Date.now() + ((preset.durationDays || 30) * 24 * 60 * 60 * 1000),
-        repairCost: preset.repairCost || 0,
-        energyCostPerDay: preset.energyCostPerDay || 0,
-        energy: 100
-      };
-      MockDB.addRig(newRig);
-
-      // 4. Auto Login
-      const loggedInUser = MockDB.login(testUsername, testPass, testPin);
-      onLogin(loggedInUser);
-
-    } catch (e: any) {
-      setError("เกิดข้อผิดพลาดในการสร้างไอดีทดสอบ: " + e.message);
-    }
-  };
 
   const toggleMode = () => {
     setIsLogin(!isLogin);
@@ -164,14 +95,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           </div>
           <h1 className="text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-700 drop-shadow-md">GOLD RUSH</h1>
           <p className="text-yellow-600/80 text-sm tracking-[0.2em] font-bold mt-2 uppercase">เกมจำลองธุรกิจเหมืองแร่</p>
-
-          {/* TOTAL BYPASS BUTTON */}
-          <button
-            onClick={() => (window as any).forceLoginAdmin()}
-            className="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded shadow-xl border-2 border-white/20 animate-bounce"
-          >
-            ⚡ AUTO-LOGIN ADMIN (BYPASS)
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -238,7 +161,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           <button
             type="button"
             onClick={(e) => {
-              alert("👆 คุณกดปุ่มเข้าสู่ระบบแล้ว!");
               handleSubmit(e);
             }}
             disabled={loading}
@@ -263,44 +185,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
             {isLogin ? "ยังไม่มีบัญชี? สมัครสมาชิก" : "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ"}
           </button>
 
-          {/* Play Demo Button */}
-          <div className="pt-4 border-t border-stone-800">
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm("เข้าสู่โหมดทดลองเล่น (Demo Mode)\n\n• เงินเริ่มต้น 50,000 บาท\n• ความเร็วเกม x720 (1 วัน = 2 นาที)\n• รีเฟรชหน้าเว็บข้อมูลจะหายไป")) {
-                  const demoUser = MockDB.createDemoUser();
-                  onLogin(demoUser);
-                }
-              }}
-              className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-red-900/50 animate-pulse"
-            >
-              <Bug size={18} /> ทดลองเล่น (Play Demo) - Speed x720
-            </button>
-          </div>
 
-          {/* EMERGENCY LOGIN FOR ADMIN */}
-          <div className="pt-6 border-t border-red-900/30">
-            <button
-              onClick={async () => {
-                if (window.confirm("ทดลองเข้าสู่ระบบ Admin โดยอัตโนมัติ (เฉพาะการแก้ไขปัญหา)?")) {
-                  try {
-                    setLoading(true);
-                    const user = await api.login('admin', 'bleach', '4901');
-                    onLogin(user);
-                  } catch (err: any) {
-                    alert("Emergency Login Failed: " + (err.response?.data?.message || err.message));
-                  } finally {
-                    setLoading(false);
-                  }
-                }
-              }}
-              className="w-full bg-red-900/40 hover:bg-red-800 text-red-200 py-3 rounded text-[10px] font-bold uppercase tracking-widest border border-red-500/30 transition-all"
-            >
-              🆘 EMERGENCY ADMIN ENTRANCE
-            </button>
-            <p className="text-[9px] text-red-500/60 mt-2">กดปุ่มนี้หากพิมพ์แล้วเข้าไม่ได้ เพื่อบังคับเข้าด้วยระบบ Admin สำรอง</p>
-          </div>
 
           <div className="pt-2 text-center">
             <button

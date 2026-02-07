@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { X, History, ArrowUpRight, ArrowDownLeft, ShoppingCart, RefreshCw, AlertCircle, Coins, Factory, Wrench, Gift, Target, Trophy, Sparkles } from 'lucide-react';
 import { Transaction } from '../services/types';
 import { api } from '../services/api';
-import { MockDB } from '../services/db';
 import { CURRENCY } from '../constants';
 
 interface HistoryModalProps {
@@ -19,11 +18,10 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
       const fetchHistory = async () => {
         try {
           const remoteData = await api.getMyHistory();
-          const localData = MockDB.getTransactions(userId);
 
-          // Merge and remove potential duplicates by ID
+          // remove potential duplicates by ID
           const seenIds = new Set();
-          const merged = [...remoteData, ...localData]
+          const unique = remoteData
             .filter(tx => {
               if (seenIds.has(tx.id)) return false;
               seenIds.add(tx.id);
@@ -31,11 +29,31 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
             })
             .sort((a, b) => b.timestamp - a.timestamp);
 
-          setTransactions(merged);
+          // Group identical consecutive transactions
+          const grouped: (Transaction & { count?: number })[] = [];
+          for (const tx of unique) {
+            const last = grouped[grouped.length - 1];
+            // Match same description, amount, type, and status
+            // Also ensure they are relatively close in time (within 1 minute)
+            const isMatch = last &&
+              last.description === tx.description &&
+              last.amount === tx.amount &&
+              last.type === tx.type &&
+              last.status === tx.status &&
+              Math.abs(last.timestamp - tx.timestamp) < 60000;
+
+            if (isMatch) {
+              last.count = (last.count || 1) + 1;
+              // Keep the latest timestamp for the group
+            } else {
+              grouped.push({ ...tx });
+            }
+          }
+
+          setTransactions(grouped);
         } catch (err) {
           console.error("Failed to fetch history:", err);
-          // Fallback to local only if remote fails
-          setTransactions(MockDB.getTransactions(userId).sort((a, b) => b.timestamp - a.timestamp));
+          setTransactions([]);
         }
       };
 
@@ -81,6 +99,16 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
         return <Trophy className="text-yellow-400" size={18} />;
       case 'LUCKY_DRAW':
         return <Sparkles className="text-purple-400" size={18} />;
+      case 'DUNGEON_ENTRY':
+        return <ArrowUpRight className="text-stone-400" size={18} />;
+      case 'DUNGEON_REWARD':
+        return <Trophy className="text-emerald-400" size={18} />;
+      case 'GIFT_CLAIM':
+        return <Gift className="text-pink-400" size={18} />;
+      case 'MATERIAL_MINED':
+        return <ArrowDownLeft className="text-stone-400" size={18} />;
+      case 'MARKET_TAX':
+        return <ArrowUpRight className="text-red-400" size={18} />;
       default:
         return <RefreshCw className="text-stone-500" size={18} />;
     }
@@ -137,18 +165,25 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
                       {getIcon(tx.type)}
                     </div>
                     <div>
-                      <div className="text-stone-200 font-bold text-sm">{tx.description}</div>
+                      <div className="text-stone-200 font-bold text-sm">
+                        {tx.description}
+                        {(tx as any).count > 1 && (
+                          <span className="text-yellow-500 ml-2">x{(tx as any).count}</span>
+                        )}
+                      </div>
                       <div className="text-xs text-stone-500 font-mono">{new Date(tx.timestamp).toLocaleString()}</div>
                     </div>
                   </div>
 
                   <div className="flex flex-col items-end gap-1">
                     <div className={`font-mono font-bold ${getAmountColor(tx)}`}>
-                      {tx.amount !== 0 && (
+                      {tx.amount !== 0 ? (
                         <>
                           {tx.amount > 0 ? '+' : ''}
-                          {tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}
+                          {((tx.amount) * ((tx as any).count || 1)).toLocaleString(undefined, { minimumFractionDigits: tx.amount % 1 === 0 ? 0 : 2 })} {CURRENCY}
                         </>
+                      ) : (
+                        <span className="text-stone-500 italic text-[10px]">บันทึกกิจกรรม</span>
                       )}
                     </div>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider font-bold ${getStatusColor(tx.status)}`}>

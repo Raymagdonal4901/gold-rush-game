@@ -31,7 +31,12 @@ export const register = async (req: Request, res: Response) => {
                 id: user._id,
                 username: user.username,
                 balance: user.balance,
-                energy: user.energy
+                energy: user.energy,
+                materials: user.materials || {},
+                stats: user.stats || {},
+                inventory: user.inventory || [],
+                role: user.role,
+                unlockedSlots: user.unlockedSlots || 3
             }
         });
     } catch (error) {
@@ -63,20 +68,6 @@ export const login = async (req: Request, res: Response) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // ตรวจสอบ PIN (ถ้ามีการส่งมา)
-        /* DISABLED BY USER REQUEST
-        if (pin) {  // Changed from req.body.pin to pin from destructuring
-            if (!user.pin) {
-                console.log(`[LOGIN WARN] User has no PIN set in DB but provided one.`);
-            } else {
-                const isPinMatch = await bcrypt.compare(pin, user.pin);
-                console.log(`[LOGIN DEBUG] PIN match result: ${isPinMatch}`);
-                if (!isPinMatch) {
-                    return res.status(401).json({ message: 'Invalid PIN' });
-                }
-            }
-        }
-        */
         // สร้าง JWT Token
         const token = jwt.sign(
             { userId: user._id, username: user.username, role: user.role },
@@ -92,7 +83,20 @@ export const login = async (req: Request, res: Response) => {
                 username: user.username,
                 balance: user.balance,
                 energy: updatedEnergy,
-                role: user.role
+                role: user.role,
+                materials: user.materials || {},
+                stats: user.stats || {},
+                inventory: user.inventory || [],
+                masteryPoints: user.masteryPoints || 0,
+                claimedQuests: user.claimedQuests || [],
+                claimedAchievements: user.claimedAchievements || [],
+                claimedRanks: user.claimedRanks || [],
+                checkInStreak: user.checkInStreak || 0,
+                lastCheckIn: user.lastCheckIn,
+                bankQrCode: user.bankQrCode,
+                notifications: user.notifications || [],
+                activeExpedition: user.activeExpedition,
+                unlockedSlots: user.unlockedSlots || 3
             }
         });
     } catch (error) {
@@ -113,7 +117,20 @@ export const getProfile = async (req: any, res: Response) => {
             username: user.username,
             balance: user.balance,
             energy: updatedEnergy,
-            role: user.role
+            role: user.role,
+            materials: user.materials || {},
+            stats: user.stats || {},
+            inventory: user.inventory || [],
+            masteryPoints: user.masteryPoints || 0,
+            claimedQuests: user.claimedQuests || [],
+            claimedRanks: user.claimedRanks || [],
+            checkInStreak: user.checkInStreak || 0,
+            lastCheckIn: user.lastCheckIn,
+            bankQrCode: user.bankQrCode,
+            notifications: user.notifications || [],
+            activeExpedition: user.activeExpedition,
+            unlockedSlots: user.unlockedSlots || 3,
+            overclockExpiresAt: user.overclockExpiresAt || null
         });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error });
@@ -126,7 +143,11 @@ const calculateAndSyncEnergy = async (user: any) => {
     const elapsedHours = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
 
     // Constant drain: 100% in 24 hours (4.166% per hour)
-    const drain = elapsedHours * 4.166666666666667;
+    let drainRate = 4.166666666666667;
+    if (user.overclockExpiresAt && user.overclockExpiresAt.getTime() > now.getTime()) {
+        drainRate *= 2;
+    }
+    const drain = elapsedHours * drainRate;
     const currentEnergy = Math.max(0, Math.min(100, (user.energy ?? 100) - drain));
 
     user.energy = currentEnergy;
@@ -215,5 +236,20 @@ export const seedAdmin = async (req: Request, res: Response) => {
         });
     } catch (error) {
         res.status(500).json({ message: 'Seed error', error });
+    }
+};
+
+export const updateBankQr = async (req: any, res: Response) => {
+    try {
+        const { bankQrCode } = req.body;
+        const user = await User.findById(req.userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        user.bankQrCode = bankQrCode;
+        await user.save();
+
+        res.json({ message: 'Bank QR updated successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
     }
 };

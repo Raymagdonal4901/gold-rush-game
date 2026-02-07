@@ -1,0 +1,14 @@
+﻿node.exe : npm error code ENOENT
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm error code ENOENT:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm error syscall open
+npm error path D:\AI\gold-rush\backend\backend\package.json
+npm error errno -4058
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open 'D:\AI\gold-rush\backend\backend\package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: C:\Users\rayma\AppData\Local\npm-cache\_logs\2026-02-05T11_06_58_829Z-debug-0.log

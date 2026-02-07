@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { X, Target, Trophy, Check, Star, Lock, Gift, Package, Coins, Medal, Sparkles, ChevronUp } from 'lucide-react';
 import { QUESTS, ACHIEVEMENTS, CURRENCY, MATERIAL_CONFIG, SHOP_ITEMS, MINING_RANKS } from '../constants';
-import { MockDB } from '../services/db';
 import { User } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
@@ -12,13 +11,16 @@ interface MissionModalProps {
     onClose: () => void;
     user: User;
     onRefresh: () => void;
+    addNotification?: (n: any) => void;
 }
 
-export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, user, onRefresh }) => {
+export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, user, onRefresh, addNotification }) => {
     const [activeTab, setActiveTab] = useState<'QUEST' | 'MASTERY'>('QUEST');
     const [weeklyStats, setWeeklyStats] = useState<any>(null);
     const [claimedQuests, setClaimedQuests] = useState<string[]>([]);
+    const [nextResetAt, setNextResetAt] = useState<number | null>(null);
     const [hasFetched, setHasFetched] = useState(false);
+    const [timeLeft, setTimeLeft] = useState<string>('--:--:--');
 
     // Fetch quest status from API when modal opens
     React.useEffect(() => {
@@ -32,11 +34,44 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
             const data = await api.getQuestStatus();
             setWeeklyStats(data.weeklyStats);
             setClaimedQuests(data.claimedQuests);
+            // Convert ISO string or Date to timestamp to avoid NaN in countdown
+            const resetTime = data.nextResetAt ? new Date(data.nextResetAt).getTime() : null;
+            setNextResetAt(resetTime);
             setHasFetched(true);
         } catch (error) {
             console.error('Failed to fetch quest status:', error);
         }
     };
+
+    // Countdown Timer
+    React.useEffect(() => {
+        if (!isOpen || !nextResetAt) return;
+
+        const updateTimer = () => {
+            const now = Date.now();
+            const diff = nextResetAt - now;
+
+            if (diff <= 0) {
+                setTimeLeft('00:00:00');
+                fetchQuestStatus(); // Re-fetch if time is up
+                return;
+            }
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+            let timeStr = '';
+            if (days > 0) timeStr += `${days} วัน `;
+            timeStr += `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            setTimeLeft(timeStr);
+        };
+
+        const timerId = setInterval(updateTimer, 1000);
+        updateTimer();
+        return () => clearInterval(timerId);
+    }, [isOpen, nextResetAt]);
 
     if (!isOpen) return null;
 
@@ -55,26 +90,47 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
             fetchQuestStatus(); // Refresh local state
             onRefresh(); // Refresh parent user state (balance/points)
         } catch (e: any) {
-            alert(e.response?.data?.message || e.message);
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: user.id,
+                message: e.response?.data?.message || e.message,
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
         }
     };
 
-    const handleClaimAchievement = (id: string) => {
+    const handleClaimAchievement = async (id: string) => {
         try {
-            MockDB.claimAchievement(user.id, id);
+            await api.claimAchievement(id);
             onRefresh();
         } catch (e: any) {
-            alert(e.message);
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: user.id,
+                message: e.response?.data?.message || e.message,
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
         }
     };
 
-    const handleClaimRank = (id: string) => {
+    const handleClaimRank = async (id: string) => {
         try {
-            MockDB.claimRankReward(user.id, id);
-            alert('Claim Successful! Rewards added to inventory.');
+            await api.claimRankReward(id);
+            // Removed alert('Claim Successful! Rewards added to inventory.');
             onRefresh();
         } catch (e: any) {
-            alert('Error claiming reward: ' + e.message);
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: user.id,
+                message: 'Error claiming reward: ' + (e.response?.data?.message || e.message),
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
         }
     };
 
@@ -145,8 +201,8 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
 
                 <div className="flex justify-between items-center mb-4">
                     <div>
-                        <h3 className="text-xl font-bold text-white mb-1">Mining Mastery</h3>
-                        <p className="text-stone-400 text-sm">ความชำนาญแห่งเหมือง</p>
+                        <h3 className="text-xl font-bold text-white mb-1">Property Mastery</h3>
+                        <p className="text-stone-400 text-sm">ความชำนาญในการบริหาร</p>
                     </div>
                     <div className="text-right">
                         <div className="text-3xl font-mono font-bold text-yellow-500">{masteryPoints}</div>
@@ -177,7 +233,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                             <Target size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-display font-bold text-white">ภารกิจ & ความชำนาญ</h2>
+                            <h2 className="text-xl font-display font-bold text-white">ภารกิจ & คะแนนบริหาร</h2>
                             <p className="text-xs text-stone-500 uppercase tracking-wider">สะสมแต้มเพื่อปลดล็อกบัฟพิเศษ</p>
                         </div>
                     </div>
@@ -197,13 +253,24 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                         onClick={() => setActiveTab('MASTERY')}
                         className={`flex-1 py-4 font-bold text-sm uppercase tracking-wider ${activeTab === 'MASTERY' ? 'bg-stone-800 text-white border-b-2 border-yellow-500' : 'text-stone-500 hover:text-stone-300'}`}
                     >
-                        Mining Mastery
+                        Property Mastery
                     </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-stone-950/50">
                     {activeTab === 'QUEST' ? (
                         <div className="space-y-4">
+                            {/* Reset Timer Info */}
+                            <div className="flex justify-between items-center bg-blue-900/10 border border-blue-500/30 p-3 rounded-xl mb-2">
+                                <div className="flex items-center gap-2 text-blue-400">
+                                    <Sparkles size={16} className="animate-pulse" />
+                                    <span className="text-xs font-bold uppercase tracking-wider">ภารกิจรีเซ็ตทุกวันจันทร์</span>
+                                </div>
+                                <div className="text-right min-w-fit">
+                                    <div className="text-[10px] text-stone-500 font-bold uppercase tracking-tighter">รีเซ็ตในอีก</div>
+                                    <div className="text-base sm:text-lg font-mono font-bold text-white tabular-nums drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] whitespace-nowrap">{timeLeft}</div>
+                                </div>
+                            </div>
                             {/* Weekly Quests */}
                             {QUESTS.map(quest => {
                                 const progress = getProgress(quest.target, quest.type);

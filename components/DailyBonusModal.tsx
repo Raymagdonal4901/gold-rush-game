@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, CalendarCheck, CheckCircle2, Gift, Sparkles, Diamond, Key, Cpu, Factory, FileText, HardHat, Shield } from 'lucide-react';
+import { X, CalendarCheck, CheckCircle2, Gift, Sparkles, Diamond, Key, Cpu, Factory, FileText, HardHat, Shield, Lock } from 'lucide-react';
 import { DAILY_CHECKIN_REWARDS } from '../constants';
-import { MockDB } from '../services/db';
+import { api } from '../services/api';
 import { User } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
 
@@ -11,35 +11,72 @@ interface DailyBonusModalProps {
     onClose: () => void;
     user: User;
     onRefresh: () => void;
+    addNotification?: (n: any) => void;
 }
 
-export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClose, user, onRefresh }) => {
+export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClose, user, onRefresh, addNotification }) => {
     const [canCheckIn, setCanCheckIn] = useState(false);
     const [todayStreak, setTodayStreak] = useState(0);
+    const [hasCheckedInSession, setHasCheckedInSession] = useState(false);
+
+    const getResetDayIdentifier = (timestamp: number) => {
+        if (timestamp === 0) return 'never';
+        const date = new Date(timestamp);
+        return `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
+    };
 
     useEffect(() => {
         if (isOpen) {
-            const last = user.lastCheckIn || 0;
-            const now = Date.now();
-            const lastDate = new Date(last).toDateString();
-            const nowDate = new Date(now).toDateString();
-            setCanCheckIn(lastDate !== nowDate);
+            let lastTime = 0;
+            if (user.lastCheckIn) {
+                const d = new Date(user.lastCheckIn);
+                if (!isNaN(d.getTime())) {
+                    lastTime = d.getTime();
+                }
+            }
+
+            const nowTime = Date.now();
+            const lastResetId = getResetDayIdentifier(lastTime);
+            const nowResetId = getResetDayIdentifier(nowTime);
+
+            // Robust check: If streak is 0, they haven't checked in (or were reset).
+            // But if lastResetId === nowResetId, they DID check in today.
+            // But if streak is 0 and they checked in today, something is wrong with the streak.
+            // We'll prioritize the date check but log it.
+            const checkable = !hasCheckedInSession && (lastTime === 0 || lastResetId !== nowResetId);
+            setCanCheckIn(checkable);
             setTodayStreak(user.checkInStreak || 0);
         }
-    }, [isOpen, user]);
+    }, [isOpen, user, hasCheckedInSession]);
 
     if (!isOpen) return null;
 
-    const handleCheckIn = () => {
+    const handleCheckIn = async () => {
         try {
-            const res = MockDB.checkIn(user.id);
+            const res = await api.user.checkIn();
             if (res.success) {
                 setCanCheckIn(false);
+                setHasCheckedInSession(true);
                 setTodayStreak(res.streak);
-                onRefresh();
+                onRefresh(); // Refresh parent user state
+                if (addNotification) addNotification({
+                    id: Date.now().toString(),
+                    userId: user.id,
+                    message: 'เช็คอินสำเร็จ!',
+                    type: 'SUCCESS',
+                    read: false,
+                    timestamp: Date.now()
+                });
             }
         } catch (e: any) {
-            alert(e.message);
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: user.id,
+                message: e.response?.data?.message || e.message,
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
         }
     };
 
@@ -89,6 +126,7 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
                         {DAILY_CHECKIN_REWARDS.map((reward, idx) => {
                             const isCollected = (todayStreak >= reward.day && !canCheckIn) || (todayStreak > reward.day);
                             const isToday = (todayStreak + 1 === reward.day && canCheckIn) || (todayStreak === reward.day && !canCheckIn);
+                            const isFuture = reward.day > (todayStreak + 1) || (reward.day === todayStreak + 1 && !canCheckIn);
                             const isGrandPrize = reward.day === 30;
 
                             return (
@@ -98,7 +136,7 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
                                         : reward.highlight
                                             ? 'bg-gradient-to-br from-yellow-900/20 to-stone-900 border-yellow-700/50'
                                             : 'bg-stone-900 border-stone-800'}
-                            ${isCollected ? 'opacity-50 grayscale' : ''}
+                            ${isCollected ? 'bg-stone-800/50 grayscale opacity-40' : ''}
                             ${isToday ? 'ring-2 ring-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)] scale-105 z-10' : ''}
                         `}>
                                     {/* Day Number */}
@@ -115,8 +153,10 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
                                     </div>
 
                                     {isCollected && (
-                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-xl backdrop-blur-[1px]">
-                                            <CheckCircle2 className="text-emerald-500" size={24} />
+                                        <div className="absolute inset-0 bg-emerald-950/20 flex items-center justify-center rounded-xl backdrop-blur-[1px]">
+                                            <div className="bg-emerald-500/80 rounded-full p-1 shadow-lg shadow-emerald-500/20">
+                                                <CheckCircle2 className="text-white" size={18} />
+                                            </div>
                                         </div>
                                     )}
 
@@ -138,13 +178,16 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
                         <button
                             onClick={handleCheckIn}
                             disabled={!canCheckIn}
-                            className={`w-full max-w-md py-4 rounded-xl font-bold text-lg shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2
+                            className={`w-full max-w-md py-4 rounded-xl font-bold text-lg shadow-lg transition-all transform active:scale-95 flex flex-col items-center justify-center gap-0
                         ${canCheckIn
                                     ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-emerald-900/30'
                                     : 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'}
                     `}
                         >
-                            {canCheckIn ? 'ลงชื่อรับรางวัล' : 'รับรางวัลแล้ว'}
+                            <span>{canCheckIn ? 'ลงชื่อรับรางวัล' : 'รับรางวัลแล้ว'}</span>
+                            {!canCheckIn && (
+                                <span className="text-[10px] opacity-60 font-medium">รีเซ็ตอีกครั้งเวลา 07:00 น. ของวันพรุ่งนี้</span>
+                            )}
                         </button>
                         <p className="text-[10px] text-stone-500">
                             *หากไม่ล็อกอินต่อเนื่องเกิน 48 ชม. ระบบจะรีเซ็ตวันเป็นวันที่ 1 ใหม่

@@ -7,8 +7,10 @@ export interface GlobalStats {
 export interface UserStats {
     totalDeposits: number;
     totalWithdrawals: number;
+    withdrawalHistory?: WithdrawalRequest[];
+    depositHistory?: DepositRequest[];
 }
-import { User, OilRig, AccessoryItem, ClaimRequest, WithdrawalRequest, DepositRequest, Transaction } from './types';
+import { User, OilRig, AccessoryItem, ClaimRequest, WithdrawalRequest, DepositRequest, Transaction, ChatMessage, MarketState, CraftingQueueItem } from './types';
 
 const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api';
 
@@ -104,6 +106,10 @@ export const api = {
         const res = await client.post(`/rigs/${rigId}/refill`);
         return res.data;
     },
+    repairRig: async (rigId: string): Promise<{ cost: number, balance: number, message: string }> => {
+        const res = await client.post(`/rigs/${rigId}/repair`);
+        return res.data;
+    },
 
     logout: () => {
         localStorage.removeItem('token');
@@ -122,6 +128,14 @@ export const api = {
             glove: mapBackendGloveToFrontend(res.data.glove)
         };
     },
+    craftRig: async (name: string): Promise<{ rig: OilRig, glove?: AccessoryItem, success: boolean }> => {
+        const res = await client.post('/rigs/craft', { name });
+        return {
+            rig: mapBackendRigToFrontend(res.data.rig),
+            glove: res.data.glove ? mapBackendGloveToFrontend(res.data.glove) : undefined,
+            success: res.data.success
+        };
+    },
 
     // Transactions
     createDepositRequest: async (amount: number, slipImage: string): Promise<any> => {
@@ -133,7 +147,15 @@ export const api = {
         return res.data;
     },
     claimReward: async (rigId: string, amount: number): Promise<any> => {
-        const res = await client.post('/transactions/claim', { rigId, amount });
+        const res = await client.post(`/rigs/${rigId}/claim`, { amount });
+        return res.data;
+    },
+    collectMaterials: async (rigId: string, amount: number, tier: number): Promise<any> => {
+        const res = await client.post(`/rigs/${rigId}/collect`, { amount, tier });
+        return res.data;
+    },
+    claimRigGift: async (rigId: string): Promise<any> => {
+        const res = await client.post(`/rigs/${rigId}/claim-gift`);
         return res.data;
     },
     getMyHistory: async (): Promise<Transaction[]> => {
@@ -144,16 +166,103 @@ export const api = {
         const res = await client.get('/transactions/stats');
         return res.data;
     },
+    getSystemConfig: async (): Promise<{ receivingQrCode: string | null, isMaintenanceMode: boolean }> => {
+        const res = await client.get('/transactions/config');
+        return res.data;
+    },
+    getMarketStatus: async (): Promise<MarketState> => {
+        const res = await client.get('/transactions/market');
+        return res.data;
+    },
+
+
+    // Accessories
+    buyAccessory: async (item: Partial<AccessoryItem>): Promise<any> => {
+        const response = await client.post('/accessories/buy', item);
+        return response.data;
+    },
+
+    equipAccessory: async (rigId: string, itemId: string, slotIndex: number): Promise<any> => {
+        const response = await client.post(`/rigs/${rigId}/equip`, { itemId, slotIndex });
+        return response.data;
+    },
+
+    unequipAccessory: async (rigId: string, slotIndex: number): Promise<any> => {
+        const response = await client.post(`/rigs/${rigId}/unequip`, { slotIndex });
+        return response.data;
+    },
+    destroyRig: async (rigId: string): Promise<any> => {
+        const response = await client.post(`/rigs/${rigId}/destroy`);
+        return response.data;
+    },
+
+    upgradeAccessory: async (itemId: string, useInsurance: boolean): Promise<any> => {
+        const response = await client.post('/accessories/upgrade', { itemId, useInsurance });
+        return response.data;
+    },
+    inventory: {
+        sell: async (itemId: string): Promise<any> => {
+            const res = await client.post(`/accessories/sell/${itemId}`);
+            return res.data;
+        },
+        upgrade: async (itemId: string, useInsurance: boolean): Promise<any> => {
+            const res = await client.post(`/accessories/upgrade`, { itemId, useInsurance });
+            return res.data;
+        }
+    },
+    craftMaterial: async (sourceTier: number): Promise<any> => {
+        const res = await client.post('/materials/craft', { sourceTier });
+        return res.data;
+    },
+    sellMaterial: async (tier: number, amount: number): Promise<any> => {
+        const res = await client.post('/materials/sell', { tier, amount });
+        return res.data;
+    },
+    buyMaterial: async (tier: number, amount: number): Promise<any> => {
+        const res = await client.post('/materials/buy', { tier, amount });
+        return res.data;
+    },
+    playLuckyDraw: async (): Promise<any> => {
+        const res = await client.post('/users/lucky-draw');
+        return res.data;
+    },
+    crafting: {
+        getQueue: async (): Promise<CraftingQueueItem[]> => {
+            const res = await client.get('/accessories/crafting/queue');
+            return res.data.queue || []; // Backend returns { queue: [...] }
+        },
+        start: async (itemId: string): Promise<any> => {
+            const res = await client.post('/accessories/crafting/start', { itemId });
+            return res.data;
+        },
+        claim: async (queueId: string): Promise<any> => {
+            const res = await client.post(`/accessories/crafting/claim/${queueId}`);
+            return res.data;
+        }
+    },
 
 
     // Quests
-    getQuestStatus: async (): Promise<{ weeklyStats: any, lastQuestReset: number, claimedQuests: string[] }> => {
+    getQuestStatus: async (): Promise<{ weeklyStats: any, lastQuestReset: number, nextResetAt: number, claimedQuests: string[] }> => {
         const res = await client.get('/quests/status');
         return res.data;
     },
 
     claimQuestReward: async (questId: string): Promise<any> => {
         const res = await client.post('/quests/claim', { questId });
+        return res.data;
+    },
+    claimAchievement: async (achId: string): Promise<any> => {
+        const res = await client.post('/quests/achievement/claim', { achId });
+        return res.data;
+    },
+    claimRankReward: async (rankId: string): Promise<any> => {
+        const res = await client.post('/quests/rank/claim', { rankId });
+        return res.data;
+    },
+
+    getLeaderboard: async (): Promise<any[]> => {
+        const res = await client.get('/users/leaderboard');
         return res.data;
     },
 
@@ -212,7 +321,14 @@ export const api = {
         },
         getUserStats: async (userId: string): Promise<UserStats> => {
             const res = await client.get(`/admin/users/${userId}/stats`);
-            return res.data;
+            const data = res.data;
+            if (data.withdrawalHistory) {
+                data.withdrawalHistory = data.withdrawalHistory.map(mapBackendWithdrawalToFrontend);
+            }
+            if (data.depositHistory) {
+                data.depositHistory = data.depositHistory.map(mapBackendDepositToFrontend);
+            }
+            return data;
         },
         giveCompensation: async (userId: string, amount: number, reason: string): Promise<any> => {
             const res = await client.post('/admin/users/compensation', { userId, amount, reason });
@@ -220,6 +336,76 @@ export const api = {
         },
         addItem: async (userId: string, itemId: string, amount: number): Promise<any> => {
             const res = await client.post('/admin/users/items', { userId, itemId, amount });
+            return res.data;
+        },
+        deleteUser: async (userId: string): Promise<any> => {
+            const res = await client.delete(`/admin/users/${userId}`);
+            return res.data;
+        },
+        toggleBan: async (userId: string): Promise<any> => {
+            const res = await client.post(`/admin/users/${userId}/toggle-ban`);
+            return res.data;
+        },
+        getDashboardStats: async (): Promise<any> => {
+            const res = await client.get('/admin/dashboard-stats');
+            return res.data;
+        },
+        getGlobalRevenue: async (): Promise<any> => {
+            const res = await client.get('/admin/revenue');
+            return res.data;
+        },
+        clearGlobalRevenue: async (): Promise<any> => {
+            const res = await client.post('/admin/revenue/clear');
+            return res.data;
+        }
+    },
+    // Chat
+    chat: {
+        getMessages: async (): Promise<ChatMessage[]> => {
+            const res = await client.get('/chat');
+            return res.data;
+        },
+        sendMessage: async (message: string): Promise<ChatMessage> => {
+            const res = await client.post('/chat', { message });
+            return res.data;
+        }
+    },
+    user: {
+        checkIn: async (): Promise<{ success: boolean, streak: number, reward: any }> => {
+            const res = await client.post('/users/check-in');
+            return res.data;
+        },
+        unlockSlot: async (targetSlot: number): Promise<any> => {
+            const res = await client.post('/users/unlock-slot', { targetSlot });
+            return res.data;
+        },
+        updatePassword: (currentPassword: string, newPassword: string) => client.post('/auth/update-password', { currentPassword, newPassword }),
+        updatePin: (currentPassword: string, newPin: string) => client.post('/auth/update-pin', { currentPassword, newPin }),
+        updateBankQr: (bankQrCode: string) => client.post('/auth/update-bank-qr', { bankQrCode }),
+        incrementStats: async (updates: { stats?: any, weeklyStats?: any }): Promise<any> => {
+            const res = await client.post('/auth/update-stats', updates);
+            return res.data;
+        },
+        activateOverclock: async (): Promise<{ success: boolean, overclockExpiresAt: number, newBalance: number }> => {
+            const res = await client.post('/users/overclock');
+            return res.data;
+        },
+        deactivateOverclock: async (): Promise<{ success: boolean, overclockExpiresAt: null, newBalance: number }> => {
+            const res = await client.post('/users/overclock/deactivate');
+            return res.data;
+        }
+    },
+    dungeon: {
+        start: async (dungeonId: number, rigId: string, useKey: boolean): Promise<any> => {
+            const res = await client.post('/dungeons/start', { dungeonId, rigId, useKey });
+            return res.data;
+        },
+        claim: async (): Promise<any> => {
+            const res = await client.post('/dungeons/claim');
+            return res.data;
+        },
+        skip: async (itemId: string): Promise<any> => {
+            const res = await client.post('/dungeons/skip', { itemId });
             return res.data;
         }
     }
@@ -236,8 +422,8 @@ const mapBackendRigToFrontend = (backendRig: any): OilRig => {
         durationMonths: 1, // Default or calculate from expiresAt
         dailyProfit: backendRig.dailyProfit,
         ratePerSecond: backendRig.dailyProfit / 86400,
-        purchasedAt: new Date(backendRig.purchasedAt || backendRig.createdAt).getTime(),
-        lastClaimAt: Date.now(),
+        purchasedAt: new Date(backendRig.purchasedAt || backendRig.purchaseDate || backendRig.createdAt).getTime(),
+        lastClaimAt: backendRig.lastClaimAt ? new Date(backendRig.lastClaimAt).getTime() : new Date(backendRig.purchasedAt || backendRig.purchaseDate || backendRig.createdAt).getTime(),
         rarity: backendRig.rarity as any,
         bonusProfit: backendRig.bonusProfit || 0,
         status: backendRig.status,
@@ -246,7 +432,9 @@ const mapBackendRigToFrontend = (backendRig: any): OilRig => {
         energyCostPerDay: backendRig.energyCostPerDay || 0,
         expiresAt: new Date(backendRig.expiresAt).getTime(),
         energy: backendRig.energy !== undefined ? backendRig.energy : 100,
-        lastEnergyUpdate: backendRig.lastEnergyUpdate ? new Date(backendRig.lastEnergyUpdate).getTime() : new Date(backendRig.purchaseDate || backendRig.createdAt || Date.now()).getTime()
+        lastEnergyUpdate: backendRig.lastEnergyUpdate ? new Date(backendRig.lastEnergyUpdate).getTime() : new Date(backendRig.purchaseDate || backendRig.createdAt || Date.now()).getTime(),
+        currentMaterials: backendRig.currentMaterials,
+        lastCollectionAt: backendRig.lastCollectionAt ? new Date(backendRig.lastCollectionAt).getTime() : undefined
     } as OilRig;
 };
 
@@ -254,7 +442,12 @@ const mapBackendGloveToFrontend = (backendGlove: any): AccessoryItem => {
     if (!backendGlove) return {} as AccessoryItem;
     return {
         id: backendGlove._id || backendGlove.id,
-        typeId: backendGlove.typeId || backendGlove.type || 'glove_common',
+        typeId: backendGlove.typeId || backendGlove.type || (
+            backendGlove.name.includes('ชิป') ? 'upgrade_chip' :
+                backendGlove.name.includes('กุญแจ') ? 'chest_key' :
+                    backendGlove.name.includes('หุ่นยนต์') ? 'robot' :
+                        backendGlove.name.includes('ถุงมือ') ? 'glove' : 'unknown'
+        ),
         name: backendGlove.name,
         price: backendGlove.price || 0,
         dailyBonus: backendGlove.dailyBonus || 0,
@@ -288,6 +481,7 @@ const mapBackendWithdrawalToFrontend = (w: any): WithdrawalRequest => ({
     amount: w.amount,
     timestamp: new Date(w.createdAt || w.timestamp).getTime(),
     status: w.status,
+    bankQrCode: w.bankQrCode,
     transactionId: w.transactionId
 });
 
@@ -308,6 +502,7 @@ const mapBackendTransactionToFrontend = (tx: any): Transaction => ({
     userId: tx.userId,
     type: tx.type,
     amount: tx.amount,
+    balanceAfter: tx.balanceAfter || 0,
     timestamp: new Date(tx.createdAt || tx.timestamp).getTime(),
     status: tx.status === 'APPROVED' ? 'COMPLETED' : tx.status,
     description: tx.description || (

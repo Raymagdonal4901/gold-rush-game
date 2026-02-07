@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2 } from 'lucide-react';
+import { Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check } from 'lucide-react';
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
 import { User, OilRig, ClaimRequest, WithdrawalRequest, DepositRequest, Notification } from '../services/types';
 import { CURRENCY, SHOP_ITEMS, MATERIAL_CONFIG } from '../constants';
+import { ChatSystem } from './ChatSystem';
 
 interface AdminDashboardProps {
     currentUser: User;
@@ -17,6 +18,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     const [pendingWithdrawals, setPendingWithdrawals] = useState<WithdrawalRequest[]>([]);
     const [pendingDeposits, setPendingDeposits] = useState<DepositRequest[]>([]); // New Phase 1
     const [search, setSearch] = useState('');
+    const [globalRevenue, setGlobalRevenue] = useState<{
+        energy_items: number;
+        market_fees: number;
+        withdrawal_fees: number;
+        repair_fees: number;
+        total: number;
+    } | null>(null);
 
     // Notifications
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -43,7 +51,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
     // User Details Modal State
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [userStats, setUserStats] = useState<{ totalDeposits: number; totalWithdrawals: number } | null>(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [userStats, setUserStats] = useState<{
+        totalDeposits: number;
+        totalWithdrawals: number;
+        revenue?: {
+            energy_items: number;
+            market_fees: number;
+            withdrawal_fees: number;
+            repair_fees: number;
+            total: number;
+        };
+        withdrawalHistory?: WithdrawalRequest[];
+    } | null>(null);
 
     // Economy Control State
     const [economyForm, setEconomyForm] = useState({
@@ -113,14 +133,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 config,
                 claims,
                 withdrawals,
-                deposits
+                deposits,
+                revenue
             ] = await Promise.all([
                 fetchSafe(() => api.admin.getUsers(), []),
                 fetchSafe(() => api.admin.getRigs(), []),
                 fetchSafe(() => api.admin.getSystemConfig(), {}),
                 fetchSafe(() => api.admin.getPendingClaims(), []),
                 fetchSafe(() => api.admin.getPendingWithdrawals(), []),
-                fetchSafe(() => api.admin.getPendingDeposits(), [])
+                fetchSafe(() => api.admin.getPendingDeposits(), []),
+                fetchSafe(() => api.admin.getGlobalRevenue(), null)
             ]);
 
             setUsers(fetchedUsers);
@@ -128,6 +150,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             setPendingClaims(claims || []);
             setPendingWithdrawals(withdrawals || []);
             setPendingDeposits(deposits || []);
+            setGlobalRevenue(revenue);
 
             if (config) {
                 setSystemQr(config.receivingQrCode || null);
@@ -189,12 +212,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         }
     };
 
-    const handleDeleteUser = (userId: string) => {
-        if (confirm('DANGER: Are you sure you want to PERMANENTLY DELETE this user? This action cannot be undone.')) {
-            MockDB.deleteUser(userId);
+    const handleDeleteUser = async (userId: string) => {
+        if (!confirm('DANGER: ยืนยันการลบผู้ใช้แบบถาวร? (การกระทำนี้ไม่สามารถย้อนกลับได้ และข้อมูลทั้งหมดจะถูกลบ)')) return;
+
+        try {
+            await api.admin.deleteUser(userId);
             refreshData();
             setSelectedUser(null);
-            alert('User deleted successfully');
+            alert('ลบข้อมูลผู้ใช้ออกจากระบบเรียบร้อยแล้ว ✅');
+        } catch (error) {
+            console.error("Failed to delete user", error);
+            alert('เกิดข้อผิดพลาดในการลบผู้ใช้');
+        }
+    };
+
+    const handleClearRevenue = async () => {
+        if (!confirm('ยืนยันการเคลียร์รายได้ผู้พัฒนาทั้งหมด? (ข้อมูลรายการที่เกี่ยวข้องจะถูกลบเพื่อเซ็ตยอดเป็น 0)')) return;
+
+        try {
+            await api.admin.clearGlobalRevenue();
+            refreshData();
+            alert('เคลียร์รายได้ผู้พัฒนาเรียบร้อยแล้ว ✅');
+        } catch (error) {
+            console.error("Failed to clear revenue", error);
+            alert('เกิดข้อผิดพลาดในการเคลียร์รายได้');
         }
     };
 
@@ -268,10 +309,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 // TODO: Implement Claim API
             } else if (confirmAction.type === 'WITHDRAWAL') {
                 await api.admin.processWithdrawal(confirmAction.id, confirmAction.action);
-                alert(`ดำเนินการถอนเงิน (${confirmAction.action}) เรียบร้อย ✅`);
+                // alert(`ดำเนินการถอนเงิน (${confirmAction.action}) เรียบร้อย ✅`);
             } else if (confirmAction.type === 'DEPOSIT') {
                 await api.admin.processDeposit(confirmAction.id, confirmAction.action);
-                alert(`ดำเนินรายการฝากเงิน (${confirmAction.action}) เรียบร้อย ✅`);
+                // alert(`ดำเนินรายการฝากเงิน (${confirmAction.action}) เรียบร้อย ✅`);
             }
         } catch (error: any) {
             console.error("Failed to process request", error);
@@ -421,17 +462,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             {/* Stats Grid */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                 <div className="bg-stone-950 p-3 rounded border border-stone-800">
-                                    <div className="text-xs text-stone-500 uppercase">Balance</div>
+                                    <div className="text-xs text-stone-500 uppercase">ยอดคงเหลือ (Balance)</div>
                                     <div className="text-lg font-bold text-emerald-400">{selectedUser.balance.toLocaleString()}</div>
                                 </div>
                                 <div className="bg-stone-900 p-3 rounded border border-stone-800">
-                                    <div className="text-xs text-stone-500 uppercase">Rigs</div>
+                                    <div className="text-xs text-stone-500 uppercase">จำนวนเหมือง (Rigs)</div>
                                     <div className="text-lg font-bold text-yellow-500">{getRigsForUser(selectedUser.id).length}</div>
                                 </div>
-                                <div className="bg-stone-900 p-3 rounded border border-stone-800">
-                                    <div className="text-xs text-stone-500 uppercase">Energy</div>
-                                    <div className="text-lg font-bold text-orange-500">{selectedUser.energy}/100</div>
-                                </div>
+                                {/* Energy Removed */}
                                 <div className="text-sm font-bold text-white">{selectedUser.role}</div>
                             </div>
                             <div className="bg-stone-950 p-3 rounded border border-stone-800">
@@ -443,6 +481,144 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 <div className="text-lg font-bold text-red-500">-{userStats?.totalWithdrawals.toLocaleString()}</div>
                             </div>
                         </div>
+
+                        {/* Developer Revenue Summary moved to main dashboard */}
+
+                        {/* Withdrawal History */}
+                        {userStats?.withdrawalHistory && userStats.withdrawalHistory.length > 0 && (
+                            <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
+                                <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-stone-400 uppercase tracking-wider flex items-center gap-2">
+                                    <FileText size={14} /> ประวัติการถอนเงิน (Withdrawal History)
+                                </div>
+                                <div className="max-h-48 overflow-y-auto">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
+                                            <tr>
+                                                <th className="p-3 font-medium">วันที่ (Date)</th>
+                                                <th className="p-3 font-medium text-right">จำนวนเงิน (Amount)</th>
+                                                <th className="p-3 font-medium text-center">QR Code</th>
+                                                <th className="p-3 font-medium text-center">สถานะ (Status)</th>
+                                                <th className="p-3 font-medium text-right">จัดการ (Action)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-stone-800">
+                                            {userStats.withdrawalHistory.map(w => (
+                                                <tr key={w.id} className="hover:bg-stone-900 transition-colors">
+                                                    <td className="p-3 text-stone-400 text-xs font-mono">{new Date(w.timestamp).toLocaleString()}</td>
+                                                    <td className="p-3 text-right font-mono text-white">{w.amount.toLocaleString()}</td>
+                                                    <td className="p-3 text-center">
+                                                        {w.bankQrCode ? (
+                                                            <div
+                                                                className="w-8 h-8 bg-white p-0.5 rounded cursor-zoom-in mx-auto overflow-hidden border border-stone-700"
+                                                                onClick={() => setPreviewImage(w.bankQrCode!)}
+                                                            >
+                                                                <img src={w.bankQrCode} alt="QR" className="w-full h-full object-cover" />
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-stone-600 text-[10px] italic">No QR</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-3 text-center">
+                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${w.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-500' :
+                                                            w.status === 'REJECTED' ? 'bg-red-900/30 text-red-500' :
+                                                                'bg-yellow-900/30 text-yellow-500'
+                                                            }`}>
+                                                            {w.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-3 text-right">
+                                                        {w.status === 'PENDING' && (
+                                                            <div className="flex justify-end gap-1">
+                                                                <button
+                                                                    onClick={() => initiateProcessWithdrawal(w, 'APPROVED')}
+                                                                    className="p-1.5 bg-emerald-900/30 text-emerald-500 hover:bg-emerald-900/50 rounded transition-colors"
+                                                                    title="Approve"
+                                                                >
+                                                                    <Check size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => initiateProcessWithdrawal(w, 'REJECTED')}
+                                                                    className="p-1.5 bg-red-900/30 text-red-500 hover:bg-red-900/50 rounded transition-colors"
+                                                                    title="Reject"
+                                                                >
+                                                                    <X size={14} />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Deposit History */}
+                        {userStats?.depositHistory && userStats.depositHistory.length > 0 && (
+                            <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
+                                <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+                                    <FileText size={14} /> ประวัติการฝากเงิน (Deposit History)
+                                </div>
+                                <div className="max-h-48 overflow-y-auto">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
+                                            <tr>
+                                                <th className="p-3 font-medium">วันที่ (Date)</th>
+                                                <th className="p-3 font-medium text-right">จำนวนเงิน (Amount)</th>
+                                                <th className="p-3 font-medium text-center">สลิป (Slip)</th>
+                                                <th className="p-3 font-medium text-center">สถานะ (Status)</th>
+                                                <th className="p-3 font-medium text-right">จัดการ (Action)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-stone-800">
+                                            {userStats.depositHistory.map(d => (
+                                                <tr key={d.id} className="hover:bg-stone-900 transition-colors">
+                                                    <td className="p-3 text-stone-400 text-xs font-mono">{new Date(d.timestamp).toLocaleString()}</td>
+                                                    <td className="p-3 text-right font-mono text-emerald-400">+{d.amount.toLocaleString()}</td>
+                                                    <td className="p-3 text-center">
+                                                        <div
+                                                            className="w-8 h-8 bg-stone-800 p-0.5 rounded cursor-zoom-in mx-auto overflow-hidden border border-stone-700"
+                                                            onClick={() => setPreviewImage(d.slipImage)}
+                                                        >
+                                                            <img src={d.slipImage} alt="Slip" className="w-full h-full object-cover" />
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-3 text-center">
+                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${d.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-500' :
+                                                            d.status === 'REJECTED' ? 'bg-red-900/30 text-red-500' :
+                                                                'bg-yellow-900/30 text-yellow-500'
+                                                            }`}>
+                                                            {d.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-3 text-right">
+                                                        {d.status === 'PENDING' && (
+                                                            <div className="flex justify-end gap-1">
+                                                                <button
+                                                                    onClick={() => initiateProcessDeposit(d, 'APPROVED')}
+                                                                    className="p-1.5 bg-emerald-900/30 text-emerald-500 hover:bg-emerald-900/50 rounded transition-colors"
+                                                                    title="Approve"
+                                                                >
+                                                                    <Check size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => initiateProcessDeposit(d, 'REJECTED')}
+                                                                    className="p-1.5 bg-red-900/30 text-red-500 hover:bg-red-900/50 rounded transition-colors"
+                                                                    title="Reject"
+                                                                >
+                                                                    <X size={14} />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Action Buttons */}
                         <div className="flex gap-4 pt-4 border-t border-stone-800">
@@ -472,6 +648,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 รีเซ็ตรหัสผ่าน
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Image Preview Overlay */}
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <div className="relative max-w-full max-h-full animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        <img src={previewImage} alt="Preview" className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl border border-stone-700" />
+                        <button
+                            onClick={() => setPreviewImage(null)}
+                            className="absolute -top-10 right-0 text-white hover:text-stone-300 flex items-center gap-2 font-bold"
+                        >
+                            <X size={32} />
+                        </button>
                     </div>
                 </div>
             )}
@@ -689,6 +883,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                     </div>
                 </div>
 
+                {/* Developer Revenue Summary */}
+                {globalRevenue && (
+                    <div className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex items-center gap-3 border-b border-stone-800 pb-4">
+                            <div className="bg-yellow-900/20 p-2 rounded text-yellow-500">
+                                <Coins size={20} />
+                            </div>
+                            <div className="flex-1 flex justify-between items-center">
+                                <h3 className="text-lg font-bold text-white uppercase tracking-wider">รายได้ผู้พัฒนาทั้งหมด (DEVELOPER REVENUE OVERVIEW)</h3>
+                                <button
+                                    onClick={handleClearRevenue}
+                                    className="px-3 py-1 bg-red-900/20 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded text-xs font-bold transition-all flex items-center gap-2"
+                                >
+                                    <Trash2 size={14} /> เคลียร์รายได้ทั้งหมด
+                                </button>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                            <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
+                                <div className="text-xs text-stone-500 uppercase font-bold mb-1">พลังงาน/ไอเทม/OC</div>
+                                <div className="text-2xl font-mono font-bold text-emerald-400">+{globalRevenue.energy_items.toLocaleString()}</div>
+                            </div>
+                            <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
+                                <div className="text-xs text-stone-500 uppercase font-bold mb-1">ค่าธรรมเนียมตลาด</div>
+                                <div className="text-2xl font-mono font-bold text-emerald-400">+{globalRevenue.market_fees.toLocaleString()}</div>
+                            </div>
+                            <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
+                                <div className="text-xs text-stone-500 uppercase font-bold mb-1">ค่าธรรมเนียมถอน</div>
+                                <div className="text-2xl font-mono font-bold text-emerald-400">+{globalRevenue.withdrawal_fees.toLocaleString()}</div>
+                            </div>
+                            <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
+                                <div className="text-xs text-stone-500 uppercase font-bold mb-1">ค่าบริการซ่อม</div>
+                                <div className="text-2xl font-mono font-bold text-emerald-400">+{globalRevenue.repair_fees.toLocaleString()}</div>
+                            </div>
+                            <div className="bg-yellow-900/10 p-4 rounded border border-yellow-500/30 hover:bg-yellow-900/20 transition-colors">
+                                <div className="text-xs text-yellow-500 uppercase font-bold mb-1">รายได้รวมทั้งหมด</div>
+                                <div className="text-2xl font-mono font-bold text-yellow-400">+{globalRevenue.total.toLocaleString()}</div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* === USERS MANAGEMENT === */}
                 <div id="user-management" className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg overflow-hidden">
                     <div className="p-4 border-b border-stone-800 flex justify-between items-center bg-stone-950">
@@ -712,12 +948,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-stone-900/50 text-stone-500 text-xs uppercase tracking-wider border-b border-stone-800">
-                                    <th className="p-4 font-bold">User info</th>
-                                    <th className="p-4 font-bold text-right">Balance</th>
-                                    <th className="p-4 font-bold text-center">Rigs</th>
-                                    <th className="p-4 font-bold text-right text-emerald-400">Daily Profit</th>
-                                    <th className="p-4 font-bold text-center">Status</th>
-                                    <th className="p-4 font-bold text-right">Actions</th>
+                                    <th className="p-4 font-bold">ข้อมูลผู้ใช้งาน</th>
+                                    <th className="p-4 font-bold text-right">ยอดคงเหลือ</th>
+                                    <th className="p-4 font-bold text-center">เหมือง</th>
+                                    <th className="p-4 font-bold text-right text-emerald-400">กำไรรายวัน</th>
+                                    <th className="p-4 font-bold text-center">สถานะ</th>
+                                    <th className="p-4 font-bold text-right">การจัดการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-800">
@@ -967,6 +1203,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                     </div>
                 </div>
             </div>
+
+            {/* Chat System for Admin */}
+            <ChatSystem currentUser={currentUser} />
         </div >
     );
 };

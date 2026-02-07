@@ -88,7 +88,7 @@ export const adminAddItem = async (req: AuthRequest, res: Response) => {
     }
 };
 
-// Get User Stats (Deposits/Withdrawals)
+// Get User Stats (Deposits/Withdrawals/Revenue/History)
 export const getUserStats = async (req: AuthRequest, res: Response) => {
     try {
         const { userId } = req.params;
@@ -108,11 +108,54 @@ export const getUserStats = async (req: AuthRequest, res: Response) => {
         ]);
         const totalWithdrawals = withdrawalStats.length > 0 ? withdrawalStats[0].total : 0;
 
+        // --- Developer Revenue Calculation ---
+        const revenueStats = await Transaction.aggregate([
+            { $match: { userId: userId.toString() } },
+            {
+                $group: {
+                    _id: '$type',
+                    total: { $sum: '$amount' }
+                }
+            }
+        ]);
+
+        const revenueMap: Record<string, number> = {};
+        revenueStats.forEach(s => revenueMap[s._id] = s.total);
+
+        // 3.1 Energy/Overclock/Battery (Energy Refill + Accessory Purchase)
+        const rev_energy_items = (revenueMap['ENERGY_REFILL'] || 0) + (revenueMap['ACCESSORY_PURCHASE'] || 0);
+
+        // 3.2 Market Fee (Tax from Selling)
+        const rev_market_fees = revenueMap['MARKET_TAX'] || 0;
+
+        // 3.3 Withdrawal Fee (Currently 0 as no explicit transaction type yet)
+        const rev_withdrawal_fees = 0;
+
+        // 3.4 Repair Fee
+        const rev_repair_fees = revenueMap['REPAIR'] || 0;
+
+        // 3.5 Total Revenue
+        const total_revenue = rev_energy_items + rev_market_fees + rev_withdrawal_fees + rev_repair_fees;
+
+        // --- Transaction History ---
+        const withdrawalHistory = await WithdrawalRequest.find({ userId: objId }).sort({ createdAt: -1 });
+        const depositHistory = await DepositRequest.find({ userId: objId }).sort({ createdAt: -1 });
+
         res.json({
             totalDeposits,
-            totalWithdrawals
+            totalWithdrawals,
+            revenue: {
+                energy_items: rev_energy_items,
+                market_fees: rev_market_fees,
+                withdrawal_fees: rev_withdrawal_fees,
+                repair_fees: rev_repair_fees,
+                total: total_revenue
+            },
+            withdrawalHistory,
+            depositHistory
         });
     } catch (error) {
+        console.error('Error fetching user stats:', error);
         res.status(500).json({ message: 'Server error', error });
     }
 };
@@ -256,6 +299,105 @@ export const getPendingClaims = async (req: AuthRequest, res: Response) => {
         const claims = await ClaimRequest.find({ status: 'PENDING' }).sort({ createdAt: -1 });
         res.json(claims);
     } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+// Get Global Revenue Stats
+export const getGlobalRevenueStats = async (req: AuthRequest, res: Response) => {
+    try {
+        console.log('[ADMIN DEBUG] getGlobalRevenueStats called');
+        // Aggregating all transactions
+        const revenueStats = await Transaction.aggregate([
+            {
+                $group: {
+                    _id: '$type',
+                    total: { $sum: '$amount' }
+                }
+            }
+        ]);
+
+        const revenueMap: Record<string, number> = {};
+        revenueStats.forEach(s => revenueMap[s._id] = s.total);
+
+        // 3.1 Energy/Overclock/Battery (Energy Refill + Accessory Purchase)
+        const rev_energy_items = (revenueMap['ENERGY_REFILL'] || 0) + (revenueMap['ACCESSORY_PURCHASE'] || 0);
+
+        // 3.2 Market Fee (Tax from Selling)
+        const rev_market_fees = revenueMap['MARKET_TAX'] || 0;
+
+        // 3.3 Withdrawal Fee
+        const rev_withdrawal_fees = 0;
+
+        // 3.4 Repair Fee
+        const rev_repair_fees = revenueMap['REPAIR'] || 0;
+
+        // 3.5 Total Revenue
+        const total_revenue = rev_energy_items + rev_market_fees + rev_withdrawal_fees + rev_repair_fees;
+
+        console.log('[ADMIN DEBUG] Global Revenue Stats calculated:', { total_revenue });
+
+        res.json({
+            energy_items: rev_energy_items,
+            market_fees: rev_market_fees,
+            withdrawal_fees: rev_withdrawal_fees,
+            repair_fees: rev_repair_fees,
+            total: total_revenue
+        });
+    } catch (error) {
+        console.error('[ADMIN ERROR] getGlobalRevenueStats failed:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+
+// Delete User Permanently
+export const deleteUser = async (req: AuthRequest, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const objId = new mongoose.Types.ObjectId(userId);
+
+        // Delete all related records
+        await Rig.deleteMany({ ownerId: userId });
+        await Transaction.deleteMany({ userId: userId });
+        await DepositRequest.deleteMany({ userId: userId });
+        await WithdrawalRequest.deleteMany({ userId: userId });
+        await ClaimRequest.deleteMany({ userId: userId });
+
+        // Finally delete the user
+        const result = await User.findByIdAndDelete(userId);
+
+        if (!result) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        console.log(`[ADMIN] User ${userId} and all related data deleted permanently.`);
+        res.json({ message: 'User and all associated data deleted successfully' });
+    } catch (error) {
+        console.error('[ADMIN ERROR] deleteUser failed:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+// Clear Global Revenue Stats
+export const clearRevenueStats = async (req: AuthRequest, res: Response) => {
+    try {
+        console.log('[ADMIN] Clearing developer revenue stats...');
+
+        // Define transaction types that count as revenue
+        const revenueTypes = ['ENERGY_REFILL', 'ACCESSORY_PURCHASE', 'MARKET_TAX', 'REPAIR'];
+
+        // Delete or mark these transactions as processed/cleared
+        // For now we delete them to reset the sum to 0
+        const result = await Transaction.deleteMany({ type: { $in: revenueTypes } });
+
+        console.log(`[ADMIN] Revenue stats cleared. Deleted ${result.deletedCount} transactions.`);
+        res.json({
+            message: 'Revenue stats cleared successfully',
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error('[ADMIN ERROR] clearRevenueStats failed:', error);
         res.status(500).json({ message: 'Server error', error });
     }
 };

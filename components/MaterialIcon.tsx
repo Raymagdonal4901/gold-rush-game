@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Hexagon, Circle, Square, Triangle, Gem, Sparkles, Layers, Mountain, Diamond } from 'lucide-react';
+// Removed unused imports from lucide-react
 
 interface MaterialIconProps {
     id: number;
@@ -11,6 +11,7 @@ export const MaterialIcon: React.FC<MaterialIconProps> = ({ id, size = "w-10 h-1
     // Map ID to filename in /assets/materials/
     const getMaterialImage = () => {
         switch (id) {
+            case 0: return 'mystery_ore.png';  // Mystery Ore (Tier 0)
             case 1: return 'coal.png';          // Coal
             case 2: return 'copper.png';
             case 3: return 'iron.png';

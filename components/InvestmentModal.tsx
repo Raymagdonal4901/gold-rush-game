@@ -15,6 +15,7 @@ interface InvestmentModalProps {
   materials: Record<number, number>;
   inventory: AccessoryItem[];
   rigs: OilRig[];
+  addNotification?: (n: any) => void;
 }
 
 export const InvestmentModal: React.FC<InvestmentModalProps> = ({
@@ -27,7 +28,8 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
   maxRigs,
   materials,
   inventory,
-  rigs
+  rigs,
+  addNotification
 }) => {
   if (!isOpen) return null;
 
@@ -38,14 +40,28 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
     if (preset.specialProperties?.maxAllowed) {
       const existingCount = rigs.filter(r => r.name === preset.name).length;
       if (existingCount >= preset.specialProperties.maxAllowed) {
-        alert(`จำกัดการครอบครองเพียง ${preset.specialProperties.maxAllowed} เครื่องต่อไอดี`);
+        if (addNotification) addNotification({
+          id: Date.now().toString(),
+          userId: '', // Will be handled by notification system
+          message: `จำกัดการครอบครองเพียง ${preset.specialProperties.maxAllowed} เครื่องต่อไอดี`,
+          type: 'ERROR',
+          read: false,
+          timestamp: Date.now()
+        });
         return;
       }
     }
 
     // 2. Check Slot Limit
     if (isSlotLimitReached) {
-      alert("คุณมีเครื่องจักรครบตามจำนวนที่ปลดล็อกแล้ว กรุณาปลดล็อกพื้นที่เพิ่ม");
+      if (addNotification) addNotification({
+        id: Date.now().toString(),
+        userId: '',
+        message: "คุณมีเครื่องจักรครบตามจำนวนที่ปลดล็อกแล้ว กรุณาปลดล็อกพื้นที่เพิ่ม",
+        type: 'ERROR',
+        read: false,
+        timestamp: Date.now()
+      });
       return;
     }
 

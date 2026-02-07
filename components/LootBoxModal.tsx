@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Hand, Lock, Truck, Cpu, Hourglass } from 'lucide-react';
+import { Sparkles, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Hand, Lock, Truck, Cpu, Hourglass, Key, Factory, Search, FileText } from 'lucide-react';
 import { Rarity } from '../services/types';
 import { RARITY_SETTINGS, CURRENCY } from '../constants';
 import { InfinityGlove } from './InfinityGlove';
@@ -16,35 +16,52 @@ interface LootBoxModalProps {
     materialId?: number;
 }
 
-// Icon renderer based on Item ID
-const ItemIcon: React.FC<{ typeId?: string, materialId?: number, rarity: Rarity, className?: string }> = ({ typeId, materialId, rarity, className }) => {
+// Icon renderer based on Item ID with Name Fallback
+const ItemIcon: React.FC<{ typeId?: string, name?: string, materialId?: number, rarity: Rarity, className?: string }> = ({ typeId, name, materialId, rarity, className }) => {
     // If we have a material ID, show the Material Icon
     if (materialId) {
         return <MaterialIcon id={materialId} size="w-32 h-32" iconSize={80} />;
     }
 
+    const itemName = name || '';
+
+    // Name-Based Overrides (Robust Fallback)
+    if (itemName.includes('ชิป') || itemName.includes('Chip')) return <Cpu className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('กุญแจ') || itemName.includes('Key')) return <Key className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('เครื่องผสม') || itemName.includes('Mixer')) return <Factory className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('แว่นขยาย') || itemName.includes('Magnifying')) return <Search className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('ใบประกัน') || itemName.includes('Insurance')) return <FileText className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />; // Import FileText if needed
+    if (itemName.includes('นาฬิกาทราย') || itemName.includes('Hourglass')) return <Hourglass className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+
+    if (itemName.includes('หมวก') || itemName.includes('Helmet')) return <HardHat className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('แว่น') || itemName.includes('Glasses')) return <Glasses className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('ชุด') || itemName.includes('Uniform') || itemName.includes('Suit')) return <Shirt className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('กระเป๋า') || itemName.includes('Bag') || itemName.includes('Backpack')) return <Backpack className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('รองเท้า') || itemName.includes('Boots')) return <Footprints className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('มือถือ') || itemName.includes('Mobile') || itemName.includes('Phone')) return <Smartphone className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('คอม') || itemName.includes('PC') || itemName.includes('Computer')) return <Monitor className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('หุ่นยนต์') || itemName.includes('Robot')) return <Bot className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('ระบบล็อค') || itemName.includes('Lock')) return <Truck className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+
     // If it's a "glove" or undefined type (default loot), show the Infinity Glove
+    // But verify it's not one of the above first (implicit else)
     if (!typeId || typeId === 'glove') {
         return <InfinityGlove rarity={rarity} className={className} size={100} />;
     }
 
     let IconComp = Hand;
-    switch (typeId) {
-        case 'hat': IconComp = HardHat; break;
-        case 'glasses': IconComp = Glasses; break;
-        case 'uniform': IconComp = Shirt; break;
-        case 'bag': IconComp = Backpack; break;
-        case 'boots': IconComp = Footprints; break;
-        case 'mobile': IconComp = Smartphone; break;
-        case 'pc': IconComp = Monitor; break;
-        case 'robot': IconComp = Bot; break;
-        case 'auto_excavator': IconComp = Truck; break;
-        case 'upgrade_chip': IconComp = Cpu; break;
-        case 'hourglass_small':
-        case 'hourglass_medium':
-        case 'hourglass_large': IconComp = Hourglass; break;
-        default: return <InfinityGlove rarity={rarity} className={className} size={100} />;
-    }
+    if (typeId.startsWith('hat')) IconComp = HardHat;
+    else if (typeId.startsWith('glasses')) IconComp = Glasses;
+    else if (typeId.startsWith('uniform')) IconComp = Shirt;
+    else if (typeId.startsWith('bag')) IconComp = Backpack;
+    else if (typeId.startsWith('boots')) IconComp = Footprints;
+    else if (typeId.startsWith('mobile')) IconComp = Smartphone;
+    else if (typeId.startsWith('pc')) IconComp = Monitor;
+    else if (typeId.startsWith('robot')) IconComp = Bot;
+    else if (typeId === 'auto_excavator') IconComp = Truck;
+    else if (typeId === 'upgrade_chip') IconComp = Cpu;
+    else if (typeId.startsWith('hourglass')) IconComp = Hourglass;
+    else return <InfinityGlove rarity={rarity} className={className} size={100} />;
 
     return <IconComp className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
 };
@@ -182,7 +199,7 @@ export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rar
                             {stage === 'idle' && (
                                 <div className="absolute -bottom-16 flex flex-col items-center gap-2 animate-pulse pointer-events-none">
                                     <span className="text-base font-bold text-yellow-100 uppercase tracking-widest bg-black/50 px-6 py-2 rounded-full border border-yellow-500/50 backdrop-blur-md shadow-xl flex items-center gap-2">
-                                        <Lock size={14} /> แตะเพื่อปลดล็อก
+                                        <Lock size={14} /> แตะเพื่อเปิดแร่ดิบ
                                     </span>
                                 </div>
                             )}
@@ -214,7 +231,7 @@ export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rar
 
                                 {/* Actual Item Icon */}
                                 <div className="w-48 h-48 relative z-10 flex items-center justify-center drop-shadow-[0_0_25px_rgba(255,255,255,0.4)] animate-[float-gold_4s_ease-in-out_infinite]">
-                                    <ItemIcon typeId={itemTypeId} materialId={materialId} rarity={rarity} className="w-full h-full" />
+                                    <ItemIcon typeId={itemTypeId} name={itemName} materialId={materialId} rarity={rarity} className="w-full h-full" />
                                 </div>
                             </div>
                         </div>
@@ -225,7 +242,7 @@ export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rar
                 <div className={`absolute bottom-10 w-full transition-all duration-700 delay-300 transform ${stage === 'revealed' ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'} z-30 px-6`}>
                     {!materialId && (
                         <div className="bg-black/60 border border-stone-600 p-4 rounded-2xl backdrop-blur-md mb-6 mx-auto max-w-sm shadow-2xl">
-                            <p className="text-stone-400 text-xs uppercase tracking-widest mb-1 text-center">โบนัสประสิทธิภาพ</p>
+                            <p className="text-stone-400 text-xs uppercase tracking-widest mb-1 text-center">รายได้เพิ่ม</p>
                             <div className="flex items-center justify-center gap-2">
                                 <p className={`text-4xl font-mono font-black ${config.color} drop-shadow-md`}>
                                     +{bonus.toFixed(2)}
@@ -239,7 +256,7 @@ export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rar
                         onClick={onClose}
                         className="w-full bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-black font-black py-4 rounded-xl shadow-[0_0_30px_rgba(234,179,8,0.4)] transition-all hover:scale-105 hover:shadow-[0_0_50px_rgba(234,179,8,0.6)] font-display text-xl uppercase tracking-widest flex items-center justify-center gap-2"
                     >
-                        <Sparkles size={24} /> เก็บเข้าคลัง <Sparkles size={24} />
+                        <Sparkles size={24} /> เก็บเข้าคลังสินค้า <Sparkles size={24} />
                     </button>
                 </div>
 

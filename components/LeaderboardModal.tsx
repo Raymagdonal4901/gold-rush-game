@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { X, Trophy, Medal, Crown, TrendingUp, Gift, Truck, FileText, Monitor, Key, Smartphone, Diamond, Glasses, Cpu, Footprints, Wrench, Hourglass } from 'lucide-react';
-import { MockDB } from '../services/db';
 import { CURRENCY } from '../constants';
+import { api } from '../services/api';
 
 interface LeaderboardModalProps {
     isOpen: boolean;
@@ -15,8 +15,11 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
 
     useEffect(() => {
         if (isOpen) {
-            const data = MockDB.getLeaderboard();
-            setLeaders(data);
+            api.getLeaderboard().then(data => {
+                setLeaders(data);
+            }).catch(err => {
+                console.error("Failed to fetch leaderboard", err);
+            });
         }
     }, [isOpen]);
 
@@ -154,7 +157,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
                                     </div>
                                     <div className="flex items-center gap-3 text-xs text-stone-400">
                                         <Key size={14} className="text-purple-400" />
-                                        <span>กุญแจสุ่ม <span className="text-purple-500 font-bold">x3</span></span>
+                                        <span>กุญแจเข้าเหมืองสุ่ม <span className="text-purple-500 font-bold">x1</span></span>
                                     </div>
                                 </div>
                             </div>
@@ -175,7 +178,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
                                     </div>
                                     <div className="flex items-center gap-3 text-xs text-stone-400">
                                         <Key size={14} className="text-purple-400" />
-                                        <span>กุญแจสุ่ม <span className="text-purple-500 font-bold">x3</span></span>
+                                        <span>กุญแจเข้าเหมืองสุ่ม <span className="text-purple-500 font-bold">x1</span></span>
                                     </div>
                                     <div className="flex items-center gap-3 text-xs text-stone-400">
                                         <Diamond size={14} className="text-cyan-400" />
@@ -197,7 +200,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
                                     </div>
                                     <div className="flex items-center gap-2 text-[10px] text-stone-500">
                                         <Key size={12} className="text-purple-500" />
-                                        <span>กุญแจสุ่ม x1</span>
+                                        <span>กุญแจเข้าเหมืองสุ่ม x1</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-[10px] text-stone-500">
                                         <Cpu size={12} className="text-indigo-400" />

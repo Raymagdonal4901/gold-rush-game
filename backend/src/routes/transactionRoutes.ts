@@ -1,6 +1,8 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth';
 import { createDepositRequest, getMyDeposits, createWithdrawalRequest, claimReward, getMyHistory, getGlobalStats } from '../controllers/transactionController';
+import { getMarketStatus } from '../controllers/materialController';
+import { getSystemConfig } from '../controllers/adminController';
 
 const router = express.Router();
 
@@ -12,5 +14,7 @@ router.post('/withdraw', createWithdrawalRequest);
 router.post('/claim', claimReward);
 router.get('/history', getMyHistory);
 router.get('/stats', getGlobalStats);
+router.get('/market', getMarketStatus);
+router.get('/config', getSystemConfig);
 
 export default router;

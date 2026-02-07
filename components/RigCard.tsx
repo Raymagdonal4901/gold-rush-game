@@ -1,12 +1,11 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { OilRig, AccessoryItem } from '../services/types';
 import { OilRigAnimation } from './OilRigAnimation';
-import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES } from '../constants';
-import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package } from 'lucide-react';
+import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG } from '../constants';
+import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star } from 'lucide-react';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
-import { MockDB } from '../services/db';
+import { api } from '../services/api';
 
 interface RigCardProps {
     rig: OilRig;
@@ -25,9 +24,12 @@ interface RigCardProps {
     onManageAccessory?: (rigId: string, slotIndex: number) => void;
     onCharge?: (id: string) => void;
     globalMultiplier?: number;
+    reactorMultiplier?: number;
     isPowered?: boolean;
     isExploring?: boolean;
+    isOverclockActive?: boolean; // Overclock boost active
     isDemo?: boolean;
+    addNotification?: (n: any) => void;
 }
 
 export const RigCard: React.FC<RigCardProps> = ({
@@ -46,10 +48,29 @@ export const RigCard: React.FC<RigCardProps> = ({
     onManageAccessory,
     onCharge,
     globalMultiplier = 1,
+    reactorMultiplier = 1,
     isPowered = true,
     isExploring = false,
-    isDemo = false
+    isOverclockActive = false,
+    isDemo = false,
+    addNotification
 }) => {
+    const handleDestroyClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (isExploring) return;
+        if (!window.confirm('ยืนยันการทุบทิ้งเครื่องขุด? อุปกรณ์ที่ติดตั้งอยู่ทั้งหมดจะถูกทำลายหายไปพร้อมกับเครื่อง')) return;
+
+        try {
+            const result = await api.destroyRig(rig.id);
+            if (result.success) {
+                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: 'ทำลายเครื่องจักรและอุปกรณ์ที่ติดตั้งอยู่แล้ว', type: 'SUCCESS', read: false, timestamp: Date.now() });
+                if (onRenew) onRenew(rig.id);
+            }
+        } catch (e: any) {
+            console.error('[DESTROY_RIG] Error:', e);
+            if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: e.response?.data?.message || 'เกิดข้อผิดพลาดในการทำลายเครื่อง', type: 'ERROR', read: false, timestamp: Date.now() });
+        }
+    };
     const [currentAmount, setCurrentAmount] = useState(BASE_CLAIM_AMOUNT);
     const [currentMaterials, setCurrentMaterials] = useState(rig.currentMaterials || 0);
     const [currentEnergyPercent, setCurrentEnergyPercent] = useState(rig.energy ?? 100);
@@ -68,7 +89,10 @@ export const RigCard: React.FC<RigCardProps> = ({
     const requestRef = useRef<number | null>(null);
     const materialIntervalRef = useRef<number | null>(null);
 
-    const speedMultiplier = isDemo ? DEMO_SPEED_MULTIPLIER : 1;
+
+    useEffect(() => {
+        console.log(`[RigCard DEBUG] ${rig.name} (${rig.id}) - ClaimAt: ${rig.lastClaimAt}, Mat: ${rig.currentMaterials}, CollectAt: ${rig.lastCollectionAt}`);
+    }, [rig]);
 
     // Find preset first to get static data like type/rarity
     const preset = RIG_PRESETS.find(p => p.name === rig.name) || RIG_PRESETS.find(p => p.price === rig.investment);
@@ -96,11 +120,17 @@ export const RigCard: React.FC<RigCardProps> = ({
     // Override base profit for specific rigs (Balance Patch)
     const baseDailyProfit = rig.dailyProfit;
 
-    const totalDailyProfit = (baseDailyProfit + effectiveBonusProfit + equippedBonus) * globalMultiplier;
+    let totalDailyProfit = (baseDailyProfit + effectiveBonusProfit + equippedBonus) * globalMultiplier * reactorMultiplier;
+
+    // OVERCLOCK x2 Boost
+    if (isOverclockActive) {
+        totalDailyProfit *= ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST;
+    }
+
     const totalRatePerSecond = totalDailyProfit / 86400;
 
     const tier = (investment: number) => {
-        if (investment === 0) return 6; // Special Tier (Vibranium)
+        if (investment === 0) return 7; // Special Tier (Vibranium)
         if (investment >= 3000) return 5;
         if (investment >= 2500) return 4;
         if (investment >= 2000) return 3;
@@ -109,45 +139,45 @@ export const RigCard: React.FC<RigCardProps> = ({
     };
     const currentTier = tier(rig.investment);
 
-    const getResourceName = () => {
-        switch (currentTier) {
-            case 6: return 'ไวเบรเนียม';
-            case 5: return 'เพชร';
-            case 4: return 'ทองคำ';
-            case 3: return 'เหล็ก';
-            case 2: return 'ทองแดง';
-            default: return 'ถ่านหิน';
-        }
-    };
 
     const getAccessoryIcon = (item: AccessoryItem, className: string) => {
         const getNeonIcon = (typeId: string) => {
-            switch (typeId) {
-                case 'hat':
-                    return <HardHat className={`${className} text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]`} />;
-                case 'glasses':
-                    return <Glasses className={`${className} text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]`} />;
-                case 'uniform':
-                    return <Shirt className={`${className} text-orange-400 drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]`} />;
-                case 'bag':
-                    return <Backpack className={`${className} text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]`} />;
-                case 'boots':
-                    return <Footprints className={`${className} text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]`} />;
-                case 'mobile':
-                    return <Smartphone className={`${className} text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]`} />;
-                case 'pc':
-                    return <Monitor className={`${className} text-rose-400 drop-shadow-[0_0_8px_rgba(251,113,133,0.8)]`} />;
-                case 'auto_excavator':
-                    return <Truck className={`${className} text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]`} />;
-                case 'robot':
-                    return <Bot className={`${className} text-yellow-500 animate-pulse drop-shadow-[0_0_8px_rgba(234,179,8,0.8)]`} />;
-                case 'upgrade_chip':
-                    return <Cpu className={`${className} text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]`} />;
-                case 'chest_key':
-                    return <Key className={`${className} text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]`} />;
-                default:
-                    return <InfinityGlove rarity={item.rarity} className={className} />;
+            if (!typeId) return <InfinityGlove rarity={item.rarity} className={className} />;
+            if (typeId.startsWith('hat')) {
+                return <HardHat className={`${className} text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.8)]`} />;
             }
+            if (typeId.startsWith('glasses')) {
+                return <Glasses className={`${className} text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]`} />;
+            }
+            if (typeId.startsWith('uniform') || typeId.startsWith('shirt')) {
+                return <Shirt className={`${className} text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]`} />;
+            }
+            if (typeId.startsWith('bag')) {
+                return <Backpack className={`${className} text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]`} />;
+            }
+            if (typeId.startsWith('boots')) {
+                return <Footprints className={`${className} text-orange-400 drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]`} />;
+            }
+            if (typeId.startsWith('mobile')) { // Communication
+                return <Smartphone className={`${className} text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]`} />;
+            }
+            if (typeId.startsWith('pc')) { // Control Board
+                return <Monitor className={`${className} text-rose-400 drop-shadow-[0_0_8px_rgba(251,113,133,0.8)]`} />;
+            }
+            if (typeId === 'auto_excavator') { // Rig Frame
+                return <Truck className={`${className} text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]`} />;
+            }
+            if (typeId.startsWith('robot')) {
+                return <Bot className={`${className} text-yellow-500 animate-pulse drop-shadow-[0_0_8px_rgba(234,179,8,0.8)]`} />;
+            }
+            if (typeId === 'upgrade_chip') {
+                return <Cpu className={`${className} text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]`} />;
+            }
+            if (typeId === 'chest_key') {
+                return <Key className={`${className} text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]`} />;
+            }
+
+            return <InfinityGlove rarity={item.rarity} className={className} />;
         };
 
         return getNeonIcon(item.typeId);
@@ -156,9 +186,11 @@ export const RigCard: React.FC<RigCardProps> = ({
     const isInfiniteDurability = preset?.specialProperties?.infiniteDurability;
     const isZeroEnergy = preset?.specialProperties?.zeroEnergy;
 
-    const baseDurationMs = (rig.durationMonths * 30 * 24 * 60 * 60 * 1000) / speedMultiplier;
+    // Calculate duration based on Days or Months
+    const durationDaysTotal = rig.durationDays || (rig.durationMonths ? rig.durationMonths * 30 : 0) || (preset?.durationDays || (preset?.durationMonths || 0) * 30);
+    const baseDurationMs = (durationDaysTotal * 24 * 60 * 60 * 1000);
     // If Infinite Durability (999 months), show as infinite
-    const isInfiniteContract = rig.durationMonths >= 900;
+    const isInfiniteContract = (rig.durationMonths >= 900) || (preset?.specialProperties?.infiniteDurability === true);
 
     const now = Date.now();
     const bonusDurationMs = (rig.renewalCount || 0) * (RENEWAL_CONFIG.WINDOW_DAYS * 24 * 60 * 60 * 1000);
@@ -166,7 +198,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     const timeLeftMs = Math.max(0, expiryTime - now);
     const isExpired = !isInfiniteContract && timeLeftMs <= 0;
 
-    const durabilityMs = (REPAIR_CONFIG.DURABILITY_DAYS * 24 * 60 * 60 * 1000) / speedMultiplier;
+    const durabilityMs = (REPAIR_CONFIG.DURABILITY_DAYS * 24 * 60 * 60 * 1000);
     const timeSinceRepair = now - (rig.lastRepairAt || rig.purchasedAt);
     const healthPercent = (isInfiniteContract || isInfiniteDurability) ? 100 : Math.max(0, 100 * (1 - timeSinceRepair / durabilityMs));
     const isBroken = healthPercent <= 0;
@@ -174,8 +206,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     let baseRepairCost = isInfiniteDurability ? 0 : (rig.repairCost || (preset ? preset.repairCost : Math.floor(rig.investment * 0.06)));
     let energyCostPerDay = rig.energyCostPerDay || (preset ? preset.energyCostPerDay : 0);
 
-    const session = MockDB.getSession();
-    const currentUser = session ? MockDB.getAllUsers().find(u => u.id === session.id) : null;
+    const currentUser = rig.ownerId ? null : null; // MockDB usage replaced by null (will be hydrated by props/refresh if needed)
     const hasSilverBuff = (currentUser?.masteryPoints || 0) >= 300;
 
     // --- Hat Discount Logic ---
@@ -198,18 +229,37 @@ export const RigCard: React.FC<RigCardProps> = ({
                 if (match) {
                     const p = parseInt(match[1]);
                     discountMultiplier += (p / 100);
-                    hatDiscountText = `(Hat -${p}%)`;
+                    hatDiscountText = `(แหล่งจ่ายไฟ -${p}%)`;
                 }
             }
         }
     }
 
-    const repairCost = Math.floor(baseRepairCost * (1 - discountMultiplier));
+    const isVibranium = rig.investment === 0 || rig.name.includes('Vibranium');
+    const repairCost = isVibranium ? 0 : Math.floor(baseRepairCost * (1 - discountMultiplier));
 
-    const energyPercent = currentEnergyPercent;
+    const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || Date.now();
+    const elapsedMs = now - lastUpdate;
+
+    // Use speed multiplier (Demo only)
+    const speedMultiplier = isDemo ? DEMO_SPEED_MULTIPLIER : 1;
+
+    // BASE Energy Drain: 100% in 24 hours (4.166% per hour)
+    let drainRatePerHour = 4.166666666666667;
+
+    // OVERCLOCK: Double the drain rate
+    if (isOverclockActive) {
+        drainRatePerHour *= 2;
+    }
+
+    const elapsedHours = (elapsedMs * speedMultiplier) / (1000 * 60 * 60);
+    const drain = elapsedHours * drainRatePerHour;
+
+    const calculatedEnergyPercent = isZeroEnergy ? 100 : Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
+    const energyPercent = calculatedEnergyPercent;
     const isOutOfEnergy = energyPercent <= 0;
 
-    const daysRemaining = (timeLeftMs / (1000 * 60 * 60 * 24)) * speedMultiplier; // Display as normal days
+    const daysRemaining = (timeLeftMs / (1000 * 60 * 60 * 24)); // Display as normal days
     const isRenewable = !isInfiniteContract && daysRemaining <= RENEWAL_CONFIG.WINDOW_DAYS && (rig.renewalCount || 0) < RENEWAL_CONFIG.MAX_RENEWALS;
     const renewalDiscount = RENEWAL_CONFIG.DISCOUNT_PERCENT;
     const renewalCost = rig.investment * (1 - renewalDiscount);
@@ -228,7 +278,8 @@ export const RigCard: React.FC<RigCardProps> = ({
         else if (preset.id === 8) matTier = 6; // Vibranium
     }
 
-    const giftIntervalMs = (GIFT_CYCLE_DAYS * 24 * 60 * 60 * 1000) / speedMultiplier;
+    const overclockBoost = (isPowered && !isZeroEnergy && isOverclockActive) ? ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST : (isPowered && !isZeroEnergy) ? ENERGY_CONFIG.BOX_DROP_SPEED_BOOST : 1;
+    const giftIntervalMs = (GIFT_CYCLE_DAYS * 24 * 60 * 60 * 1000) / (overclockBoost);
     const lastGiftTime = rig.lastGiftAt || rig.purchasedAt;
     const nextGiftTime = lastGiftTime + giftIntervalMs;
     const isGiftAvailable = !isExpired && (now >= nextGiftTime);
@@ -241,11 +292,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     const aiRobotTimeLeft = aiRobotItem ? Math.max(0, aiRobotItem.expireAt - Date.now()) : 0;
 
     const formatTimeLeft = (ms: number) => {
-        // Correct display logic based on speed?
-        // If we want to show "Actual Real Time Remaining", just use ms.
-        // If we want to show "Game Time Remaining", multiply by speedMultiplier.
-        // Usually UI shows "Game Time".
-        const gameMs = ms * speedMultiplier;
+        const gameMs = ms;
 
         if (isInfiniteContract) return 'ถาวร (∞)';
         if (gameMs <= 0) return 'หมดสัญญา';
@@ -254,14 +301,11 @@ export const RigCard: React.FC<RigCardProps> = ({
         const minutes = Math.floor((gameMs % (1000 * 60 * 60)) / (1000 * 60));
 
         if (days > 0) return `${days}วัน ${hours}ชม.`;
-        // For demo, we might want to see seconds if it's very fast?
-        // But "24h -> 2min". 1 day game time = 2 min real time.
-        // If we show "Days", it's consistent.
         return `${hours}:${minutes.toString().padStart(2, '0')}:${Math.floor((gameMs % (1000 * 60)) / 1000).toString().padStart(2, '0')}`;
     };
 
     const formatGiftCooldown = (ms: number) => {
-        const gameMs = ms * speedMultiplier;
+        const gameMs = ms;
         const days = Math.floor(gameMs / (1000 * 60 * 60 * 24));
         const hours = Math.floor((gameMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         if (days > 0) return `${days}วัน`;
@@ -271,7 +315,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     };
 
     const formatSimpleTime = (ms: number) => {
-        const gameMs = ms * speedMultiplier;
+        const gameMs = ms;
         const days = Math.floor(gameMs / (1000 * 60 * 60 * 24));
         const hours = Math.floor((gameMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         if (days > 0) return `${days}วัน`;
@@ -280,7 +324,7 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     const animate = () => {
         const now = Date.now();
-        const timeElapsedSeconds = ((now - rig.lastClaimAt) / 1000) * speedMultiplier;
+        const timeElapsedSeconds = ((now - rig.lastClaimAt) / 1000);
         if (!isExpired && !isBroken && effectiveIsPowered && !isExploring && !isOutOfEnergy) {
             const minedValue = timeElapsedSeconds * totalRatePerSecond;
             const total = BASE_CLAIM_AMOUNT + minedValue;
@@ -315,8 +359,9 @@ export const RigCard: React.FC<RigCardProps> = ({
             const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || now;
             const elapsedMs = now - lastUpdate;
             // Apply speed multiplier for Demo mode (720x faster drain)
-            const elapsedHours = (elapsedMs * speedMultiplier) / (1000 * 60 * 60);
-            const drain = elapsedHours * 4.166666666666667; // 100% in 24 hours
+            const elapsedHours = (elapsedMs) / (1000 * 60 * 60);
+            const drainRate = isOverclockActive ? 8.333333333333334 : 4.166666666666667;
+            const drain = elapsedHours * drainRate;
             const calculatedEnergy = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
             setCurrentEnergyPercent(calculatedEnergy);
         };
@@ -325,13 +370,13 @@ export const RigCard: React.FC<RigCardProps> = ({
         const interval = setInterval(updateEnergy, 1000); // Update every second
 
         return () => clearInterval(interval);
-    }, [rig.energy, rig.lastEnergyUpdate, rig.purchasedAt, rig.name, speedMultiplier, isJustCharged]);
+    }, [rig.energy, rig.lastEnergyUpdate, rig.purchasedAt, rig.name, isJustCharged]);
 
     useEffect(() => {
         if (rig.currentMaterials !== undefined) {
             setCurrentMaterials(rig.currentMaterials);
         }
-        if (!isExpired && !isBroken && effectiveIsPowered && !isExploring && !isOutOfEnergy) {
+        if (!isExpired && !isBroken && !isExploring && !isOutOfEnergy) {
             materialIntervalRef.current = window.setInterval(() => {
                 setCurrentMaterials(prev => {
                     if (prev < 1) {
@@ -344,7 +389,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                     }
                     return prev;
                 });
-            }, MATERIAL_CONFIG.DROP_INTERVAL_MS);
+            }, MATERIAL_CONFIG.DROP_INTERVAL_MS / overclockBoost);
         }
         return () => {
             if (materialIntervalRef.current) clearInterval(materialIntervalRef.current);
@@ -416,8 +461,12 @@ export const RigCard: React.FC<RigCardProps> = ({
         e.stopPropagation();
         if (isGiftAvailable) {
             if (hasKey && !isOutOfEnergy) onClaimGift(rig.id);
-            else if (isOutOfEnergy) alert('เครื่องจักรไม่มีพลังงาน (Out of Energy)');
-            else alert('คุณต้องมี "กุญแจไขหีบ" เพื่อเปิดหีบสมบัติ (ซื้อได้ที่ร้านค้า ราคา 5 บาท)');
+            else if (isOutOfEnergy) {
+                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: 'เครื่องจักรไม่มีพลังงาน (Out of Energy)', type: 'ERROR', read: false, timestamp: Date.now() });
+            }
+            else {
+                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: 'คุณต้องมี "กุญแจเข้าเหมือง" เพื่อเปิดหีบสมบัติ (ซื้อได้ที่ร้านค้า ราคา 5 บาท)', type: 'ERROR', read: false, timestamp: Date.now() });
+            }
         }
     };
 
@@ -431,12 +480,12 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     const getTierStyles = () => {
         switch (currentTier) {
-            case 6: return { container: 'bg-stone-950 border-purple-500 shadow-lg', headerBg: 'bg-gradient-to-r from-purple-950 via-stone-900 to-stone-900', accentColor: 'text-purple-400', icon: <Cpu size={14} className="text-purple-400 animate-pulse" />, wrench: 'hidden' };
+            case 7: return { container: 'bg-stone-950 border-purple-500 shadow-lg', headerBg: 'bg-gradient-to-r from-purple-950 via-stone-900 to-stone-900', accentColor: 'text-purple-400', icon: <Cpu size={14} className="text-purple-400 animate-pulse" />, wrench: 'hidden' };
             case 5: return { container: 'bg-stone-950 border-yellow-500 shadow-lg', headerBg: 'bg-gradient-to-r from-yellow-900/50 via-stone-900 to-stone-900', accentColor: 'text-yellow-400', icon: <Crown size={14} className="text-yellow-400 fill-yellow-400/20" />, wrench: 'text-cyan-400' };
             case 4: return { container: 'bg-stone-950 border-orange-700 shadow-md', headerBg: 'bg-gradient-to-r from-orange-950 via-stone-900 to-stone-900', accentColor: 'text-orange-500', icon: <Hexagon size={14} className="text-orange-500" />, wrench: 'text-yellow-400' };
-            case 3: return { container: 'bg-stone-950 border-sky-600 shadow-md', headerBg: 'bg-gradient-to-r from-sky-950 via-stone-900 to-stone-900', accentColor: 'text-sky-400', icon: <Pickaxe size={14} className="text-sky-500" />, wrench: 'text-slate-300' };
-            case 2: return { container: 'bg-stone-950 border-emerald-600 shadow-md', headerBg: 'bg-gradient-to-r from-emerald-950 via-stone-900 to-stone-900', accentColor: 'text-emerald-400', icon: <Pickaxe size={14} className="text-emerald-500" />, wrench: 'text-orange-600' };
-            default: return { container: 'bg-stone-950 border-stone-800 shadow-sm', headerBg: 'bg-stone-900', accentColor: 'text-stone-400', icon: <Pickaxe size={14} className="text-stone-600" />, wrench: 'text-stone-500' };
+            case 3: return { container: 'bg-stone-950 border-sky-600 shadow-md', headerBg: 'bg-gradient-to-r from-sky-950 via-stone-900 to-stone-900', accentColor: 'text-sky-400', icon: <Home size={14} className="text-sky-500" />, wrench: 'text-slate-300' };
+            case 2: return { container: 'bg-stone-950 border-emerald-600 shadow-md', headerBg: 'bg-gradient-to-r from-emerald-950 via-stone-900 to-stone-900', accentColor: 'text-emerald-400', icon: <Home size={14} className="text-emerald-500" />, wrench: 'text-orange-600' };
+            default: return { container: 'bg-stone-950 border-stone-800 shadow-sm', headerBg: 'bg-stone-900', accentColor: 'text-stone-400', icon: <Home size={14} className="text-stone-600" />, wrench: 'text-stone-500' };
         }
     };
 
@@ -444,57 +493,38 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     const BatteryUI = ({ percent, colorClass, isEnergy = false }: { percent: number; colorClass: string, isEnergy?: boolean }) => {
         const segments = 5;
-        const filledSegments = Math.round((percent / 100) * segments);
+        const filledSegments = Math.ceil((percent / 100) * segments);
 
-        // Define glow color based on health/energy
-        const glowColor = percent <= 20 ? 'rgba(239, 68, 68, 0.8)' : percent <= 50 ? 'rgba(234, 179, 8, 0.8)' : isEnergy ? 'rgba(34, 197, 94, 0.8)' : 'rgba(16, 185, 129, 0.8)';
+        // Solid Colors matching reference
+        let barColor = 'bg-[#4ADE80]'; // Green
+        if (percent <= 20) barColor = 'bg-[#EF4444]'; // Red
+        else if (percent <= 40) barColor = 'bg-[#F97316]'; // Orange
+        else if (percent <= 60) barColor = 'bg-[#EAB308]'; // Yellow
 
-        // Calculate time left (24h basis)
-        const totalSeconds = (percent / 100) * 24 * 60 * 60;
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = Math.floor(totalSeconds % 60);
-        const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        // Remove pulse animation for cleaner look unless critical
+        const isCritical = percent <= 20;
 
         return (
-            <div className="w-11 h-11 rounded-xl border border-white/10 bg-black/60 flex items-center justify-center relative group shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
-                {/* Robust Battery Shell with Thick White Border */}
-                <div className="relative w-6 h-9 border-2 border-white rounded-[4px] p-[1.5px] flex flex-col-reverse gap-[1px] bg-black/40 shadow-[0_0_8px_rgba(255,255,255,0.3)]">
+            <div className="flex flex-col items-center gap-1">
+                {/* Battery Container */}
+                <div className="relative w-8 h-12 border-2 border-stone-400 rounded-md p-0.5 flex flex-col justify-end bg-stone-900/50">
                     {/* Battery Tip */}
-                    <div className="absolute -top-[5px] left-1/2 -translate-x-1/2 w-2.5 h-[3px] bg-white rounded-t-[1.5px] shadow-[0_0_5px_rgba(255,255,255,0.3)]" />
+                    <div className="absolute -top-[5px] left-1/2 -translate-x-1/2 w-4 h-[3px] bg-stone-400 rounded-t-sm" />
 
-                    {/* Thick Horizontal Segments */}
-                    {Array.from({ length: segments }).map((_, i) => (
-                        <div
-                            key={i}
-                            className={`w-full h-[5px] rounded-[1px] transition-all duration-700 ${i < filledSegments ? colorClass : 'bg-white/5'
-                                }`}
-                            style={i < filledSegments ? { boxShadow: `0 0 10px ${glowColor}` } : {}}
-                        />
-                    ))}
+                    {/* Segments Container */}
+                    <div className="flex flex-col-reverse w-full h-full gap-[1px]">
+                        {Array.from({ length: segments }).map((_, i) => (
+                            <div
+                                key={i}
+                                className={`w-full h-[18%] rounded-[1px] ${i < filledSegments ? barColor : 'bg-transparent'} ${isCritical && i < filledSegments ? 'animate-pulse' : ''}`}
+                            />
+                        ))}
+                    </div>
 
-                    {/* Large Glowing Lightning Bolt (if has health) */}
-                    {percent > 0 && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none drop-shadow-[0_0_3px_rgba(255,255,255,0.8)]">
-                            <Zap size={10} className="text-white fill-white animate-pulse" />
-                        </div>
-                    )}
+                    <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                        <span className="text-[10px] font-bold text-black">{percent.toFixed(0)}%</span>
+                    </div>
                 </div>
-
-                {/* Overall Neon Glow */}
-                <div className={`absolute inset-0 rounded-xl -z-10 blur-[10px] opacity-30 transition-all ${colorClass}`}></div>
-
-                {/* COUNTDOWN OVERLAY (Always visible for Energy, Hover for Durability) */}
-                {isEnergy ? (
-                    <div className="absolute inset-0 bg-black/80 rounded-xl flex flex-col items-center justify-center z-20 backdrop-blur-[1px]">
-                        <span className="text-[9px] font-black text-white leading-none tracking-tighter scale-90">{timeString}</span>
-                    </div>
-                ) : (
-                    <div className="absolute inset-0 bg-black/90 rounded-xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                        <span className="text-[10px] font-black text-white leading-none">{percent.toFixed(1)}%</span>
-                        <span className="text-[6px] font-bold text-stone-500 uppercase mt-0.5">Health</span>
-                    </div>
-                )}
             </div>
         );
     };
@@ -509,12 +539,12 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     return (
         <div className={`relative rounded-xl p-0.5 transition-all duration-300 sm:hover:-translate-y-1 group border 
-        ${globalMultiplier > 1 ? 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]' : styles.container.replace('bg-stone-950', '').replace('shadow-', '') + ' ' + styles.container}
+        ${((globalMultiplier || 1) > 1 || (reactorMultiplier || 1) > 1) ? 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]' : (styles?.container || '').replace('bg-stone-950', '').replace('shadow-', '') + ' ' + (styles?.container || '')}
     `}>
 
             <div className={`absolute inset-0 bg-stone-950`}></div>
             <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-[40px] opacity-20 
-          ${globalMultiplier > 1 ? 'bg-purple-500 opacity-40 animate-pulse' :
+          ${(globalMultiplier || 1) > 1 ? 'bg-purple-500 opacity-40 animate-pulse' :
                     currentTier >= 5 ? 'bg-yellow-500' : currentTier === 4 ? 'bg-orange-500' : currentTier === 3 ? 'bg-sky-500' : currentTier === 2 ? 'bg-emerald-500' : 'bg-stone-700'}
       `}></div>
 
@@ -524,7 +554,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <div className="bg-yellow-500/10 p-3 rounded-full mb-3">
                         <Coins className="text-yellow-500 animate-pulse" size={24} />
                     </div>
-                    <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">ยืนยันการเก็บเกี่ยว</h4>
+                    <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">ยืนยันการเคลมรายได้</h4>
                     <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">{currentAmount.toFixed(4)}</div>
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
                         <button onClick={(e) => { e.stopPropagation(); setIsConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">ยกเลิก</button>
@@ -532,14 +562,13 @@ export const RigCard: React.FC<RigCardProps> = ({
                     </div>
                 </div>
             )}
-
             {isExploring && (
                 <div className="absolute inset-0 z-50 bg-purple-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 text-center">
                     <div className="bg-purple-500/20 p-4 rounded-full mb-4 animate-[pulse_2s_infinite]">
                         <Skull className="text-purple-400" size={32} />
                     </div>
-                    <h4 className="text-purple-300 font-bold text-lg uppercase tracking-wider mb-2">กำลังสำรวจดันเจี้ยน</h4>
-                    <p className="text-purple-200/60 text-xs px-4">เครื่องจักรนี้หยุดทำงานชั่วคราวเพื่อสำรวจพื้นที่ลึกลับ</p>
+                    <h4 className="text-purple-300 font-bold text-lg uppercase tracking-wider mb-2">กำลังหาคนงานเหมือง</h4>
+                    <p className="text-purple-200/60 text-xs px-4">เครื่องนี้หยุดทำงานชั่วคราวเพื่อหาคนงานใหม่</p>
                 </div>
             )}
 
@@ -564,11 +593,11 @@ export const RigCard: React.FC<RigCardProps> = ({
                     </div>
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">ยืนยันการซ่อมแซม</h4>
                     <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">-{repairCost.toLocaleString()}</div>
-                    {hasSilverBuff && <div className="text-xs text-stone-500">(Silver Miner -5%)</div>}
+                    {hasSilverBuff && <div className="text-xs text-stone-500">(Silver Owner -5%)</div>}
                     {hatDiscountText && <div className="text-xs text-emerald-400">{hatDiscountText}</div>}
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
                         <button onClick={(e) => { e.stopPropagation(); setIsRepairConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">ยกเลิก</button>
-                        <button onClick={confirmRepair} className="py-2.5 rounded bg-red-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> ซ่อมทันที</button>
+                        <button onClick={confirmRepair} className="py-2.5 rounded bg-red-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> ซ่อมแซมทันที</button>
                     </div>
                 </div>
             )}
@@ -582,17 +611,17 @@ export const RigCard: React.FC<RigCardProps> = ({
 
             {isChargeConfirming && (
                 <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 text-center">
-                    <div className="bg-emerald-500/10 p-3 rounded-full mb-3">
-                        <Zap className="text-emerald-500 animate-pulse" size={24} />
+                    <div className="bg-orange-500/10 p-3 rounded-full mb-3">
+                        <Flame className="text-orange-500 animate-pulse" size={24} />
                     </div>
-                    <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">ยืนยันการชาร์จไฟ</h4>
+                    <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">ยืนยันการเติมพลังงาน</h4>
                     <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">
                         -{Math.max(0.1, ((100 - energyPercent) / 100) * energyCostPerDay).toFixed(2)}
                     </div>
-                    <div className="text-xs text-stone-500 mb-4">เติมพลังงานเต็ม 100%</div>
+                    <div className="text-xs text-stone-500 mb-4">ชาร์จพลังงานจนเต็ม 100%</div>
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
                         <button onClick={(e) => { e.stopPropagation(); setIsChargeConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">ยกเลิก</button>
-                        <button onClick={confirmCharge} className="py-2.5 rounded bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> ชาร์จทันที</button>
+                        <button onClick={confirmCharge} className="py-2.5 rounded bg-orange-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> เติมทันที</button>
                     </div>
                 </div>
             )}
@@ -615,9 +644,9 @@ export const RigCard: React.FC<RigCardProps> = ({
             <div className="relative rounded-[10px] h-full flex flex-col">
 
                 {/* Header Info */}
-                <div className={`flex justify-between items-start z-10 p-2 border-b ${globalMultiplier > 1 ? 'border-purple-500/50 bg-gradient-to-r from-purple-900/30 to-stone-900' : 'border-stone-800 ' + styles.headerBg} pb-3 relative`}>
+                <div className={`flex justify-between items-start z-10 p-2 border-b ${(globalMultiplier > 1 || reactorMultiplier > 1) ? 'border-purple-500/50 bg-gradient-to-r from-purple-900/30 to-stone-900' : 'border-stone-800 ' + styles.headerBg} pb-3 relative`}>
                     <div className="flex flex-col">
-                        <span className={`text-xs font-display font-bold uppercase tracking-widest flex items-center gap-1.5 drop-shadow-sm ${globalMultiplier > 1 ? 'text-white' : styles.accentColor}`}>
+                        <span className={`text-xs font-display font-bold uppercase tracking-widest flex items-center gap-1.5 drop-shadow-sm ${(globalMultiplier > 1 || reactorMultiplier > 1) ? 'text-white' : styles.accentColor}`}>
                             {React.cloneElement(styles.icon as React.ReactElement, { size: 12 })}
                             {rig.name}
                         </span>
@@ -634,10 +663,17 @@ export const RigCard: React.FC<RigCardProps> = ({
                     </div>
 
                     <div className="flex flex-col items-end gap-1">
-                        <div className={`px-1.5 py-0.5 rounded border text-[9px] flex items-center gap-1 shadow-sm ${globalMultiplier > 1 ? 'bg-purple-900/30 border-purple-500 text-purple-300' : 'bg-emerald-950/30 border-emerald-900/50 text-emerald-400'}`}>
+                        <div className={`px-1.5 py-0.5 rounded border text-[9px] flex items-center gap-1 shadow-sm ${isOverclockActive ? 'bg-emerald-900/50 border-emerald-500 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : (globalMultiplier > 1 || reactorMultiplier > 1) ? 'bg-purple-900/30 border-purple-500 text-purple-300' : 'bg-emerald-950/30 border-emerald-900/50 text-emerald-400'}`}>
                             <Clock size={10} />
-                            <span>+{totalDailyProfit.toFixed(1)}/วัน</span>
+                            <span className={isOverclockActive ? 'text-emerald-300 font-bold' : ''}>+{totalDailyProfit.toFixed(1)}/วัน</span>
+                            {isOverclockActive && <Zap size={10} className="text-yellow-400 animate-pulse" />}
                         </div>
+                        {isOverclockActive && (
+                            <div className="text-[9px] text-emerald-400 flex items-center gap-1 font-extrabold bg-emerald-950 border border-emerald-500 px-2 py-0.5 rounded animate-[pulse_1s_infinite] shadow-[0_0_15px_rgba(16,185,129,0.5)]">
+                                <Zap size={10} className="text-yellow-400 fill-yellow-400" />
+                                ⚡ OVERCLOCK x2 POWER
+                            </div>
+                        )}
                         <div className="flex flex-col items-end mb-1">
                             {rig.bonusProfit > 0 && !['พลั่วสนิมเขรอะ', 'สว่านพกพา'].includes(rig.name) && (
                                 <div className={`text-[9px] ${rarityConfig.color} flex items-center gap-1 font-bold`}>
@@ -678,9 +714,9 @@ export const RigCard: React.FC<RigCardProps> = ({
                                     {/* Tooltip */}
                                     <div className="absolute right-full top-0 mr-2 z-[60] bg-stone-900/95 text-xs text-white p-2 rounded-lg border border-yellow-500/30 shadow-xl opacity-0 hover:opacity-100 group-hover/glove:opacity-100 pointer-events-none transition-opacity min-w-[120px] backdrop-blur-sm">
                                         <div className="font-bold text-yellow-500 mb-1">{gloveItem.name}</div>
-                                        <div className="text-[10px] text-stone-400 flex items-center gap-1">
-                                            <Timer size={10} />
-                                            {formatTimeLeft(Math.max(0, gloveItem.expireAt - Date.now()))}
+                                        <div className="text-[10px] text-yellow-400 flex items-center gap-1">
+                                            <Star size={10} />
+                                            โบนัส: +{gloveItem.dailyBonus.toFixed(1)} / วัน
                                         </div>
                                     </div>
                                 </div>
@@ -698,7 +734,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                     {/* LEFT SIDEBAR: Battery & 4 Accessory Slots */}
                     <div className="flex flex-col items-center gap-3 pr-2 border-r border-stone-800/30">
                         <div className="flex flex-col items-center gap-2 mb-1 w-full max-w-[100px]">
-                            {/* TOP: Battery (Repurposed to Energy) */}
+                            {/* TOP: Battery (Energy Only) */}
                             <BatteryUI percent={energyPercent} colorClass={energyColor} isEnergy={true} />
 
                             {/* CHARGE BUTTON - Next to Battery */}
@@ -739,7 +775,32 @@ export const RigCard: React.FC<RigCardProps> = ({
                                     >
                                         {item ? (
                                             <div className="relative w-full h-full flex items-center justify-center bg-stone-800/50 rounded-lg">
-                                                {getAccessoryIcon(item, "w-5 h-5 text-yellow-100 drop-shadow-sm")}
+                                                {(() => {
+                                                    const name = item.name || '';
+                                                    const typeIdLower = (item.typeId || '').toLowerCase();
+
+                                                    let IconComp = InfinityGlove;
+                                                    let colorClass = "text-yellow-100 drop-shadow-sm";
+
+                                                    // priority check by name
+                                                    if (typeIdLower.startsWith('hat') || name.includes('หมวก') || name.includes('Helmet')) { IconComp = HardHat; colorClass = "text-emerald-400"; }
+                                                    else if (typeIdLower.startsWith('glasses') || name.includes('แว่น') || name.includes('Glasses')) { IconComp = Glasses; colorClass = "text-blue-400"; }
+                                                    else if (typeIdLower.startsWith('uniform') || typeIdLower.startsWith('shirt') || name.includes('ชุด') || name.includes('Uniform') || name.includes('Suit')) { IconComp = Shirt; colorClass = "text-orange-400"; }
+                                                    else if (typeIdLower.startsWith('bag') || name.includes('กระเป๋า') || name.includes('Bag') || name.includes('Backpack')) { IconComp = Backpack; colorClass = "text-purple-400"; }
+                                                    else if (typeIdLower.startsWith('boots') || name.includes('รองเท้า') || name.includes('Boots')) { IconComp = Footprints; colorClass = "text-yellow-400"; }
+                                                    else if (typeIdLower.startsWith('mobile') || name.includes('มือถือ') || name.includes('Mobile')) { IconComp = Smartphone; colorClass = "text-cyan-400"; }
+                                                    else if (typeIdLower.startsWith('pc') || name.includes('คอม') || name.includes('PC')) { IconComp = Monitor; colorClass = "text-rose-400"; }
+                                                    else if (typeIdLower.startsWith('robot') || name.includes('หุ่นยนต์') || name.includes('Robot')) { IconComp = Bot; colorClass = "text-fuchsia-400"; }
+                                                    else if (typeIdLower === 'auto_excavator' || name.includes('ระบบล็อค')) { IconComp = Zap; colorClass = "text-indigo-400"; }
+                                                    else if (typeIdLower === 'upgrade_chip' || name.includes('ชิป')) { IconComp = Cpu; colorClass = "text-blue-500"; }
+                                                    else if (typeIdLower === 'mixer' || name.includes('เครื่องผสม')) { IconComp = Factory; colorClass = "text-amber-500"; }
+                                                    else if (typeIdLower === 'magnifying_glass' || name.includes('แว่นขยาย')) { IconComp = Search; colorClass = "text-sky-400"; }
+
+                                                    if (IconComp === InfinityGlove) {
+                                                        return <InfinityGlove size={22} rarity={item.rarity} />;
+                                                    }
+                                                    return <IconComp size={20} className={colorClass} />;
+                                                })()}
                                                 <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 animate-[pulse_3s_infinite] pointer-events-none rounded-lg overflow-hidden"></div>
 
                                                 {/* Tooltip for Accessories */}
@@ -750,10 +811,10 @@ export const RigCard: React.FC<RigCardProps> = ({
                                                             {item.specialEffect}
                                                         </div>
                                                     )}
-                                                    <div className="text-[10px] text-stone-400 flex items-center gap-1">
-                                                        <Timer size={10} />
+                                                    <div className="text-[10px] text-yellow-400 flex items-center gap-1">
+                                                        <Star size={10} />
                                                         <span className="font-mono">
-                                                            {formatTimeLeft(Math.max(0, item.expireAt - Date.now()))}
+                                                            โบนัส: +{item.dailyBonus.toFixed(1)} / วัน
                                                         </span>
                                                     </div>
                                                 </div>
@@ -770,9 +831,50 @@ export const RigCard: React.FC<RigCardProps> = ({
                     </div>
 
                     <div className="flex-1 flex flex-col relative min-h-[160px]">
+
+                        {/* Center-Top Status Bar (Health/Durability) */}
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1 group/health">
+                            <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/5 shadow-lg">
+                                <Wrench size={10} className={`${healthPercent <= 20 ? 'text-red-500 animate-pulse' : 'text-stone-300'} drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]`} />
+
+                                <div className="flex gap-[2px] items-center">
+                                    {Array.from({ length: 10 }).map((_, i) => {
+                                        const segmentThreshold = (i + 1) * 10;
+                                        const isFilled = healthPercent >= segmentThreshold;
+
+                                        let segColor = 'bg-stone-800';
+                                        if (isFilled) {
+                                            if (healthPercent > 80) segColor = 'bg-[#4ADE80] shadow-[0_0_5px_rgba(74,222,128,0.5)]'; // Green
+                                            else if (healthPercent > 60) segColor = 'bg-[#A3E635] shadow-[0_0_5px_rgba(163,230,53,0.5)]'; // Yellow-Green
+                                            else if (healthPercent > 40) segColor = 'bg-[#EAB308] shadow-[0_0_5px_rgba(234,179,8,0.5)]'; // Yellow
+                                            else if (healthPercent > 20) segColor = 'bg-[#F97316] shadow-[0_0_5px_rgba(249,115,22,0.5)]'; // Orange
+                                            else segColor = 'bg-[#EF4444] shadow-[0_0_5px_rgba(239,68,68,0.5)] animate-pulse'; // Red
+                                        }
+
+                                        return (
+                                            <div
+                                                key={i}
+                                                className={`h-1.5 w-2 sm:w-2.5 rounded-[1px] transition-all duration-500 ${segColor}`}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                                <span className={`text-[9px] font-mono leading-none ${healthPercent <= 20 ? 'text-red-400 font-bold' : 'text-stone-400'}`}>
+                                    {Math.ceil(healthPercent)}%
+                                </span>
+                            </div>
+                        </div>
+
                         {/* Animation (Centered) */}
                         <div className="flex-1 flex items-center justify-center">
-                            <OilRigAnimation isActive={!isExpired && !isBroken && effectiveIsPowered && !isExploring && !isOutOfEnergy} rarity={rig.rarity} tier={currentTier} rigName={rig.name} />
+                            <OilRigAnimation
+                                isActive={!isExpired && !isBroken && !isExploring && !isOutOfEnergy}
+                                rarity={rig.rarity}
+                                tier={currentTier}
+                                rigName={rig.name}
+                                isOverclockActive={isOverclockActive}
+                            />
+
                         </div>
                     </div>
 
@@ -780,7 +882,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                         <div className="absolute top-3 right-3 z-20 flex flex-col items-center gap-2 pointer-events-auto">
 
                             {/* REPAIR BUTTON (Aligned with Battery) */}
-                            {!isInfiniteDurability && (
+                            {!isInfiniteDurability && !isVibranium && (
                                 <button
                                     onClick={handleRepairClick}
                                     disabled={isExploring}
@@ -886,7 +988,7 @@ export const RigCard: React.FC<RigCardProps> = ({
 
                                 <div className="flex flex-col">
                                     <span className={`text-[10px] font-bold uppercase tracking-wide ${currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-400'}`}>
-                                        {currentMaterials > 0 ? 'กุญแจไขหีบ' : 'รอการค้นพบ'}
+                                        {currentMaterials > 0 ? 'กุญแจเข้าเหมือง' : 'รอการค้นพบ'}
                                     </span>
                                     <div className="flex gap-2 text-[10px] items-center mt-0.5">
                                         {currentMaterials > 0 ? <span className="text-red-500 font-extrabold tracking-wider bg-red-950/30 px-1 rounded">เต็ม (FULL)</span> : <span className="text-stone-600">ความจุ 1</span>}
@@ -908,6 +1010,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <div className="flex justify-between items-end px-1 border-t border-stone-800/50 pt-3">
                         <div className="text-right w-full">
                             <div className={`text-xl font-mono font-bold tabular-nums flex items-center justify-end gap-1 text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.1)]`}>
+                                {isOverclockActive && <span className="text-emerald-400 text-xs mr-0.5 animate-pulse">x2</span>}
                                 {currentAmount.toFixed(4)} <Sparkles size={12} className={!isExpired && !isBroken && isPowered && !isExploring ? "animate-pulse text-yellow-500" : "hidden"} />
                             </div>
                         </div>
@@ -947,7 +1050,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                             ? 'bg-red-600 hover:bg-red-500 text-white border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.4)] cursor-pointer'
                                             : !effectiveIsPowered
                                                 ? 'bg-orange-900/20 text-orange-500 border-orange-900/50 cursor-not-allowed'
-                                                : currentTier === 6
+                                                : currentTier === 7
                                                     ? 'bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 text-white border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:shadow-[0_0_30px_rgba(168,85,247,0.7)]'
                                                     : currentTier >= 5
                                                         ? 'bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 text-black border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)] hover:shadow-[0_0_25px_rgba(234,179,8,0.6)]'
@@ -963,13 +1066,22 @@ export const RigCard: React.FC<RigCardProps> = ({
                         >
                             {isExploring ? (
                                 <><Skull size={18} /> กำลังสำรวจ...</>
-                            ) : isBroken && !isExpired ? (
-                                <><Wrench size={18} /> ซ่อม ({baseRepairCost})</>
+                            ) : isBroken && !isExpired && !isVibranium ? (
+                                <><Wrench size={18} /> ซ่อมแซม ({baseRepairCost})</>
                             ) : !effectiveIsPowered && !isExpired ? (
                                 <><ZapOff size={18} /> พลังงานหมด</>
                             ) : (
-                                <><Coins size={18} strokeWidth={2.5} /> {isExpired ? 'หมดอายุ' : 'เก็บผลผลิต'}</>
+                                <><Coins size={18} strokeWidth={2.5} /> {isExpired ? 'หมดอายุ' : 'เก็บค่าเช่า'}</>
                             )}
+                        </button>
+                    )}
+
+                    {isExpired && (
+                        <button
+                            onClick={handleDestroyClick}
+                            className="w-full font-bold py-2 rounded border border-red-500 bg-red-900/20 hover:bg-red-500 text-red-500 hover:text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-wider"
+                        >
+                            <Trash2 size={18} /> ทุบทิ้ง (Destroy)
                         </button>
                     )}
                 </div>

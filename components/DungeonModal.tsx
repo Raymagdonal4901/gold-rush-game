@@ -5,15 +5,17 @@ import { X, Skull, Flame, Rocket, Clock, Coins, Key, ArrowRight, Timer, CheckCir
 import { DUNGEON_CONFIG, CURRENCY, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
 import { MockDB } from '../services/db';
 import { User, Expedition, OilRig, AccessoryItem } from '../services/types';
+import { api } from '../services/api';
 
 interface DungeonModalProps {
     isOpen: boolean;
     onClose: () => void;
     user: User;
     onRefresh: () => void;
+    addNotification?: (n: any) => void;
 }
 
-export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, user, onRefresh }) => {
+export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, user, onRefresh, addNotification }) => {
     const [activeExpedition, setActiveExpedition] = useState<Expedition | null>(null);
     const [selectedDungeonId, setSelectedDungeonId] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState<string>('');
@@ -61,9 +63,12 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
     // Timer Effect
     useEffect(() => {
         if (!activeExpedition) return;
-        const interval = setInterval(() => {
+
+        const updateTimer = () => {
             const now = Date.now();
-            const ms = activeExpedition.endTime - now;
+            const endTime = new Date(activeExpedition.endTime).getTime(); // Handle potential string from backend
+            const ms = endTime - now;
+
             if (ms <= 0) {
                 setTimeLeft('พร้อมรับรางวัล');
             } else {
@@ -72,66 +77,126 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                 const s = Math.floor((ms % (1000 * 60)) / 1000);
                 setTimeLeft(`${h}h ${m}m ${s}s`);
             }
-        }, 1000);
+        };
+
+        // Call immediately to avoid 1s initial empty state
+        updateTimer();
+
+        const interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
     }, [activeExpedition]);
 
     if (!isOpen) return null;
 
-    const handleStart = (dungeonId: number, useKey: boolean = false) => {
+    const handleStart = async (dungeonId: number, useKey: boolean = false) => {
         if (!selectedRigId) {
-            alert("กรุณาเลือกเครื่องขุดที่จะส่งไปสำรวจ");
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: user.id,
+                message: "กรุณาเลือกเครื่องขุดที่จะส่งไปสำรวจ",
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
             return;
         }
         setIsProcessing(true);
         try {
-            MockDB.startExpedition(user.id, dungeonId, useKey, selectedRigId);
+            if (user.isDemo) {
+                MockDB.startExpedition(user.id, dungeonId, useKey, selectedRigId);
+                // Sync stats to Backend (Mock)
+                api.user.incrementStats({ weeklyStats: { dungeonsEntered: 1 } }).catch(console.error);
+            } else {
+                await api.dungeon.start(dungeonId, selectedRigId, useKey);
+            }
+
             onRefresh();
             setActiveExpedition(user.activeExpedition || null);
             setSelectedDungeonId(null);
             setSelectedRigId(null);
         } catch (e: any) {
-            alert(e.message);
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: user.id,
+                message: e.response?.data?.message || e.message,
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
         } finally {
             setIsProcessing(false);
         }
     };
 
-    const handleClaim = () => {
+    const handleClaim = async () => {
         setIsProcessing(true);
         try {
-            const res = MockDB.claimExpedition(user.id);
+            let res;
+            if (user.isDemo) {
+                res = MockDB.claimExpedition(user.id);
+            } else {
+                res = await api.dungeon.claim();
+            }
             // IMPORTANT: Update local state BEFORE triggering refresh
-            // This ensures React batches these updates together
             setActiveExpedition(null);
             setClaimResult(res);
             // Now refresh parent data
             onRefresh();
         } catch (e: any) {
             console.error("Claim Expedition Error:", e);
-            alert(e.message || "Failed to claim reward");
+            // Clear stale state if backend says no expedition exists
+            const errorMsg = e.response?.data?.message || e.message || "";
+            if (errorMsg.includes('ไม่มีการสำรวจ') || errorMsg.includes('No active expedition')) {
+                setActiveExpedition(null);
+                onRefresh(); // Sync with backend
+            }
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: user.id,
+                message: errorMsg || "Failed to claim reward",
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
         } finally {
             setIsProcessing(false);
         }
     };
 
-    const handleUseTimeSkip = (itemId: string) => {
+    const handleUseTimeSkip = async (itemId: string) => {
         try {
-            MockDB.skipExpeditionTime(user.id, itemId);
+            if (user.isDemo) {
+                MockDB.skipExpeditionTime(user.id, itemId);
+            } else {
+                await api.dungeon.skip(itemId);
+            }
             onRefresh(); // Refresh user data to update inventory and expedition time
+
             // Re-fetch local state for animation smoothness
-            const updatedUser = MockDB.getAllUsers().find(u => u.id === user.id);
-            if (updatedUser) {
-                setActiveExpedition(updatedUser.activeExpedition || null);
-                const inv = updatedUser.inventory || [];
-                setHourglasses({
-                    small: inv.filter(i => i.typeId === 'hourglass_small').length,
-                    medium: inv.filter(i => i.typeId === 'hourglass_medium').length,
-                    large: inv.filter(i => i.typeId === 'hourglass_large').length,
-                });
+            // For real users, onRefresh() updates the 'user' prop after a bit, 
+            // but we can optimistically set it or wait for next render.
+            // For now, let's just let onRefresh do its job.
+            if (user.isDemo) {
+                const updatedUser = MockDB.getAllUsers().find(u => u.id === user.id);
+                if (updatedUser) {
+                    setActiveExpedition(updatedUser.activeExpedition || null);
+                    const inv = updatedUser.inventory || [];
+                    setHourglasses({
+                        small: inv.filter(i => i.typeId === 'hourglass_small').length,
+                        medium: inv.filter(i => i.typeId === 'hourglass_medium').length,
+                        large: inv.filter(i => i.typeId === 'hourglass_large').length,
+                    });
+                }
             }
         } catch (e: any) {
-            alert(e.message);
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: user.id,
+                message: e.response?.data?.message || e.message,
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
         }
     };
 
@@ -159,7 +224,13 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                             <Skull size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-display font-bold text-white">เหมืองลับ (Secret Dungeon)</h2>
+                            <h2 className="text-xl font-display font-bold text-white">
+                                {activeExpedition
+                                    ? DUNGEON_CONFIG.find(d => d.id === activeExpedition.dungeonId)?.name
+                                    : selectedDungeonId
+                                        ? DUNGEON_CONFIG.find(d => d.id === selectedDungeonId)?.name
+                                        : 'เลือกแหล่งสำรวจ (Select Exploration Site)'}
+                            </h2>
                             <p className="text-xs text-stone-500 uppercase tracking-wider">ส่งเครื่องขุดไปสำรวจเพื่อรับรางวัล</p>
                         </div>
                     </div>
@@ -179,7 +250,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                             </div>
 
                             <div className="text-center">
-                                <h3 className="text-2xl font-bold text-white mb-2">กำลังสำรวจ...</h3>
+                                <h3 className="text-2xl font-bold text-white mb-2">กำลังสำรวจแหล่งแร่...</h3>
                                 <div className="text-4xl font-mono font-bold text-purple-400 mb-4">{timeLeft}</div>
                                 <p className="text-stone-500 text-sm bg-stone-900/50 px-4 py-2 rounded-full border border-stone-800 inline-block">
                                     {DUNGEON_CONFIG.find(d => d.id === activeExpedition.dungeonId)?.name}
@@ -283,7 +354,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                         <div className="flex flex-col h-full animate-in slide-in-from-right">
                             <div className="flex items-center gap-2 mb-4">
                                 <button onClick={() => setSelectedDungeonId(null)} className="text-stone-500 hover:text-white"><ArrowRight className="rotate-180" /></button>
-                                <h3 className="text-lg font-bold text-white">เลือกเครื่องขุดเพื่อส่งสำรวจ</h3>
+                                <h3 className="text-lg font-bold text-white">เลือกเครื่องขุดเพื่อส่งไปพื้นที่สำรวจ</h3>
                             </div>
 
                             <div className="bg-blue-900/20 border border-blue-900/50 p-3 rounded-lg mb-4 text-xs text-blue-300 flex items-start gap-2">
@@ -341,7 +412,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                                     disabled={!selectedRigId}
                                                     className="py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg text-[10px] md:text-sm"
                                                 >
-                                                    <Key size={14} /> ใช้กุญแจ {dungeon.keyCost} ดอก
+                                                    <Key size={14} /> ใช้กุญแจเข้าเหมือง {dungeon.keyCost} ดอก
                                                 </button>
                                             </div>
                                         );
@@ -349,10 +420,12 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                         return (
                                             <button
                                                 onClick={() => handleStart(dungeon.id, false)}
-                                                disabled={!selectedRigId}
+                                                disabled={!selectedRigId || user.balance < dungeon.cost}
                                                 className="w-full py-3 bg-stone-800 hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold border border-stone-600"
                                             >
-                                                เริ่มสำรวจ (จ่าย {dungeon.cost.toLocaleString()} {CURRENCY})
+                                                {!selectedRigId ? 'กรุณาเลือกเครื่องขุด' :
+                                                    user.balance < dungeon.cost ? 'ยอดเงินไม่เพียงพอ' :
+                                                        `เริ่มสำรวจ (จ่าย ${dungeon.cost.toLocaleString()} ${CURRENCY})`}
                                             </button>
                                         );
                                     }
@@ -367,26 +440,30 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
 
                                     {/* HOVER TOOLTIP OVERLAY */}
                                     <div className="absolute inset-x-0 top-0 bottom-[50px] bg-stone-950/95 backdrop-blur-sm z-20 flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-t-xl overflow-hidden p-4">
-                                        <div className="text-center font-bold text-white mb-2 border-b border-stone-800 pb-2 text-sm shrink-0">รางวัลที่ค้นพบได้</div>
+                                        <div className="text-center font-bold text-white mb-2 border-b border-stone-800 pb-2 text-sm shrink-0">
+                                            {dungeon.id === 1 ? 'รางวัล (สุ่มได้รับ)' : 'รางวัล (ทั่วไป + Jackpot)'}
+                                        </div>
                                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
                                             {/* Jackpot */}
-                                            <div>
-                                                <div className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Sparkles size={10} /> Jackpot (Rare)</div>
-                                                <ul className="text-[10px] text-yellow-100 space-y-1">
-                                                    {dungeon.rewards.rare.map((r, i) => {
-                                                        if (r.tier !== undefined) {
-                                                            const name = MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES];
-                                                            return <li key={i} className="flex justify-between"><span>• {name}</span> <span>x{r.amount}</span></li>
-                                                        } else {
-                                                            const item = SHOP_ITEMS.find(s => s.id === r.itemId);
-                                                            return <li key={i} className="flex justify-between"><span>• {item?.name || r.itemId}</span> <span>x{r.amount}</span></li>
-                                                        }
-                                                    })}
-                                                </ul>
-                                            </div>
+                                            {dungeon.id !== 1 && (
+                                                <div>
+                                                    <div className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Sparkles size={10} /> Jackpot (100%)</div>
+                                                    <ul className="text-[10px] text-yellow-100 space-y-1">
+                                                        {dungeon.rewards.rare.map((r, i) => {
+                                                            if (r.tier !== undefined) {
+                                                                const name = MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES];
+                                                                return <li key={i} className="flex justify-between"><span>• {name}</span> <span>x{r.amount}</span></li>
+                                                            } else {
+                                                                const item = SHOP_ITEMS.find(s => s.id === r.itemId);
+                                                                return <li key={i} className="flex justify-between"><span>• {item?.name || r.itemId}</span> <span>x{r.amount}</span></li>
+                                                            }
+                                                        })}
+                                                    </ul>
+                                                </div>
+                                            )}
                                             {/* Common */}
                                             <div>
-                                                <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">ทั่วไป (Common)</div>
+                                                <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">ทั่วไป (80%)</div>
                                                 <ul className="text-[10px] text-stone-300 space-y-1">
                                                     {dungeon.rewards.common.map((r, i) => (
                                                         <li key={i} className="flex justify-between"><span>• {MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span> <span>x{r.amount}</span></li>
@@ -395,7 +472,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                             </div>
                                             {/* Salt */}
                                             <div>
-                                                <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">เกลือ (Salt)</div>
+                                                <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">เกลือ (20%)</div>
                                                 <ul className="text-[10px] text-stone-500 space-y-1">
                                                     {dungeon.rewards.salt.map((r, i) => (
                                                         <li key={i} className="flex justify-between"><span>• {MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span> <span>x{r.amount}</span></li>
@@ -420,8 +497,10 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                             <div className="space-y-1 pt-1">
                                                 <div className="text-[10px] text-stone-500 uppercase font-bold">โอกาสได้รับ</div>
                                                 <div className="flex justify-between"><span>ทั่วไป</span><span className="text-emerald-400">80%</span></div>
-                                                <div className="flex justify-between"><span>เกลือ</span><span className="text-stone-500">15-19%</span></div>
-                                                <div className="flex justify-between"><span>Jackpot</span><span className="text-yellow-500">1-5%</span></div>
+                                                <div className="flex justify-between"><span>เกลือ</span><span className="text-stone-500">20%</span></div>
+                                                {dungeon.id !== 1 && (
+                                                    <div className="flex justify-between"><span>Jackpot</span><span className="text-yellow-500">100%</span></div>
+                                                )}
                                             </div>
                                         </div>
 

@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, seedAdmin, getProfile, refillEnergy } from '../controllers/authController';
+import { register, login, seedAdmin, getProfile, refillEnergy, updateBankQr } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
@@ -9,5 +9,6 @@ router.post('/login', login);
 router.get('/me', authenticate, getProfile);
 router.post('/refill-energy', authenticate, refillEnergy);
 router.get('/seed-admin', seedAdmin);
+router.post('/update-bank-qr', authenticate, updateBankQr);
 
 export default router;

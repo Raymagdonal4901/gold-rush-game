@@ -2,7 +2,7 @@
 import React from 'react';
 import { X, Crown, Star, Check } from 'lucide-react';
 import { VIP_TIERS, CURRENCY } from '../constants';
-import { User } from '../types';
+import { User } from '../services/types';
 
 interface VIPModalProps {
     isOpen: boolean;

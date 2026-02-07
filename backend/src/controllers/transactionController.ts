@@ -34,14 +34,12 @@ export const createWithdrawalRequest = async (req: AuthRequest, res: Response) =
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Verify PIN
-        if (!pin) {
-            return res.status(400).json({ message: 'กรุณากรอกรหัส PIN' });
-        }
-
-        const isPinMatch = await bcrypt.compare(pin, user.pin || '');
-        if (!isPinMatch) {
-            return res.status(400).json({ message: 'รหัส PIN ไม่ถูกต้อง' });
+        // Verify PIN (Optional if bypassed by frontend)
+        if (pin) {
+            const isPinMatch = await bcrypt.compare(pin, user.pin || '');
+            if (!isPinMatch) {
+                return res.status(400).json({ message: 'รหัส PIN ไม่ถูกต้อง' });
+            }
         }
 
         if (user.balance < amount) {
@@ -56,6 +54,7 @@ export const createWithdrawalRequest = async (req: AuthRequest, res: Response) =
             userId,
             username: user.username,
             amount,
+            bankQrCode: user.bankQrCode,
             status: 'PENDING'
         });
 
@@ -75,15 +74,63 @@ export const getMyHistory = async (req: AuthRequest, res: Response) => {
         const claims = await ClaimRequest.find({ userId }).lean();
         const transactions = await Transaction.find({ userId }).lean();
 
-        // Combine and sort by date
+        // Combine and handle various formats
         const history = [
-            ...deposits.map(d => ({ ...d, type: 'DEPOSIT' })),
-            ...withdrawals.map(w => ({ ...w, type: 'WITHDRAWAL', amount: -w.amount })),
-            ...claims.map(c => ({ ...c, type: 'MINING_CLAIM' })),
-            ...transactions
+            ...deposits.map(d => ({
+                id: d._id,
+                type: 'DEPOSIT',
+                amount: d.amount,
+                description: `ฝากเงินผ่านระบบ`,
+                status: d.status,
+                timestamp: d.createdAt
+            })),
+            ...withdrawals.map(w => ({
+                id: w._id,
+                type: 'WITHDRAWAL',
+                amount: -w.amount,
+                description: `ถอนเงินคงเหลือ`,
+                status: w.status,
+                timestamp: w.createdAt
+            })),
+            ...claims.map(c => ({
+                id: c._id,
+                type: 'MINING_CLAIM',
+                amount: c.amount,
+                description: `เก็บผลผลิตจากเครื่องขุด: ${c.rigName || 'N/A'}`,
+                status: c.status,
+                timestamp: c.createdAt
+            })),
+            ...transactions.map(tx => {
+                let amount = tx.amount;
+                const spendingTypes = [
+                    'ASSET_PURCHASE', 'ACCESSORY_PURCHASE', 'ACCESSORY_UPGRADE',
+                    'REPAIR', 'ENERGY_REFILL', 'MATERIAL_BUY', 'MARKET_TAX',
+                    'DUNGEON_ENTRY', 'SLOT_EXPANSION', 'RIG_RENEWAL',
+                    'ACCESSORY_CRAFT_START', 'MATERIAL_CRAFT'
+                ];
+
+                // If it's a spending type and amount is positive, flip it
+                if (spendingTypes.includes(tx.type) && amount > 0) {
+                    amount = -amount;
+                }
+
+                // Handle Lucky Draw cost vs reward
+                if (tx.type === 'LUCKY_DRAW' && tx.description.includes('เล่นเสี่ยงโชค') && amount > 0) {
+                    amount = -amount;
+                }
+
+                return {
+                    id: tx._id || tx.id,
+                    type: tx.type,
+                    amount: amount,
+                    description: tx.description,
+                    status: tx.status,
+                    timestamp: tx.timestamp
+                };
+            })
         ].sort((a: any, b: any) => {
-            const dateA = new Date(a.createdAt || a.timestamp || 0).getTime();
-            const dateB = new Date(b.createdAt || b.timestamp || 0).getTime();
+            const dateA = new Date(a.timestamp || 0).getTime();
+            const dateB = new Date(b.timestamp || 0).getTime();
             return dateB - dateA;
         });
 

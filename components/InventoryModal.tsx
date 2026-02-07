@@ -1,12 +1,12 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { X, Backpack, DollarSign, ArrowUpCircle, Cpu, Hammer, HardHat, Glasses, Shirt, Footprints, Smartphone, Monitor, Bot, Truck, ShoppingBag, Sparkles, AlertTriangle, Hourglass, Search, Factory, Key, FileText, Timer } from 'lucide-react';
+import { X, Backpack, DollarSign, ArrowUpCircle, Cpu, Hammer, HardHat, Glasses, Shirt, Footprints, Smartphone, Monitor, Bot, Truck, ShoppingBag, Sparkles, AlertTriangle, Hourglass, Search, Factory, Key, FileText, Timer, Shield, Gem, Star, TrendingUp, TrendingDown } from 'lucide-react';
 import { AccessoryItem } from '../services/types';
 import { CURRENCY, RARITY_SETTINGS, UPGRADE_REQUIREMENTS, MATERIAL_CONFIG } from '../constants';
-import { MockDB } from '../services/db';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
+import { api } from '../services/api';
 
 interface InventoryModalProps {
     isOpen: boolean;
@@ -14,15 +14,18 @@ interface InventoryModalProps {
     inventory: AccessoryItem[];
     userId: string;
     onRefresh: () => void;
+    marketState?: any; // Use any for brevity or import MarketState
+    materials?: Record<number, number>; // Pass materials to show total value
 }
 
-export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose, inventory, userId, onRefresh }) => {
+export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose, inventory, userId, onRefresh, marketState, materials = {} }) => {
     const [selectedItem, setSelectedItem] = useState<AccessoryItem | null>(null);
     const [action, setAction] = useState<'DETAILS' | 'UPGRADE' | 'SELL'>('DETAILS');
     const [msg, setMsg] = useState('');
 
     const [animationStep, setAnimationStep] = useState<'IDLE' | 'PREPARE' | 'HAMMER' | 'IMPACT' | 'RESULT'>('IDLE');
     const [upgradeResult, setUpgradeResult] = useState<{ success: boolean, newItem?: AccessoryItem } | null>(null);
+    const [rigs, setRigs] = useState<any[]>([]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -31,44 +34,110 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
             setAnimationStep('IDLE');
             setUpgradeResult(null);
             setMsg('');
+            api.getMyRigs().then(setRigs).catch(console.error);
         }
     }, [isOpen]);
 
     if (!isOpen) return null;
 
-    const rigs = MockDB.getMyRigs(userId);
+    // rigs is now a state
     const equippedIds = new Set<string>();
-    rigs.forEach(r => r.slots?.forEach(s => { if (s) equippedIds.add(s); }));
+    rigs.forEach(r => r.slots?.forEach((s: any) => { if (s) equippedIds.add(s); }));
 
-    const getIcon = (typeId: string, className: string, rarity: any) => {
+    // Group items by typeId
+    const groupedInventory = React.useMemo(() => {
+        const groups: Record<string, { representative: AccessoryItem, count: number, allIds: string[] }> = {};
+        inventory.forEach(item => {
+            const key = `${item.typeId}_${item.level || 1}_${item.rarity}`;
+            if (!groups[key]) {
+                groups[key] = { representative: item, count: 0, allIds: [] };
+            }
+            groups[key].count++;
+            groups[key].allIds.push(item.id);
+        });
+        return Object.values(groups);
+    }, [inventory]);
+
+    const totalMaterialsValue = React.useMemo(() => {
+        if (!marketState?.trends || !materials) return 0;
+        return Object.entries(materials).reduce((acc, [tier, count]) => {
+            const price = marketState.trends[Number(tier)]?.currentPrice || (MATERIAL_CONFIG.PRICES as any)[tier] || 0;
+            return acc + (price * (count as number));
+        }, 0);
+    }, [marketState, materials]);
+
+    const getItemDisplayName = (item: any) => {
+        const typeId = item.typeId || '';
+        const name = item.name || '';
+        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return 'กุญแจเข้าเหมือง';
+        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return 'ชิปอัปเกรด';
+        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return 'โต๊ะช่างสกัดแร่';
+        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return 'แว่นขยายส่องแร่';
+        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return 'หุ่นยนต์ AI';
+        return name;
+    };
+
+    const getIcon = (item: AccessoryItem, className: string) => {
+        let typeId = item.typeId || '';
+        const name = item.name || '';
+        const rarity = item.rarity;
+
+        // Name-based overrides to consistent with AccessoryManagementModal
+        if (name.includes('ชิป') || name.includes('Chip')) typeId = 'upgrade_chip';
+        else if (name.includes('กุญแจ') || name.includes('Key')) typeId = 'chest_key';
+        else if (name.includes('เครื่องผสม') || name.includes('Mixer')) typeId = 'mixer';
+        else if (name.includes('แว่นขยาย') || name.includes('Magnifying')) typeId = 'magnifying_glass';
+        else if (name.includes('ใบประกัน') || name.includes('Insurance')) typeId = 'insurance_card';
+        else if (name.includes('นาฬิกาทราย') || name.includes('Hourglass')) typeId = 'hourglass_small';
+        else if (name.includes('วัสดุปริศนา') || name.includes('Mystery Material')) typeId = 'mystery_ore';
+        else if (name.includes('วัสดุในตำนาน') || name.includes('Legendary Material')) typeId = 'legendary_ore';
+        else if (name.includes('ระบบล็อค') || name.includes('Auto Lock')) typeId = 'auto_excavator';
+        else if (name.includes('หุ่นยนต์') || name.includes('Robot')) typeId = 'robot';
+        // Classic Equipment Fallbacks
+        else if (name.includes('หมวก') || name.includes('Helmet')) typeId = 'hat';
+        else if (name.includes('แว่น') || name.includes('Glasses')) typeId = 'glasses';
+        else if (name.includes('ชุด') || name.includes('Uniform') || name.includes('Suit')) typeId = 'uniform';
+        else if (name.includes('กระเป๋า') || name.includes('Bag') || name.includes('Backpack')) typeId = 'bag';
+        else if (name.includes('รองเท้า') || name.includes('Boots')) typeId = 'boots';
+        else if (name.includes('มือถือ') || name.includes('Mobile') || name.includes('Phone')) typeId = 'mobile';
+        else if (name.includes('คอม') || name.includes('PC') || name.includes('Computer')) typeId = 'pc';
+
+        if (!typeId) return <InfinityGlove rarity={rarity} className={className} />;
+        if (typeId.includes('glove')) return <InfinityGlove rarity={rarity} className={className} />;
+
+        if (typeId.startsWith('hat')) return <HardHat className={className} />;
+        if (typeId.startsWith('glasses')) return <Glasses className={className} />;
+        if (typeId.startsWith('uniform') || typeId.startsWith('shirt')) return <Shirt className={className} />;
+        if (typeId.startsWith('bag')) return <Backpack className={className} />;
+        if (typeId.startsWith('boots')) return <Footprints className={className} />;
+        if (typeId.startsWith('mobile')) return <Smartphone className={className} />;
+        if (typeId.startsWith('pc')) return <Monitor className={className} />;
+        if (typeId.startsWith('robot')) return <Bot className={className} />;
+        if (typeId === 'auto_excavator' || typeId.startsWith('truck')) return <Truck className={className} />;
+        if (typeId === 'upgrade_chip' || typeId.startsWith('chip')) return <Cpu className={className} />;
+        if (typeId.startsWith('hourglass')) return <Hourglass className={className} />;
+        if (typeId === 'chest_key' || typeId.startsWith('key')) return <Key className={className} />;
+        if (typeId === 'mixer') return <Factory className={className} />;
+        if (typeId === 'magnifying_glass') return <Search className={className} />;
+        if (typeId === 'insurance_card') return <FileText className={className} />;
+        if (typeId === 'FileText') return <FileText className={className} />;
+        if (typeId === 'mystery_ore') return <Sparkles className={className} />;
+        if (typeId === 'legendary_ore') return <Gem className={className} />;
+
         switch (typeId) {
-            case 'hat': return <HardHat className={className} />;
-            case 'glasses': return <Glasses className={className} />;
-            case 'uniform': return <Shirt className={className} />;
-            case 'bag': return <Backpack className={className} />;
-            case 'boots': return <Footprints className={className} />;
-            case 'mobile': return <Smartphone className={className} />;
-            case 'pc': return <Monitor className={className} />;
-            case 'robot': return <Bot className={className} />;
-            case 'auto_excavator': return <Truck className={className} />;
-            case 'upgrade_chip': return <Cpu className={className} />;
-            case 'chest_key': return <Key className={className} />;
-            case 'mixer': return <Factory className={className} />;
-            case 'magnifying_glass': return <Search className={className} />;
-            case 'insurance_card': return <FileText className={className} />;
-            case 'FileText': return <FileText className={className} />;
-            case 'hourglass_small':
-            case 'hourglass_medium':
-            case 'hourglass_large': return <Hourglass className={className} />;
-            default: return <InfinityGlove rarity={rarity} className={className} />;
+            case 'miner_card_bronze':
+            case 'miner_card_silver':
+            case 'miner_card_gold':
+                return <Shield className={className} />;
+            default:
+                return <InfinityGlove rarity={rarity} className={className} />;
         }
     };
 
-    const handleSell = () => {
-        if (!selectedItem) return;
+    const handleSell = async () => {
         try {
-            const refund = MockDB.sellAccessory(userId, selectedItem.id);
-            setMsg(`ขายสำเร็จ! ได้รับ ${refund.toLocaleString()} ${CURRENCY}`);
+            await api.inventory.sell(selectedItem!.id);
+            setMsg(`ขายสำเร็จ!`);
             setTimeout(() => {
                 setMsg('');
                 setSelectedItem(null);
@@ -80,18 +149,18 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         }
     };
 
-    const handleUpgrade = () => {
+    const handleUpgrade = async () => {
         if (!selectedItem) return;
         setAnimationStep('PREPARE');
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
-                const res = MockDB.upgradeAccessory(userId, selectedItem.id);
+                const res = await api.inventory.upgrade(selectedItem.id, false);
                 setAnimationStep('HAMMER');
                 setTimeout(() => {
                     setAnimationStep('IMPACT');
                 }, 1200);
                 setTimeout(() => {
-                    setUpgradeResult({ success: res.success, newItem: res.newItem });
+                    setUpgradeResult({ success: res.success, newItem: res.item });
                     setAnimationStep('RESULT');
                     if (res.success) onRefresh();
                 }, 2000);
@@ -144,10 +213,10 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
             <div className="p-4 bg-stone-900 border border-stone-800 rounded-xl relative overflow-hidden">
                 <div className="flex justify-between items-start mb-4 relative z-10">
                     <div className={`w-16 h-16 rounded-lg border-2 ${RARITY_SETTINGS[selectedItem.rarity].border} bg-stone-800 flex items-center justify-center`}>
-                        {getIcon(selectedItem.typeId, `w-8 h-8 ${RARITY_SETTINGS[selectedItem.rarity].color}`, selectedItem.rarity)}
+                        {getIcon(selectedItem, `w-8 h-8 ${RARITY_SETTINGS[selectedItem.rarity].color}`)}
                     </div>
                     <div className="text-right">
-                        <div className={`font-bold ${selectedItem.isHandmade ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' : 'text-white'}`}>{selectedItem.name}</div>
+                        <div className={`font-bold ${selectedItem.isHandmade ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' : 'text-white'}`}>{getItemDisplayName(selectedItem)}</div>
                         <div className={`text-xs ${RARITY_SETTINGS[selectedItem.rarity].color}`}>{selectedItem.rarity}</div>
                         {selectedItem.level && selectedItem.level > 1 && <div className="text-xs text-yellow-500 font-bold">Lv. {selectedItem.level}</div>}
                     </div>
@@ -214,7 +283,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                 <div className="text-sm text-stone-300 mb-2 font-bold">ต้องใช้วัตถุดิบในการตีบวก</div>
                                 <div className="flex justify-center items-center gap-2 mb-2">
                                     <div className="w-10 h-10 border border-stone-700 bg-stone-800 rounded flex items-center justify-center relative">
-                                        {getIcon(selectedItem.typeId, `w-6 h-6 ${RARITY_SETTINGS[selectedItem.rarity].color}`, selectedItem.rarity)}
+                                        {getIcon(selectedItem, `w-6 h-6 ${RARITY_SETTINGS[selectedItem.rarity].color}`)}
                                     </div>
                                     <span className="text-stone-500">+</span>
                                     <div className="w-10 h-10 border border-purple-500 bg-purple-900/20 rounded flex items-center justify-center" title="ชิปอัปเกรด">
@@ -255,7 +324,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                 <div className="absolute top-20 left-1/2 -translate-x-1/2 w-32 h-10 bg-stone-800 rounded-full blur-xl opacity-50"></div>
                                 <div className={`relative z-10 transition-transform duration-100 ${animationStep === 'IMPACT' ? 'scale-90 translate-y-2' : 'scale-150 animate-[float-gold_2s_infinite]'}`}>
                                     <div className={`w-32 h-32 rounded-xl border-4 ${RARITY_SETTINGS[selectedItem.rarity].border} bg-stone-900 flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.5)]`}>
-                                        {getIcon(selectedItem.typeId, `w-20 h-20 ${RARITY_SETTINGS[selectedItem.rarity].color}`, selectedItem.rarity)}
+                                        {getIcon(selectedItem, `w-20 h-20 ${RARITY_SETTINGS[selectedItem.rarity].color}`)}
                                     </div>
                                 </div>
                                 {animationStep === 'PREPARE' && (
@@ -296,7 +365,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                         <div className="relative mb-8">
                                             <div className="absolute inset-0 bg-yellow-500/30 blur-[60px] animate-pulse"></div>
                                             <div className="relative z-10 w-40 h-40 rounded-full border-4 border-yellow-400 bg-gradient-to-br from-yellow-900 to-black flex items-center justify-center shadow-[0_0_50px_rgba(234,179,8,0.6)] animate-[bounce_2s_infinite]">
-                                                {getIcon(selectedItem.typeId, "w-24 h-24 text-yellow-300", selectedItem.rarity)}
+                                                {getIcon(selectedItem, "w-24 h-24 text-yellow-300")}
                                                 <div className="absolute -bottom-2 bg-yellow-600 text-white font-black px-4 py-1 rounded-full border-2 border-yellow-300 shadow-lg text-xl">
                                                     Lv. {selectedItem.level ? selectedItem.level + 1 : 2}
                                                 </div>
@@ -314,14 +383,14 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                         <div className="relative mb-8">
                                             <div className="absolute inset-0 bg-red-500/20 blur-[50px]"></div>
                                             <div className="relative z-10 w-32 h-32 rounded-full border-4 border-red-900 bg-black flex items-center justify-center shadow-[0_0_30px_rgba(220,38,38,0.5)] grayscale opacity-80 animate-[shake_0.5s_ease-in-out]">
-                                                {getIcon(selectedItem.typeId, "w-16 h-16 text-stone-600", selectedItem.rarity)}
+                                                {getIcon(selectedItem, "w-16 h-16 text-stone-600")}
                                             </div>
                                             <AlertTriangle className="absolute -top-2 -right-2 text-red-500 animate-pulse" size={40} />
                                         </div>
                                         <h3 className="text-3xl font-display font-bold text-red-500 mb-2 tracking-widest">
                                             FAILED
                                         </h3>
-                                        <p className="text-stone-500 mb-8">เสียวัตถุดิบ แต่ถุงมือยังอยู่ครบ</p>
+                                        <p className="text-stone-500 mb-8">เสียวัตถุดิบ แต่ผู้จัดการยังอยู่ครบ</p>
                                     </>
                                 )}
                                 <button onClick={resetAfterUpgrade} className="px-8 py-3 bg-stone-800 hover:bg-stone-700 text-white rounded-lg font-bold border border-stone-600 transition-all hover:scale-105">ตกลง</button>
@@ -348,53 +417,79 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                 <div className="flex flex-1 overflow-hidden">
                     <div className="w-1/2 sm:w-2/3 border-r border-stone-800 overflow-y-auto custom-scrollbar p-4">
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {/* Render Ungrouped Inventory */}
-                            {inventory.map((item, idx) => (
-                                <div
-                                    key={idx}
-                                    onClick={() => { setSelectedItem(item); setAction('DETAILS'); setMsg(''); }}
-                                    className={`relative p-3 rounded-lg border cursor-pointer transition-all flex flex-col items-center gap-2 text-center group
-                                ${selectedItem?.id === item.id ? 'bg-stone-800 border-yellow-500' : 'bg-stone-900 border-stone-800 hover:bg-stone-800'}
-                            `}
-                                >
-                                    <div className="relative">
-                                        {getIcon(item.typeId, `w-8 h-8 ${RARITY_SETTINGS[item.rarity].color} group-hover:scale-110 transition-transform`, item.rarity)}
+                            {/* Render Grouped (Stacked) Inventory */}
+                            {groupedInventory.map((group, idx) => {
+                                const item = group.representative;
+                                const isSelected = selectedItem?.id && group.allIds.includes(selectedItem.id);
+                                return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => { setSelectedItem(item); setAction('DETAILS'); setMsg(''); }}
+                                        className={`relative p-3 rounded-lg border cursor-pointer transition-all flex flex-col items-center gap-2 text-center group
+                                 ${isSelected ? 'bg-stone-800 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'bg-stone-900 border-stone-800 hover:bg-stone-800'}
+`}
+                                    >
+                                        <div className="relative">
+                                            {getIcon(item, `w-8 h-8 ${RARITY_SETTINGS[item.rarity].color} group-hover:scale-110 transition-transform`)}
 
-                                        {/* Equipped Indicator */}
-                                        {equippedIds.has(item.id) && <div className="absolute -top-1 -left-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>}
-
-                                        {/* Level Badge */}
-                                        {item.level && item.level > 1 && <span className="absolute -bottom-1 -right-2 text-[8px] bg-yellow-900 text-yellow-200 px-1 rounded">+{item.level}</span>}
-
-                                        {/* Tooltip - Name and Expiration */}
-                                        <div className="absolute left-[80%] top-0 z-[150] bg-stone-900/95 text-[10px] text-white p-2 rounded-lg border border-stone-700 shadow-xl opacity-0 group-hover:opacity-100 hover:opacity-100 pointer-events-none transition-opacity min-w-[120px] backdrop-blur-sm whitespace-nowrap">
-                                            <div className={`font-bold ${RARITY_SETTINGS[item.rarity].color} mb-1`}>{item.name}</div>
-                                            {item.specialEffect && (
-                                                <div className="text-[9px] text-emerald-400 mb-1 font-bold">
-                                                    {item.specialEffect}
+                                            {/* Quantity Badge */}
+                                            {group.count > 1 && (
+                                                <div className="absolute -top-1 -right-3 bg-yellow-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded border border-stone-950 shadow-lg z-10">
+                                                    x{group.count}
                                                 </div>
                                             )}
-                                            <div className="text-[9px] text-stone-400 flex items-center gap-1">
-                                                <Timer size={10} />
-                                                <span className="font-mono">{(() => {
-                                                    const timeLeft = Math.max(0, item.expireAt - Date.now());
-                                                    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-                                                    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                                                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-                                                    if (days > 0) return `${days}d ${hours}h`;
-                                                    if (hours > 0) return `${hours}h ${minutes}m`;
-                                                    return `${minutes}m`;
-                                                })()}</span>
+
+                                            {/* Equipped Indicator */}
+                                            {group.allIds.some(id => equippedIds.has(id)) && (
+                                                <div className="absolute -top-1 -left-1 w-2 h-2 bg-green-500 rounded-full animate-pulse z-10"></div>
+                                            )}
+
+                                            {/* Level Badge */}
+                                            {item.level && item.level > 1 && <span className="absolute -bottom-1 -right-2 text-[8px] bg-yellow-900 text-yellow-200 px-1 rounded">+{item.level}</span>}
+
+                                            {/* Tooltip */}
+                                            <div className="absolute left-[80%] top-0 z-[150] bg-stone-900/95 text-[10px] text-white p-2 rounded-lg border border-stone-700 shadow-xl opacity-0 group-hover:opacity-100 hover:opacity-100 pointer-events-none transition-opacity min-w-[120px] backdrop-blur-sm whitespace-nowrap">
+                                                <div className={`font-bold ${RARITY_SETTINGS[item.rarity].color} mb-1`}>{getItemDisplayName(item)}</div>
+                                                {group.count > 1 && <div className="text-stone-400 text-[9px] mb-1 italic">จำนวนคงเหลือ: {group.count} ชิ้น</div>}
+                                                {item.specialEffect && (
+                                                    <div className="text-[9px] text-emerald-400 mb-1 font-bold">
+                                                        {item.specialEffect}
+                                                    </div>
+                                                )}
+                                                {item.typeId !== 'robot' && (
+                                                    <div className="text-[9px] text-stone-400 flex items-center gap-1">
+                                                        <Star size={10} className="text-yellow-500" />
+                                                        <span className="font-mono text-yellow-500">โบนัส: +{(item.dailyBonus || 0).toFixed(2)} / วัน</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
+                                        <div className={`text-[10px] truncate w-full ${item.isHandmade ? 'text-yellow-400 font-bold' : 'text-stone-400'}`}>
+                                            {getItemDisplayName(item)}
+                                        </div>
                                     </div>
-                                    <div className={`text-[10px] truncate w-full ${item.isHandmade ? 'text-yellow-400 font-bold' : 'text-stone-400'}`}>
-                                        {item.name}
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                         {inventory.length === 0 && <div className="text-stone-600 text-center mt-10">กระเป๋าว่างเปล่า</div>}
+
+                        {/* Market Value Summary */}
+                        {totalMaterialsValue > 0 && (
+                            <div className="mt-6 pt-4 border-t border-stone-800/50">
+                                <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <TrendingUp size={14} className="text-emerald-400" />
+                                        <span className="text-[10px] text-emerald-400/70 font-bold uppercase tracking-wider">มูลค่าวัตถุดิบทั้งหมด</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-sm font-bold text-emerald-400 font-mono">
+                                            {totalMaterialsValue.toLocaleString()} {CURRENCY}
+                                        </div>
+                                        <div className="text-[9px] text-emerald-500/50">ราคาอ้างอิงตามตลาดปัจจุบัน</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div className="w-1/2 sm:w-1/3 bg-stone-950 p-4 overflow-y-auto">
                         {renderDetailView()}
@@ -402,15 +497,15 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                 </div>
 
                 <style>{`
-            @keyframes converge-right {
-                0% { transform: translateX(0) scale(1); opacity: 1; }
-                100% { transform: translateX(8rem) scale(0); opacity: 0; }
-            }
-            @keyframes converge-left {
-                0% { transform: translateX(0) scale(1); opacity: 1; }
-                100% { transform: translateX(-8rem) scale(0); opacity: 0; }
-            }
-        `}</style>
+@keyframes converge-right {
+    0% { transform: translateX(0) scale(1); opacity: 1; }
+    100% { transform: translateX(8rem) scale(0); opacity: 0; }
+}
+@keyframes converge-left {
+    0% { transform: translateX(0) scale(1); opacity: 1; }
+    100% { transform: translateX(-8rem) scale(0); opacity: 0; }
+}
+`}</style>
             </div>
         </div>
     );

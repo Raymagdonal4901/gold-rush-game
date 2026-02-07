@@ -28,7 +28,7 @@ import { GloveRevealModal } from './GloveRevealModal';
 import { GoldRain } from './GoldRain';
 import { ChatSystem } from './ChatSystem';
 import { OilRig, User, Rarity, Notification, AccessoryItem, MarketState } from '../services/types';
-import { CURRENCY, RigPreset, MAX_RIGS_PER_USER, RARITY_SETTINGS, SHOP_ITEMS, MAX_ACCESSORIES, RIG_PRESETS, ENERGY_CONFIG, REPAIR_CONFIG, GLOVE_DETAILS, MATERIAL_CONFIG, DEMO_SPEED_MULTIPLIER, ROBOT_CONFIG } from '../constants';
+import { CURRENCY, RigPreset, MAX_RIGS_PER_USER, RARITY_SETTINGS, SHOP_ITEMS, MAX_ACCESSORIES, RIG_PRESETS, ENERGY_CONFIG, REPAIR_CONFIG, GLOVE_DETAILS, MATERIAL_CONFIG, DEMO_SPEED_MULTIPLIER, ROBOT_CONFIG, GIFT_CYCLE_DAYS } from '../constants';
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
 
@@ -134,16 +134,97 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     const [showGoldRain, setShowGoldRain] = useState(false);
     const [isCharging, setIsCharging] = useState(false);
     const [lootResult, setLootResult] = useState<{ rarity: Rarity, bonus: number, itemTypeId?: string, itemName?: string, materialId?: number } | null>(null);
+    const [marketState, setMarketState] = useState<MarketState | null>(null);
     const [gloveReveal, setGloveReveal] = useState<{ name: string, rarity: string, bonus: number } | null>(null);
 
     // ... useEffects and helper functions ...
     // Ref to block refresh during sensitive operations
     const skipRefreshRef = useRef(false);
+    const lastMarketPrices = useRef<Record<number, number>>({});
 
-
+    // --- AI ROBOT AUTOMATION LOOP ---
     useEffect(() => {
-        refreshData();
-    }, []);
+        const interval = setInterval(async () => {
+            const robot = inventory.find(i => i.typeId === 'robot' && (!i.expireAt || i.expireAt > Date.now()));
+            if (!robot) return;
+
+            console.log("[ROBOT] Thinker active...");
+
+            // 1. Auto-collect Gifts (Key/Box)
+            for (const rig of rigs) {
+                // Match RigCard logic: use lastGiftAt and GIFT_CYCLE_DAYS
+                const giftIntervalMs = GIFT_CYCLE_DAYS * 24 * 60 * 60 * 1000;
+                const lastGiftTime = rig.lastGiftAt || rig.purchasedAt;
+                const nextGiftTime = lastGiftTime + giftIntervalMs;
+                const isGiftAvailable = Date.now() >= nextGiftTime;
+
+                if (isGiftAvailable) {
+                    console.log(`[ROBOT] Auto-collecting gift for rig: ${rig.name}`);
+                    handleGiftClaim(rig.id);
+                }
+            }
+
+            // 1.5 Auto-collect Materials (Keys/Ores)
+            for (const rig of rigs) {
+                if ((rig.currentMaterials || 0) > 0) {
+                    console.log(`[ROBOT] Auto-collecting materials for rig: ${rig.name}`);
+                    handleCollectMaterials(rig.id);
+                }
+            }
+
+            // 2. Auto-refill & Auto-repair
+            for (const rig of rigs) {
+                // Calculate Health & Energy matching RigCard logic
+                const durabilityMs = (REPAIR_CONFIG.DURABILITY_DAYS * 24 * 60 * 60 * 1000);
+                const timeSinceRepair = Date.now() - (rig.lastRepairAt || rig.purchasedAt || Date.now());
+
+                const preset = RIG_PRESETS.find(p => p.name === rig.name);
+                const isInfiniteDurability = preset?.specialProperties?.infiniteDurability;
+                const isInfiniteContract = (rig.durationMonths >= 900) || (preset?.specialProperties?.infiniteDurability === true);
+
+                const healthPercent = (isInfiniteContract || isInfiniteDurability) ? 100 : Math.max(0, 100 * (1 - timeSinceRepair / durabilityMs));
+
+                const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || Date.now();
+                const elapsedMs = Date.now() - lastUpdate;
+                const elapsedHours = (elapsedMs * (user.isDemo ? DEMO_SPEED_MULTIPLIER : 1)) / (1000 * 60 * 60);
+                const overclockActive = user.overclockExpiresAt ? new Date(user.overclockExpiresAt).getTime() > Date.now() : false;
+                const drainRate = overclockActive ? 8.333333333333334 : 4.166666666666667;
+                const drain = elapsedHours * drainRate;
+                const energyPercent = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
+
+                if (energyPercent < 50) {
+                    console.log(`[ROBOT] Auto-refilling energy for rig: ${rig.name} (${energyPercent.toFixed(1)}%)`);
+                    handleChargeRigEnergy(rig.id);
+                }
+
+                if (healthPercent < 20) {
+                    console.log(`[ROBOT] Auto-repairing rig: ${rig.name} (${healthPercent.toFixed(1)}%)`);
+                    handleRepair(rig.id);
+                }
+            }
+
+            // 3. Price Alerts
+            if (marketState?.prices) {
+                const currentPrices = marketState.prices;
+                for (const [tier, price] of Object.entries(currentPrices)) {
+                    const prevPrice = lastMarketPrices.current[parseInt(tier)];
+                    if (prevPrice && price > prevPrice) {
+                        addNotification({
+                            id: `market-alert-${tier}-${Date.now()}`,
+                            userId: user.id,
+                            message: `ราคาวัตถุดิบ Tier ${tier} พุ่งสูงขึ้น! (${prevPrice} -> ${price})`,
+                            type: 'INFO',
+                            read: false,
+                            timestamp: Date.now()
+                        });
+                    }
+                    lastMarketPrices.current[parseInt(tier)] = price;
+                }
+            }
+        }, 30000); // Think every 30 seconds
+
+        return () => clearInterval(interval);
+    }, [inventory, rigs, marketState]);
 
     const activeInventory = inventory.filter(item => {
         return (!item.expireAt || item.expireAt > Date.now());
@@ -166,40 +247,19 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     };
 
     useEffect(() => {
+        // Initial Fetch: Fix 5s delay by loading data immediately on mount
+        refreshData();
+
         const interval = setInterval(() => {
             refreshData();
-            const msgs = MockDB.getUserNotifications(user.id);
-            if (msgs.length > 0) {
-                msgs.forEach(n => {
-                    MockDB.markNotificationRead(n.id);
-                    addNotification(n);
-                });
-            }
 
-            // --- AI ROBOT LOGIC START ---
-            if (hasAIRobot) {
-                const robotResult = MockDB.processRobotLogic(user.id);
-                if (robotResult.actions.length > 0) {
-                    robotResult.actions.forEach(action => {
-                        addNotification({ id: Date.now().toString() + Math.random(), userId: user.id, title: 'AI Robot Action', message: action, type: 'INFO', timestamp: Date.now(), read: false });
-                    });
-                }
-
-                // Smart Notification: Market (Check every 10s roughly, or just check every loop? simple check)
-                // Rate limit to avoid spam, or check changes.
-                // For now, let's just check if current market state warrants valid 'surge'
-                // Ideally this should be in `processRobotLogic` but doing it here for UI feedback visibility
-                const m = MockDB.getMarketStatus();
-                Object.entries(m.trends).forEach(([tier, data]) => {
+            // AI Robot Logic
+            if (hasAIRobot && marketState?.trends) {
+                Object.entries(marketState.trends).forEach(([tier, data]) => {
                     const priceChange = (data.currentPrice - data.basePrice) / data.basePrice;
                     if (priceChange >= ROBOT_CONFIG.NOTIFY_PRICE_THRESHOLD) {
-                        // Check if we haven't notified recently? 
-                        // Simplification: Not implemented debouncing here to keep it simple, 
-                        // but ideally should verify if we hold this material.
-                        // "Alert if price of material I OWN surges"
-                        // Since `user.materials` is available here:
                         const myCount = user.materials[parseInt(tier)] || 0;
-                        if (myCount > 0 && Math.random() < 0.05) { // 5% chance per tick to show, preventing spam
+                        if (myCount > 0 && Math.random() < 0.02) {
                             addNotification({
                                 id: `surge_${tier}_${Date.now()}`,
                                 userId: user.id,
@@ -213,85 +273,48 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                     }
                 });
             }
-            // --- AI ROBOT LOGIC END ---
-
-        }, 2000);
+        }, 20000); // Polling every 20s
         return () => clearInterval(interval);
-    }, [user.id, hasAIRobot]); // Add hasAIRobot dependency
-
-
-
+    }, [user.id, user.materials, marketState, hasAIRobot]); // Dependencies ensure AI Robot logic uses latest data. Interval restarts on change, which throttles polling during active use.
 
     const refreshData = async () => {
         if (skipRefreshRef.current) return;
         try {
-            // 1. Fetch Latest Data
-            let remoteUser, remoteRigs;
+            // Parallel Fetch: Execute all requests at once to solve 5s delay
+            const fetchPromises: Promise<any>[] = [
+                user.isDemo ? Promise.resolve(MockDB.getSession()) : api.getMe(),
+                user.isDemo ? Promise.resolve(MockDB.getMyRigs(user.id)) : api.getMyRigs(),
+                user.isDemo ? Promise.resolve(MockDB.getMarketState()) : api.getMarketStatus(),
+                user.isDemo ? Promise.resolve({ onlineMiners: 1337, totalOreMined: 9999, marketVolume: 50000 }) : api.getGlobalStats()
+            ];
 
-            if (user.isDemo) {
-                // Demo Mode: Fetch from Local MockDB
-                remoteUser = MockDB.getSession();
-                remoteRigs = MockDB.getMyRigs(user.id);
-            } else {
-                // Real Mode: Fetch from API
-                [remoteUser, remoteRigs] = await Promise.all([
-                    api.getMe(),
-                    api.getMyRigs()
-                ]);
-            }
+            const [remoteUser, remoteRigs, remoteMarket, remoteGlobal] = await Promise.all(fetchPromises);
 
-            if (skipRefreshRef.current) return; // Prevent overwriting if blocked during fetch
+            if (skipRefreshRef.current) return;
 
-            // 2. Sync to LocalStorage (Bridge for MockDB legacy logic)
-            // Ensure remoteUser has all fields MockDB expects
+            // Bridge logic for MockDB sessions (non-persisted fields)
             const mergedUser = {
-                ...MockDB.getSession(), // Keep local state like 'lastCheckIn' if not in backend
-                ...remoteUser,
-                id: remoteUser.id || (remoteUser as any)._id // Ensure ID match
+                ...user, // Keep current session fields if not in backend
+                ...(remoteUser as User),
+                isDemo: user.isDemo // Preserve demo state
             };
 
-            // Overwrite specific keys MockDB uses
+            // PERF: Removed heavy LocalStorage sync loop. 
+            // Only update the active session for MockDB compatibility.
             if (typeof window !== 'undefined') {
                 localStorage.setItem('oil_baron_session', JSON.stringify(mergedUser));
-                // Update USER list item too
-                const users = JSON.parse(localStorage.getItem('oil_baron_users') || '[]');
-                const updatedUsers = users.map((u: any) => u.id === mergedUser.id ? mergedUser : u);
-                if (!users.find((u: any) => u.id === mergedUser.id)) updatedUsers.push(mergedUser);
-                localStorage.setItem('oil_baron_users', JSON.stringify(updatedUsers));
-
-                // Rigs (Filter out others? Or just replace mining ones)
-                // For now, let's assume API is source of truth for MY rigs.
-                // But MockDB stores ALL users rigs in one array? No, getMyRigs filters by ID.
-                // But setStore(RIGS) overwrites everything.
-                // We should NOT destroy other users rigs if we are multi-user locally?
-                // Given we are moving to backend, local multi-user is less relevant.
-                // For simplicity: Update local rigs for THIS user.
-                const allRigs = JSON.parse(localStorage.getItem('oil_baron_rigs') || '[]');
-                const otherRigs = allRigs.filter((r: any) => r.ownerId !== mergedUser.id);
-                localStorage.setItem('oil_baron_rigs', JSON.stringify([...otherRigs, ...remoteRigs]));
             }
 
-            // 3. Update React State
-            setUser(mergedUser as User);
+            // Batch State Updates
+            setUser(mergedUser);
             setRigs(remoteRigs);
-
-            // 4. Update Global/Local Stats
-            const bal = mergedUser.balance; // Use merged
-            const inv = mergedUser.inventory || [];
-            const mats = mergedUser.materials || {};
-            const energy = mergedUser.energy || 0;
-
-            // Note: mocked stats might be inaccurate if backend doesn't calculate them
-            const txs = MockDB.getTransactions(user.id); // Local transactions only?
-            setHasPendingTx(txs.some(t => t.status === 'PENDING'));
-
-            // 4. Update Global/Local Stats
-            api.getGlobalStats().then(stats => setGlobalStats(stats)).catch(err => console.error("Failed to fetch global stats", err));
-            setInventory(inv);
+            setInventory(mergedUser.inventory || []);
+            setMarketState(remoteMarket);
+            setGlobalStats(remoteGlobal);
+            setHasPendingTx(false);
 
         } catch (error) {
-            console.error("Failed to refresh data from API:", error);
-            // Fallback to local only?
+            console.error("Dashboard refresh failed:", error);
         }
     };
 
@@ -340,10 +363,80 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             }, 500);
             addNotification({ id: Date.now().toString(), userId: user.id, message: `ชำระค่าไฟเรียบร้อย -${cost.toLocaleString()} ${CURRENCY}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
         } catch (e: any) {
-            alert(e.response?.data?.message || e.message);
+            addNotification({
+                id: Date.now().toString(),
+                userId: user.id,
+                message: `เกิดข้อผิดพลาด: ${e.response?.data?.message || e.message}`,
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
             refreshData(); // Revert on error
         } finally {
             setEnergyConfirm(null);
+        }
+    };
+
+    // Overclock handler
+    const [overclockLoading, setOverclockLoading] = useState(false);
+    const isOverclockActive = user.overclockExpiresAt ? new Date(user.overclockExpiresAt).getTime() > Date.now() : false;
+
+    const handleActivateOverclock = async () => {
+        if (overclockLoading) return;
+        setOverclockLoading(true);
+        try {
+            const result = await api.user.activateOverclock();
+            if (result.success) {
+                setUser(prev => ({ ...prev, balance: result.newBalance, overclockExpiresAt: result.overclockExpiresAt }));
+                setIsCharging(true);
+                setTimeout(() => setIsCharging(false), 3000);
+                addNotification({ id: Date.now().toString(), userId: user.id, message: `เปิดใช้งาน Overclock x2 Power เรียบร้อย (48 ชม.)`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+                refreshData();
+            }
+        } catch (e: any) {
+            addNotification({
+                id: Date.now().toString(),
+                userId: user.id,
+                message: e.response?.data?.message || e.message,
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
+        } finally {
+            setOverclockLoading(false);
+        }
+    };
+
+    const handleDeactivateOverclock = async () => {
+        if (overclockLoading) return;
+        setOverclockLoading(true);
+
+        // Optimistic update: immediately update UI
+        const prevExpiry = user.overclockExpiresAt;
+        setUser(prev => ({ ...prev, overclockExpiresAt: undefined }));
+
+        try {
+            const result = await api.user.deactivateOverclock();
+            if (result.success) {
+                addNotification({ id: Date.now().toString(), userId: user.id, message: `ปิดใช้งาน Overclock เรียบร้อย`, type: 'INFO', read: false, timestamp: Date.now() });
+                // Don't call refreshData() here - optimistic update is already done
+            } else {
+                // Revert if API returned success: false
+                setUser(prev => ({ ...prev, overclockExpiresAt: prevExpiry }));
+            }
+        } catch (e: any) {
+            // Revert on error
+            setUser(prev => ({ ...prev, overclockExpiresAt: prevExpiry }));
+            addNotification({
+                id: Date.now().toString(),
+                userId: user.id,
+                message: e.response?.data?.message || e.message,
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
+        } finally {
+            setOverclockLoading(false);
         }
     };
 
@@ -359,7 +452,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             }
         }
 
-        if (rigs.length >= maxRigs) { alert(`พื้นที่สัมปทานเต็มแล้ว (สูงสุด ${maxRigs} เครื่อง)`); return; }
+        if (rigs.length >= maxRigs) { alert(`พื้นที่ขุดเหมืองเต็มแล้ว (สูงสุด ${maxRigs} เครื่อง)`); return; }
 
         // Crafting Logic
         if (preset.craftingRecipe) {
@@ -375,8 +468,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             // Check Items
             if (preset.craftingRecipe.items) {
                 for (const [imgId, amount] of Object.entries(preset.craftingRecipe.items)) {
-                    const count = activeInventory.filter(i => i.typeId === imgId).length; // Use activeInventory or detailed inventory logic? Inventory items are unique objects. 
-                    // We need to count by typeId.
+                    const count = inventory.filter(i => i.typeId === imgId).length;
                     if (count < amount) {
                         const itemConfig = SHOP_ITEMS.find(i => i.id === imgId);
                         alert(`ไอเทมไม่พอ: ต้องการ ${itemConfig ? itemConfig.name : imgId} x${amount}`);
@@ -385,25 +477,32 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 }
             }
 
-            // Deduct Materials
+            // Deduct Materials (Optimistic)
             if (preset.craftingRecipe.materials) {
+                const newMaterials = { ...(user.materials || {}) };
                 for (const [tier, amount] of Object.entries(preset.craftingRecipe.materials)) {
-                    if (user.materials) user.materials[parseInt(tier)] -= amount;
+                    const t = parseInt(tier);
+                    newMaterials[t] = (newMaterials[t] || 0) - amount;
                 }
+                setUser(prev => ({ ...prev, materials: newMaterials }));
             }
 
-            // Deduct Items
+            // Deduct Items (Optimistic)
             if (preset.craftingRecipe.items) {
+                const newInventory = [...inventory];
                 for (const [imgId, amount] of Object.entries(preset.craftingRecipe.items)) {
-                    // Remove N items of typeId
                     for (let k = 0; k < amount; k++) {
-                        MockDB.consumeItem(user.id, imgId);
+                        const index = newInventory.findIndex(i => i.typeId === imgId);
+                        if (index !== -1) newInventory.splice(index, 1);
                     }
                 }
+                setInventory(newInventory);
             }
 
-            // Log Transaction (Crafting doesn't cost money directly usually, but maybe fee? Assuming 0 fee for now based on requirement)
-            MockDB.logTransaction({ userId: user.id, type: 'ASSET_PURCHASE', amount: 0, status: 'COMPLETED', description: `สร้าง: ${preset.name}` });
+            // Log Transaction (Only for demo mode since real mode logs on backend)
+            if (user.isDemo) {
+                MockDB.logTransaction({ userId: user.id, type: 'ASSET_PURCHASE', amount: 0, status: 'COMPLETED', description: `สร้าง: ${preset.name}` });
+            }
 
         } else {
             // Normal Purchase via API
@@ -416,8 +515,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 let result;
 
                 if (user.isDemo) {
-                    // Demo Mode: Buy locally
-                    result = MockDB.buyRig(user.id, preset.name, preset.price, preset.dailyProfit, durationDays, preset.repairCost, preset.energyCostPerDay, preset.bonusProfit || 0);
+                    // Demo Mode: Buy locally (Fixed signature: userId, presetId, slotIndex)
+                    result = MockDB.buyRig(user.id, preset.id, 0);
                     // Simulate delay
                     await new Promise(r => setTimeout(r, 800));
                 } else {
@@ -437,6 +536,16 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                     });
                 }
 
+                // Optimistic UI Update: Add the new rig and glove to the state immediately
+                if (result.rig) {
+                    setRigs(prev => [...prev, result.rig]);
+                }
+                if (result.glove) {
+                    setInventory(prev => [...prev, result.glove]);
+                }
+
+                setUser(prev => ({ ...prev, balance: prev.balance - (preset.price || 0) }));
+
                 refreshData();
                 addNotification({ id: Date.now().toString(), userId: user.id, message: `ซื้อเครื่องขุดสำเร็จ: ${preset.name}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
 
@@ -450,28 +559,37 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
         // Create the Rig (Crafting Success)
         setIsCharging(true);
+        console.log(`[HANDEL_PURCHASE] Starting craft for: ${preset.name}, isDemo: ${user.isDemo}`);
         try {
-            const durationDays = preset.durationDays || (preset.durationMonths || 1) * 30;
             let result;
-
             if (user.isDemo) {
-                // Demo Mode
-                result = MockDB.buyRig(user.id, preset.name, preset.price, preset.dailyProfit, durationDays, preset.repairCost, preset.energyCostPerDay, preset.bonusProfit || 0);
-                // Simulate delay
+                const durationDays = preset.durationDays || (preset.durationMonths || 1) * 30;
+                // Correctly call MockDB.buyRig for demo mode crafting
+                result = MockDB.buyRig(user.id, preset.id, 0);
                 await new Promise(r => setTimeout(r, 800));
             } else {
-                // Real Mode: Call API (Price should be 0 for crafted items usually)
-                result = await api.buyRig(preset.name, preset.price, preset.dailyProfit, durationDays, preset.repairCost, preset.energyCostPerDay, preset.bonusProfit);
+                // Real Mode: Call Crafting API
+                console.log(`[HANDEL_PURCHASE] Calling api.craftRig("${preset.name}")`);
+                result = await api.craftRig(preset.name);
+                console.log(`[HANDEL_PURCHASE] api.craftRig result:`, result);
             }
 
-            // Show Gold Rain Animation (Special for Crafting?)
-            triggerGoldRain();
+            // Optimistic UI Update: Add the new rig and glove to the state immediately
+            if (result.rig) {
+                setRigs(prev => [...prev, result.rig]);
+            }
+            if (result.glove) {
+                setInventory(prev => [...prev, result.glove]);
+            }
 
+            // Refresh everything to sync with server
             refreshData();
-            addNotification({ id: Date.now().toString(), userId: user.id, message: `คราฟต์สำเร็จ: ${preset.name}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            addNotification({ id: Date.now().toString(), userId: user.id, message: `ผลิตเครื่องจักรสำเร็จ: ${preset.name}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
 
         } catch (err: any) {
             console.error("Crafting Failed", err);
+            // If it failed, we should probably revert the local state if it was deducted, 
+            // but refreshData() will handle that sync-back.
             alert("การคราฟต์ล้มเหลว: " + (err.response?.data?.message || err.message));
         } finally {
             setIsCharging(false);
@@ -502,58 +620,85 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         }
     };
 
-    const handleGiftClaim = (rigId: string) => {
-        const rig = rigs.find(r => r.id === rigId);
-        if (!rig) return;
-        const preset = RIG_PRESETS.find(p => p.name === rig.name);
-        if (!preset) return;
-
+    const handleGiftClaim = async (rigId: string) => {
         try {
-            let matTier = -1;
-            let minAmount = 0;
-            let maxAmount = 0;
-
-            // Mapping based on User Request
-            if (preset.id === 3) { matTier = 1; minAmount = 5; maxAmount = 10; } // Coal Rig -> Coal
-            else if (preset.id === 4) { matTier = 2; minAmount = 5; maxAmount = 10; } // Copper Rig -> Copper
-            else if (preset.id === 5) { matTier = 3; minAmount = 3; maxAmount = 6; } // Iron Rig -> Iron
-            else if (preset.id === 6) { matTier = 4; minAmount = 3; maxAmount = 6; } // Gold Rig -> Gold
-            else if (preset.id === 7) { matTier = 5; minAmount = 1; maxAmount = 3; } // Diamond Rig -> Diamond
-            else if (preset.id === 8) { matTier = 6; minAmount = 3; maxAmount = 5; } // Vibranium Reactor -> Vibranium
-
-            if (matTier === -1) {
-                // FALLBACK: Non-mining rigs or special rigs drop random equipment
-                const potentialRewards = ['hat', 'uniform', 'bag', 'boots'];
-                const rewardId = potentialRewards[Math.floor(Math.random() * potentialRewards.length)];
-                const newItem = MockDB.grantItem(user.id, rewardId);
-
-                const updatedRig = { ...rig, lastGiftAt: Date.now() };
-                MockDB.updateRig(updatedRig);
-
-                refreshData();
-                setLootResult({ rarity: newItem.rarity, bonus: newItem.dailyBonus, itemTypeId: newItem.typeId, itemName: newItem.name });
-                addNotification({ id: Date.now().toString(), userId: user.id, message: `ได้รับของขวัญ: ${newItem.name}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            if (user.isDemo) {
+                // Keep existing local logic for demo if needed, but for now we focus on Real mode.
+                // Re-implementing simplified local version or just alerting.
+                alert("Demo mode is not supported for persistent gifts yet.");
                 return;
             }
 
-            // MATERIAL DROP
-            const amount = Math.floor(Math.random() * (maxAmount - minAmount + 1)) + minAmount;
-            const res = MockDB.grantMaterials(user.id, matTier, amount);
-
-            const updatedRig = { ...rig, lastGiftAt: Date.now() };
-            MockDB.updateRig(updatedRig);
-
+            const res = await api.claimRigGift(rigId);
             refreshData();
-            setLootResult({ rarity: 'SUPER_RARE', bonus: 0, itemName: `${res.name} x${amount}`, materialId: matTier });
-            addNotification({ id: Date.now().toString(), userId: user.id, message: `ได้รับของขวัญ: ${res.name} x${amount}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
 
-        } catch (e: any) { alert(e.message); }
+            if (res.type === 'ITEM') {
+                const newItem = res.item;
+                setLootResult({ rarity: newItem.rarity, bonus: newItem.dailyBonus, itemTypeId: newItem.typeId, itemName: newItem.name });
+                addNotification({ id: Date.now().toString(), userId: user.id, message: `ได้รับของขวัญ: ${newItem.name}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            } else {
+                setLootResult({ rarity: 'SUPER_RARE', bonus: 0, itemName: `${res.name} x${res.amount}`, materialId: res.tier });
+                addNotification({ id: Date.now().toString(), userId: user.id, message: `ได้รับของขวัญ: ${res.name} x${res.amount}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            }
+        } catch (e: any) {
+            const errMsg = e.response?.data?.message || e.message;
+            alert(errMsg);
+        }
     };
 
 
     const handleRenew = (rigId: string) => { try { const cost = MockDB.renewRig(user.id, rigId, 0); refreshData(); addNotification({ id: Date.now().toString(), userId: user.id, message: `ต่ออายุเครื่องจักรสำเร็จ (-${cost.toLocaleString()} ${CURRENCY})`, type: 'SUCCESS', read: false, timestamp: Date.now() }); } catch (e: any) { alert(e.message); } };
-    const handleRepair = (rigId: string) => { try { const cost = MockDB.repairRig(user.id, rigId); refreshData(); addNotification({ id: Date.now().toString(), userId: user.id, message: `ซ่อมแซมเครื่องจักรสำเร็จ (-${cost.toLocaleString()} ${CURRENCY})`, type: 'SUCCESS', read: false, timestamp: Date.now() }); } catch (e: any) { alert(e.message); } };
-    const handleCollectMaterials = (rigId: string) => { try { const result = MockDB.collectRigMaterials(user.id, rigId); refreshData(); addNotification({ id: Date.now().toString(), userId: user.id, message: `เก็บ ${result.name} x${result.count} เข้าคลังแล้ว`, type: 'SUCCESS', read: false, timestamp: Date.now() }); } catch (e: any) { alert(e.message); } };
+    const handleRepair = async (rigId: string) => {
+        try {
+            let cost = 0;
+            if (user.isDemo) {
+                cost = MockDB.repairRig(user.id, rigId);
+            } else {
+                const res = await api.repairRig(rigId);
+                cost = res.cost;
+            }
+            refreshData();
+            addNotification({ id: Date.now().toString(), userId: user.id, message: `ซ่อมแซมเครื่องจักรสำเร็จ (-${cost.toLocaleString()} ${CURRENCY})`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+        } catch (e: any) {
+            alert(e.response?.data?.message || e.message);
+        }
+    };
+    const handleCollectMaterials = async (rigId: string) => {
+        try {
+            const rig = rigs.find(r => r.id === rigId);
+            if (!rig) throw new Error('Rig not found');
+
+            const count = rig.currentMaterials || 0;
+            if (count <= 0) {
+                // No materials to collect, silently return
+                return;
+            }
+
+            // Determine tier based on investment
+            const tier = (() => {
+                const investment = rig.investment;
+                if (investment === 0) return 7;
+                if (investment >= 3000) return 5;
+                if (investment >= 2500) return 4;
+                if (investment >= 2000) return 3;
+                if (investment >= 1500) return 2;
+                return 1;
+            })();
+
+            if (user.isDemo) {
+                MockDB.collectRigMaterials(user.id, rigId);
+            } else {
+                await api.collectMaterials(rigId, count, tier);
+            }
+
+            refreshData();
+            const matName = MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES] || 'วัสดุ';
+            addNotification({ id: Date.now().toString(), userId: user.id, message: `เก็บ ${matName} x${count} เข้าคลังแล้ว`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+        } catch (e: any) {
+            console.error('[CollectMaterials] Error:', e);
+            // Don't show alert for robot auto-collection failures
+        }
+    };
     const handleUpdateMaterials = (rigId: string, count: number) => { MockDB.updateRigMaterials(rigId, count); };
 
     const handleChargeRigEnergy = async (rigId: string) => {
@@ -569,7 +714,9 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             const lastUpdate = targetRig.lastEnergyUpdate || targetRig.purchasedAt || Date.now();
             const elapsedMs = Date.now() - lastUpdate;
             const elapsedHours = (elapsedMs * (user.isDemo ? DEMO_SPEED_MULTIPLIER : 1)) / (1000 * 60 * 60);
-            const drain = elapsedHours * 4.166666666666667;
+            const isOverclockActive = user.overclockExpiresAt ? new Date(user.overclockExpiresAt).getTime() > Date.now() : false;
+            const drainRate = isOverclockActive ? 8.333333333333334 : 4.166666666666667;
+            const drain = elapsedHours * drainRate;
             const currentEnergy = Math.max(0, Math.min(100, (targetRig.energy ?? 100) - drain));
 
             const needed = 100 - currentEnergy;
@@ -613,25 +760,35 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         } catch (e: any) {
             skipRefreshRef.current = false; // Unblock on error
             refreshData(); // Revert on error
-            alert(e.message || 'เกิดข้อผิดพลาดในการชาร์จไฟ');
+            addNotification({ id: Date.now().toString(), userId: user.id, message: e.message || 'เกิดข้อผิดพลาดในการชาร์จไฟ', type: 'ERROR', read: false, timestamp: Date.now() });
         }
     };
 
-    const handleBuyAccessory = (itemId: string) => {
+    const handleBuyAccessory = async (itemId: string) => {
         try {
-            const newItem = MockDB.buyAccessory(user.id, itemId);
+            // Find item info locally first for the request
+            const itemInfo = SHOP_ITEMS.find(i => i.id === itemId);
+            if (!itemInfo) throw new Error('Item not found');
+
+            const res = await api.buyAccessory({
+                itemId: itemInfo.id,
+                price: itemInfo.price,
+                name: itemInfo.name,
+                dailyBonus: (itemInfo as any).dailyBonus,
+                rarity: (itemInfo as any).rarity,
+                lifespanDays: itemInfo.lifespanDays
+            });
+
+            const newItem = res.item;
+
+            // Optimistic Update: Add to inventory immediately
+            setInventory(prev => [...prev, newItem]);
+
             refreshData();
 
-            // Items that skip the Loot Box animation
-            const directAddItems = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'insurance_card'];
-
-            if (directAddItems.includes(itemId)) {
-                addNotification({ id: Date.now().toString(), userId: user.id, message: `ได้รับ ${newItem.name} เรียบร้อย!`, type: 'SUCCESS', read: false, timestamp: Date.now() });
-            } else {
-                setLootResult({ rarity: newItem.rarity, bonus: newItem.dailyBonus, itemTypeId: newItem.typeId, itemName: newItem.name });
-            }
+            addNotification({ id: Date.now().toString(), userId: user.id, message: `ได้รับ ${newItem.name} เรียบร้อย!`, type: 'SUCCESS', read: false, timestamp: Date.now() });
         } catch (e: any) {
-            alert(e.message);
+            addNotification({ id: Date.now().toString(), userId: user.id, message: e.response?.data?.message || e.message, type: 'ERROR', read: false, timestamp: Date.now() });
         }
     };
 
@@ -646,7 +803,14 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             alert(e.response?.data?.message || e.message);
         }
     };
-    const handleSaveQr = (base64: string) => { MockDB.updateUserQr(user.id, base64); refreshData(); };
+    const handleSaveQr = async (base64: string) => {
+        try {
+            await api.user.updateBankQr(base64);
+            refreshData();
+        } catch (err: any) {
+            addNotification({ id: Date.now().toString(), userId: user.id, message: "บันทึกล้มเหลว: " + (err.response?.data?.message || err.message), type: 'ERROR', read: false, timestamp: Date.now() });
+        }
+    };
     const handleDepositSuccess = () => { refreshData(); addNotification({ id: Date.now().toString(), userId: user.id, message: `ส่งคำร้องฝากเงินแล้ว กรุณารออนุมัติ`, type: 'INFO', read: false, timestamp: Date.now() }); };
 
     // Glove Management Handlers
@@ -654,20 +818,22 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         setManagingAccessory({ rigId, slotIndex });
     };
 
-    const handleAccessoryEquip = (itemId: string) => {
+    const handleAccessoryEquip = async (itemId: string) => {
         if (!managingAccessory) return;
         try {
-            MockDB.equipAccessory(user.id, managingAccessory.rigId, itemId, managingAccessory.slotIndex);
+            await api.equipAccessory(managingAccessory.rigId, itemId, managingAccessory.slotIndex);
             refreshData();
-            addNotification({ id: Date.now().toString(), userId: user.id, message: `สวมใส่อุปกรณ์สำเร็จ`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            setManagingAccessory(null);
+            addNotification({ id: Date.now().toString(), userId: user.id, message: `ติดตั้งอุปกรณ์สำเร็จ`, type: 'SUCCESS', read: false, timestamp: Date.now() });
         } catch (e: any) { alert(e.message); }
     };
 
-    const handleAccessoryUnequip = () => {
+    const handleAccessoryUnequip = async () => {
         if (!managingAccessory) return;
         try {
-            MockDB.unequipAccessory(user.id, managingAccessory.rigId, managingAccessory.slotIndex);
+            await api.unequipAccessory(managingAccessory.rigId, managingAccessory.slotIndex);
             refreshData();
+            setManagingAccessory(null);
             addNotification({ id: Date.now().toString(), userId: user.id, message: `ถอดอุปกรณ์สำเร็จ`, type: 'SUCCESS', read: false, timestamp: Date.now() });
         } catch (e: any) { alert(e.message); }
     };
@@ -690,11 +856,6 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
     return (
         <div className="min-h-screen font-sans pb-24 landscape:pb-16 lg:pb-20 bg-stone-950 text-stone-200">
-            {user.isDemo && (
-                <div className="fixed top-0 left-0 w-full z-[200] bg-red-600 text-white text-center py-1 text-xs font-bold uppercase tracking-widest animate-pulse shadow-lg">
-                    DEMO MODE: SPEED x{DEMO_SPEED_MULTIPLIER} (Time Limit: 10 Mins)
-                </div>
-            )}
             {showGoldRain && <GoldRain />}
 
             {/* ... Navbar (omitted for brevity, assume same structure) ... */}
@@ -792,7 +953,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
 
                 {/* Dashboard Headers & Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-10">
                     {/* Active Rigs */}
                     <div
                         onClick={() => document.getElementById('rigs-list')?.scrollIntoView({ behavior: 'smooth' })}
@@ -826,7 +987,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                     </div>
 
                     {/* Energy - Electric Furnace Style */}
-                    <div className={`col-span-2 md:col-span-1 relative group rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 hover:-translate-y-1 bg-stone-900 border-2 ${isCharging ? 'border-yellow-400' : 'border-stone-700'}`}>
+                    <div className={`sm:col-span-2 lg:col-span-1 relative group rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 hover:-translate-y-1 bg-stone-900 border-2 ${isCharging ? 'border-yellow-400' : 'border-stone-700'}`}>
 
                         {/* Furnace Background Detail */}
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-stone-800 to-stone-950"></div>
@@ -862,7 +1023,13 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                     }}
                                 >
                                     {/* Core Detail - Rotating Background */}
-                                    <div className="absolute inset-0 opacity-50 animate-[spin_10s_linear_infinite]" style={{ backgroundImage: 'repeating-conic-gradient(#000 0% 5%, transparent 5% 25%)' }}></div>
+                                    <div
+                                        className="absolute inset-0 opacity-50"
+                                        style={{
+                                            backgroundImage: 'repeating-conic-gradient(#000 0% 5%, transparent 5% 25%)',
+                                            animation: `spin ${isOverclockActive ? '2s' : '10s'} linear infinite`
+                                        }}
+                                    ></div>
 
                                     {/* Zap Icon - Intense Breathing Animation */}
                                     <Zap
@@ -872,10 +1039,59 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                             ${isCharging ? 'scale-150 animate-bounce' : 'animate-breathing'}
                                         `}
                                     />
+
+                                    {/* Additional Overclock Lightning "Strikes" */}
+                                    {/* Additional Overclock Lightning "Strikes" -> Epic Lightning Animation */}
+
                                 </div>
 
                                 {/* Success Flash Effect */}
                                 {isCharging && <div className="absolute inset-2 rounded-full bg-white/40 animate-ping pointer-events-none"></div>}
+
+                                {/* Epic Lightning Animation (Moved Outside Overflow-Hidden) */}
+                                {/* Epic Lightning Animation (Realistic) */}
+                                {isOverclockActive && (
+                                    <div className="absolute inset-0 pointer-events-none overflow-visible z-20">
+                                        {/* Main Thunderbolt */}
+                                        {/* Bolt 1: 0 deg - Long Fork */}
+                                        <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] opacity-0 animate-[pulse_0.05s_ease-in-out_infinite] mix-blend-screen drop-shadow-[0_0_10px_rgba(255,255,255,0.8)] drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]" viewBox="0 0 100 100" style={{ filter: 'url(#lightning-filter)', transform: 'translate(-50%, -50%) rotate(0deg)' }}>
+                                            {/* Main Branch */}
+                                            <path d="M50,50 L52,40 L48,30 L53,20 L47,10 L50,0" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            {/* Side Branch */}
+                                            <path d="M48,30 L40,25" fill="none" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                                            <path d="M53,20 L60,15" fill="none" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+
+                                        {/* Bolt 2: 72 deg - S Curve Split */}
+                                        <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] opacity-0 animate-[pulse_0.08s_ease-in-out_infinite] mix-blend-screen drop-shadow-[0_0_10px_rgba(255,255,255,0.8)] drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]" viewBox="0 0 100 100" style={{ filter: 'url(#lightning-filter)', transform: 'translate(-50%, -50%) rotate(72deg)', animationDelay: '0.03s' }}>
+                                            <path d="M50,50 L55,35 L45,25 L50,10" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            <path d="M55,35 L65,30" fill="none" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+
+                                        {/* Bolt 3: 144 deg - Jagged Strike */}
+                                        <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] opacity-0 animate-[pulse_0.12s_ease-in-out_infinite] mix-blend-screen drop-shadow-[0_0_10px_rgba(255,255,255,0.8)] drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]" viewBox="0 0 100 100" style={{ filter: 'url(#lightning-filter)', transform: 'translate(-50%, -50%) rotate(144deg)', animationDelay: '0.07s' }}>
+                                            <path d="M50,50 L48,35 L52,25 L47,15 L50,5" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            <path d="M52,25 L58,20 L62,10" fill="none" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+
+                                        {/* Bolt 4: 216 deg - Tree Root */}
+                                        <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] opacity-0 animate-[pulse_0.06s_ease-in-out_infinite] mix-blend-screen drop-shadow-[0_0_10px_rgba(255,255,255,0.8)] drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]" viewBox="0 0 100 100" style={{ filter: 'url(#lightning-filter)', transform: 'translate(-50%, -50%) rotate(216deg)', animationDelay: '0.02s' }}>
+                                            <path d="M50,50 L45,30 L55,10" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            <path d="M45,30 L35,25" fill="none" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                                            <path d="M50,20 L60,15" fill="none" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+
+                                        {/* Bolt 5: 288 deg - Chaotic ZigZag */}
+                                        <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] opacity-0 animate-[pulse_0.1s_ease-in-out_infinite] mix-blend-screen drop-shadow-[0_0_10px_rgba(255,255,255,0.8)] drop-shadow-[0_0_20px_rgba(6,182,212,0.6)]" viewBox="0 0 100 100" style={{ filter: 'url(#lightning-filter)', transform: 'translate(-50%, -50%) rotate(288deg)', animationDelay: '0.05s' }}>
+                                            <path d="M50,50 L53,35 L42,20 L55,5" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            <path d="M53,35 L60,30" fill="none" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                                            <path d="M42,20 L35,15" fill="none" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+
+                                        {/* Central Constant Glow (White-Hot) */}
+                                        <div className="absolute inset-0 bg-white/30 blur-3xl animate-pulse rounded-full mix-blend-screen"></div>
+                                    </div>
+                                )}
 
                                 {/* Glass Reflection & Inner Shadow */}
                                 <div className="absolute inset-2 rounded-full bg-gradient-to-tr from-white/10 to-transparent pointer-events-none shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]"></div>
@@ -902,17 +1118,108 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                 </div>
                             </div>
 
-                            {/* Prominent Refill Button */}
-                            <button
-                                onClick={handleRefillEnergyClick}
-                                className={`w-full py-2 rounded-lg font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg text-xs 
-                                    bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border border-orange-500 shadow-orange-900/50 hover:shadow-orange-700/50 active:scale-95 cursor-pointer
-                                `}
-                            >
-                                <Zap size={14} className="fill-white animate-pulse" />
-                                เติมพลังงาน (REFILL)
-                            </button>
+                            <div className="flex flex-col gap-2 mt-2 w-full">
+                                {/* 1. Energy Refill Button (Always Visible if not full) */}
+                                <button
+                                    onClick={handleRefillEnergyClick}
+                                    disabled={energyLevel >= 100}
+                                    className={`w-full py-1.5 rounded-lg font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md text-[10px] 
+                                        ${energyLevel >= 100
+                                            ? 'bg-stone-800 text-stone-500 border border-stone-700 cursor-not-allowed'
+                                            : 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border border-orange-500 shadow-orange-900/50 hover:shadow-orange-700/50 active:scale-95 cursor-pointer'
+                                        }
+                                    `}
+                                >
+                                    <Zap size={12} className={energyLevel < 100 ? "fill-white animate-pulse" : ""} />
+                                    {energyLevel >= 100 ? 'พลังงานเต็ม (FULL)' : 'เติมพลังงาน (2 บาท)'}
+                                </button>
 
+                                {/* 2. Overclock Toggle (Mobile Style) */}
+                                <div className={`w-full p-3 rounded-xl border transition-all duration-300 flex items-center justify-between relative overflow-hidden group
+                                    ${isOverclockActive
+                                        ? 'bg-emerald-950/40 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                                        : 'bg-stone-900/40 border-stone-800'
+                                    }`}
+                                >
+
+
+                                    {/* The icon now acts as a Payment Button */}
+                                    <div
+                                        onClick={() => !isOverclockActive && handleActivateOverclock()}
+                                        className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center gap-1 border shadow-inner transition-all duration-300 group/paybtn relative z-10
+                                        ${isOverclockActive
+                                                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 animate-[bounce_1s_infinite]'
+                                                : 'bg-stone-800 border-stone-700 text-stone-500 hover:border-emerald-500/50 hover:bg-stone-800/80 cursor-pointer active:scale-95'}`}
+                                    >
+                                        <div className="relative">
+                                            {isOverclockActive && <div className="absolute inset-0 bg-yellow-400 blur-md animate-ping opacity-50"></div>}
+                                            <Zap size={22} className={isOverclockActive ? 'text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.8)] animate-pulse' : 'group-hover/paybtn:text-emerald-500 transition-colors'} />
+                                        </div>
+                                        <span className={`text-[10px] font-bold uppercase leading-none ${isOverclockActive ? 'text-emerald-400' : 'text-stone-300'}`}>
+                                            {isOverclockActive ? 'ACTIVE' : '50 ฿'}
+                                        </span>
+                                        <span className="text-[7px] opacity-60 font-bold uppercase leading-none tracking-tighter">Energy x2</span>
+                                    </div>
+
+                                    <div className="flex-1 space-y-1 relative z-10 pl-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${isOverclockActive ? 'bg-yellow-400 animate-[ping_0.5s_infinite]' : 'bg-stone-700'}`}></div>
+                                            <h4 className={`text-[13px] font-bold font-display uppercase tracking-widest leading-none ${isOverclockActive ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-white to-yellow-300 animate-pulse drop-shadow-[0_0_5px_rgba(253,224,71,0.5)]' : 'text-white'}`}>
+                                                OVERCLOCK MODE
+                                            </h4>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            {isOverclockActive ? (
+                                                <div className="flex items-center gap-2 bg-emerald-950/80 px-2 py-1 rounded-md border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] backdrop-blur-sm">
+                                                    <Timer size={14} className="text-emerald-400 animate-spin" />
+                                                    <span className="text-lg font-mono font-bold text-emerald-300 tabular-nums drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
+                                                        {(() => {
+                                                            const expiry = new Date(user.overclockExpiresAt!).getTime();
+                                                            const left = expiry - Date.now();
+                                                            const hours = Math.floor(Math.max(0, left) / (1000 * 60 * 60));
+                                                            const mins = Math.floor((Math.max(0, left) % (1000 * 60 * 60)) / (1000 * 60));
+                                                            const secs = Math.floor((Math.max(0, left) % (1000 * 60)) / 1000);
+                                                            return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                                                        })()}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col">
+                                                    <span className="text-[11px] font-bold text-emerald-500 tracking-tight">จ่าย 50 ฿ เพื่อรับคูณ 2</span>
+                                                    <span className="text-[9px] text-stone-500 font-mono italic">ระยะเวลา 48 ชั่วโมง</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* The Toggle Switch Wrapper (Activate System Tooltip) */}
+                                    <div className="flex flex-col items-end gap-1.5 z-20 relative">
+                                        <span className="text-[8px] font-bold text-stone-500 uppercase tracking-tighter">{isOverclockActive ? 'ปิดระบบ' : 'เปิดระบบ x2'}</span>
+                                        <div
+                                            onClick={() => !overclockLoading && (isOverclockActive ? handleDeactivateOverclock() : handleActivateOverclock())}
+                                            className={`w-14 h-7 rounded-full p-1 transition-all duration-300 relative 
+                                                ${overclockLoading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
+                                                ${isOverclockActive ? 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.8)] border border-yellow-300' : 'bg-stone-700 hover:bg-stone-600'}`}
+                                        >
+                                            <div className={`w-5 h-5 bg-white rounded-full transition-all duration-300 transform shadow-md flex items-center justify-center
+                                                ${isOverclockActive ? 'translate-x-7' : 'translate-x-0'}`}
+                                            >
+                                                {isOverclockActive && <Zap size={12} className="text-emerald-600 fill-emerald-600 animate-pulse" />}
+                                            </div>
+                                        </div>
+
+                                        <div className="text-[9px] text-stone-500 font-mono flex items-center gap-1 opacity-70">
+                                            <Clock size={8} /> 48 ชม.
+                                        </div>
+                                    </div>
+
+                                </div>
+                                {!isOverclockActive && (
+                                    <div className="mt-2 pt-2 border-t border-stone-800/50 text-[9px] text-center text-stone-500 font-mono flex items-center justify-center gap-1">
+                                        คลิกที่สวิตช์เพื่อเริ่มใช้งานทันที หรือคลิกไอคอนเพื่อดูรายละเอียด
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -954,7 +1261,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 {/* --- SLOT SYSTEM GRID --- */}
                 <div className="mb-16">
                     <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                        <Grid size={24} className="text-yellow-500" /> พื้นที่สัมปทาน (Mining Slots)
+                        <Grid size={24} className="text-yellow-500" /> พื้นที่ขุดเหมือง
                     </h3>
                     <div id="rigs-list" className="grid grid-cols-1 landscape:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-8">
                         {Array.from({ length: MAX_RIGS_PER_USER }).map((_, index) => {
@@ -982,6 +1289,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                         isPowered={isPowered}
                                         isExploring={isExploring}
                                         isDemo={user.isDemo}
+                                        isOverclockActive={user.overclockExpiresAt ? new Date(user.overclockExpiresAt).getTime() > Date.now() : false}
+                                        addNotification={addNotification}
                                     />
                                 );
                             } else if (isUnlocked) {
@@ -1049,8 +1358,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 )
             }
 
+
+
             {/* Notifications and Modals... */}
-            <div className="fixed bottom-24 lg:bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+            <div className="fixed bottom-24 lg:bottom-4 right-4 z-[150] flex flex-col gap-2 pointer-events-none">
                 {notifications.map(n => (
                     <div key={n.id} className={`pointer-events-auto flex items-start gap-3 p-4 rounded-lg shadow-2xl border backdrop-blur-md animate-in slide-in-from-right duration-500 fade-in w-80 ${n.type === 'SUCCESS' ? 'bg-emerald-950/80 border-emerald-500/50' : n.type === 'ERROR' ? 'bg-red-950/80 border-red-500/50' : 'bg-blue-950/80 border-blue-500/50'}`}>
                         <div className={`p-1 rounded-full ${n.type === 'SUCCESS' ? 'bg-emerald-500/20 text-emerald-400' : n.type === 'INFO' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
@@ -1062,26 +1373,118 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             </div>
 
             {/* Modals */}
-            <InvestmentModal isOpen={isBuyModalOpen} onClose={() => setIsBuyModalOpen(false)} onConfirm={handlePurchase} onOpenRates={() => setIsRatesModalOpen(true)} walletBalance={user.balance} currentRigCount={rigs.length} maxRigs={user.unlockedSlots || 3} materials={user.materials || {}} inventory={inventory} rigs={rigs} />
-            <AccessoryShopModal isOpen={isShopOpen} onClose={() => setIsShopOpen(false)} walletBalance={user.balance} onBuy={handleBuyAccessory} />
-            <WarehouseModal isOpen={isWarehouseOpen} onClose={() => setIsWarehouseOpen(false)} userId={user.id} materials={user.materials || {}} onSell={(tier, amount) => { try { const earned = MockDB.sellUserMaterial(user.id, tier, amount); refreshData(); triggerGoldRain(); addNotification({ id: Date.now().toString(), userId: user.id, message: `ขายสำเร็จ! ได้รับ +${earned.toLocaleString()} ${CURRENCY}`, type: 'SUCCESS', read: false, timestamp: Date.now() }); } catch (e: any) { alert(e.message); } }} onCraft={(sourceTier) => { try { const res = MockDB.craftMaterial(user.id, sourceTier); refreshData(); addNotification({ id: Date.now().toString(), userId: user.id, message: `ผสมสำเร็จ! ${res.sourceName} -> ${res.targetName}`, type: 'SUCCESS', read: false, timestamp: Date.now() }); return res; } catch (e: any) { alert(e.message); throw e; } }} onPlayGoldRain={triggerGoldRain} onOpenMarket={(tier) => { setMarketTier(tier); setIsMarketOpen(true); }} />
-            <WithdrawModal isOpen={isWithdrawModalOpen} onClose={() => setIsWithdrawModalOpen(false)} walletBalance={user.balance} onWithdraw={handleWithdraw} savedQrCode={user.bankQrCode} onSaveQr={handleSaveQr} />
-            <DepositModal isOpen={isDepositModalOpen} onClose={() => setIsDepositModalOpen(false)} onDepositSuccess={handleDepositSuccess} />
-            <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} user={user} />
-            <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} userId={user.id} />
-            <GiftSystemModal isOpen={isGiftSystemOpen} onClose={() => setIsGiftSystemOpen(false)} />
-            <LeaderboardModal isOpen={isLeaderboardOpen} onClose={() => setIsLeaderboardOpen(false)} />
-            <ReferralModal isOpen={isReferralOpen} onClose={() => setIsReferralOpen(false)} user={user} />
-            <DevToolsModal isOpen={isDevToolsOpen} onClose={() => setIsDevToolsOpen(false)} user={user} onRefresh={refreshData} />
-            <MarketModal isOpen={isMarketOpen} onClose={() => { setIsMarketOpen(false); setMarketTier(undefined); }} userId={user.id} onSuccess={refreshData} initialTier={marketTier} />
-            <InventoryModal isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} inventory={inventory} userId={user.id} onRefresh={refreshData} />
+            <InvestmentModal
+                isOpen={isBuyModalOpen}
+                onClose={() => setIsBuyModalOpen(false)}
+                onConfirm={handlePurchase}
+                onOpenRates={() => setIsRatesModalOpen(true)}
+                walletBalance={user.balance}
+                currentRigCount={rigs.length}
+                maxRigs={user.unlockedSlots || 3}
+                materials={user.materials || {}}
+                inventory={inventory}
+                rigs={rigs}
+                user={user}
+                addNotification={addNotification}
+            />
+            <AccessoryShopModal
+                isOpen={isShopOpen}
+                onClose={() => setIsShopOpen(false)}
+                walletBalance={user.balance}
+                onBuy={handleBuyAccessory}
+                onRefresh={refreshData}
+                addNotification={addNotification}
+                userId={user.id}
+            />
+            <WarehouseModal
+                isOpen={isWarehouseOpen}
+                onClose={() => setIsWarehouseOpen(false)}
+                userId={user.id}
+                inventory={inventory}
+                materials={user.materials || {}}
+                balance={user.balance}
+                marketState={marketState}
+                onSell={async (tier, amount) => {
+                    try {
+                        const price = (marketState?.trends[tier]?.currentPrice || MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES]) * amount;
+                        MockDB.sellUserMaterial(user.id, tier, amount);
+
+                        if (!user.isDemo) {
+                            const result = await api.sellMaterial(tier, amount);
+                            // result.balance is updated on backend
+                        }
+
+                        refreshData();
+                        triggerGoldRain();
+                        addNotification({
+                            id: Date.now().toString(),
+                            userId: user.id,
+                            message: `ขายสำเร็จ! ได้รับ +${price.toLocaleString()} ${CURRENCY}`,
+                            type: 'SUCCESS',
+                            read: false,
+                            timestamp: Date.now()
+                        });
+                    } catch (e: any) {
+                        addNotification({
+                            id: Date.now().toString(),
+                            userId: user.id,
+                            message: "การขายล้มเหลว: " + (e.response?.data?.message || e.message),
+                            type: 'ERROR',
+                            read: false,
+                            timestamp: Date.now()
+                        });
+                    }
+                }}
+                onCraft={async (sourceTier) => {
+                    try {
+                        const res = await api.craftMaterial(sourceTier);
+                        refreshData();
+                        addNotification({
+                            id: Date.now().toString(),
+                            userId: user.id,
+                            message: `ผสมสำเร็จ! ${res.sourceName} -> ${res.targetName}`,
+                            type: 'SUCCESS',
+                            read: false,
+                            timestamp: Date.now()
+                        });
+                        return res;
+                    } catch (e: any) {
+                        const errMsg = e.response?.data?.message || e.message || 'เกิดข้อผิดพลาดในการสกัดแร่';
+                        addNotification({
+                            id: Date.now().toString(),
+                            userId: user.id,
+                            message: errMsg,
+                            type: 'ERROR',
+                            read: false,
+                            timestamp: Date.now()
+                        });
+                        throw e;
+                    }
+                }}
+                onPlayGoldRain={triggerGoldRain}
+                onOpenMarket={(tier) => {
+                    setMarketTier(tier);
+                    setIsMarketOpen(true);
+                }}
+                addNotification={addNotification}
+            />
+            <WithdrawModal isOpen={isWithdrawModalOpen} onClose={() => setIsWithdrawModalOpen(false)} walletBalance={user.balance} onWithdraw={handleWithdraw} savedQrCode={user.bankQrCode} onSaveQr={handleSaveQr} addNotification={addNotification} />
+            <DepositModal isOpen={isDepositModalOpen} onClose={() => setIsDepositModalOpen(false)} user={user} onDepositSuccess={handleDepositSuccess} addNotification={addNotification} />
+            <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} user={user} onSuccess={refreshData} addNotification={addNotification} />
+            <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} userId={user.id} addNotification={addNotification} />
+            <GiftSystemModal isOpen={isGiftSystemOpen} onClose={() => setIsGiftSystemOpen(false)} addNotification={addNotification} />
+            <LeaderboardModal isOpen={isLeaderboardOpen} onClose={() => setIsLeaderboardOpen(false)} addNotification={addNotification} />
+            <ReferralModal isOpen={isReferralOpen} onClose={() => setIsReferralOpen(false)} user={user} addNotification={addNotification} />
+            <DevToolsModal isOpen={isDevToolsOpen} onClose={() => setIsDevToolsOpen(false)} user={user} onRefresh={refreshData} addNotification={addNotification} />
+            <MarketModal isOpen={isMarketOpen} onClose={() => { setIsMarketOpen(false); setMarketTier(undefined); }} userId={user.id} onSuccess={refreshData} initialTier={marketTier} addNotification={addNotification} />
+            <InventoryModal isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} inventory={inventory} userId={user.id} onRefresh={refreshData} addNotification={addNotification} marketState={marketState} materials={user.materials} />
 
             {/* New Modals */}
-            <DailyBonusModal isOpen={isDailyBonusOpen} onClose={() => setIsDailyBonusOpen(false)} user={user} onRefresh={refreshData} />
-            <MissionModal isOpen={isMissionOpen} onClose={() => setIsMissionOpen(false)} user={user} onRefresh={refreshData} />
-            <VIPModal isOpen={isVIPOpen} onClose={() => setIsVIPOpen(false)} user={user} />
-            <DungeonModal isOpen={isDungeonOpen} onClose={() => setIsDungeonOpen(false)} user={user} onRefresh={refreshData} />
-            <GameGuideModal isOpen={isGameGuideOpen} onClose={() => setIsGameGuideOpen(false)} />
+            <DailyBonusModal isOpen={isDailyBonusOpen} onClose={() => setIsDailyBonusOpen(false)} user={user} onRefresh={refreshData} addNotification={addNotification} />
+            <MissionModal isOpen={isMissionOpen} onClose={() => setIsMissionOpen(false)} user={user} onRefresh={refreshData} addNotification={addNotification} />
+            <VIPModal isOpen={isVIPOpen} onClose={() => setIsVIPOpen(false)} user={user} addNotification={addNotification} />
+            <DungeonModal isOpen={isDungeonOpen} onClose={() => setIsDungeonOpen(false)} user={user} onRefresh={refreshData} addNotification={addNotification} />
+            <GameGuideModal isOpen={isGameGuideOpen} onClose={() => setIsGameGuideOpen(false)} addNotification={addNotification} />
 
             {/* Equip Selection */}
 
@@ -1111,6 +1514,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             onEquip={handleAccessoryEquip}
                             onUnequip={handleAccessoryUnequip}
                             onRefresh={refreshData}
+                            materials={user.materials}
+                            addNotification={addNotification}
                         />
                     );
                 })()
@@ -1140,7 +1545,6 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             <button onClick={() => { setIsMissionOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Target className="text-blue-400" size={32} /><span className="text-sm font-bold text-stone-300">ภารกิจ</span></button>
                             <button onClick={() => { setIsVIPOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Crown className="text-yellow-400" size={32} /><span className="text-sm font-bold text-stone-300">VIP</span></button>
                             <button onClick={() => { setIsMarketOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><BarChart2 className="text-emerald-500" size={32} /><span className="text-sm font-bold text-stone-300">ตลาดกลาง</span></button>
-                            <button onClick={() => { setIsInventoryOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Backpack className="text-orange-400" size={32} /><span className="text-sm font-bold text-stone-300">กระเป๋า</span></button>
                             <button onClick={() => { setIsHistoryOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><History className="text-stone-400" size={32} /><span className="text-sm font-bold text-stone-300">ประวัติ</span></button>
                             <button onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Settings className="text-stone-400" size={32} /><span className="text-sm font-bold text-stone-300">ตั้งค่า</span></button>
                             <button onClick={() => { setIsGameGuideOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><BookOpen className="text-blue-400" size={32} /><span className="text-sm font-bold text-stone-300">คู่มือเกม</span></button>
@@ -1199,11 +1603,11 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                         <span className="text-[10px] font-medium">ตลาด</span>
                     </button>
                     <button
-                        onClick={() => setIsInventoryOpen(true)}
-                        className="flex flex-col items-center justify-center py-2 px-1 rounded-lg text-stone-400 hover:text-orange-500 hover:bg-stone-800/50 transition-all active:scale-95"
+                        onClick={() => setIsDungeonOpen(true)}
+                        className="flex flex-col items-center justify-center py-2 px-1 rounded-lg text-stone-400 hover:text-purple-500 hover:bg-stone-800/50 transition-all active:scale-95"
                     >
-                        <Backpack size={20} className="mb-1" />
-                        <span className="text-[10px] font-medium">กระเป๋า</span>
+                        <Skull size={20} className="mb-1" />
+                        <span className="text-[10px] font-medium">ดันเจียน</span>
                     </button>
                     <button
                         onClick={() => setIsMobileMenuOpen(true)}
@@ -1229,6 +1633,14 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 gloveRarity={gloveReveal?.rarity || 'COMMON'}
                 gloveBonus={gloveReveal?.bonus || 0}
             />
+
+            {/* SVG Filter Definition for Realistic Lightning */}
+            <svg className="hidden">
+                <filter id="lightning-filter">
+                    <feTurbulence type="fractalNoise" baseFrequency="0.02 0.15" numOctaves="3" result="noise" seed="0" />
+                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="20" />
+                </filter>
+            </svg>
 
         </div >
     );

@@ -6,6 +6,10 @@ import authRoutes from './routes/authRoutes';
 import rigRoutes from './routes/rigRoutes';
 import adminRoutes from './routes/adminRoutes';
 import questRoutes from './routes/questRoutes';
+import accessoryRoutes from './routes/accessoryRoutes';
+import dungeonRoutes from './routes/dungeonRoutes';
+import userRoutes from './routes/userRoutes';
+import materialRoutes from './routes/materialRoutes';
 // โหลด Environment Variables
 dotenv.config();
 const app = express();
@@ -19,6 +23,10 @@ import transactionRoutes from './routes/transactionRoutes';
 app.use('/api/auth', authRoutes);
 app.use('/api/rigs', rigRoutes);
 app.use('/api/quests', questRoutes); // Add Quests API
+app.use('/api/accessories', accessoryRoutes);
+app.use('/api/dungeons', dungeonRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/materials', materialRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/transactions', transactionRoutes);
 // Health Check

@@ -19,7 +19,8 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ currentUser }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Level Gate Check
-    const canChat = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN' || (currentUser.stats?.totalDeposited || 0) > 0;
+    // Level Gate Check - UNLOCKED FOR EVERYONE
+    const canChat = true;
 
     useEffect(() => {
         if (!isOpen) return;

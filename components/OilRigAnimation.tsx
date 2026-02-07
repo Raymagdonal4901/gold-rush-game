@@ -7,9 +7,12 @@ interface OilRigAnimationProps {
   rarity?: Rarity;
   tier?: number; // 1 to 5 based on investment
   rigName?: string; // NEW: Rig name to determine animation style
+  isOverclockActive?: boolean; // NEW: Overclock boost active
 }
 
-export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = true, rarity = 'COMMON', tier = 1, rigName = '' }) => {
+export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = true, rarity = 'COMMON', tier = 1, rigName = '', isOverclockActive = false }) => {
+  const speedScale = isOverclockActive ? 0.5 : 1; // Double speed = half duration
+
 
   // Rarity colors for particles
   const getParticleColor = () => {
@@ -34,7 +37,7 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
       <circle cx="0" cy="58" r="3" fill="#52525b" />
 
       {/* Drill Body (Angled) */}
-      <g className={isActive ? "animate-[drill-shake_0.1s_linear_infinite]" : ""} style={{ transformOrigin: '0 -20px' }}>
+      <g className={isActive ? "animate-[drill-shake_${0.1 * speedScale}s_linear_infinite]" : ""} style={{ transformOrigin: '0 -20px' }}>
         {/* Handle */}
         <rect x="-6" y="-60" width="12" height="25" rx="3" fill="#f97316" stroke="#ea580c" strokeWidth="1" />
 
@@ -46,7 +49,7 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
         <rect x="-4" y="-15" width="8" height="40" fill="#71717a" stroke="#52525b" strokeWidth="1" />
 
         {/* Drill Bit (Spiral) */}
-        <g className={isActive ? "animate-[spin_0.3s_linear_infinite]" : ""} style={{ transformOrigin: '0 35px' }}>
+        <g className={isActive ? "animate-[spin_${0.3 * speedScale}s_linear_infinite]" : ""} style={{ transformOrigin: '0 35px' }}>
           <path d="M0 25 L-8 35 L0 45 L8 35 Z" fill="#d4d4d8" stroke="#a1a1aa" strokeWidth="1" />
           <circle cx="0" cy="35" r="3" fill="#e5e5e5" />
           {/* Spiral Lines */}
@@ -58,10 +61,10 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
       {/* Dust/Debris Particles */}
       {isActive && (
         <g>
-          <circle cx="-15" cy="40" r="2" fill="#78716c" className="animate-[float-gold_0.6s_infinite]" />
-          <circle cx="20" cy="42" r="1.5" fill="#a8a29e" className="animate-[float-gold_0.8s_infinite]" style={{ animationDelay: '0.2s' }} />
-          <circle cx="5" cy="38" r="2.5" fill="#57534e" className="animate-[float-gold_0.5s_infinite]" style={{ animationDelay: '0.4s' }} />
-          <circle cx="-25" cy="45" r="1" fill="#d6d3d1" className="animate-[float-gold_0.7s_infinite]" style={{ animationDelay: '0.1s' }} />
+          <circle cx="-15" cy="40" r="2" fill="#78716c" className="animate-[float-gold_${0.6 * speedScale}s_infinite]" />
+          <circle cx="20" cy="42" r="1.5" fill="#a8a29e" className="animate-[float-gold_${0.8 * speedScale}s_infinite]" style={{ animationDelay: '0.2s' }} />
+          <circle cx="5" cy="38" r="2.5" fill="#57534e" className="animate-[float-gold_${0.5 * speedScale}s_infinite]" style={{ animationDelay: '0.4s' }} />
+          <circle cx="-25" cy="45" r="1" fill="#d6d3d1" className="animate-[float-gold_${0.7 * speedScale}s_infinite]" style={{ animationDelay: '0.1s' }} />
         </g>
       )}
 
@@ -82,10 +85,10 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
     <g transform="translate(100, 75)">
       {/* Ground Mound */}
       <path d="M-30 60 Q0 50 30 60" fill="none" stroke="#44403c" strokeWidth="2" />
-      <path d="M-25 60 Q0 45 25 60 Z" fill="#292524" className={isActive ? "animate-[squash_2s_infinite]" : ""} />
+      <path d="M-25 60 Q0 45 25 60 Z" fill="#292524" className={isActive ? "animate-[squash_${2 * speedScale}s_infinite]" : ""} />
 
       {/* The Rusty Shovel */}
-      <g className={isActive ? "animate-[dig-cycle_2s_ease-in-out_infinite]" : ""} style={{ transformOrigin: '0 40px' }}>
+      <g className={isActive ? "animate-[dig-cycle_${2 * speedScale}s_ease-in-out_infinite]" : ""} style={{ transformOrigin: '0 40px' }}>
         {/* Handle */}
         <rect x="-2" y="-50" width="4" height="50" fill="#92400e" stroke="#78350f" strokeWidth="1" rx="1" />
         <circle cx="0" cy="-52" r="4" fill="none" stroke="#78350f" strokeWidth="2" />
@@ -101,9 +104,9 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
       {/* Flying Dirt (Throw Phase) */}
       {isActive && (
         <g>
-          <circle cx="15" cy="30" r="3" fill="#292524" className="animate-[dirt-fly_2s_infinite]" style={{ animationDelay: '1.2s' }} />
-          <circle cx="20" cy="25" r="2" fill="#44403c" className="animate-[dirt-fly_2s_infinite]" style={{ animationDelay: '1.25s' }} />
-          <circle cx="25" cy="35" r="2.5" fill="#1c1917" className="animate-[dirt-fly_2s_infinite]" style={{ animationDelay: '1.3s' }} />
+          <circle cx="15" cy="30" r="3" fill="#292524" className="animate-[dirt-fly_${2 * speedScale}s_infinite]" style={{ animationDelay: '1.2s' }} />
+          <circle cx="20" cy="25" r="2" fill="#44403c" className="animate-[dirt-fly_${2 * speedScale}s_infinite]" style={{ animationDelay: '1.25s' }} />
+          <circle cx="25" cy="35" r="2.5" fill="#1c1917" className="animate-[dirt-fly_${2 * speedScale}s_infinite]" style={{ animationDelay: '1.3s' }} />
         </g>
       )}
 
@@ -136,7 +139,7 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
       <path d="M30 60 L35 80" stroke="#78350f" strokeWidth="4" strokeLinecap="round" />
 
       {/* Main Boiler Tank */}
-      <g className={isActive ? "animate-[shake_2s_linear_infinite]" : ""}>
+      <g className={isActive ? "animate-[shake_${2 * speedScale}s_linear_infinite]" : ""}>
         {/* Tank Body */}
         <rect x="-40" y="-30" width="80" height="90" rx="10" fill="#c2410c" stroke="#7c2d12" strokeWidth="3" />
         {/* Copper Sheen/Highlight */}
@@ -153,12 +156,12 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
 
         {/* Molten Liquid inside Window */}
         <g clipPath="url(#copper-clip)">
-          <rect x="-20" y="5" width="40" height="40" fill="#ea580c" className={isActive ? "animate-[liquid-rise_2s_ease-in-out_infinite]" : ""} />
+          <rect x="-20" y="5" width="40" height="40" fill="#ea580c" className={isActive ? "animate-[liquid-rise_${2 * speedScale}s_ease-in-out_infinite]" : ""} />
           {/* Bubbles */}
           {isActive && (
             <g>
-              <circle cx="-5" cy="20" r="3" fill="#fdba74" className="animate-[float-gold_1s_infinite]" />
-              <circle cx="8" cy="25" r="2" fill="#fdba74" className="animate-[float-gold_1.2s_infinite]" style={{ animationDelay: '0.4s' }} />
+              <circle cx="-5" cy="20" r="3" fill="#fdba74" className="animate-[float-gold_${1 * speedScale}s_infinite]" />
+              <circle cx="8" cy="25" r="2" fill="#fdba74" className="animate-[float-gold_${1.2 * speedScale}s_infinite]" style={{ animationDelay: '0.4s' }} />
             </g>
           )}
         </g>
@@ -170,7 +173,7 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
 
         {/* Pressure Gauge */}
         <circle cx="0" cy="-30" r="12" fill="#fef3c7" stroke="#78350f" strokeWidth="2" />
-        <line x1="0" y1="-30" x2="0" y2="-40" stroke="#ef4444" strokeWidth="2" className={isActive ? "animate-[gauge-wiggle_0.5s_linear_infinite]" : ""} style={{ transformOrigin: '0 -30px' }} />
+        <line x1="0" y1="-30" x2="0" y2="-40" stroke="#ef4444" strokeWidth="2" className={isActive ? "animate-[gauge-wiggle_${0.5 * speedScale}s_linear_infinite]" : ""} style={{ transformOrigin: '0 -30px' }} />
       </g>
 
       {/* Steam Pipes & Vents */}
@@ -180,8 +183,8 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
       {/* Steam Puffs */}
       {isActive && (
         <g transform="translate(60, 10)">
-          <circle cx="5" cy="0" r="3" fill="white" opacity="0.6" className="animate-[steam_1.5s_infinite]" />
-          <circle cx="10" cy="-5" r="4" fill="white" opacity="0.4" className="animate-[steam_1.5s_infinite]" style={{ animationDelay: '0.3s' }} />
+          <circle cx="5" cy="0" r="3" fill="white" opacity="0.6" className="animate-[steam_${1.5 * speedScale}s_infinite]" />
+          <circle cx="10" cy="-5" r="4" fill="white" opacity="0.4" className="animate-[steam_${1.5 * speedScale}s_infinite]" style={{ animationDelay: '0.3s' }} />
         </g>
       )}
 
@@ -189,7 +192,7 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
       <path d="M-40 40 L-50 40 L-50 45" stroke="#7c2d12" strokeWidth="4" fill="none" />
       {isActive && (
         <g>
-          <circle cx="-50" cy="45" r="3" fill="#ea580c" className="animate-[drip_1s_cubic-bezier(0.5,0,1,1)_infinite]" />
+          <circle cx="-50" cy="45" r="3" fill="#ea580c" className="animate-[drip_${1 * speedScale}s_cubic-bezier(0.5,0,1,1)_infinite]" />
         </g>
       )}
 
@@ -233,7 +236,7 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
 
       {/* Hot Iron Bar (Target) */}
       <g transform="translate(0, 31)">
-        <rect x="-15" y="0" width="30" height="6" rx="1" fill="#f97316" stroke="#ea580c" strokeWidth="1" className={isActive ? "animate-[hot-iron_2s_infinite]" : ""} />
+        <rect x="-15" y="0" width="30" height="6" rx="1" fill="#f97316" stroke="#ea580c" strokeWidth="1" className={isActive ? "animate-[hot-iron_${2 * speedScale}s_infinite]" : ""} />
         {/* Glow effect */}
         <ellipse cx="0" cy="3" rx="12" ry="4" fill="#fbbf24" opacity="0.5" className={isActive ? "animate-pulse" : ""} />
       </g>
@@ -243,7 +246,7 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
       <circle cx="-50" cy="-20" r="8" fill="#52525b" stroke="#27272a" strokeWidth="2" />
 
       {/* The Swinging Arm & Hammer Head */}
-      <g className={isActive ? "animate-[hammer-swing_1.2s_ease-in-out_infinite]" : ""} style={{ transformOrigin: '-50px -20px' }}>
+      <g className={isActive ? "animate-[hammer-swing_${1.2 * speedScale}s_ease-in-out_infinite]" : ""} style={{ transformOrigin: '-50px -20px' }}>
         {/* Arm */}
         <rect x="-50" y="-24" width="60" height="8" fill="#a1a1aa" stroke="#52525b" strokeWidth="1" rx="4" />
 
@@ -258,11 +261,11 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
       {isActive && (
         <g transform="translate(0, 30)">
           {/* Left Spark */}
-          <path d="M-5 0 L-10 -10" stroke="#fbbf24" strokeWidth="2" className="animate-[spark-splash_1.2s_infinite]" style={{ animationDelay: '0.4s' }} />
+          <path d="M-5 0 L-10 -10" stroke="#fbbf24" strokeWidth="2" className="animate-[spark-splash_${1.2 * speedScale}s_infinite]" style={{ animationDelay: '0.4s' }} />
           {/* Right Spark */}
-          <path d="M5 0 L15 -8" stroke="#fbbf24" strokeWidth="2" className="animate-[spark-splash_1.2s_infinite]" style={{ animationDelay: '0.45s' }} />
+          <path d="M5 0 L15 -8" stroke="#fbbf24" strokeWidth="2" className="animate-[spark-splash_${1.2 * speedScale}s_infinite]" style={{ animationDelay: '0.45s' }} />
           {/* Hit Flash */}
-          <circle cx="0" cy="0" r="10" fill="white" opacity="0.8" className="animate-[flash_1.2s_infinite]" style={{ animationDelay: '0.4s' }} />
+          <circle cx="0" cy="0" r="10" fill="white" opacity="0.8" className="animate-[flash_${1.2 * speedScale}s_infinite]" style={{ animationDelay: '0.4s' }} />
         </g>
       )}
 
@@ -315,9 +318,9 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
         {/* Bubbles in Molten Gold */}
         {isActive && (
           <g>
-            <circle cx="-10" cy="-42" r="3" fill="#fef3c7" className="animate-[bounce_1s_infinite]" />
-            <circle cx="15" cy="-38" r="2" fill="#fef3c7" className="animate-[bounce_1.5s_infinite]" style={{ animationDelay: '0.2s' }} />
-            <circle cx="5" cy="-40" r="4" fill="#fef3c7" className="animate-[bounce_2s_infinite]" style={{ animationDelay: '0.5s' }} />
+            <circle cx="-10" cy="-42" r="3" fill="#fef3c7" className="animate-[bounce_${1 * speedScale}s_infinite]" />
+            <circle cx="15" cy="-38" r="2" fill="#fef3c7" className="animate-[bounce_${1.5 * speedScale}s_infinite]" style={{ animationDelay: '0.2s' }} />
+            <circle cx="5" cy="-40" r="4" fill="#fef3c7" className="animate-[bounce_${2 * speedScale}s_infinite]" style={{ animationDelay: '0.5s' }} />
           </g>
         )}
 
@@ -339,7 +342,7 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
 
       {/* Sliding Gold Bar */}
       {isActive && (
-        <g className="animate-[slide-down_2s_linear_infinite]">
+        <g className="animate-[slide-down_${2 * speedScale}s_linear_infinite]">
           <rect x="25" y="25" width="15" height="8" rx="1" fill="#facc15" stroke="#ca8a04" strokeWidth="1" transform="rotate(30)" />
           {/* Shine */}
           <path d="M28 25 L32 33" stroke="white" strokeWidth="2" opacity="0.6" transform="rotate(30)" />
@@ -380,7 +383,7 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
         <rect x="-3" y="-15" width="6" height="15" fill="#d4d4d8" stroke="#52525b" strokeWidth="1" />
 
         {/* The Plunger Handle (Moving Part) */}
-        <g className={isActive ? "animate-[plunge_2s_infinite]" : ""}>
+        <g className={isActive ? "animate-[plunge_${2 * speedScale}s_infinite]" : ""}>
           <rect x="-4" y="-25" width="8" height="25" fill="#a1a1aa" stroke="#52525b" strokeWidth="1" />
           <rect x="-12" y="-30" width="24" height="6" rx="2" fill="#52525b" stroke="#27272a" strokeWidth="1" />
         </g>
@@ -401,37 +404,37 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
           <rect x="-3" y="-10" width="6" height="15" fill="#ef4444" stroke="#991b1b" strokeWidth="1" />
           <path d="M0 -10 L0 -15" stroke="#fcd34d" strokeWidth="1" /> {/* Fuse */}
           {/* Fuse Spark */}
-          {isActive && <circle cx="0" cy="-15" r="2" fill="#facc15" className="animate-[pulse_0.2s_infinite]" />}
+          {isActive && <circle cx="0" cy="-15" r="2" fill="#facc15" className={`animate-[pulse_${0.2 * speedScale}s_infinite]`} />}
         </g>
 
         {/* EXPLOSION EFFECT */}
         {isActive && (
           <g>
             {/* Growing Explosion Cloud */}
-            <circle cx="0" cy="5" r="20" fill="#f59e0b" opacity="0.8" className="animate-[explode_2s_infinite]" style={{ animationDelay: '0.9s' }} />
-            <circle cx="0" cy="5" r="15" fill="#ef4444" opacity="0.8" className="animate-[explode_2s_infinite]" style={{ animationDelay: '1.0s' }} />
+            <circle cx="0" cy="5" r="20" fill="#f59e0b" opacity="0.8" className="animate-[explode_${2 * speedScale}s_infinite]" style={{ animationDelay: '0.9s' }} />
+            <circle cx="0" cy="5" r="15" fill="#ef4444" opacity="0.8" className="animate-[explode_${2 * speedScale}s_infinite]" style={{ animationDelay: '1.0s' }} />
 
             {/* Flying Coal Chunks (Scattered) */}
             <g>
               {/* Left Spurt */}
-              <g transform="rotate(-60)" className="animate-[debris_2s_infinite]" style={{ animationDelay: '1.0s' }}>
+              <g transform="rotate(-60)" className="animate-[debris_${2 * speedScale}s_infinite]" style={{ animationDelay: '1.0s' }}>
                 <circle cx="0" cy="-20" r="3" fill="#292524" />
               </g>
               {/* Top-Left Spurt */}
-              <g transform="rotate(-30)" className="animate-[debris_2s_infinite]" style={{ animationDelay: '1.0s' }}>
+              <g transform="rotate(-30)" className="animate-[debris_${2 * speedScale}s_infinite]" style={{ animationDelay: '1.0s' }}>
                 <circle cx="0" cy="-25" r="4" fill="#1c1917" />
               </g>
               {/* Upward Spurt */}
-              <g className="animate-[debris_2s_infinite]" style={{ animationDelay: '1.0s' }}>
+              <g className="animate-[debris_${2 * speedScale}s_infinite]" style={{ animationDelay: '1.0s' }}>
                 <circle cx="0" cy="-30" r="3" fill="#292524" />
                 <circle cx="5" cy="-20" r="2" fill="#44403c" />
               </g>
               {/* Top-Right Spurt */}
-              <g transform="rotate(30)" className="animate-[debris_2s_infinite]" style={{ animationDelay: '1.0s' }}>
+              <g transform="rotate(30)" className="animate-[debris_${2 * speedScale}s_infinite]" style={{ animationDelay: '1.0s' }}>
                 <circle cx="0" cy="-25" r="4" fill="#1c1917" />
               </g>
               {/* Right Spurt */}
-              <g transform="rotate(60)" className="animate-[debris_2s_infinite]" style={{ animationDelay: '1.0s' }}>
+              <g transform="rotate(60)" className="animate-[debris_${2 * speedScale}s_infinite]" style={{ animationDelay: '1.0s' }}>
                 <circle cx="0" cy="-20" r="3" fill="#292524" />
               </g>
             </g>
@@ -486,7 +489,7 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
         <rect x="-10" y="-30" width="20" height="40" fill="#cbd5e1" stroke="#64748b" strokeWidth="2" />
 
         {/* The Press Head (Moving Part) */}
-        <g className={isActive ? "animate-[press_1.5s_ease-in-out_infinite]" : ""}>
+        <g className={isActive ? "animate-[press_${1.5 * speedScale}s_ease-in-out_infinite]" : ""}>
           <rect x="-20" y="0" width="40" height="15" rx="3" fill="#164e63" stroke="#0891b2" strokeWidth="2" />
           {/* Hydraulic lines */}
           <path d="M-5 0 L-5 -30" stroke="#94a3b8" strokeWidth="1" />
@@ -501,12 +504,12 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
       {isActive && (
         <g>
           {/* Diamond 1 (Just pressed) */}
-          <g className="animate-[pop-out_1.5s_linear_infinite]">
+          <g className="animate-[pop-out_${1.5 * speedScale}s_linear_infinite]">
             <path d="M-8 45 L0 35 L8 45 L0 55 Z" fill="#cffafe" stroke="#22d3ee" strokeWidth="1" />
           </g>
 
           {/* Diamond 2 (Moving on belt) */}
-          <g className="animate-[conveyor_1.5s_linear_infinite]" style={{ animationDelay: '0.75s' }}>
+          <g className="animate-[conveyor_${1.5 * speedScale}s_linear_infinite]" style={{ animationDelay: '0.75s' }}>
             <path d="M-8 45 L0 35 L8 45 L0 55 Z" fill="#a5f3fc" stroke="#0891b2" strokeWidth="1" />
           </g>
         </g>
@@ -563,19 +566,19 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
       {/* 2. GYROSCOPIC RINGS (The "Atom" look but grander) */}
       <g transform="translate(0, -10)">
         {/* Ring 1: Slow Vertical Spin */}
-        <g className={isActive ? "animate-[spin_10s_linear_infinite]" : ""}>
+        <g className={isActive ? "animate-[spin_${10 * speedScale}s_linear_infinite]" : ""}>
           <ellipse cx="0" cy="0" rx="70" ry="20" fill="none" stroke="#6b21a8" strokeWidth="6" transform="rotate(-30)" />
           <ellipse cx="0" cy="0" rx="70" ry="20" fill="none" stroke="#d8b4fe" strokeWidth="1" transform="rotate(-30)" opacity="0.6" />
         </g>
 
         {/* Ring 2: Medium Horizontal Spin */}
-        <g className={isActive ? "animate-[spin_7s_linear_infinite_reverse]" : ""}>
+        <g className={isActive ? "animate-[spin_${7 * speedScale}s_linear_infinite_reverse]" : ""}>
           <ellipse cx="0" cy="0" rx="70" ry="20" fill="none" stroke="#a855f7" strokeWidth="5" transform="rotate(30)" />
           <ellipse cx="0" cy="0" rx="70" ry="20" fill="none" stroke="#f0abfc" strokeWidth="1" transform="rotate(30)" opacity="0.6" />
         </g>
 
         {/* Ring 3: Fast Inner Spin */}
-        <g className={isActive ? "animate-[spin_4s_linear_infinite]" : ""}>
+        <g className={isActive ? "animate-[spin_${4 * speedScale}s_linear_infinite]" : ""}>
           <circle cx="0" cy="0" r="50" fill="none" stroke="#d946ef" strokeWidth="4" strokeDasharray="20 10" />
         </g>
       </g>
@@ -588,13 +591,8 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
         {/* Inner Plasma */}
         {isActive ? (
           <g>
-            <circle cx="0" cy="0" r="28" fill="#581c87" className="animate-[pulse_2s_infinite]" />
-            <circle cx="0" cy="0" r="22" fill="#7e22ce" className="animate-[pulse_1s_infinite]" />
-            <circle cx="0" cy="0" r="15" fill="#d8b4fe" className="animate-[pulse_0.5s_infinite]" />
-            <circle cx="0" cy="0" r="10" fill="#ffffff" className="animate-[ping_1.5s_infinite]" opacity="0.5" />
-
             {/* Core Lightning */}
-            <path d="M-15 -15 L15 15 M15 -15 L-15 15" stroke="#f0abfc" strokeWidth="3" className="animate-[spin_0.5s_linear_infinite]" />
+            <path d="M-15 -15 L15 15 M15 -15 L-15 15" stroke="#f0abfc" strokeWidth="3" className={`animate-[spin_${0.5 * speedScale}s_linear_infinite]`} />
           </g>
         ) : (
           <circle cx="0" cy="0" r="25" fill="#1e1b4b" />
@@ -604,8 +602,8 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
       {/* 4. FLOATING SATELLITES */}
       {isActive && (
         <g transform="translate(0, -10)">
-          <circle cx="0" cy="-60" r="6" fill="#f0abfc" className="animate-[bounce_2s_infinite]" />
-          <circle cx="0" cy="60" r="6" fill="#f0abfc" className="animate-[bounce_2s_infinite]" />
+          <circle cx="0" cy="-60" r="6" fill="#f0abfc" className="animate-[bounce_${2 * speedScale}s_infinite]" />
+          <circle cx="0" cy="60" r="6" fill="#f0abfc" className="animate-[bounce_${2 * speedScale}s_infinite]" />
         </g>
       )}
 
@@ -613,7 +611,7 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
         {/* Particle Emission */}
         {isActive && (
           <g>
-            <circle cx="0" cy="0" r="3" fill="#f0abfc" className="animate-[float-gold_1s_infinite]" style={{ '--tx': '40px', '--ty': '-60px' } as any} />
+            <circle cx="0" cy="0" r="3" fill="#f0abfc" className="animate-[float-gold_${1 * speedScale}s_infinite]" style={{ '--tx': '40px', '--ty': '-60px' } as any} />
             <circle cx="0" cy="0" r="3" fill="#c084fc" className="animate-[float-gold_1.5s_infinite]" style={{ '--tx': '-40px', '--ty': '-50px' } as any} />
           </g>
         )}
@@ -622,12 +620,19 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
   );
 
   const renderVisuals = () => {
-    // First check for name-specific animations
-    if (rigName === 'สว่านพกพา') return renderDrill();
-    if (rigName === 'เครื่องขุดถ่านหิน') return renderCoalMachine(); // Jackhammer for Coal Machine
-    if (rigName === 'พลั่วสนิมเขรอะ') return renderTier1(); // Shovel
+    // Name-specific mappings
+    if (rigName === 'พลั่วสนิมเขรอะ') return renderTier1(); // Tier 1: Shovel
+    if (rigName === 'สว่านพกพา') return renderDrill(); // Tier 2: Drill
+    if (rigName === 'เครื่องขุดถ่านหิน') return renderCoalMachine(); // Tier 3: TNT/Coal Blaster
+    if (rigName === 'เครื่องขุดทองแดง') return renderTier2(); // Tier 4: Copper Furnace
+    if (rigName === 'เครื่องขุดเหล็ก') return renderTier3(); // Tier 5: Iron Forge
+    if (rigName === 'เครื่องขุดทองคำ') return renderTier4(); // Tier 6: Gold Smelter
+    if (rigName === 'เครื่องขุดเพชร') return renderTier5(); // Tier 7: Diamond Press
+    if (rigName.includes('ไวเบรเนียม')) return renderTier6(); // Tier 8: Vibranium Reactor
 
     // Fallback to tier-based animations
+    // Note: The 'tier' prop might not perfectly align if presets changed, so relying on name is safer.
+    // Keeping fallbacks just in case.
     if (tier === 6) return renderTier6();
     if (tier === 5) return renderTier5();
     if (tier === 4) return renderTier4();

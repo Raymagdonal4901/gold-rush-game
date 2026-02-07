@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, QrCode, ArrowRight, CheckCircle, Upload, AlertCircle, ScanLine, Clock, FileText } from 'lucide-react';
 import { CURRENCY, TRANSACTION_LIMITS } from '../constants';
-import { MockDB } from '../services/db';
 import { api } from '../services/api';
 import { User } from '../services/types';
 
 interface DepositModalProps {
     isOpen: boolean;
     onClose: () => void;
+    user: User;
     onDepositSuccess: () => void;
+    addNotification?: (n: any) => void;
 }
 
-export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, onDepositSuccess }) => {
+export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, user, onDepositSuccess, addNotification }) => {
     const [amount, setAmount] = useState('');
     const [step, setStep] = useState<'INPUT' | 'PAYMENT' | 'SUCCESS'>('INPUT');
     const [systemQr, setSystemQr] = useState<string | null>(null);
@@ -20,22 +21,23 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, onD
     const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const currentUser: User | null = MockDB.getSession();
-
     useEffect(() => {
         if (isOpen) {
             setAmount('');
             setStep('INPUT');
             setSlipFile(null);
             setSlipPreview(null);
-            const config = MockDB.getSystemConfig();
-            setSystemQr(config.receivingQrCode || null);
+            api.getSystemConfig().then(config => {
+                setSystemQr(config.receivingQrCode || null);
+            }).catch(err => {
+                console.error("Failed to load system QR", err);
+            });
         }
     }, [isOpen]);
 
     const handleNextStep = () => {
         const val = parseFloat(amount);
-        if (isNaN(val) || val < TRANSACTION_LIMITS.MIN || val > TRANSACTION_LIMITS.MAX) return;
+        if (isNaN(val) || val < TRANSACTION_LIMITS.DEPOSIT.MIN || val > TRANSACTION_LIMITS.DEPOSIT.MAX) return;
         setStep('PAYMENT');
     };
 
@@ -53,7 +55,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, onD
     };
 
     const handleConfirmPayment = () => {
-        if (!slipPreview || !currentUser || isLoading) return;
+        if (!slipPreview || !user || isLoading) return;
 
         setIsLoading(true);
 
@@ -66,7 +68,14 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, onD
             // We don't call onDepositSuccess here because it's not instant anymore
         }).catch(err => {
             console.error("Deposit failed", err);
-            alert("เกิดข้อผิดพลาดในการแจ้งฝาก: " + (err.response?.data?.message || err.message));
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: user.id,
+                message: "เกิดข้อผิดพลาดในการแจ้งฝาก: " + (err.response?.data?.message || err.message),
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
         }).finally(() => {
             setIsLoading(false);
         });
@@ -114,7 +123,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, onD
                                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-stone-600 font-bold">{CURRENCY}</span>
                                 </div>
                                 <p className="text-xs text-stone-500">
-                                    ขั้นต่ำ {TRANSACTION_LIMITS.MIN.toLocaleString()} - สูงสุด {TRANSACTION_LIMITS.MAX.toLocaleString()} {CURRENCY}
+                                    ขั้นต่ำ {TRANSACTION_LIMITS.DEPOSIT.MIN.toLocaleString()} - สูงสุด {TRANSACTION_LIMITS.DEPOSIT.MAX.toLocaleString()} {CURRENCY}
                                 </p>
                             </div>
 
@@ -132,7 +141,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, onD
 
                             <button
                                 onClick={handleNextStep}
-                                disabled={!amount || parseFloat(amount) < TRANSACTION_LIMITS.MIN || parseFloat(amount) > TRANSACTION_LIMITS.MAX}
+                                disabled={!amount || parseFloat(amount) < TRANSACTION_LIMITS.DEPOSIT.MIN || parseFloat(amount) > TRANSACTION_LIMITS.DEPOSIT.MAX}
                                 className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-800 disabled:text-stone-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-900/20 transition-all flex items-center justify-center gap-2 mt-4"
                             >
                                 ดำเนินการต่อ <ArrowRight size={18} />
