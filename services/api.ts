@@ -12,7 +12,10 @@ export interface UserStats {
 }
 import { User, OilRig, AccessoryItem, ClaimRequest, WithdrawalRequest, DepositRequest, Transaction, ChatMessage, MarketState, CraftingQueueItem } from './types';
 
-const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api';
+const isProd = (import.meta as any).env.PROD;
+const API_URL = (import.meta as any).env.VITE_API_URL ||
+    (import.meta as any).env.NEXT_PUBLIC_API_URL ||
+    (isProd ? '/api' : 'http://localhost:5001/api');
 
 const client = axios.create({
     baseURL: API_URL,
