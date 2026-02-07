@@ -471,38 +471,40 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         const hasEnoughChips = ownedChips >= (upgradeReq?.chipAmount || 0);
 
         return (
-            <div className="flex flex-col">
-                <div className="flex-1 flex flex-col items-center justify-center p-6 bg-stone-900/50 min-h-[300px]">
+            <div className="flex flex-col h-full min-h-0 overflow-y-auto custom-scrollbar touch-pan-y pb-2">
+                {/* Horizontal layout: Card + Level info side by side */}
+                <div className="flex-none flex items-center gap-3 p-2 bg-stone-900/50 border-b border-stone-800">
                     {equippedItem ? (
-                        <div className={`relative w-48 h-64 rounded-2xl border-2 ${rarityConfig.border} bg-stone-900/90 flex flex-col items-center justify-center overflow-hidden shadow-2xl transition-transform hover:scale-105 duration-300 group`}>
-                            {/* Tech overlay on card */}
-                            <div className="absolute inset-0 bg-[linear-gradient(0deg,transparent_45%,rgba(255,255,255,0.05)_50%,transparent_55%)] bg-[length:100%_4px] opacity-20 pointer-events-none"></div>
-
-                            <div className={`absolute inset-0 bg-gradient-to-br ${rarityConfig.bgGradient} opacity-20`}></div>
-                            <div className="relative z-10 mb-4 scale-125 drop-shadow-2xl group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] transition-all">
-                                {getAccessoryIcon(equippedItem)}
+                        <>
+                            {/* Tiny Icon - no card */}
+                            <div className={`w-8 h-8 rounded ${rarityConfig.border} bg-stone-900/90 flex items-center justify-center flex-shrink-0`}>
+                                {getAccessoryIcon(equippedItem, 16)}
                             </div>
-                            <div className="relative z-10 text-center px-4">
-                                <h3 className={`font-bold text-lg leading-tight ${rarityConfig.color} drop-shadow-sm`}>{getItemDisplayName(equippedItem)}</h3>
-                                <div className="text-xs text-stone-400 mt-1 uppercase tracking-wide opacity-80">{rarityConfig.label}</div>
-                                {equippedItem.level && equippedItem.level > 1 && (
-                                    <span className="inline-block mt-2 px-3 py-0.5 rounded-sm bg-stone-800 text-cyan-400 text-[10px] font-bold shadow-lg border border-cyan-500/30 backdrop-blur-sm font-mono tracking-widest">
-                                        LV.{equippedItem.level}
-                                    </span>
+
+                            {/* Item Name + Level Progress */}
+                            <div className="flex-1 min-w-0">
+                                <h3 className={`font-bold text-sm ${rarityConfig.color} truncate`}>{getItemDisplayName(equippedItem)}</h3>
+                                {upgradeReq && (
+                                    <div className="flex items-center gap-2 mt-1 text-xs">
+                                        <span className="text-white font-mono font-bold">LV.{currentLevel}</span>
+                                        <Rocket className="rotate-45 text-stone-600" size={10} />
+                                        <span className="text-cyan-500 font-mono font-bold">LV.{nextLevel}</span>
+                                        <span className="text-cyan-400 font-mono text-[10px]">+{bonusDiff.toFixed(2)}</span>
+                                    </div>
                                 )}
                             </div>
-                        </div>
+                        </>
                     ) : (
-                        <div onClick={() => setView('SELECT')} className="w-48 h-64 rounded-2xl border-2 border-dashed border-stone-700 bg-stone-900/50 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-500 hover:bg-stone-800/80 transition-all group">
-                            <Plus className="text-stone-500 group-hover:text-cyan-500 mb-4 transition-colors" size={32} />
-                            <span className="text-stone-500 font-bold group-hover:text-cyan-500 transition-colors uppercase tracking-widest text-sm">เลือกอุปกรณ์</span>
+                        <div onClick={() => setView('SELECT')} className="w-full py-4 rounded-lg border-2 border-dashed border-stone-700 bg-stone-900/50 flex items-center justify-center cursor-pointer hover:border-cyan-500 hover:bg-stone-800/80 transition-all gap-2">
+                            <Plus className="text-stone-500" size={20} />
+                            <span className="text-stone-500 font-bold uppercase tracking-wider text-xs">เลือกอุปกรณ์</span>
                         </div>
                     )}
                 </div>
 
-                <div className="bg-stone-900 p-6 border-t border-stone-800">
+                <div className="bg-stone-900 p-3 border-t border-stone-800">
                     {equippedItem ? (
-                        <div className="space-y-4">
+                        <div className="space-y-2">
                             <div className="flex gap-2">
                                 {slotIndex !== 0 ? (
                                     <>
@@ -516,53 +518,33 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                 )}
                             </div>
 
-                            <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 relative overflow-hidden">
+                            <div className="bg-stone-950 border border-stone-800 rounded-lg p-2 relative overflow-hidden">
                                 {upgradeReq ? (
                                     <>
-                                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-stone-900">
-                                            <div className="flex items-center gap-3">
-                                                <div className="text-center">
-                                                    <div className="text-[10px] text-stone-500 uppercase">ปัจจุบัน</div>
-                                                    <div className="text-xl font-black text-white font-mono">LV.{currentLevel}</div>
-                                                </div>
-                                                <div className="text-stone-600"><Rocket className="rotate-45" size={16} /></div>
-                                                <div className="text-center">
-                                                    <div className="text-[10px] text-cyan-500 uppercase font-bold">ถัดไป</div>
-                                                    <div className="text-xl font-black text-cyan-500 font-mono">LV.{nextLevel}</div>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="text-[10px] text-stone-500 uppercase">โบนัส</div>
-                                                <div className="text-cyan-400 font-bold font-mono text-lg flex items-center justify-end gap-1">
-                                                    <TrendingUp size={14} />
-                                                    +{bonusDiff.toFixed(2)}
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <div className="flex items-center gap-1 mb-2 bg-stone-900 p-2 rounded-lg border border-stone-800 shadow-inner text-[10px]">
 
-                                        <div className="flex items-center gap-2 mb-6 bg-stone-900 p-3 rounded-lg border border-stone-800 shadow-inner">
-                                            <div className="flex-1 flex flex-col items-center justify-center gap-1 text-xs text-stone-300 border-r border-stone-800 pr-2">
-                                                <div className="flex items-center gap-1 text-purple-400 font-bold"><Cpu size={12} /> ชิป</div>
-                                                <span className={`font-mono text-sm ${hasEnoughChips ? 'text-white' : 'text-red-500'}`}>
+                                            <div className="flex-1 flex flex-col items-center justify-center gap-0.5 text-stone-300 border-r border-stone-800 pr-1">
+                                                <div className="flex items-center gap-1 text-purple-400 font-bold"><Cpu size={10} /> ชิป</div>
+                                                <span className={`font-mono ${hasEnoughChips ? 'text-white' : 'text-red-500'}`}>
                                                     {ownedChips}/{upgradeReq.chipAmount}
                                                 </span>
                                             </div>
-                                            <div className="flex-1 flex flex-col items-center justify-center gap-1 text-xs text-stone-300">
-                                                <div className="flex items-center gap-1 text-blue-400 font-bold"><MaterialIcon id={upgradeReq.matTier} size="w-3 h-3" iconSize={10} /> วัตถุดิบ</div>
-                                                <span className={`font-mono text-sm ${((materials[upgradeReq.matTier] || 0) >= upgradeReq.matAmount) ? 'text-white' : 'text-red-500'}`}>
+                                            <div className="flex-1 flex flex-col items-center justify-center gap-0.5 text-stone-300">
+                                                <div className="flex items-center gap-1 text-blue-400 font-bold"><MaterialIcon id={upgradeReq.matTier} size="w-2.5 h-2.5" iconSize={8} /> วัตถุดิบ</div>
+                                                <span className={`font-mono ${((materials[upgradeReq.matTier] || 0) >= upgradeReq.matAmount) ? 'text-white' : 'text-red-500'}`}>
                                                     {matName} {materials[upgradeReq.matTier] || 0}/{upgradeReq.matAmount}
                                                 </span>
                                             </div>
-                                            <div className="flex-1 flex flex-col items-center justify-center gap-1 text-xs text-stone-300 border-l border-stone-800 pl-2">
+                                            <div className="flex-1 flex flex-col items-center justify-center gap-0.5 text-stone-300 border-l border-stone-800 pl-1">
                                                 <div className="text-yellow-600 font-bold">ค่าใช้จ่าย</div>
-                                                <span className="text-yellow-500 font-bold font-mono text-sm">฿{upgradeReq.cost.toLocaleString()}</span>
+                                                <span className="text-yellow-500 font-bold font-mono">฿{upgradeReq.cost.toLocaleString()}</span>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-between mb-4 bg-stone-900/50 p-3 rounded-lg border border-stone-800">
-                                            <div className="flex items-center gap-2">
+                                        <div className="flex items-center justify-between mb-1 bg-stone-900/50 p-1.5 rounded border border-stone-800 text-[9px]">
+                                            <div className="flex items-center gap-1.5">
                                                 <div
-                                                    className={`w-5 h-5 rounded border flex items-center justify-center cursor-pointer transition-colors ${useInsurance ? 'bg-cyan-500 border-cyan-400' : 'bg-stone-800 border-stone-600'}`}
+                                                    className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${useInsurance ? 'bg-cyan-500 border-cyan-400' : 'bg-stone-800 border-stone-600'}`}
                                                     onClick={() => {
                                                         if (insuranceCount > 0) setUseInsurance(!useInsurance);
                                                         else if (addNotification) addNotification({
@@ -575,58 +557,36 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                                         });
                                                     }}
                                                 >
-                                                    {useInsurance && <CheckCircle2 size={14} className="text-white" />}
+                                                    {useInsurance && <CheckCircle2 size={10} className="text-white" />}
                                                 </div>
-                                                <div className="text-xs text-stone-300">
-                                                    <div className="font-bold flex items-center gap-1">
-                                                        <Shield size={12} className="text-emerald-400" /> ใบประกันความเสี่ยง
-                                                    </div>
-                                                    <div className="text-[10px] text-stone-500">มีครอบครอง: {insuranceCount} ใบ</div>
+                                                <div className="text-stone-300">
+                                                    <span className="font-bold flex items-center gap-0.5">
+                                                        <Shield size={10} className="text-emerald-400" /> ประกัน ({insuranceCount})
+                                                    </span>
                                                 </div>
                                             </div>
                                             {useInsurance ? (
-                                                <div className="text-[10px] items-center flex gap-1 text-emerald-400 font-bold bg-emerald-950/30 px-2 py-1 rounded border border-emerald-900/50">
-                                                    <Shield size={10} /> ป้องกันแล้ว
-                                                </div>
+                                                <span className="text-emerald-400 font-bold">✓ ป้องกัน</span>
                                             ) : (
-                                                <div className="text-[10px] items-center flex gap-1 text-red-400 font-bold bg-red-950/10 px-2 py-1 rounded border border-red-900/20">
-                                                    <AlertTriangle size={10} />
-                                                    {upgradeReq.risk === 'NONE' ? (
-                                                        <span className="text-emerald-500">ไม่มีความเสี่ยง</span>
-                                                    ) : upgradeReq.risk === 'BREAK' ? (
-                                                        <span className="text-red-500">ความเสี่ยง: อุปกรณ์แตก</span>
-                                                    ) : (
-                                                        <span>ความเสี่ยง: ลดระดับ</span>
-                                                    )}
-                                                </div>
+                                                <span className={upgradeReq.risk === 'NONE' ? 'text-emerald-500' : 'text-red-400'}>
+                                                    {upgradeReq.risk === 'NONE' ? 'ไม่มีความเสี่ยง' : 'เสี่ยง: อุปกรณ์แตก'}
+                                                </span>
                                             )}
                                         </div>
 
                                         <button
                                             onClick={handleUpgrade}
                                             disabled={isUpgrading}
-                                            className="w-full py-4 bg-orange-700 hover:bg-orange-600 border border-orange-500/50 text-white font-black uppercase tracking-widest rounded-xl transition-all flex flex-col items-center justify-center gap-1 group shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_30px_rgba(249,115,22,0.5)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden relative"
+                                            className="w-full py-2.5 bg-orange-700 hover:bg-orange-600 border border-orange-500/50 text-white font-black uppercase tracking-widest rounded-lg transition-all flex flex-col items-center justify-center gap-0 group shadow-[0_0_15px_rgba(249,115,22,0.3)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden relative"
                                         >
-                                            <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%] animate-[shimmer_2s_infinite]"></div>
-                                            <div className="flex items-center gap-2 text-lg relative z-10">
-                                                <Hammer size={20} className={isUpgrading ? "animate-bounce" : ""} />
-                                                <span>ตีบวก (UPGRADE)</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-[10px] font-medium opacity-90 relative z-10">
-                                                <span className={upgradeReq.chance < 0.5 ? "text-red-300" : "text-orange-200"}>
-                                                    โอกาสสำเร็จ: {(upgradeReq.chance * 100).toFixed(0)}%
-                                                </span>
+                                            <div className="flex items-center gap-2 text-sm relative z-10">
+                                                <Hammer size={16} className={isUpgrading ? "animate-bounce" : ""} />
+                                                <span>ตีบวก ({(upgradeReq.chance * 100).toFixed(0)}%)</span>
                                             </div>
                                         </button>
-
-                                        {upgradeReq.chance < 1.0 && (
-                                            <div className="mt-3 text-center flex items-center justify-center gap-1.5 text-[10px] text-red-500/80 font-bold bg-red-950/30 py-1.5 rounded border border-red-900/30">
-                                                <AlertTriangle size={10} />
-                                                คำเตือน: มีความเสี่ยงที่จะล้มเหลว
-                                            </div>
-                                        )}
                                     </>
                                 ) : (
+
                                     <div className="text-center text-stone-500 py-8 flex flex-col items-center gap-2">
                                         {currentLevel >= 5 ? (
                                             <>
@@ -654,7 +614,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                         <div className="text-center text-stone-500 text-sm py-4">ไม่ได้สวมใส่อุปกรณ์</div>
                     )}
                 </div>
-            </div>
+            </div >
         );
     };
 
@@ -693,7 +653,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 text-sans">
             {renderMiningAnimation()}
             {renderResultPopup()}
-            <div className="bg-stone-950 border border-stone-800 w-full max-w-sm rounded-xl shadow-2xl overflow-hidden flex flex-col h-auto max-h-[90vh] relative">
+            <div className="bg-stone-950 border border-stone-800 w-full max-w-sm rounded-xl shadow-2xl overflow-hidden flex flex-col h-[80vh] relative">
 
                 <div className="bg-stone-900 p-4 border-b border-stone-800 flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-3">
