@@ -11,9 +11,10 @@ const seedAdmin = async () => {
         await mongoose.connect(uri);
         console.log('Connected to MongoDB at', uri);
 
-        const adminExists = await User.findOne({ username: 'admin' });
+        const adminUsername = 'DevRay';
+        const adminExists = await User.findOne({ username: adminUsername });
         if (adminExists) {
-            console.log('Admin user already exists');
+            console.log(`User ${adminUsername} already exists`);
             // Update to ensure role is ADMIN
             adminExists.role = 'ADMIN';
             // Force reset password to bleach
@@ -21,23 +22,23 @@ const seedAdmin = async () => {
             adminExists.password = await bcrypt.hash('bleach', salt);
             adminExists.pin = await bcrypt.hash('4901', salt);
             await adminExists.save();
-            console.log('Admin password rest to: bleach, PIN: 4901');
+            console.log(`Admin ${adminUsername} password reset to: bleach, PIN: 4901`);
         } else {
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash('bleach', salt);
             const hashedPin = await bcrypt.hash('4901', salt);
 
             const admin = new User({
-                username: 'admin',
+                username: adminUsername,
                 password: hashedPassword,
                 pin: hashedPin,
                 role: 'ADMIN',
-                balance: 999999,
+                balance: 0,
                 energy: 100
             });
 
             await admin.save();
-            console.log('Admin user created: username="admin", password="bleach", PIN="4901"');
+            console.log(`Admin user created: username="${adminUsername}", password="bleach", PIN="4901"`);
         }
 
         process.exit(0);
