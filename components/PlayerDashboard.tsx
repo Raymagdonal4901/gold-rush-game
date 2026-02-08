@@ -1167,19 +1167,15 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             </div>
 
                             <div className="flex flex-col gap-2 mt-2 w-full">
-                                {/* 1. Energy Refill Button (Always Visible if not full) */}
+                                {/* 1. Energy Refill Button (Always Visible) */}
                                 <button
                                     onClick={handleRefillEnergyClick}
-                                    disabled={energyLevel >= 100}
                                     className={`w-full py-1.5 rounded-lg font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md text-[10px] 
-                                        ${energyLevel >= 100
-                                            ? 'bg-stone-800 text-stone-500 border border-stone-700 cursor-not-allowed'
-                                            : 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border border-orange-500 shadow-orange-900/50 hover:shadow-orange-700/50 active:scale-95 cursor-pointer'
-                                        }
+                                        bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border border-orange-500 shadow-orange-900/50 hover:shadow-orange-700/50 active:scale-95 cursor-pointer
                                     `}
                                 >
-                                    <Zap size={12} className={energyLevel < 100 ? "fill-white animate-pulse" : ""} />
-                                    {energyLevel >= 100 ? 'พลังงานเต็ม (FULL)' : 'เติมพลังงาน (2 บาท)'}
+                                    <Zap size={12} className="fill-white animate-pulse" />
+                                    {energyLevel >= 100 ? 'เติมพลังงาน (เต็มแล้ว)' : 'เติมพลังงาน (2 บาท)'}
                                 </button>
 
                                 {/* 2. Overclock Toggle (Mobile Style) */}
