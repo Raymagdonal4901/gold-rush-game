@@ -173,8 +173,9 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             }
 
             // 1.6 Auto-refill Global Energy (System Power)
-            if (energyLevel <= 1) {
-                console.log(`[ROBOT] Auto-refilling GLOBAL energy (${energyLevel.toFixed(1)}%)`);
+            const currentGlobalEnergy = user.energy !== undefined ? user.energy : 100;
+            if (currentGlobalEnergy <= 1) {
+                console.log(`[ROBOT] Auto-refilling GLOBAL energy (${currentGlobalEnergy.toFixed(1)}%)`);
                 confirmRefillEnergy();
             }
 
