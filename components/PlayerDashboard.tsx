@@ -145,7 +145,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
     // --- AI ROBOT AUTOMATION LOOP ---
     useEffect(() => {
-        const interval = setInterval(async () => {
+        const runRobotAutomation = async () => {
             console.log(`[ROBOT DEBUG] Checking for robot in inventory... (${inventory.length} items)`);
             const robot = inventory.find(i => i.typeId === 'robot' && (!i.expireAt || i.expireAt > Date.now()));
             if (!robot) {
@@ -174,7 +174,30 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 console.log(`[ROBOT DEBUG] Rig ${rig.name}: currentMaterials = ${rig.currentMaterials}`);
                 if ((rig.currentMaterials || 0) > 0) {
                     console.log(`[ROBOT] Auto-collecting materials for rig: ${rig.name}`);
-                    handleCollectMaterials(rig.id);
+                    try {
+                        // Inline material collection to avoid stale closure issues
+                        const count = rig.currentMaterials || 0;
+                        if (count > 0) {
+                            const tier = (() => {
+                                const investment = rig.investment;
+                                if (investment === 0) return 7;
+                                if (investment >= 3000) return 5;
+                                if (investment >= 2500) return 4;
+                                if (investment >= 2000) return 3;
+                                if (investment >= 1500) return 2;
+                                return 1;
+                            })();
+
+                            if (user.isDemo) {
+                                MockDB.collectRigMaterials(user.id, rig.id);
+                            } else {
+                                await api.collectMaterials(rig.id, count, tier);
+                            }
+                            console.log(`[ROBOT] Successfully collected ${count} materials from ${rig.name}`);
+                        }
+                    } catch (e) {
+                        console.error(`[ROBOT] Failed to collect materials from ${rig.name}:`, e);
+                    }
                 }
             }
 
@@ -242,10 +265,14 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                     lastMarketPrices.current[parseInt(tier)] = price;
                 }
             }
-        }, 30000); // Think every 30 seconds
+        };
+
+        // Run immediately on mount, then every 30 seconds
+        runRobotAutomation();
+        const interval = setInterval(runRobotAutomation, 30000);
 
         return () => clearInterval(interval);
-    }, [inventory, rigs, marketState]);
+    }, [inventory, rigs, marketState, user]);
 
     const activeInventory = inventory.filter(item => {
         return (!item.expireAt || item.expireAt > Date.now());
