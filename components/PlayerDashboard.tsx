@@ -141,6 +141,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     // Ref to block refresh during sensitive operations
     const skipRefreshRef = useRef(false);
     const lastMarketPrices = useRef<Record<number, number>>({});
+    const lastAutoRefillRef = useRef<Record<string, number>>({});  // Cooldown tracker for AI Robot refills
 
     // --- AI ROBOT AUTOMATION LOOP ---
     useEffect(() => {
@@ -172,10 +173,12 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 }
             }
 
-            // 1.6 Auto-refill Global Energy (System Power)
+            // 1.6 Auto-refill Global Energy (System Power) - with 60s cooldown
             const currentGlobalEnergy = user.energy !== undefined ? user.energy : 100;
-            if (currentGlobalEnergy <= 1) {
+            const lastGlobalRefill = lastAutoRefillRef.current['global'] || 0;
+            if (currentGlobalEnergy <= 1 && (Date.now() - lastGlobalRefill > 60000)) {
                 console.log(`[ROBOT] Auto-refilling GLOBAL energy (${currentGlobalEnergy.toFixed(1)}%)`);
+                lastAutoRefillRef.current['global'] = Date.now();
                 confirmRefillEnergy();
             }
 
@@ -199,8 +202,11 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 const drain = elapsedHours * drainRate;
                 const energyPercent = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
 
-                if (energyPercent <= 1) {
+                // Rig energy refill with 60s cooldown
+                const lastRigRefill = lastAutoRefillRef.current[rig.id] || 0;
+                if (energyPercent <= 1 && (Date.now() - lastRigRefill > 60000)) {
                     console.log(`[ROBOT] Auto-refilling energy for rig: ${rig.name} (${energyPercent.toFixed(1)}%)`);
+                    lastAutoRefillRef.current[rig.id] = Date.now();
                     handleChargeRigEnergy(rig.id);
                 }
 
