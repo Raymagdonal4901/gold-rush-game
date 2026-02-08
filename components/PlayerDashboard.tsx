@@ -146,8 +146,12 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     // --- AI ROBOT AUTOMATION LOOP ---
     useEffect(() => {
         const interval = setInterval(async () => {
+            console.log(`[ROBOT DEBUG] Checking for robot in inventory... (${inventory.length} items)`);
             const robot = inventory.find(i => i.typeId === 'robot' && (!i.expireAt || i.expireAt > Date.now()));
-            if (!robot) return;
+            if (!robot) {
+                console.log('[ROBOT DEBUG] No active robot found - skipping automation');
+                return;
+            }
 
             console.log("[ROBOT] Thinker active...");
 
@@ -167,6 +171,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
             // 1.5 Auto-collect Materials (Keys/Ores)
             for (const rig of rigs) {
+                console.log(`[ROBOT DEBUG] Rig ${rig.name}: currentMaterials = ${rig.currentMaterials}`);
                 if ((rig.currentMaterials || 0) > 0) {
                     console.log(`[ROBOT] Auto-collecting materials for rig: ${rig.name}`);
                     handleCollectMaterials(rig.id);
