@@ -165,16 +165,13 @@ export const refillEnergy = async (req: any, res: Response) => {
         const currentEnergy = user.energy ?? 100;
         const needed = Math.max(0, 100 - currentEnergy);
 
-        const rigs = await Rig.find({ ownerId: userId });
-        let totalDailyCost = 0;
-        rigs.forEach(r => {
-            totalDailyCost += r.energyCostPerDay || 0;
-        });
+        // Flat rate: 0.02 Baht per 1% (matching ENERGY_CONFIG.COST_PER_UNIT in frontend)
+        const COST_PER_UNIT = 0.02;
+        const MIN_REFILL_FEE = 2.0;
 
-        // 0.02 Baht per 1%
-        let cost = (needed / 100) * totalDailyCost;
-        if (cost < 1.0) { // MIN_REFILL_FEE
-            cost = 1.0;
+        let cost = needed * COST_PER_UNIT;
+        if (cost < MIN_REFILL_FEE) {
+            cost = MIN_REFILL_FEE;
         }
 
         if (user.balance < cost) {

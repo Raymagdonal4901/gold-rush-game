@@ -172,6 +172,12 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 }
             }
 
+            // 1.6 Auto-refill Global Energy (System Power)
+            if (energyLevel <= 1) {
+                console.log(`[ROBOT] Auto-refilling GLOBAL energy (${energyLevel.toFixed(1)}%)`);
+                confirmRefillEnergy();
+            }
+
             // 2. Auto-refill & Auto-repair
             for (const rig of rigs) {
                 // Calculate Health & Energy matching RigCard logic
@@ -192,7 +198,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 const drain = elapsedHours * drainRate;
                 const energyPercent = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
 
-                if (energyPercent < 50) {
+                if (energyPercent <= 1) {
                     console.log(`[ROBOT] Auto-refilling energy for rig: ${rig.name} (${energyPercent.toFixed(1)}%)`);
                     handleChargeRigEnergy(rig.id);
                 }
