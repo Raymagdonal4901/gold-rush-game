@@ -430,7 +430,8 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                         <div className="bg-stone-950/50 p-3 rounded-xl border border-stone-800 mb-6 space-y-2">
                             {confirmState.recipe?.requiredItem && (() => {
                                 const reqId = confirmState.recipe.requiredItem;
-                                const hasItem = inventory.some(i => i.typeId === reqId);
+                                const itemCount = inventory.filter(i => i.typeId === reqId).length;
+                                const hasItem = itemCount > 0;
                                 const itemInfo = SHOP_ITEMS.find(i => i.id === reqId);
                                 return (
                                     <div className="flex justify-between items-center text-xs">
@@ -439,7 +440,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                             ต้องการ: {itemInfo?.name || reqId}
                                         </span>
                                         <span className={hasItem ? "text-emerald-500 font-bold flex items-center gap-1" : "text-red-500 font-bold flex items-center gap-1"}>
-                                            {hasItem ? <><CheckCircle2 size={12} /> มีแล้ว</> : <><AlertTriangle size={12} /> ยังไม่มี</>}
+                                            {hasItem ? <><CheckCircle2 size={12} /> มีอยู่ {itemCount} ชิ้น</> : <><AlertTriangle size={12} /> ยังไม่มี</>}
                                         </span>
                                     </div>
                                 );

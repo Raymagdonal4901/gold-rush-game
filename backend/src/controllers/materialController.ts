@@ -156,6 +156,15 @@ export const craftMaterial = async (req: AuthRequest, res: Response) => {
         // Deduct Fee
         user.balance -= recipe.fee;
 
+        // 4. Consume Required Item (if applicable)
+        if (recipe.requiredItem) {
+            const itemIndex = user.inventory.findIndex((i: any) => i.typeId === recipe.requiredItem);
+            if (itemIndex !== -1) {
+                user.inventory.splice(itemIndex, 1);
+                user.markModified('inventory');
+            }
+        }
+
         // Stats
         if (!user.stats) user.stats = {};
         user.stats.materialsCrafted = (user.stats.materialsCrafted || 0) + 1;
