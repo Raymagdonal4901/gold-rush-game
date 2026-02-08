@@ -173,10 +173,11 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 }
             }
 
-            // 1.6 Auto-refill Global Energy (System Power) - with 60s cooldown
+            // 1.6 Auto-refill Global Energy (System Power) - with 60s cooldown and balance check
             const currentGlobalEnergy = user.energy !== undefined ? user.energy : 100;
+            const globalRefillCost = Math.max(2.0, (100 - currentGlobalEnergy) * 0.02); // MIN_REFILL_FEE = 2.0
             const lastGlobalRefill = lastAutoRefillRef.current['global'] || 0;
-            if (currentGlobalEnergy <= 1 && (Date.now() - lastGlobalRefill > 60000)) {
+            if (currentGlobalEnergy <= 1 && (Date.now() - lastGlobalRefill > 60000) && user.balance >= globalRefillCost) {
                 console.log(`[ROBOT] Auto-refilling GLOBAL energy (${currentGlobalEnergy.toFixed(1)}%)`);
                 lastAutoRefillRef.current['global'] = Date.now();
                 confirmRefillEnergy();
@@ -202,9 +203,11 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 const drain = elapsedHours * drainRate;
                 const energyPercent = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
 
-                // Rig energy refill with 60s cooldown
+                // Rig energy refill with 60s cooldown and balance check
+                const rigEnergyCostPerDay = rig.energyCostPerDay || (preset ? preset.energyCostPerDay : 0);
+                const rigRefillCost = Math.max(0.1, ((100 - energyPercent) / 100) * rigEnergyCostPerDay);
                 const lastRigRefill = lastAutoRefillRef.current[rig.id] || 0;
-                if (energyPercent <= 1 && (Date.now() - lastRigRefill > 60000)) {
+                if (energyPercent <= 1 && (Date.now() - lastRigRefill > 60000) && user.balance >= rigRefillCost) {
                     console.log(`[ROBOT] Auto-refilling energy for rig: ${rig.name} (${energyPercent.toFixed(1)}%)`);
                     lastAutoRefillRef.current[rig.id] = Date.now();
                     handleChargeRigEnergy(rig.id);
