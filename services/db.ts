@@ -765,5 +765,43 @@ export const MockDB = {
 
         rig.currentMaterials = count;
         setStore(STORAGE_KEYS.RIGS, rigs);
+    },
+
+    refillEnergy: (userId: string) => {
+        const users = getStore<User[]>(STORAGE_KEYS.USERS, []);
+        const user = users.find(u => u.id === userId);
+        if (!user) throw new Error('User not found');
+
+        const currentEnergy = user.energy !== undefined ? user.energy : 100;
+        const missing = 100 - currentEnergy;
+        let cost = missing * ENERGY_CONFIG.COST_PER_UNIT;
+        if (cost < ENERGY_CONFIG.MIN_REFILL_FEE) cost = ENERGY_CONFIG.MIN_REFILL_FEE;
+
+        if (user.balance < cost) throw new Error('Insufficient balance');
+
+        user.balance -= cost;
+        user.energy = 100;
+        user.lastEnergyUpdate = Date.now();
+
+        setStore(STORAGE_KEYS.USERS, users);
+        syncSession(user);
+        return cost;
+    },
+
+    logTransaction: (txData: any) => {
+        const transactions = getStore<Transaction[]>(STORAGE_KEYS.TRANSACTIONS, []);
+        const users = getStore<User[]>(STORAGE_KEYS.USERS, []);
+        const user = users.find(u => u.id === txData.userId);
+
+        const tx: Transaction = {
+            ...txData,
+            id: `TX${Date.now()}${Math.floor(Math.random() * 1000)}`,
+            balanceAfter: user ? user.balance : 0,
+            timestamp: Date.now()
+        };
+
+        transactions.push(tx);
+        setStore(STORAGE_KEYS.TRANSACTIONS, transactions);
+        return tx;
     }
 };

@@ -4,6 +4,7 @@ import { X, Dices, RefreshCw, Zap, Wallet, Box, Sparkles, Star } from 'lucide-re
 import { LUCKY_DRAW_CONFIG, CURRENCY } from '../constants';
 import { api } from '../services/api';
 import { User } from '../services/types';
+import { useTranslation } from './LanguageContext';
 
 interface LuckyDrawModalProps {
     isOpen: boolean;
@@ -14,6 +15,7 @@ interface LuckyDrawModalProps {
 }
 
 export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose, user, onRefresh, addNotification }) => {
+    const { t, language } = useTranslation();
     const [gameState, setGameState] = useState<'IDLE' | 'SHUFFLING' | 'PICKING' | 'REVEALED'>('IDLE');
     const [cards, setCards] = useState<number[]>([0, 1, 2, 3, 4]);
     const [selectedCard, setSelectedCard] = useState<number | null>(null);
@@ -43,7 +45,7 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
             if (addNotification) addNotification({
                 id: Date.now().toString(),
                 userId: user.id,
-                message: 'เงินไม่เพียงพอ',
+                message: t('lucky_draw.insufficient_funds'),
                 type: 'ERROR',
                 read: false,
                 timestamp: Date.now()
@@ -117,8 +119,8 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                                 <Dices size={24} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-display font-bold text-white">เสี่ยงโชค (LUCKY DRAW)</h2>
-                                <p className="text-xs text-stone-500 uppercase tracking-wider">เปิดไพ่ลุ้นรางวัลใหญ่</p>
+                                <h2 className="text-xl font-display font-bold text-white">{t('lucky_draw.title')}</h2>
+                                <p className="text-xs text-stone-500 uppercase tracking-wider">{t('lucky_draw.subtitle')}</p>
                             </div>
                         </div>
                         <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
@@ -131,7 +133,7 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
 
                         {/* Probabilities Table (Absolute Positioned) */}
                         <div className="absolute top-6 left-6 bg-black/40 border border-stone-800 rounded-lg p-3 backdrop-blur-sm hidden sm:block">
-                            <h4 className="font-bold text-stone-300 text-xs mb-2 border-b border-stone-700 pb-1">โอกาสได้รับ:</h4>
+                            <h4 className="font-bold text-stone-300 text-xs mb-2 border-b border-stone-700 pb-1">{t('lucky_draw.chance_label')}</h4>
                             <ul className="space-y-1.5 w-40">
                                 {LUCKY_DRAW_CONFIG.PROBABILITIES.map((p, i) => (
                                     <li key={i} className="flex justify-between text-[10px]">
@@ -208,11 +210,11 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                                 >
                                     {canPlayFree ? (
                                         <>
-                                            <Sparkles className="text-yellow-300 animate-pulse" /> หมุนฟรี (Free)
+                                            <Sparkles className="text-yellow-300 animate-pulse" /> {t('lucky_draw.free_spin')}
                                         </>
                                     ) : (
                                         <>
-                                            {user.balance < LUCKY_DRAW_CONFIG.COST ? 'ยอดเงินไม่เพียงพอ' : <span>จ่าย {LUCKY_DRAW_CONFIG.COST} บาท</span>}
+                                            {user.balance < LUCKY_DRAW_CONFIG.COST ? t('lucky_draw.insufficient_funds') : <span>{t('lucky_draw.pay_spin').replace('{cost}', LUCKY_DRAW_CONFIG.COST.toString())}</span>}
                                         </>
                                     )}
                                 </button>
@@ -220,13 +222,13 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
 
                             {gameState === 'SHUFFLING' && (
                                 <div className="text-yellow-500 font-display text-2xl animate-pulse tracking-widest">
-                                    SHUFFLING...
+                                    {t('lucky_draw.shuffling')}
                                 </div>
                             )}
 
                             {gameState === 'PICKING' && (
                                 <div className="text-white font-bold text-lg animate-bounce bg-stone-900/80 px-6 py-2 rounded-full border border-stone-700">
-                                    เลือกไพ่ 1 ใบ
+                                    {t('lucky_draw.pick_card')}
                                 </div>
                             )}
                         </div>
@@ -264,13 +266,13 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                                     onClick={resetGame}
                                     className="px-8 py-3 bg-stone-800 hover:bg-stone-700 text-white font-bold rounded-xl border border-stone-600 transition-all hover:scale-105"
                                 >
-                                    เล่นอีกครั้ง
+                                    {t('lucky_draw.play_again')}
                                 </button>
                                 <button
                                     onClick={onClose}
                                     className="px-8 py-3 bg-white text-black font-bold rounded-xl hover:bg-stone-200 transition-all hover:scale-105"
                                 >
-                                    ปิด
+                                    {t('common.close')}
                                 </button>
                             </div>
                         </div>

@@ -6,6 +6,7 @@ import { AccessoryItem } from '../services/types';
 import { CURRENCY, RARITY_SETTINGS, UPGRADE_REQUIREMENTS, MATERIAL_CONFIG } from '../constants';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
+import { useTranslation } from './LanguageContext';
 import { api } from '../services/api';
 
 interface InventoryModalProps {
@@ -19,6 +20,7 @@ interface InventoryModalProps {
 }
 
 export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose, inventory, userId, onRefresh, marketState, materials = {} }) => {
+    const { t, language } = useTranslation();
     const [selectedItem, setSelectedItem] = useState<AccessoryItem | null>(null);
     const [action, setAction] = useState<'DETAILS' | 'UPGRADE' | 'SELL'>('DETAILS');
     const [msg, setMsg] = useState('');
@@ -69,11 +71,11 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
     const getItemDisplayName = (item: any) => {
         const typeId = item.typeId || '';
         const name = item.name || '';
-        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return 'กุญแจเข้าเหมือง';
-        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return 'ชิปอัปเกรด';
-        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return 'โต๊ะช่างสกัดแร่';
-        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return 'แว่นขยายส่องแร่';
-        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return 'หุ่นยนต์ AI';
+        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return language === 'th' ? 'กุญแจเข้าเหมือง' : 'Mining Key';
+        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return language === 'th' ? 'ชิปอัปเกรด' : 'Upgrade Chip';
+        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return language === 'th' ? 'โต๊ะช่างสกัดแร่' : 'Material Extractor';
+        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return language === 'th' ? 'แว่นขยายส่องแร่' : 'Magnifying Glass';
+        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return language === 'th' ? 'หุ่นยนต์ AI' : 'AI Robot';
         return name;
     };
 
@@ -137,7 +139,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
     const handleSell = async () => {
         try {
             await api.inventory.sell(selectedItem!.id);
-            setMsg(`ขายสำเร็จ!`);
+            setMsg(language === 'th' ? `ขายสำเร็จ!` : 'Sold Successfully!');
             setTimeout(() => {
                 setMsg('');
                 setSelectedItem(null);
@@ -202,7 +204,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
     const matName = MATERIAL_CONFIG.NAMES[matTier as keyof typeof MATERIAL_CONFIG.NAMES];
 
     const renderDetailView = () => {
-        if (!selectedItem) return <div className="text-stone-500 text-center mt-10">เลือกไอเทมเพื่อดูรายละเอียด</div>;
+        if (!selectedItem) return <div className="text-stone-500 text-center mt-10">{t('inventory.select_item')}</div>;
 
         const isEquipped = equippedIds.has(selectedItem.id);
         const isChip = selectedItem.typeId === 'upgrade_chip';
@@ -217,28 +219,28 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                     </div>
                     <div className="text-right">
                         <div className={`font-bold ${selectedItem.isHandmade ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' : 'text-white'}`}>{getItemDisplayName(selectedItem)}</div>
-                        <div className={`text-xs ${RARITY_SETTINGS[selectedItem.rarity].color}`}>{selectedItem.rarity}</div>
+                        <div className={`text-[10px] font-bold tracking-tight uppercase ${RARITY_SETTINGS[selectedItem.rarity].color}`}>{selectedItem.rarity}</div>
                         {selectedItem.level && selectedItem.level > 1 && <div className="text-xs text-yellow-500 font-bold">Lv. {selectedItem.level}</div>}
                     </div>
                 </div>
 
                 <div className="space-y-2 text-sm text-stone-400 mb-6 relative z-10">
                     <div className="flex justify-between">
-                        <span>โบนัสรายวัน</span>
+                        <span>{language === 'th' ? 'โบนัสรายวัน' : 'Daily Bonus'}</span>
                         <span className="text-white font-mono">+{(selectedItem.dailyBonus || 0).toFixed(2)} {CURRENCY}</span>
                     </div>
                     {selectedItem.specialEffect && (
                         <div className="flex justify-between">
-                            <span>คุณสมบัติพิเศษ</span>
+                            <span>{language === 'th' ? 'คุณสมบัติพิเศษ' : 'Special Property'}</span>
                             <span className="text-emerald-400 font-bold">{selectedItem.specialEffect}</span>
                         </div>
                     )}
                     <div className="flex justify-between">
-                        <span>สถานะ</span>
-                        <span className={isEquipped ? 'text-green-400 font-bold' : 'text-stone-500'}>{isEquipped ? 'สวมใส่อยู่' : 'ว่าง'}</span>
+                        <span>{language === 'th' ? 'สถานะ' : 'Status'}</span>
+                        <span className={isEquipped ? 'text-green-400 font-bold' : 'text-stone-500'}>{isEquipped ? t('inventory.equipped') : t('inventory.empty_slot')}</span>
                     </div>
                     <div className="flex justify-between">
-                        <span>ราคาขายคืน</span>
+                        <span>{language === 'th' ? 'ราคาขายคืน' : 'Sell Back Price'}</span>
                         <span className="text-emerald-400 font-mono">{(selectedItem.price * 0.5).toLocaleString()} {CURRENCY}</span>
                     </div>
                 </div>
@@ -252,24 +254,24 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                             disabled={isEquipped || isChip}
                             className="py-2 bg-red-900/20 border border-red-900/50 text-red-400 rounded hover:bg-red-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                            <DollarSign size={16} /> ขายคืน
+                            <DollarSign size={16} /> {t('inventory.sell_back')}
                         </button>
                         <button
                             onClick={() => setAction('UPGRADE')}
                             disabled={isEquipped || isChip || isSpecial || !isGlove} // Only gloves upgradeable
                             className="py-2 bg-yellow-900/20 border border-yellow-900/50 text-yellow-400 rounded hover:bg-yellow-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                            <ArrowUpCircle size={16} /> ตีบวก
+                            <ArrowUpCircle size={16} /> {t('inventory.upgrade')}
                         </button>
                     </div>
                 )}
 
                 {action === 'SELL' && (
                     <div className="text-center relative z-10">
-                        <p className="text-red-400 text-sm mb-3">ยืนยันการขายคืนในราคา 50%?</p>
+                        <p className="text-red-400 text-sm mb-3">{t('inventory.sell_confirm')}</p>
                         <div className="flex gap-2">
-                            <button onClick={() => setAction('DETAILS')} className="flex-1 py-2 bg-stone-800 rounded text-stone-300">ยกเลิก</button>
-                            <button onClick={handleSell} className="flex-1 py-2 bg-red-600 rounded text-white font-bold">ยืนยันขาย</button>
+                            <button onClick={() => setAction('DETAILS')} className="flex-1 py-2 bg-stone-800 rounded text-stone-300">{t('common.cancel')}</button>
+                            <button onClick={handleSell} className="flex-1 py-2 bg-red-600 rounded text-white font-bold">{language === 'th' ? 'ยืนยันขาย' : 'Confirm Sell'}</button>
                         </div>
                     </div>
                 )}
@@ -277,10 +279,10 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                 {action === 'UPGRADE' && (
                     <div className="text-center relative z-10">
                         {isMaxLevel ? (
-                            <div className="text-stone-500 py-4">อุปกรณ์ระดับสูงสุดแล้ว</div>
+                            <div className="text-stone-500 py-4">{t('inventory.max_level')}</div>
                         ) : (
                             <div className="bg-stone-950 p-2 rounded mb-3">
-                                <div className="text-sm text-stone-300 mb-2 font-bold">ต้องใช้วัตถุดิบในการตีบวก</div>
+                                <div className="text-sm text-stone-300 mb-2 font-bold">{t('inventory.upgrade_req')}</div>
                                 <div className="flex justify-center items-center gap-2 mb-2">
                                     <div className="w-10 h-10 border border-stone-700 bg-stone-800 rounded flex items-center justify-center relative">
                                         {getIcon(selectedItem, `w-6 h-6 ${RARITY_SETTINGS[selectedItem.rarity].color}`)}
@@ -296,16 +298,16 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                     </div>
                                 </div>
                                 <ul className="text-xs text-stone-500 space-y-1">
-                                    <li>• ใช้ชิป x1 และ {matName} x{matAmount}</li>
-                                    <li>• โอกาสสำเร็จ {(chance * 100).toFixed(0)}%</li>
-                                    <li>• <span className="text-red-400">ถ้าแตก: เสียวัตถุดิบ</span> (อุปกรณ์ไม่หาย)</li>
+                                    <li>• {language === 'th' ? `ใช้ชิป x1 และ ${matName} x${matAmount}` : `Requires Chip x1 and ${matName} x${matAmount}`}</li>
+                                    <li>• {t('inventory.upgrade_chance')} {(chance * 100).toFixed(0)}%</li>
+                                    <li>• <span className="text-red-400">{t('inventory.upgrade_fail_penalty')}</span></li>
                                 </ul>
                             </div>
                         )}
 
                         <div className="flex gap-2">
-                            <button onClick={() => setAction('DETAILS')} className="flex-1 py-2 bg-stone-800 rounded text-stone-300">ยกเลิก</button>
-                            <button onClick={handleUpgrade} disabled={isMaxLevel} className="flex-1 py-2 bg-yellow-600 hover:bg-yellow-500 rounded text-black font-bold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(234,179,8,0.3)] disabled:opacity-50"><Hammer size={14} /> ตีบวก</button>
+                            <button onClick={() => setAction('DETAILS')} className="flex-1 py-2 bg-stone-800 rounded text-stone-300">{t('common.cancel')}</button>
+                            <button onClick={handleUpgrade} disabled={isMaxLevel} className="flex-1 py-2 bg-yellow-600 hover:bg-yellow-500 rounded text-black font-bold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(234,179,8,0.3)] disabled:opacity-50"><Hammer size={14} /> {t('inventory.upgrade')}</button>
                         </div>
                     </div>
                 )}
@@ -390,10 +392,10 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                         <h3 className="text-3xl font-display font-bold text-red-500 mb-2 tracking-widest">
                                             FAILED
                                         </h3>
-                                        <p className="text-stone-500 mb-8">เสียวัตถุดิบ แต่ผู้จัดการยังอยู่ครบ</p>
+                                        <p className="text-stone-500 mb-8">{language === 'th' ? 'เสียวัตถุดิบ แต่ผู้จัดการยังอยู่ครบ' : 'Materials lost, but equipment remains safe.'}</p>
                                     </>
                                 )}
-                                <button onClick={resetAfterUpgrade} className="px-8 py-3 bg-stone-800 hover:bg-stone-700 text-white rounded-lg font-bold border border-stone-600 transition-all hover:scale-105">ตกลง</button>
+                                <button onClick={resetAfterUpgrade} className="px-8 py-3 bg-stone-800 hover:bg-stone-700 text-white rounded-lg font-bold border border-stone-600 transition-all hover:scale-105">{t('common.confirm')}</button>
                             </div>
                         )}
                     </div>
@@ -405,8 +407,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                             <Backpack size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-display font-bold text-white">Inventory</h2>
-                            <p className="text-xs text-stone-500 uppercase tracking-wider">จัดการ / ขาย / อัปเกรด</p>
+                            <h2 className="text-xl font-display font-bold text-white">{t('inventory.title')}</h2>
+                            <p className="text-xs text-stone-500 uppercase tracking-wider">{t('inventory.subtitle')}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
@@ -450,7 +452,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                             {/* Tooltip */}
                                             <div className="absolute left-[80%] top-0 z-[150] bg-stone-900/95 text-[10px] text-white p-2 rounded-lg border border-stone-700 shadow-xl opacity-0 group-hover:opacity-100 hover:opacity-100 pointer-events-none transition-opacity min-w-[120px] backdrop-blur-sm whitespace-nowrap">
                                                 <div className={`font-bold ${RARITY_SETTINGS[item.rarity].color} mb-1`}>{getItemDisplayName(item)}</div>
-                                                {group.count > 1 && <div className="text-stone-400 text-[9px] mb-1 italic">จำนวนคงเหลือ: {group.count} ชิ้น</div>}
+                                                {group.count > 1 && <div className="text-stone-400 text-[9px] mb-1 italic">{language === 'th' ? `จำนวนคงเหลือ: ${group.count} ชิ้น` : `Remaining: ${group.count} pcs`}</div>}
                                                 {item.specialEffect && (
                                                     <div className="text-[9px] text-emerald-400 mb-1 font-bold">
                                                         {item.specialEffect}
@@ -459,7 +461,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                                 {item.typeId !== 'robot' && (
                                                     <div className="text-[9px] text-stone-400 flex items-center gap-1">
                                                         <Star size={10} className="text-yellow-500" />
-                                                        <span className="font-mono text-yellow-500">โบนัส: +{(item.dailyBonus || 0).toFixed(2)} / วัน</span>
+                                                        <span className="font-mono text-yellow-500">{language === 'th' ? `โบนัส: +${(item.dailyBonus || 0).toFixed(2)} / วัน` : `Bonus: +${(item.dailyBonus || 0).toFixed(2)} / day`}</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -471,7 +473,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                 );
                             })}
                         </div>
-                        {inventory.length === 0 && <div className="text-stone-600 text-center mt-10">กระเป๋าว่างเปล่า</div>}
+                        {inventory.length === 0 && <div className="text-stone-600 text-center mt-10">{t('inventory.empty')}</div>}
 
                         {/* Market Value Summary */}
                         {totalMaterialsValue > 0 && (
@@ -479,13 +481,13 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                 <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-3 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <TrendingUp size={14} className="text-emerald-400" />
-                                        <span className="text-[10px] text-emerald-400/70 font-bold uppercase tracking-wider">มูลค่าวัตถุดิบทั้งหมด</span>
+                                        <span className="text-[10px] text-emerald-400/70 font-bold uppercase tracking-wider">{t('inventory.total_value')}</span>
                                     </div>
                                     <div className="text-right">
                                         <div className="text-sm font-bold text-emerald-400 font-mono">
                                             {totalMaterialsValue.toLocaleString()} {CURRENCY}
                                         </div>
-                                        <div className="text-[9px] text-emerald-500/50">ราคาอ้างอิงตามตลาดปัจจุบัน</div>
+                                        <div className="text-[9px] text-emerald-500/50">{t('inventory.market_ref')}</div>
                                     </div>
                                 </div>
                             </div>

@@ -5,6 +5,7 @@ import { Rarity } from '../services/types';
 import { RARITY_SETTINGS, CURRENCY } from '../constants';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
+import { useTranslation } from './LanguageContext';
 
 interface LootBoxModalProps {
     isOpen: boolean;
@@ -67,6 +68,7 @@ const ItemIcon: React.FC<{ typeId?: string, name?: string, materialId?: number, 
 };
 
 export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rarity, bonus, itemTypeId, itemName, materialId }) => {
+    const { t, language } = useTranslation();
     // Stages: idle -> shaking -> unlocking (chains break) -> opening (lid lifts) -> flash -> revealed
     const [stage, setStage] = useState<'idle' | 'shaking' | 'unlocking' | 'opening' | 'flash' | 'revealed'>('idle');
 
@@ -110,7 +112,7 @@ export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rar
                     <h2 className={`text-4xl font-display font-black uppercase tracking-widest ${config.color} drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]`}>
                         {config.label}
                     </h2>
-                    <div className={`text-2xl font-bold text-white mt-1 drop-shadow-md`}>{itemName || 'Unknown Item'}</div>
+                    <div className={`text-2xl font-bold text-white mt-1 drop-shadow-md`}>{itemName || t('lootbox.unknown')}</div>
                 </div>
 
                 {/* The Treasure Chest Container */}
@@ -199,7 +201,7 @@ export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rar
                             {stage === 'idle' && (
                                 <div className="absolute -bottom-16 flex flex-col items-center gap-2 animate-pulse pointer-events-none">
                                     <span className="text-base font-bold text-yellow-100 uppercase tracking-widest bg-black/50 px-6 py-2 rounded-full border border-yellow-500/50 backdrop-blur-md shadow-xl flex items-center gap-2">
-                                        <Lock size={14} /> แตะเพื่อเปิดแร่ดิบ
+                                        <Lock size={14} /> {t('lootbox.tap_to_open')}
                                     </span>
                                 </div>
                             )}
@@ -242,12 +244,12 @@ export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rar
                 <div className={`absolute bottom-10 w-full transition-all duration-700 delay-300 transform ${stage === 'revealed' ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'} z-30 px-6`}>
                     {!materialId && (
                         <div className="bg-black/60 border border-stone-600 p-4 rounded-2xl backdrop-blur-md mb-6 mx-auto max-w-sm shadow-2xl">
-                            <p className="text-stone-400 text-xs uppercase tracking-widest mb-1 text-center">รายได้เพิ่ม</p>
+                            <p className="text-stone-400 text-xs uppercase tracking-widest mb-1 text-center">{t('lootbox.bonus_income')}</p>
                             <div className="flex items-center justify-center gap-2">
                                 <p className={`text-4xl font-mono font-black ${config.color} drop-shadow-md`}>
                                     +{bonus.toFixed(2)}
                                 </p>
-                                <span className="text-sm text-stone-300 font-bold mt-2">{CURRENCY}/วัน</span>
+                                <span className="text-sm text-stone-300 font-bold mt-2">{CURRENCY}{t('lootbox.per_day')}</span>
                             </div>
                         </div>
                     )}
@@ -256,7 +258,7 @@ export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rar
                         onClick={onClose}
                         className="w-full bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-black font-black py-4 rounded-xl shadow-[0_0_30px_rgba(234,179,8,0.4)] transition-all hover:scale-105 hover:shadow-[0_0_50px_rgba(234,179,8,0.6)] font-display text-xl uppercase tracking-widest flex items-center justify-center gap-2"
                     >
-                        <Sparkles size={24} /> เก็บเข้าคลังสินค้า <Sparkles size={24} />
+                        <Sparkles size={24} /> {t('lootbox.collect')} <Sparkles size={24} />
                     </button>
                 </div>
 

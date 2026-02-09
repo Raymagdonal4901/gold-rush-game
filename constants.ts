@@ -1,5 +1,5 @@
-
 export const CURRENCY = '$';
+export const EXCHANGE_RATE_USD_THB = 35;
 export const BASE_CLAIM_AMOUNT = 0;
 export const DEMO_SPEED_MULTIPLIER = 10; // 10x Speed for simulation
 

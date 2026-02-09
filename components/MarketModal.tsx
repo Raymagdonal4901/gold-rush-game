@@ -4,6 +4,7 @@ import { X, TrendingUp, TrendingDown, Minus, RefreshCw, BarChart2, DollarSign, S
 import { MarketState, Transaction, MarketItemData, AccessoryItem } from '../services/types';
 import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, ROBOT_CONFIG } from '../constants';
 import { MaterialIcon } from './MaterialIcon';
+import { useTranslation } from './LanguageContext';
 import { api } from '../services/api';
 
 interface MarketModalProps {
@@ -16,6 +17,7 @@ interface MarketModalProps {
 }
 
 export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userId, onSuccess, initialTier, addNotification }) => {
+    const { t, language } = useTranslation();
     const [market, setMarket] = useState<MarketState | null>(null);
     const [selectedTier, setSelectedTier] = useState<number>(1);
     const [amount, setAmount] = useState<number>(0);
@@ -126,7 +128,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
             if (addNotification) addNotification({
                 id: Date.now().toString(),
                 userId: userId,
-                message: `${action === 'BUY' ? 'ซื้อ' : 'ขาย'}สำเร็จ!`,
+                message: `${action === 'BUY' ? (language === 'th' ? 'ซื้อ' : 'Buy') : (language === 'th' ? 'ขาย' : 'Sell')}${language === 'th' ? 'สำเร็จ!' : ' Success!'}`,
                 type: 'SUCCESS',
                 read: false,
                 timestamp: Date.now()
@@ -211,18 +213,18 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                             <BarChart2 size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-display font-bold text-white">ตลาดกลางวัสดุ (Material Exchange)</h2>
+                            <h2 className="text-xl font-display font-bold text-white">{t('market.title')}</h2>
                             <div className="flex items-center gap-2 text-xs text-stone-500">
-                                <span className="flex items-center gap-1"><RefreshCw size={10} /> รีเซ็ตทุก {MARKET_CONFIG.UPDATE_INTERVAL_HOURS} ชม.</span>
+                                <span className="flex items-center gap-1"><RefreshCw size={10} /> {t('market.reset_note')} {MARKET_CONFIG.UPDATE_INTERVAL_HOURS} {language === 'th' ? 'ชม.' : 'hrs.'}</span>
                                 <span>•</span>
-                                <span className={userMastery >= 1000 ? "text-cyan-400 font-bold" : "text-yellow-500"}>ค่าธรรมเนียม {spreadLabel}% (ฝั่งซื้อ)</span>
+                                <span className={userMastery >= 1000 ? "text-cyan-400 font-bold" : "text-yellow-500"}>{t('market.fee_note')} {spreadLabel}% ({t('market.buy_side')})</span>
                             </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="flex bg-stone-950 p-1 rounded-lg border border-stone-800">
-                            <button onClick={() => setActiveTab('TRADE')} className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'TRADE' ? 'bg-stone-800 text-white shadow' : 'text-stone-500 hover:text-stone-300'}`}>ซื้อขาย</button>
-                            <button onClick={() => setActiveTab('HISTORY')} className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'HISTORY' ? 'bg-stone-800 text-white shadow' : 'text-stone-500 hover:text-stone-300'}`}>ประวัติ</button>
+                            <button onClick={() => setActiveTab('TRADE')} className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'TRADE' ? 'bg-stone-800 text-white shadow' : 'text-stone-500 hover:text-stone-300'}`}>{t('market.trade_tab')}</button>
+                            <button onClick={() => setActiveTab('HISTORY')} className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'HISTORY' ? 'bg-stone-800 text-white shadow' : 'text-stone-500 hover:text-stone-300'}`}>{t('market.history_tab')}</button>
                         </div>
                         <button onClick={onClose} className="p-2 hover:bg-stone-800 rounded-full text-stone-500 hover:text-white ml-2">
                             <X size={24} />
@@ -233,29 +235,29 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                 <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
                     <div className="w-full md:w-80 border-r border-stone-800 bg-stone-900/50 overflow-y-auto custom-scrollbar shrink-0 max-h-[35vh] md:max-h-full">
                         {Object.entries(market.trends).map(([key, rawData]) => {
-                            const t = Number(key);
+                            const tier = Number(key);
                             const data = rawData as MarketItemData;
-                            const isSelected = selectedTier === t;
-                            const name = MATERIAL_CONFIG.NAMES[t as keyof typeof MATERIAL_CONFIG.NAMES];
-                            const count = userMats[t] || 0;
+                            const isSelected = selectedTier === tier;
+                            const name = MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES];
+                            const count = userMats[tier] || 0;
                             const itemDev = ((data.currentPrice - data.basePrice) / data.basePrice);
                             const itemBot = Math.abs(itemDev) > MARKET_CONFIG.BOT_INTERVENTION_THRESHOLD;
 
                             return (
                                 <button
-                                    key={t}
-                                    onClick={() => { setSelectedTier(t); setAmount(0); setShowConfirm(false); }}
+                                    key={tier}
+                                    onClick={() => { setSelectedTier(tier); setAmount(0); setShowConfirm(false); }}
                                     className={`w-full p-4 border-b border-stone-800 flex justify-between items-center transition-all ${isSelected ? 'bg-stone-800 border-l-4 border-l-blue-500 pl-3' : 'hover:bg-stone-900 border-l-4 border-l-transparent'}`}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <MaterialIcon id={t} size="w-8 h-8" iconSize={16} />
+                                        <MaterialIcon id={tier} size="w-8 h-8" iconSize={16} />
                                         <div className="text-left">
                                             <div className={`font-bold text-sm flex items-center gap-1 ${isSelected ? 'text-white' : 'text-stone-400'}`}>
                                                 {name}
                                                 {itemBot && <Bot size={12} className="text-emerald-400 animate-pulse" title="System Stabilizer Bot Active" />}
                                             </div>
                                             <div className="text-[10px] text-stone-500">
-                                                คงเหลือ: <span className={count > 0 ? "text-white font-bold" : "text-stone-600"}>{count}</span>
+                                                {t('market.available')}: <span className={count > 0 ? "text-white font-bold" : "text-stone-600"}>{count}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -282,14 +284,23 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                                 <div className="w-16 h-16 bg-red-900/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500 animate-pulse">
                                                     <Bot size={32} className="text-red-400" />
                                                 </div>
-                                                <h3 className="text-xl font-bold text-red-400 mb-2">คำเตือนจากผู้ช่วย!</h3>
+                                                <h3 className="text-xl font-bold text-red-400 mb-2">{t('market.safety_warning')}</h3>
                                                 <p className="text-white text-sm mb-4">
-                                                    "คุณผู้จัดการครับ! ช่วงนี้ราคา <span className="text-yellow-500 font-bold">{matName}</span> ตกหนักมาก (<span className="text-red-400 font-bold">{(deviationFromBase * 100).toFixed(1)}%</span>) <br />
-                                                    แน่ใจนะครับว่าจะขายตอนนี้? ผมแนะนำให้รอก่อนครับ"
+                                                    {language === 'th' ? (
+                                                        <>
+                                                            "คุณผู้จัดการครับ! ช่วงนี้ราคา <span className="text-yellow-500 font-bold">{matName}</span> ตกหนักมาก (<span className="text-red-400 font-bold">{(deviationFromBase * 100).toFixed(1)}%</span>) <br />
+                                                            แน่ใจนะครับว่าจะขายตอนนี้? ผมแนะนำให้รอก่อนครับ"
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            "Manager! The price of <span className="text-yellow-500 font-bold">{matName}</span> has dropped significantly (<span className="text-red-400 font-bold">{(deviationFromBase * 100).toFixed(1)}%</span>). <br />
+                                                            Are you sure you want to sell now? I recommend waiting."
+                                                        </>
+                                                    )}
                                                 </p>
                                                 <div className="grid grid-cols-2 gap-3">
-                                                    <button onClick={() => setShowSafetyWarning(false)} className="py-3 rounded bg-stone-800 hover:bg-stone-700 text-white font-bold transition-colors">เชื่อคำแนะนำ (ยกเลิก)</button>
-                                                    <button onClick={handleTransaction} className="py-3 rounded bg-red-600 hover:bg-red-500 text-white font-bold transition-colors shadow-lg shadow-red-900/40">ขายเลย (ไม่สน)</button>
+                                                    <button onClick={() => setShowSafetyWarning(false)} className="py-3 rounded bg-stone-800 hover:bg-stone-700 text-white font-bold transition-colors">{t('market.safety_advice')}</button>
+                                                    <button onClick={handleTransaction} className="py-3 rounded bg-red-600 hover:bg-red-500 text-white font-bold transition-colors shadow-lg shadow-red-900/40">{t('market.safety_ignore')}</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -299,23 +310,23 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                 {showConfirm && !showSafetyWarning && (
                                     <div className="absolute inset-0 z-20 bg-stone-950/90 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in zoom-in duration-200">
                                         <div className="bg-stone-900 border border-stone-700 w-full max-w-sm rounded-xl p-6 shadow-2xl">
-                                            <h3 className="text-lg font-bold text-white mb-4 text-center border-b border-stone-800 pb-2">ยืนยันรายการ{action === 'BUY' ? 'ซื้อ' : 'ขาย'}</h3>
+                                            <h3 className="text-lg font-bold text-white mb-4 text-center border-b border-stone-800 pb-2">{t('market.confirm_title')}</h3>
                                             <div className="space-y-3 mb-6 text-sm">
-                                                <div className="flex justify-between items-center"><span className="text-stone-400">รายการ</span><span className="text-white font-bold flex items-center gap-2"><MaterialIcon id={selectedTier} size="w-6 h-6" iconSize={12} /> {matName}</span></div>
-                                                <div className="flex justify-between items-center"><span className="text-stone-400">ราคาต่อหน่วย</span><span className="text-stone-300 font-mono">{unitPrice.toFixed(2)}</span></div>
-                                                <div className="flex justify-between items-center"><span className="text-stone-400">จำนวน</span><span className="text-white font-bold">x{amount}</span></div>
+                                                <div className="flex justify-between items-center"><span className="text-stone-400">{language === 'th' ? 'รายการ' : 'Item'}</span><span className="text-white font-bold flex items-center gap-2"><MaterialIcon id={selectedTier} size="w-6 h-6" iconSize={12} /> {matName}</span></div>
+                                                <div className="flex justify-between items-center"><span className="text-stone-400">{language === 'th' ? 'ราคาต่อหน่วย' : 'Unit Price'}</span><span className="text-stone-300 font-mono">{unitPrice.toFixed(2)}</span></div>
+                                                <div className="flex justify-between items-center"><span className="text-stone-400">{language === 'th' ? 'จำนวน' : 'Amount'}</span><span className="text-white font-bold">x{amount}</span></div>
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-stone-400">{action === 'BUY' ? 'ค่าธรรมเนียม' : 'ภาษีตลาด'}</span>
+                                                    <span className="text-stone-400">{action === 'BUY' ? t('market.spread') : t('market.tax')}</span>
                                                     <span className="text-stone-500 font-mono">
                                                         {action === 'BUY' ? `+${buyTax.toFixed(2)}` : `-${sellTax.toFixed(2)}`}
                                                     </span>
                                                 </div>
                                                 <div className="h-px bg-stone-800 my-2"></div>
-                                                <div className="flex justify-between items-center text-base"><span className="text-stone-300">ราคารวมสุทธิ</span><span className={`font-mono font-bold ${action === 'BUY' ? 'text-red-400' : 'text-emerald-400'}`}>{totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}</span></div>
+                                                <div className="flex justify-between items-center text-base"><span className="text-stone-300">{t('market.total_price')}</span><span className={`font-mono font-bold ${action === 'BUY' ? 'text-red-400' : 'text-emerald-400'}`}>{totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}</span></div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-3">
-                                                <button onClick={() => setShowConfirm(false)} className="py-3 rounded bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold transition-colors">แก้ไข</button>
-                                                <button onClick={handleTransaction} disabled={loading} className={`py-3 rounded font-bold text-white shadow-lg flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'}`}>{loading ? <RefreshCw className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}{action === 'BUY' ? 'ยืนยันการสั่งซื้อ' : 'ยืนยันการขายออก'}</button>
+                                                <button onClick={() => setShowConfirm(false)} className="py-3 rounded bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold transition-colors">{t('common.cancel')}</button>
+                                                <button onClick={handleTransaction} disabled={loading} className={`py-3 rounded font-bold text-white shadow-lg flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'}`}>{loading ? <RefreshCw className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}{action === 'BUY' ? t('market.confirm_buy') : t('market.confirm_sell')}</button>
                                             </div>
                                         </div>
                                     </div>
@@ -348,13 +359,13 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
 
                                 <div className="flex-1 p-4 flex flex-col justify-between overflow-y-auto custom-scrollbar">
                                     <div className="grid grid-cols-2 gap-3 mb-4 bg-stone-900 p-1 rounded-xl border border-stone-800">
-                                        <button onClick={() => setAction('BUY')} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="rotate-45" /> สั่งซื้อ (BUY)</button>
-                                        <button onClick={() => setAction('SELL')} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'SELL' ? 'bg-red-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="-rotate-[135deg]" /> ขายออก (SELL)</button>
+                                        <button onClick={() => setAction('BUY')} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="rotate-45" /> {t('market.buy_action')}</button>
+                                        <button onClick={() => setAction('SELL')} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'SELL' ? 'bg-red-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="-rotate-[135deg]" /> {t('market.sell_action')}</button>
                                     </div>
                                     <div className="space-y-4">
-                                        <div className="flex justify-between text-xs text-stone-400 bg-stone-900/50 p-2.5 rounded-lg border border-stone-800"><span>Available Balance:</span><span className="font-bold text-white">{action === 'SELL' ? `${maxSell} Units` : `${userBalance.toLocaleString()} ${CURRENCY}`}</span></div>
+                                        <div className="flex justify-between text-xs text-stone-400 bg-stone-900/50 p-2.5 rounded-lg border border-stone-800"><span>{language === 'th' ? 'คงเหลือในมือ' : 'Your Balance'}:</span><span className="font-bold text-white">{action === 'SELL' ? `${maxSell} Units` : `${userBalance.toLocaleString()} ${CURRENCY}`}</span></div>
                                         <div className="space-y-2">
-                                            <div className="flex justify-between items-center"><label className="text-xs text-stone-500 uppercase font-bold">จำนวนที่ต้องการ (Amount)</label><span className="text-xs text-blue-400 cursor-pointer hover:underline" onClick={() => setAmount(action === 'SELL' ? maxSell : maxBuy)}>Max Available</span></div>
+                                            <div className="flex justify-between items-center"><label className="text-xs text-stone-500 uppercase font-bold">{t('market.amount_label')}</label><span className="text-xs text-blue-400 cursor-pointer hover:underline" onClick={() => setAmount(action === 'SELL' ? maxSell : maxBuy)}>{t('market.max_available')}</span></div>
                                             <div className="relative">
                                                 <input type="number" value={amount === 0 ? '' : amount} onChange={(e) => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setAmount(isNaN(val) ? 0 : val); }} className="w-full bg-stone-900 border border-stone-700 rounded-xl p-3 text-white font-mono text-base focus:border-blue-500 outline-none transition-colors" placeholder="0" />
                                                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 text-[10px] font-bold">UNITS</span>
@@ -378,10 +389,10 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                         >
                                             {loading ? <RefreshCw className="animate-spin" size={20} /> : (
                                                 <>
-                                                    {action === 'BUY' && totalPrice > userBalance ? 'ยอดเงินไม่เพียงพอ' :
-                                                        action === 'SELL' && amount > maxSell ? 'วัตถุดิบไม่เพียงพอ' :
-                                                            amount <= 0 ? 'ระบุจำนวนที่ต้องการ' :
-                                                                action === 'BUY' ? 'ตรวจสอบรายการสั่งซื้อ' : 'ตรวจสอบรายการขาย'}
+                                                    {action === 'BUY' && totalPrice > userBalance ? t('market.insufficient_funds') :
+                                                        action === 'SELL' && amount > maxSell ? t('market.insufficient_mats') :
+                                                            amount <= 0 ? (language === 'th' ? 'ระบุจำนวนที่ต้องการ' : 'Enter amount') :
+                                                                action === 'BUY' ? (language === 'th' ? 'ตรวจสอบรายการสั่งซื้อ' : 'Review Purchase') : (language === 'th' ? 'ตรวจสอบรายการขาย' : 'Review Sale')}
                                                 </>
                                             )}
                                         </button>
@@ -390,10 +401,10 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                             </>
                         ) : (
                             <div className="flex-1 flex flex-col h-full">
-                                <div className="p-4 border-b border-stone-800 bg-stone-900/50 flex justify-between items-center"><h3 className="font-bold text-stone-300">ประวัติการซื้อขายล่าสุด</h3><div className="text-xs text-stone-500">แสดง 20 รายการล่าสุด</div></div>
+                                <div className="p-4 border-b border-stone-800 bg-stone-900/50 flex justify-between items-center"><h3 className="font-bold text-stone-300">{language === 'th' ? 'ประวัติการซื้อขายล่าสุด' : 'Recent Trade History'}</h3><div className="text-xs text-stone-500">{language === 'th' ? 'แสดง 20 รายการล่าสุด' : 'Showing last 20'}</div></div>
                                 <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
                                     {history.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-full text-stone-500 gap-2"><History size={32} opacity={0.5} /><p>ยังไม่มีประวัติการซื้อขาย</p></div>
+                                        <div className="flex flex-col items-center justify-center h-full text-stone-500 gap-2"><History size={32} opacity={0.5} /><p>{language === 'th' ? 'ยังไม่มีประวัติการซื้อขาย' : 'No trade history yet'}</p></div>
                                     ) : (
                                         <div className="divide-y divide-stone-800">
                                             {history.map(tx => (
@@ -401,7 +412,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${tx.type === 'MATERIAL_BUY' ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-500' : 'bg-red-900/20 border-red-500/30 text-red-500'}`}>{tx.type === 'MATERIAL_BUY' ? <ShoppingCart size={14} /> : <DollarSign size={14} />}</div>
                                                         <div>
-                                                            <div className="text-sm font-bold text-stone-200 flex items-center gap-2">{tx.type === 'MATERIAL_BUY' ? 'ซื้อเข้า (Buy)' : 'ขายออก (Sell)'}<span className="text-[10px] bg-stone-800 text-stone-400 px-1.5 rounded">{tx.description.split(':')[1]?.split('x')[0]?.trim()}</span></div>
+                                                            <div className="text-sm font-bold text-stone-200 flex items-center gap-2">{tx.type === 'MATERIAL_BUY' ? (language === 'th' ? 'ซื้อเข้า (Buy)' : 'Buy') : (language === 'th' ? 'ขายออก (Sell)' : 'Sell')}<span className="text-[10px] bg-stone-800 text-stone-400 px-1.5 rounded">{tx.description.split(':')[1]?.split('x')[0]?.trim()}</span></div>
                                                             <div className="text-xs text-stone-500 font-mono">{new Date(tx.timestamp).toLocaleString()}</div>
                                                         </div>
                                                     </div>

@@ -5,6 +5,7 @@ import { InfinityGlove } from './InfinityGlove';
 import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS } from '../constants';
 import { api } from '../services/api';
 import { MaterialIcon } from './MaterialIcon';
+import { useTranslation } from './LanguageContext';
 
 interface AccessoryManagementModalProps {
     isOpen: boolean;
@@ -24,6 +25,7 @@ interface AccessoryManagementModalProps {
 export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> = ({
     isOpen, onClose, rig, slotIndex, equippedItem, inventory, userId, onEquip, onUnequip, onRefresh, materials = {}, addNotification
 }) => {
+    const { t, language } = useTranslation();
     const [view, setView] = useState<'MANAGE' | 'SELECT'>('MANAGE');
     const [isUpgrading, setIsUpgrading] = useState(false);
     const [useInsurance, setUseInsurance] = useState(false);
@@ -62,7 +64,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             if (addNotification) addNotification({
                 id: Date.now().toString(),
                 userId: userId,
-                message: 'ไม่มีใบประกันความเสี่ยง!',
+                message: t('blacksmith.no_insurance'),
                 type: 'ERROR',
                 read: false,
                 timestamp: Date.now()
@@ -95,7 +97,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                         type: 'SUCCESS',
                         text: 'UPGRADE SUCCESS!',
                         level: res.item?.level,
-                        subtext: 'การตีบวกสำเร็จ!',
+                        subtext: t('blacksmith.upgrade_success'),
                         oldBonus,
                         newBonus: res.item?.dailyBonus,
                         itemName
@@ -104,7 +106,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                     setUpgradeMsg({
                         type: 'ERROR',
                         text: 'UPGRADE FAILED!',
-                        subtext: res.message || 'อุปกรณ์เสียหายจากการตีบวก',
+                        subtext: res.message || t('blacksmith.item_damaged'),
                         level: res.item?.level
                     });
                 }
@@ -117,7 +119,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 setUpgradeMsg({
                     type: 'ERROR',
                     text: 'SYSTEM ERROR',
-                    subtext: e.response?.data?.message || e.message || 'เกิดข้อผิดพลาด'
+                    subtext: e.response?.data?.message || e.message || t('blacksmith.error')
                 });
                 setIsUpgrading(false);
                 setUpgradePhase('IDLE');
@@ -179,11 +181,11 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
     const getItemDisplayName = (item: any) => {
         const typeId = item.typeId || '';
         const name = item.name || '';
-        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return 'กุญแจเข้าเหมือง';
-        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return 'ชิปอัปเกรด';
-        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return 'โต๊ะช่างสกัดแร่';
-        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return 'แว่นขยายส่องแร่';
-        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return 'หุ่นยนต์ AI';
+        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return language === 'th' ? 'กุญแจเข้าเหมือง' : 'Mining Key';
+        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return language === 'th' ? 'ชิปอัปเกรด' : 'Upgrade Chip';
+        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return language === 'th' ? 'โต๊ะช่างสกัดแร่' : 'Material Mixer';
+        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return language === 'th' ? 'แว่นขยายส่องแร่' : 'Magnifying Glass';
+        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return language === 'th' ? 'หุ่นยนต์ AI' : 'AI Robot';
         return name;
     };
 
@@ -344,9 +346,9 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 {/* Status Text */}
                 <div className="mt-32 text-center relative z-20">
                     <h2 className="text-4xl font-black text-white uppercase tracking-widest font-display drop-shadow-[0_4px_0_#000]">
-                        {upgradePhase === 'HEATING' && <span className="text-orange-500">กำลังเผา...!</span>}
-                        {upgradePhase === 'HAMMERING' && <span className="text-yellow-500">ตรึ้ง! ตรึ้ง!</span>}
-                        {upgradePhase === 'COOLING' && <span className="text-stone-300">กำลังชุบแข็ง...</span>}
+                        {upgradePhase === 'HEATING' && <span className="text-orange-500">{t('blacksmith.heating')}</span>}
+                        {upgradePhase === 'HAMMERING' && <span className="text-yellow-500">{t('blacksmith.hammering')}</span>}
+                        {upgradePhase === 'COOLING' && <span className="text-stone-300">{t('blacksmith.cooling')}</span>}
                     </h2>
                 </div>
             </div>
@@ -387,7 +389,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                     {isSuccess && upgradeMsg.level && (
                         <div className="w-full bg-black/30 border-2 border-yellow-900/50 p-4 rounded-lg space-y-3 relative z-10">
                             <div className="text-center">
-                                <span className="text-yellow-700/80 text-[10px] uppercase font-bold tracking-widest">ตีบวกสำเร็จ</span>
+                                <span className="text-yellow-700/80 text-[10px] uppercase font-bold tracking-widest">{t('blacksmith.success_banner')}</span>
                                 <div className="text-white font-bold text-lg">{upgradeMsg.itemName}</div>
                             </div>
                             <div className="flex justify-center my-2">
@@ -408,7 +410,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                         className={`w-full py-4 font-bold text-white uppercase tracking-wider hover:brightness-110 transition-all rounded-xl shadow-lg relative z-10
                         ${isSuccess ? 'bg-gradient-to-r from-yellow-700 to-orange-700 border-t border-yellow-400' : 'bg-stone-700 border-t border-stone-500'}`}
                     >
-                        ตกลง (OK)
+                        {t('blacksmith.ok')}
                     </button>
                 </div>
             </div>
@@ -495,7 +497,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                     ) : (
                         <div onClick={() => setView('SELECT')} className="w-48 h-64 rounded-2xl border-2 border-dashed border-stone-700 bg-stone-900/50 flex flex-col items-center justify-center cursor-pointer hover:border-cyan-500 hover:bg-stone-800/80 transition-all group">
                             <Plus className="text-stone-500 group-hover:text-cyan-500 mb-4 transition-colors" size={32} />
-                            <span className="text-stone-500 font-bold group-hover:text-cyan-500 transition-colors uppercase tracking-widest text-sm">เลือกอุปกรณ์</span>
+                            <span className="text-stone-500 font-bold group-hover:text-cyan-500 transition-colors uppercase tracking-widest text-sm">{t('blacksmith.select_equip')}</span>
                         </div>
                     )}
                 </div>
@@ -506,12 +508,12 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                             <div className="flex gap-2">
                                 {slotIndex !== 0 ? (
                                     <>
-                                        <button onClick={() => setView('SELECT')} className="flex-1 py-3 bg-stone-800 hover:bg-stone-700 border border-stone-700 hover:border-stone-500 rounded-lg text-stone-300 font-bold text-xs uppercase tracking-wider transition-all">เปลี่ยนอุปกรณ์</button>
-                                        <button onClick={onUnequip} className="px-4 py-3 bg-red-900/20 hover:bg-red-900/40 border border-red-900/50 rounded-lg text-red-500 font-bold text-xs uppercase tracking-wider transition-all">ถอดออก</button>
+                                        <button onClick={() => setView('SELECT')} className="flex-1 py-3 bg-stone-800 hover:bg-stone-700 border border-stone-700 hover:border-stone-500 rounded-lg text-stone-300 font-bold text-xs uppercase tracking-wider transition-all">{t('blacksmith.change_equip')}</button>
+                                        <button onClick={onUnequip} className="px-4 py-3 bg-red-900/20 hover:bg-red-900/40 border border-red-900/50 rounded-lg text-red-500 font-bold text-xs uppercase tracking-wider transition-all">{t('blacksmith.unequip')}</button>
                                     </>
                                 ) : (
                                     <div className="flex-1 py-3 text-center text-stone-500 font-bold text-xs uppercase tracking-widest bg-stone-900/50 rounded-lg border border-stone-800 flex items-center justify-center gap-2">
-                                        <Lock size={12} className="text-stone-600" /> อุปกรณ์ถาวร (ติดตัวเครื่อง)
+                                        <Lock size={12} className="text-stone-600" /> {t('blacksmith.permanent')}
                                     </div>
                                 )}
                             </div>
@@ -522,17 +524,17 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                         <div className="flex justify-between items-center mb-2 pb-2 border-b border-stone-900">
                                             <div className="flex items-center gap-2">
                                                 <div className="text-center">
-                                                    <div className="text-[9px] text-stone-500 uppercase">ปัจจุบัน</div>
+                                                    <div className="text-[9px] text-stone-500 uppercase">{t('blacksmith.current')}</div>
                                                     <div className="text-base font-black text-white font-mono">LV.{currentLevel}</div>
                                                 </div>
                                                 <div className="text-stone-600"><Rocket className="rotate-45" size={12} /></div>
                                                 <div className="text-center">
-                                                    <div className="text-[9px] text-cyan-500 uppercase font-bold">ถัดไป</div>
+                                                    <div className="text-[9px] text-cyan-500 uppercase font-bold">{t('blacksmith.next')}</div>
                                                     <div className="text-base font-black text-cyan-500 font-mono">LV.{nextLevel}</div>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <div className="text-[9px] text-stone-500 uppercase">โบนัส</div>
+                                                <div className="text-[9px] text-stone-500 uppercase">{t('blacksmith.bonus')}</div>
                                                 <div className="text-cyan-400 font-bold font-mono text-base flex items-center justify-end gap-1">
                                                     <TrendingUp size={12} />
                                                     +{bonusDiff.toFixed(2)}
@@ -542,19 +544,19 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
                                         <div className="flex items-center gap-1 mb-2 bg-stone-900 p-2 rounded-lg border border-stone-800 shadow-inner text-[10px]">
                                             <div className="flex-1 flex flex-col items-center justify-center gap-0.5 text-stone-300 border-r border-stone-800 pr-1">
-                                                <div className="flex items-center gap-1 text-purple-400 font-bold"><Cpu size={10} /> ชิป</div>
+                                                <div className="flex items-center gap-1 text-purple-400 font-bold"><Cpu size={10} /> {language === 'th' ? 'ชิป' : 'Chip'}</div>
                                                 <span className={`font-mono ${hasEnoughChips ? 'text-white' : 'text-red-500'}`}>
                                                     {ownedChips}/{upgradeReq.chipAmount}
                                                 </span>
                                             </div>
                                             <div className="flex-1 flex flex-col items-center justify-center gap-0.5 text-stone-300">
-                                                <div className="flex items-center gap-1 text-blue-400 font-bold"><MaterialIcon id={upgradeReq.matTier} size="w-2.5 h-2.5" iconSize={8} /> วัตถุดิบ</div>
+                                                <div className="flex items-center gap-1 text-blue-400 font-bold"><MaterialIcon id={upgradeReq.matTier} size="w-2.5 h-2.5" iconSize={8} /> {t('blacksmith.materials')}</div>
                                                 <span className={`font-mono ${((materials[upgradeReq.matTier] || 0) >= upgradeReq.matAmount) ? 'text-white' : 'text-red-500'}`}>
                                                     {matName} {materials[upgradeReq.matTier] || 0}/{upgradeReq.matAmount}
                                                 </span>
                                             </div>
                                             <div className="flex-1 flex flex-col items-center justify-center gap-0.5 text-stone-300 border-l border-stone-800 pl-1">
-                                                <div className="text-yellow-600 font-bold">ค่าใช้จ่าย</div>
+                                                <div className="text-yellow-600 font-bold">{t('blacksmith.cost')}</div>
                                                 <span className="text-yellow-500 font-bold font-mono">฿{upgradeReq.cost.toLocaleString()}</span>
                                             </div>
                                         </div>
@@ -568,7 +570,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                                         else if (addNotification) addNotification({
                                                             id: Date.now().toString(),
                                                             userId: userId,
-                                                            message: 'ไม่มีใบประกันความเสี่ยง',
+                                                            message: t('blacksmith.no_insurance'),
                                                             type: 'ERROR',
                                                             read: false,
                                                             timestamp: Date.now()
@@ -579,24 +581,24 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                                 </div>
                                                 <div className="text-xs text-stone-300">
                                                     <div className="font-bold flex items-center gap-1">
-                                                        <Shield size={12} className="text-emerald-400" /> ใบประกันความเสี่ยง
+                                                        <Shield size={12} className="text-emerald-400" /> {t('blacksmith.insurance')}
                                                     </div>
-                                                    <div className="text-[10px] text-stone-500">มีครอบครอง: {insuranceCount} ใบ</div>
+                                                    <div className="text-[10px] text-stone-500">{t('blacksmith.owned_count').replace('{count}', insuranceCount.toString())}</div>
                                                 </div>
                                             </div>
                                             {useInsurance ? (
                                                 <div className="text-[10px] items-center flex gap-1 text-emerald-400 font-bold bg-emerald-950/30 px-2 py-1 rounded border border-emerald-900/50">
-                                                    <Shield size={10} /> ป้องกันแล้ว
+                                                    <Shield size={10} /> {t('blacksmith.protected')}
                                                 </div>
                                             ) : (
                                                 <div className="text-[10px] items-center flex gap-1 text-red-400 font-bold bg-red-950/10 px-2 py-1 rounded border border-red-900/20">
                                                     <AlertTriangle size={10} />
                                                     {upgradeReq.risk === 'NONE' ? (
-                                                        <span className="text-emerald-500">ไม่มีความเสี่ยง</span>
+                                                        <span className="text-emerald-500">{t('blacksmith.no_risk')}</span>
                                                     ) : upgradeReq.risk === 'BREAK' ? (
-                                                        <span className="text-red-500">ความเสี่ยง: อุปกรณ์แตก</span>
+                                                        <span className="text-red-500">{t('blacksmith.risk_break')}</span>
                                                     ) : (
-                                                        <span>ความเสี่ยง: ลดระดับ</span>
+                                                        <span>{t('blacksmith.risk_downgrade')}</span>
                                                     )}
                                                 </div>
                                             )}
@@ -610,10 +612,10 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                             <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%] animate-[shimmer_2s_infinite]"></div>
                                             <div className="flex items-center gap-2 text-base relative z-10">
                                                 <Hammer size={18} className={isUpgrading ? "animate-bounce" : ""} />
-                                                <span>ตีบวก (UPGRADE)</span>
+                                                <span>{language === 'th' ? 'ตีบวก' : 'UPGRADE'} (UPGRADE)</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-[9px] font-medium opacity-90 relative z-10">
-                                                <span className={upgradeReq.chance < 0.5 ? "text-red-300" : "text-orange-200"}>โอกาส: {(upgradeReq.chance * 100).toFixed(0)}%</span>
+                                                <span className={upgradeReq.chance < 0.5 ? "text-red-300" : "text-orange-200"}>{language === 'th' ? 'โอกาส' : 'Chance'}: {(upgradeReq.chance * 100).toFixed(0)}%</span>
                                             </div>
                                         </button>
                                     </>
@@ -627,14 +629,14 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                                     <Sparkles className="absolute -top-2 -right-2 text-yellow-300 animate-pulse" size={24} />
                                                 </div>
                                                 <div className="mt-4">
-                                                    <h3 className="text-yellow-500 font-black text-xl uppercase tracking-wider">ระดับสูงสุด</h3>
-                                                    <p className="text-stone-400 mt-1">อัปเกรดเต็มแล้ว</p>
+                                                    <h3 className="text-yellow-500 font-black text-xl uppercase tracking-wider">{t('blacksmith.max_level')}</h3>
+                                                    <p className="text-stone-400 mt-1">{t('blacksmith.fully_upgraded')}</p>
                                                 </div>
                                             </>
                                         ) : (
                                             <>
                                                 <Shield size={32} className="opacity-20" />
-                                                <span>ไม่สามารถตีบวกได้<br /><span className="text-xs opacity-50">(ไม่มีข้อมูล)</span></span>
+                                                <span>{t('blacksmith.cannot_upgrade')}<br /><span className="text-xs opacity-50">{t('blacksmith.no_data')}</span></span>
                                             </>
                                         )}
                                     </div>
@@ -642,7 +644,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                             </div>
                         </div>
                     ) : (
-                        <div className="text-center text-stone-500 text-sm py-4">ไม่ได้สวมใส่อุปกรณ์</div>
+                        <div className="text-center text-stone-500 text-sm py-4">{t('blacksmith.not_equipped')}</div>
                     )}
                 </div>
             </div>
@@ -654,11 +656,11 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         <div className="flex flex-col h-full bg-stone-950">
             <div className="p-4 border-b border-stone-800 bg-stone-900 flex items-center gap-2">
                 <button onClick={() => setView('MANAGE')} className="p-1 hover:bg-stone-800 rounded"><ArrowUpCircle className="-rotate-90" size={20} /></button>
-                <span className="font-bold text-white uppercase tracking-wider">เลือกอุปกรณ์</span>
+                <span className="font-bold text-white uppercase tracking-wider">{t('blacksmith.select_equip')}</span>
             </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 grid grid-cols-2 gap-3">
                 {availableItems.length === 0 ? (
-                    <div className="col-span-2 text-center text-stone-500 py-10">ไม่พบไอเทม</div>
+                    <div className="col-span-2 text-center text-stone-500 py-10">{t('blacksmith.no_items')}</div>
                 ) : (
                     availableItems.map(item => (
                         <div key={item.id} onClick={() => { onEquip(item.id); setView('MANAGE'); }} className="bg-stone-900 border border-stone-800 hover:border-cyan-500 rounded-xl p-3 cursor-pointer transition-all flex flex-col items-center text-center gap-2 group relative overflow-hidden">
@@ -669,8 +671,8 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                             <div>
                                 <div className={`text-xs font-bold ${RARITY_SETTINGS[item.rarity].color} font-mono tracking-tighter`}>{getItemDisplayName(item)}</div>
                                 <div className="flex flex-col items-center mt-1">
-                                    <div className="text-[10px] text-cyan-400 font-mono">+{item.dailyBonus || 0} / วัน</div>
-                                    <div className="text-[9px] text-yellow-500 font-bold uppercase tracking-widest mt-0.5">โบนัส: +{item.dailyBonus || 0} / วัน</div>
+                                    <div className="text-[10px] text-cyan-400 font-mono">+{item.dailyBonus || 0} {t('lootbox.per_day')}</div>
+                                    <div className="text-[9px] text-yellow-500 font-bold uppercase tracking-widest mt-0.5">{t('blacksmith.bonus')}: +{item.dailyBonus || 0} {t('lootbox.per_day')}</div>
                                 </div>
                             </div>
                         </div>
@@ -690,7 +692,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                     <div className="flex items-center gap-3">
                         <div className="bg-orange-900/20 p-2 rounded text-orange-500"><Hammer size={20} /></div>
                         <div>
-                            <h2 className="text-lg font-display font-black text-white uppercase tracking-wider">โรงตีบวก (Blacksmith)</h2>
+                            <h2 className="text-lg font-display font-black text-white uppercase tracking-wider">{t('blacksmith.title')}</h2>
                             <p className="text-[10px] text-stone-500 uppercase tracking-widest">Slot {slotIndex + 1}</p>
                         </div>
                     </div>

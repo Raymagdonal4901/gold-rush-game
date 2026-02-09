@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Hammer, LogOut, User as UserIcon, Coins, TrendingUp, Bell, CheckCircle2, AlertCircle, History, PlusCircle, Wallet, ArrowUpRight, Gift, Clock, ShoppingBag, Briefcase, Zap, Settings, Timer, Bug, Key, Menu, X, Home, Package, FlaskConical, TestTube2, Gem, Trophy, Users, BookOpen, Grid, BarChart2, Backpack, CalendarCheck, Target, Crown, Lock, Skull } from 'lucide-react';
+import { Plus, Hammer, LogOut, User as UserIcon, Coins, TrendingUp, Bell, CheckCircle2, AlertCircle, History, PlusCircle, Wallet, ArrowUpRight, Gift, Clock, ShoppingBag, Briefcase, Zap, Settings, Timer, Bug, Key, Menu, X, Home, Package, FlaskConical, TestTube2, Gem, Trophy, Users, BookOpen, Grid, BarChart2, Backpack, CalendarCheck, Target, Crown, Lock, Skull, Languages } from 'lucide-react';
 import { RigCard } from './RigCard';
 import { InvestmentModal } from './InvestmentModal';
 import { WithdrawModal } from './WithdrawModal';
@@ -31,6 +31,7 @@ import { OilRig, User, Rarity, Notification, AccessoryItem, MarketState } from '
 import { CURRENCY, RigPreset, MAX_RIGS_PER_USER, RARITY_SETTINGS, SHOP_ITEMS, MAX_ACCESSORIES, RIG_PRESETS, ENERGY_CONFIG, REPAIR_CONFIG, GLOVE_DETAILS, MATERIAL_CONFIG, DEMO_SPEED_MULTIPLIER, ROBOT_CONFIG, GIFT_CYCLE_DAYS } from '../constants';
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
+import { useTranslation } from './LanguageContext';
 
 const getItemIconPath = (typeId: string) => {
     switch (typeId) {
@@ -90,7 +91,7 @@ interface PlayerDashboardProps {
 }
 
 export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, onLogout }) => {
-    // ... state ...
+    const { t, language, setLanguage } = useTranslation();
     const [user, setUser] = useState<User>(initialUser);
     const [rigs, setRigs] = useState<OilRig[]>([]);
     const [inventory, setInventory] = useState<AccessoryItem[]>([]);
@@ -248,9 +249,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             }
 
             // 3. Price Alerts
-            if (marketState?.prices) {
-                const currentPrices = marketState.prices;
-                for (const [tier, price] of Object.entries(currentPrices)) {
+            if (marketState?.trends) {
+                const trends = marketState.trends;
+                for (const [tier, data] of Object.entries(trends)) {
+                    const price = (data as any).currentPrice;
                     const prevPrice = lastMarketPrices.current[parseInt(tier)];
                     if (prevPrice && price > prevPrice) {
                         addNotification({
@@ -304,9 +306,9 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             // AI Robot Logic
             if (hasAIRobot && marketState?.trends) {
                 Object.entries(marketState.trends).forEach(([tier, data]) => {
-                    const priceChange = (data.currentPrice - data.basePrice) / data.basePrice;
+                    const priceChange = ((data as any).currentPrice - (data as any).basePrice) / (data as any).basePrice;
                     if (priceChange >= ROBOT_CONFIG.NOTIFY_PRICE_THRESHOLD) {
-                        const myCount = user.materials[parseInt(tier)] || 0;
+                        const myCount = (user.materials || {})[parseInt(tier)] || 0;
                         if (myCount > 0 && Math.random() < 0.02) {
                             addNotification({
                                 id: `surge_${tier}_${Date.now()}`,
@@ -928,29 +930,29 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             className="bg-stone-800 p-2 sm:p-3 rounded-full border border-stone-700 hover:border-yellow-500 hover:text-yellow-500 transition-all text-stone-400 shadow-lg relative group"
                         >
                             <BookOpen size={20} className="sm:w-6 sm:h-6" />
-                            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">คู่มือเกม</span>
+                            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">{language === 'th' ? 'คู่มือเกม' : 'Game Guide'}</span>
                         </button>
                         <div className="hidden lg:flex items-center gap-2">
                             <button onClick={() => setIsWarehouseOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-800/50 bg-blue-900/20 text-blue-500 hover:bg-blue-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
-                                <Package size={14} /> คลังวัตถุดิบ
+                                <Package size={14} /> {t('dashboard.warehouse')}
                             </button>
                             <button onClick={() => setIsMarketOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-800/50 bg-emerald-900/20 text-emerald-500 hover:bg-emerald-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
-                                <BarChart2 size={14} /> ตลาดกลาง
+                                <BarChart2 size={14} /> {language === 'th' ? 'ตลาดกลาง' : 'Market'}
                             </button>
                             <button onClick={() => setIsDailyBonusOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-800/50 bg-emerald-900/20 text-emerald-500 hover:bg-emerald-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
-                                <CalendarCheck size={14} /> เช็คชื่อ
+                                <CalendarCheck size={14} /> {language === 'th' ? 'เช็คชื่อ' : 'Check-in'}
                             </button>
                             <button onClick={() => setIsMissionOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-800/50 bg-blue-900/20 text-blue-500 hover:bg-blue-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
-                                <Target size={14} /> ภารกิจ
+                                <Target size={14} /> {language === 'th' ? 'ภารกิจ' : 'Missions'}
                             </button>
                             <button onClick={() => setIsDungeonOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-purple-900/50 bg-purple-900/20 text-purple-400 hover:bg-purple-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
-                                <Skull size={14} /> เหมืองลับ
+                                <Skull size={14} /> {language === 'th' ? 'เหมืองลับ' : 'Secret Mine'}
                             </button>
                             <button onClick={() => setIsVIPOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-yellow-800/50 bg-yellow-900/20 text-yellow-500 hover:bg-yellow-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
                                 <Crown size={14} /> VIP
                             </button>
                             <button onClick={() => setIsLeaderboardOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-orange-800/50 bg-orange-900/20 text-orange-500 hover:bg-orange-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
-                                <Trophy size={14} /> อันดับ
+                                <Trophy size={14} /> {language === 'th' ? 'อันดับ' : 'Rank'}
                             </button>
                         </div>
 
@@ -958,27 +960,34 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             onClick={() => setIsShopOpen(true)}
                             className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full border border-yellow-600/50 bg-yellow-900/10 text-yellow-400 hover:bg-yellow-900/30 transition-colors text-xs font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(234,179,8,0.1)] hover:shadow-[0_0_15px_rgba(234,179,8,0.3)]"
                         >
-                            <ShoppingBag size={14} /> ร้านค้าอุปกรณ์
+                            <ShoppingBag size={14} /> {t('dashboard.shop')}
                         </button>
 
                         <div className="flex items-center gap-2 sm:gap-3 bg-stone-900/50 p-1.5 rounded-lg border border-stone-800">
                             <div className="flex flex-col items-end px-2 mr-1 sm:mr-2 border-r border-stone-800">
-                                <span className="text-[8px] sm:text-[10px] text-stone-500 uppercase tracking-widest leading-none mb-1">ยอดเงินคงเหลือ</span>
+                                <span className="text-[8px] sm:text-[10px] text-stone-500 uppercase tracking-widest leading-none mb-1">{t('common.balance')}</span>
                                 <span className="text-base sm:text-lg font-mono font-bold text-white tabular-nums leading-none">
                                     {user.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] sm:text-xs text-stone-500">{CURRENCY}</span>
                                 </span>
                             </div>
                             <div className="flex gap-1 sm:gap-2">
                                 <button onClick={() => setIsDepositModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white p-1.5 sm:px-3 sm:py-1.5 rounded text-xs font-bold uppercase flex items-center gap-1 transition-colors shadow-lg shadow-emerald-900/20">
-                                    <PlusCircle size={14} /> <span className="hidden sm:inline">ฝากเงิน</span>
+                                    <PlusCircle size={14} /> <span className="hidden sm:inline">{t('common.deposit')}</span>
                                 </button>
                                 <button onClick={() => setIsWithdrawModalOpen(true)} className="bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-600 p-1.5 sm:px-3 sm:py-1.5 rounded text-xs font-bold uppercase flex items-center gap-1 transition-colors hover:text-white hover:border-stone-500">
-                                    <Wallet size={14} /> <span className="hidden sm:inline">ถอนเงิน</span>
+                                    <Wallet size={14} /> <span className="hidden sm:inline">{t('common.withdraw')}</span>
                                 </button>
                             </div>
                         </div>
 
                         <div className="hidden lg:flex gap-2">
+                            <button
+                                onClick={() => setLanguage(language === 'th' ? 'en' : 'th')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-stone-900 border border-stone-800 text-stone-400 hover:text-yellow-500 hover:border-yellow-500 transition-all text-[10px] font-bold uppercase"
+                            >
+                                <Languages size={14} />
+                                {language === 'th' ? 'EN' : 'TH'}
+                            </button>
                             <button onClick={() => setIsHistoryOpen(true)} className="p-2 text-stone-500 hover:text-yellow-500 transition-colors bg-stone-900 border border-stone-800 rounded relative">
                                 <History size={20} />
                                 {hasPendingTx && <span className="absolute -top-1 -right-1 flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>}
@@ -999,7 +1008,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             </nav>
 
             {/* Main Content */}
-            <main className="w-full px-4 sm:px-6 py-6 landscape:py-4 sm:py-8 pb-24 landscape:pb-16 lg:pb-8">
+            < main className="w-full px-4 sm:px-6 py-6 landscape:py-4 sm:py-8 pb-24 landscape:pb-16 lg:pb-8" >
 
                 {/* Global Stats Ticker */}
 
@@ -1014,7 +1023,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                         <div className="absolute right-0 top-0 p-4 sm:p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                             <Hammer size={40} className="sm:w-[60px] sm:h-[60px]" />
                         </div>
-                        <div className="text-stone-500 text-[10px] sm:text-xs uppercase tracking-widest font-bold mb-2">เหมืองที่ทำงานอยู่</div>
+                        <div className="text-stone-500 text-[10px] sm:text-xs uppercase tracking-widest font-bold mb-2">{t('dashboard.active_rigs')}</div>
                         <div className="text-2xl sm:text-4xl font-display font-bold text-white group-hover:text-yellow-400">
                             {rigs.length} <span className="text-sm sm:text-lg text-stone-600 font-sans font-normal">/ {MAX_RIGS_PER_USER}</span>
                         </div>
@@ -1028,7 +1037,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                         <div className="absolute right-0 top-0 p-4 sm:p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                             <TrendingUp size={40} className="sm:w-[60px] sm:h-[60px]" />
                         </div>
-                        <div className="text-stone-500 text-[10px] sm:text-xs uppercase tracking-widest font-bold mb-2">ผลตอบแทนรวม/วัน</div>
+                        <div className="text-stone-500 text-[10px] sm:text-xs uppercase tracking-widest font-bold mb-2">{t('dashboard.total_revenue')}</div>
                         <div className="flex flex-col">
                             <div className="text-2xl sm:text-4xl font-display font-bold text-green-400 flex items-center gap-2 group-hover:text-green-300">
                                 {isPowered ? rigDaily.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '0.0'} <span className="text-xs sm:text-sm text-stone-500">{CURRENCY}</span>
@@ -1053,7 +1062,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             {/* Header Text */}
                             <div className="w-full flex justify-between items-start">
                                 <span className="text-[10px] text-stone-500 font-bold uppercase tracking-widest bg-black/40 px-2 py-0.5 rounded border border-stone-800">
-                                    เตาปฏิกรณ์ (Reactor)
+                                    {t('dashboard.energy_status')}
                                 </span>
                                 <div className={`w-2 h-2 rounded-full ${isCharging ? 'bg-yellow-400 animate-ping' : 'bg-red-900'}`}></div>
                             </div>
@@ -1454,8 +1463,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 marketState={marketState}
                 onSell={async (tier, amount) => {
                     try {
-                        const price = (marketState?.trends[tier]?.currentPrice || MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES]) * amount;
-                        MockDB.sellUserMaterial(user.id, tier, amount);
+                        const price = ((marketState?.trends as any)?.[tier]?.currentPrice || MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES]) * amount;
+                        MockDB.sellMaterial(user.id, tier, amount);
 
                         if (!user.isDemo) {
                             const result = await api.sellMaterial(tier, amount);

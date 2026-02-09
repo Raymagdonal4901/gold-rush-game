@@ -69,7 +69,6 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
       case 'REFUND':
       case 'MINING_CLAIM':
       case 'MINING_REVENUE':
-      case 'DUNGEON_REWARD':
       case 'DAILY_BONUS':
       case 'REFERRAL_BONUS':
       case 'COMPENSATION':
@@ -91,8 +90,6 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
       case 'REPAIR':
       case 'ENERGY_REFILL':
         return <Wrench className="text-orange-500" size={18} />;
-      case 'GIFT_CLAIM':
-        return <Gift className="text-pink-500" size={18} />;
       case 'QUEST_REWARD':
         return <Target className="text-blue-500" size={18} />;
       case 'RANK_REWARD':

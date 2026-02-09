@@ -3,7 +3,7 @@ import { authenticate, authorizeAdmin } from '../middleware/auth';
 import {
     getAllUsers, getAllRigs, getSystemConfig, updateSystemConfig,
     getPendingClaims, getPendingWithdrawals, getPendingDeposits, processDepositRequest, processWithdrawalRequest, getUserStats,
-    adminGiveCompensation, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats
+    adminGiveCompensation, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats, adminConvertCurrencyToUSD
 } from '../controllers/adminController';
 
 const router = express.Router();
@@ -29,6 +29,6 @@ router.delete('/users/:userId', deleteUser);
 router.post('/revenue/clear', clearRevenueStats);
 router.get('/revenue', getGlobalRevenueStats);
 
-router.post('/convert-currency', adminAuth, adminController.adminConvertCurrencyToUSD);
+router.post('/convert-currency', adminConvertCurrencyToUSD);
 
 export default router;

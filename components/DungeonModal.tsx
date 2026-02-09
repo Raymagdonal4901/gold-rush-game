@@ -6,6 +6,7 @@ import { DUNGEON_CONFIG, CURRENCY, MATERIAL_CONFIG, SHOP_ITEMS } from '../consta
 import { MockDB } from '../services/db';
 import { User, Expedition, OilRig, AccessoryItem } from '../services/types';
 import { api } from '../services/api';
+import { useTranslation } from './LanguageContext';
 
 interface DungeonModalProps {
     isOpen: boolean;
@@ -16,6 +17,7 @@ interface DungeonModalProps {
 }
 
 export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, user, onRefresh, addNotification }) => {
+    const { t, language } = useTranslation();
     const [activeExpedition, setActiveExpedition] = useState<Expedition | null>(null);
     const [selectedDungeonId, setSelectedDungeonId] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState<string>('');
@@ -70,7 +72,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
             const ms = endTime - now;
 
             if (ms <= 0) {
-                setTimeLeft('พร้อมรับรางวัล');
+                setTimeLeft(t('dungeon.ready'));
             } else {
                 const h = Math.floor(ms / (1000 * 60 * 60));
                 const m = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
@@ -93,7 +95,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
             if (addNotification) addNotification({
                 id: Date.now().toString(),
                 userId: user.id,
-                message: "กรุณาเลือกเครื่องขุดที่จะส่งไปสำรวจ",
+                message: t('dungeon.select_rig_first'),
                 type: 'ERROR',
                 read: false,
                 timestamp: Date.now()
@@ -229,9 +231,9 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                     ? DUNGEON_CONFIG.find(d => d.id === activeExpedition.dungeonId)?.name
                                     : selectedDungeonId
                                         ? DUNGEON_CONFIG.find(d => d.id === selectedDungeonId)?.name
-                                        : 'เลือกแหล่งสำรวจ (Select Exploration Site)'}
+                                        : (language === 'th' ? 'เลือกแหล่งสำรวจ' : 'Select Exploration Site')}
                             </h2>
-                            <p className="text-xs text-stone-500 uppercase tracking-wider">ส่งเครื่องขุดไปสำรวจเพื่อรับรางวัล</p>
+                            <p className="text-xs text-stone-500 uppercase tracking-wider">{t('dungeon.subtitle')}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
@@ -250,13 +252,13 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                             </div>
 
                             <div className="text-center">
-                                <h3 className="text-2xl font-bold text-white mb-2">กำลังสำรวจแหล่งแร่...</h3>
+                                <h3 className="text-2xl font-bold text-white mb-2">{t('dungeon.exploring')}</h3>
                                 <div className="text-4xl font-mono font-bold text-purple-400 mb-4">{timeLeft}</div>
                                 <p className="text-stone-500 text-sm bg-stone-900/50 px-4 py-2 rounded-full border border-stone-800 inline-block">
                                     {DUNGEON_CONFIG.find(d => d.id === activeExpedition.dungeonId)?.name}
                                 </p>
                                 <div className="mt-2 text-xs text-stone-500">
-                                    เครื่องขุดที่ส่งไปจะงดจ่ายรายได้ในช่วงเวลานี้
+                                    {t('dungeon.income_warning')}
                                 </div>
                             </div>
 
@@ -266,13 +268,13 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                     disabled={isProcessing}
                                     className="px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold shadow-[0_0_20px_purple] animate-bounce flex items-center gap-2"
                                 >
-                                    <Sparkles /> รับรางวัล <Sparkles />
+                                    <Sparkles /> {t('dungeon.claim_reward')} <Sparkles />
                                 </button>
                             ) : (
                                 // Time Skip Options
                                 <div className="bg-stone-900/50 border border-stone-800 p-4 rounded-xl w-full max-w-lg">
                                     <div className="text-xs text-stone-400 uppercase font-bold mb-3 flex items-center gap-2">
-                                        <Hourglass size={12} className="text-yellow-500" /> เร่งเวลา (Time Skip)
+                                        <Hourglass size={12} className="text-yellow-500" /> {t('dungeon.time_skip')}
                                     </div>
                                     <div className="grid grid-cols-3 gap-3">
                                         <button
@@ -280,24 +282,24 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                             disabled={hourglasses.small === 0}
                                             className={`flex flex-col items-center p-3 rounded border transition-all ${hourglasses.small > 0 ? 'bg-stone-800 border-stone-600 hover:bg-stone-700 hover:border-yellow-500' : 'bg-stone-900 border-stone-800 opacity-50 cursor-not-allowed'}`}
                                         >
-                                            <span className="text-xs font-bold text-white">-30 นาที</span>
-                                            <span className="text-[10px] text-stone-500 mt-1">มี: {hourglasses.small}</span>
+                                            <span className="text-xs font-bold text-white">-30 {language === 'th' ? 'นาที' : 'min'}</span>
+                                            <span className="text-[10px] text-stone-500 mt-1">{t('dungeon.own')} {hourglasses.small}</span>
                                         </button>
                                         <button
                                             onClick={() => handleUseTimeSkip('hourglass_medium')}
                                             disabled={hourglasses.medium === 0}
                                             className={`flex flex-col items-center p-3 rounded border transition-all ${hourglasses.medium > 0 ? 'bg-stone-800 border-stone-600 hover:bg-stone-700 hover:border-yellow-500' : 'bg-stone-900 border-stone-800 opacity-50 cursor-not-allowed'}`}
                                         >
-                                            <span className="text-xs font-bold text-white">-2 ชม.</span>
-                                            <span className="text-[10px] text-stone-500 mt-1">มี: {hourglasses.medium}</span>
+                                            <span className="text-xs font-bold text-white">-2 {language === 'th' ? 'ชม.' : 'hrs'}</span>
+                                            <span className="text-[10px] text-stone-500 mt-1">{t('dungeon.own')} {hourglasses.medium}</span>
                                         </button>
                                         <button
                                             onClick={() => handleUseTimeSkip('hourglass_large')}
                                             disabled={hourglasses.large === 0}
                                             className={`flex flex-col items-center p-3 rounded border transition-all ${hourglasses.large > 0 ? 'bg-stone-800 border-stone-600 hover:bg-stone-700 hover:border-yellow-500' : 'bg-stone-900 border-stone-800 opacity-50 cursor-not-allowed'}`}
                                         >
-                                            <span className="text-xs font-bold text-white">-6 ชม.</span>
-                                            <span className="text-[10px] text-stone-500 mt-1">มี: {hourglasses.large}</span>
+                                            <span className="text-xs font-bold text-white">-6 {language === 'th' ? 'ชม.' : 'hrs'}</span>
+                                            <span className="text-[10px] text-stone-500 mt-1">{t('dungeon.own')} {hourglasses.large}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -327,11 +329,11 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                             {/* Text Content - Compact */}
                             <div className="z-10 text-center space-y-3 px-4 w-full max-w-lg">
                                 <h3 className="text-xl md:text-2xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-200 animate-pulse tracking-wider shadow-sm">
-                                    CONGRATULATIONS!
+                                    {language === 'th' ? 'ยินดีด้วย!' : 'CONGRATULATIONS!'}
                                 </h3>
 
                                 <div className="bg-stone-900/80 backdrop-blur-sm border border-yellow-500/30 p-4 rounded-xl shadow-lg transform transition-all duration-300">
-                                    <div className="text-xs text-yellow-500/80 uppercase font-bold tracking-widest mb-1">Rewards Obtained</div>
+                                    <div className="text-xs text-yellow-500/80 uppercase font-bold tracking-widest mb-1">{language === 'th' ? 'ได้รับรางวัล' : 'Rewards Obtained'}</div>
                                     <div className="font-bold text-white leading-relaxed drop-shadow-md whitespace-pre-line">
                                         {(claimResult.reward || 'Unknown Reward').split('+').map((part, idx) => (
                                             <div key={idx} className={(part || '').includes('JACKPOT') ? 'text-yellow-400 font-extrabold text-lg md:text-xl mt-1 animate-pulse' : 'text-base md:text-lg text-white'}>
@@ -346,7 +348,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                 onClick={() => setClaimResult(null)}
                                 className="mt-6 px-8 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white rounded-full font-bold shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all transform hover:scale-105 z-20 flex items-center gap-2 text-sm"
                             >
-                                <ArrowRight size={16} /> ไปต่อ (Continue)
+                                <ArrowRight size={16} /> {t('dungeon.continue')}
                             </button>
                         </div>
                     ) : selectedDungeonId ? (
@@ -354,19 +356,18 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                         <div className="flex flex-col h-full animate-in slide-in-from-right">
                             <div className="flex items-center gap-2 mb-4">
                                 <button onClick={() => setSelectedDungeonId(null)} className="text-stone-500 hover:text-white"><ArrowRight className="rotate-180" /></button>
-                                <h3 className="text-lg font-bold text-white">เลือกเครื่องขุดเพื่อส่งไปพื้นที่สำรวจ</h3>
+                                <h3 className="text-lg font-bold text-white">{t('dungeon.select_rig')}</h3>
                             </div>
 
                             <div className="bg-blue-900/20 border border-blue-900/50 p-3 rounded-lg mb-4 text-xs text-blue-300 flex items-start gap-2">
                                 <Info className="shrink-0 mt-0.5" size={14} />
                                 <div>
-                                    <strong>คำเตือน:</strong> เครื่องขุดที่ถูกส่งไปสำรวจจะ <u>หยุดผลิตเงินรายวัน</u> ชั่วคราว <br />
-                                    ยิ่งเครื่องขุดระดับสูง ยิ่งมีโอกาสพบไอเทมหายากมากขึ้น
+                                    <strong>{t('dungeon.rig_warning_title')}</strong> {t('dungeon.rig_warning_message')}
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto pb-20">
-                                {userRigs.length === 0 && <div className="col-span-full text-center text-stone-500 py-10">คุณไม่มีเครื่องขุดที่พร้อมใช้งาน</div>}
+                                {userRigs.length === 0 && <div className="col-span-full text-center text-stone-500 py-10">{t('dungeon.no_rigs')}</div>}
                                 {userRigs.map(rig => {
                                     const luckBonus = getRigLuckBonus(rig);
                                     return (
@@ -405,14 +406,14 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                                     disabled={!selectedRigId}
                                                     className="py-3 bg-stone-800 hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold border border-stone-600 text-[10px] md:text-sm"
                                                 >
-                                                    จ่าย {dungeon.cost.toLocaleString()} {CURRENCY}
+                                                    {t('dungeon.pay_limit').replace('{amount}', dungeon.cost.toLocaleString())}
                                                 </button>
                                                 <button
                                                     onClick={() => handleStart(dungeon.id, true)}
                                                     disabled={!selectedRigId}
                                                     className="py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg text-[10px] md:text-sm"
                                                 >
-                                                    <Key size={14} /> ใช้กุญแจเข้าเหมือง {dungeon.keyCost} ดอก
+                                                    <Key size={14} /> {t('dungeon.use_key').replace('{count}', dungeon.keyCost.toString())}
                                                 </button>
                                             </div>
                                         );
@@ -423,9 +424,9 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                                 disabled={!selectedRigId || user.balance < dungeon.cost}
                                                 className="w-full py-3 bg-stone-800 hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold border border-stone-600"
                                             >
-                                                {!selectedRigId ? 'กรุณาเลือกเครื่องขุด' :
-                                                    user.balance < dungeon.cost ? 'ยอดเงินไม่เพียงพอ' :
-                                                        `เริ่มสำรวจ (จ่าย ${dungeon.cost.toLocaleString()} ${CURRENCY})`}
+                                                {!selectedRigId ? t('dungeon.select_rig_first') :
+                                                    user.balance < dungeon.cost ? t('common.insufficient_balance') :
+                                                        `${t('dungeon.start_exploration')} (${t('dungeon.pay_limit').replace('{amount}', dungeon.cost.toLocaleString())})`}
                                             </button>
                                         );
                                     }
@@ -441,13 +442,13 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                     {/* HOVER TOOLTIP OVERLAY */}
                                     <div className="absolute inset-x-0 top-0 bottom-[50px] bg-stone-950/95 backdrop-blur-sm z-20 flex flex-col opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-t-xl overflow-hidden p-4">
                                         <div className="text-center font-bold text-white mb-2 border-b border-stone-800 pb-2 text-sm shrink-0">
-                                            {dungeon.id === 1 ? 'รางวัล (สุ่มได้รับ)' : 'รางวัล (ทั่วไป + Jackpot)'}
+                                            {dungeon.id === 1 ? t('dungeon.reward_random') : t('dungeon.reward_jackpot')}
                                         </div>
                                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
                                             {/* Jackpot */}
                                             {dungeon.id !== 1 && (
                                                 <div>
-                                                    <div className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Sparkles size={10} /> Jackpot (100%)</div>
+                                                    <div className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Sparkles size={10} /> {t('dungeon.jackpot_label')} (100%)</div>
                                                     <ul className="text-[10px] text-yellow-100 space-y-1">
                                                         {dungeon.rewards.rare.map((r, i) => {
                                                             if (r.tier !== undefined) {
@@ -463,7 +464,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                             )}
                                             {/* Common */}
                                             <div>
-                                                <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">ทั่วไป (80%)</div>
+                                                <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">{t('dungeon.common_label')} (80%)</div>
                                                 <ul className="text-[10px] text-stone-300 space-y-1">
                                                     {dungeon.rewards.common.map((r, i) => (
                                                         <li key={i} className="flex justify-between"><span>• {MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span> <span>x{r.amount}</span></li>
@@ -472,7 +473,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                             </div>
                                             {/* Salt */}
                                             <div>
-                                                <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">เกลือ (20%)</div>
+                                                <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">{t('dungeon.salt_label')} (20%)</div>
                                                 <ul className="text-[10px] text-stone-500 space-y-1">
                                                     {dungeon.rewards.salt.map((r, i) => (
                                                         <li key={i} className="flex justify-between"><span>• {MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span> <span>x{r.amount}</span></li>
@@ -491,15 +492,15 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
 
                                         <div className="space-y-2 mb-4 text-xs text-stone-300 flex-1">
                                             <div className="flex justify-between border-b border-stone-800 pb-1">
-                                                <span>เวลา</span>
-                                                <span className="font-mono text-white">{dungeon.durationHours} ชม.</span>
+                                                <span>{t('dungeon.duration')}</span>
+                                                <span className="font-mono text-white">{dungeon.durationHours} {language === 'th' ? 'ชม.' : 'hrs'}</span>
                                             </div>
                                             <div className="space-y-1 pt-1">
-                                                <div className="text-[10px] text-stone-500 uppercase font-bold">โอกาสได้รับ</div>
-                                                <div className="flex justify-between"><span>ทั่วไป</span><span className="text-emerald-400">80%</span></div>
-                                                <div className="flex justify-between"><span>เกลือ</span><span className="text-stone-500">20%</span></div>
+                                                <div className="text-[10px] text-stone-500 uppercase font-bold">{language === 'th' ? 'โอกาสได้รับ' : 'Chances'}</div>
+                                                <div className="flex justify-between"><span>{t('dungeon.common_label')}</span><span className="text-emerald-400">80%</span></div>
+                                                <div className="flex justify-between"><span>{t('dungeon.salt_label')}</span><span className="text-stone-500">20%</span></div>
                                                 {dungeon.id !== 1 && (
-                                                    <div className="flex justify-between"><span>Jackpot</span><span className="text-yellow-500">100%</span></div>
+                                                    <div className="flex justify-between"><span>{t('dungeon.jackpot_label')}</span><span className="text-yellow-500">100%</span></div>
                                                 )}
                                             </div>
                                         </div>
@@ -508,7 +509,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                             onClick={() => setSelectedDungeonId(dungeon.id)}
                                             className="w-full bg-stone-800 hover:bg-stone-700 text-white py-2 rounded text-xs font-bold border border-stone-600 mt-auto flex items-center justify-center gap-2 group-hover:bg-purple-900/20 group-hover:text-purple-300 group-hover:border-purple-500/50 transition-all z-30 relative"
                                         >
-                                            เลือกด่านนี้ <ArrowRight size={12} />
+                                            {t('dungeon.select_this')} <ArrowRight size={12} />
                                         </button>
                                     </div>
                                 </div>

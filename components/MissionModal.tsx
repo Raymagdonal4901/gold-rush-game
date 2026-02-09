@@ -5,6 +5,7 @@ import { QUESTS, ACHIEVEMENTS, CURRENCY, MATERIAL_CONFIG, SHOP_ITEMS, MINING_RAN
 import { User } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
+import { useTranslation } from './LanguageContext';
 
 interface MissionModalProps {
     isOpen: boolean;
@@ -15,6 +16,7 @@ interface MissionModalProps {
 }
 
 export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, user, onRefresh, addNotification }) => {
+    const { t, language } = useTranslation();
     const [activeTab, setActiveTab] = useState<'QUEST' | 'MASTERY'>('QUEST');
     const [weeklyStats, setWeeklyStats] = useState<any>(null);
     const [claimedQuests, setClaimedQuests] = useState<string[]>([]);
@@ -63,7 +65,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
             const secs = Math.floor((diff % (1000 * 60)) / 1000);
 
             let timeStr = '';
-            if (days > 0) timeStr += `${days} วัน `;
+            if (days > 0) timeStr += `${days} ${t('mission.day')} `;
             timeStr += `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             setTimeLeft(timeStr);
         };
@@ -166,7 +168,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
         if (quest.rewardType === 'points') {
             return (
                 <div className="text-yellow-400 font-bold mb-2 flex items-center justify-center gap-1 text-xs">
-                    <Star size={14} fill="currentColor" /> {quest.rewardAmount} แต้ม
+                    <Star size={14} fill="currentColor" /> {quest.rewardAmount} {t('mission.points_unit')}
                 </div>
             );
         }
@@ -201,12 +203,12 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
 
                 <div className="flex justify-between items-center mb-4">
                     <div>
-                        <h3 className="text-xl font-bold text-white mb-1">Property Mastery</h3>
-                        <p className="text-stone-400 text-sm">ความชำนาญในการบริหาร</p>
+                        <h3 className="text-xl font-bold text-white mb-1">{t('mission.mastery_title')}</h3>
+                        <p className="text-stone-400 text-sm">{t('mission.mastery_subtitle')}</p>
                     </div>
                     <div className="text-right">
                         <div className="text-3xl font-mono font-bold text-yellow-500">{masteryPoints}</div>
-                        <div className="text-stone-500 text-xs font-bold uppercase tracking-wider">Total Points</div>
+                        <div className="text-stone-500 text-xs font-bold uppercase tracking-wider">{t('mission.total_points')}</div>
                     </div>
                 </div>
 
@@ -216,8 +218,8 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
 
                 <div className="flex justify-between text-xs text-stone-500 font-bold">
                     <span>0</span>
-                    {nextRank && <span>Next: {nextRank.label} ({nextRank.points})</span>}
-                    {!nextRank && <span>MAX RANK</span>}
+                    {nextRank && <span>{t('mission.next_rank')}: {nextRank.label} ({nextRank.points})</span>}
+                    {!nextRank && <span>{t('mission.max_rank')}</span>}
                 </div>
             </div>
         );
@@ -233,8 +235,8 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                             <Target size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-display font-bold text-white">ภารกิจ & คะแนนบริหาร</h2>
-                            <p className="text-xs text-stone-500 uppercase tracking-wider">สะสมแต้มเพื่อปลดล็อกบัฟพิเศษ</p>
+                            <h2 className="text-xl font-display font-bold text-white">{t('mission.title')}</h2>
+                            <p className="text-xs text-stone-500 uppercase tracking-wider">{t('mission.subtitle')}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
@@ -247,13 +249,13 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                         onClick={() => setActiveTab('QUEST')}
                         className={`flex-1 py-4 font-bold text-sm uppercase tracking-wider ${activeTab === 'QUEST' ? 'bg-stone-800 text-white border-b-2 border-yellow-500' : 'text-stone-500 hover:text-stone-300'}`}
                     >
-                        ภารกิจรายสัปดาห์
+                        {t('mission.weekly_tab')}
                     </button>
                     <button
                         onClick={() => setActiveTab('MASTERY')}
                         className={`flex-1 py-4 font-bold text-sm uppercase tracking-wider ${activeTab === 'MASTERY' ? 'bg-stone-800 text-white border-b-2 border-yellow-500' : 'text-stone-500 hover:text-stone-300'}`}
                     >
-                        Property Mastery
+                        {t('mission.mastery_tab')}
                     </button>
                 </div>
 
@@ -264,10 +266,10 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                             <div className="flex justify-between items-center bg-blue-900/10 border border-blue-500/30 p-3 rounded-xl mb-2">
                                 <div className="flex items-center gap-2 text-blue-400">
                                     <Sparkles size={16} className="animate-pulse" />
-                                    <span className="text-xs font-bold uppercase tracking-wider">ภารกิจรีเซ็ตทุกวันจันทร์</span>
+                                    <span className="text-xs font-bold uppercase tracking-wider">{t('mission.reset_note')}</span>
                                 </div>
                                 <div className="text-right min-w-fit">
-                                    <div className="text-[10px] text-stone-500 font-bold uppercase tracking-tighter">รีเซ็ตในอีก</div>
+                                    <div className="text-[10px] text-stone-500 font-bold uppercase tracking-tighter">{t('mission.reset_in')}</div>
                                     <div className="text-base sm:text-lg font-mono font-bold text-white tabular-nums drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] whitespace-nowrap">{timeLeft}</div>
                                 </div>
                             </div>
@@ -301,7 +303,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                                                         canClaim ? 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg' : 'bg-stone-800 text-stone-600 cursor-not-allowed'}
                                         `}
                                             >
-                                                {isClaimed ? 'รับแล้ว' : 'รับรางวัล'}
+                                                {isClaimed ? t('mission.claimed') : t('mission.claim')}
                                             </button>
                                         </div>
                                     </div>
@@ -309,7 +311,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                             })}
 
                             <div className="h-px bg-stone-800 my-4"></div>
-                            <h3 className="text-stone-400 text-xs font-bold uppercase tracking-widest mb-2">ความสำเร็จ (Achievements)</h3>
+                            <h3 className="text-stone-400 text-xs font-bold uppercase tracking-widest mb-2">{t('mission.achievements')}</h3>
 
                             {/* Achievements */}
                             {ACHIEVEMENTS.map(ach => {
@@ -333,7 +335,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                                         </div>
                                         <div className="w-28 text-center z-10">
                                             <div className="text-yellow-400 font-bold mb-2 flex items-center justify-center gap-1 text-xs">
-                                                <Star size={14} fill="currentColor" /> {ach.points} แต้ม
+                                                <Star size={14} fill="currentColor" /> {ach.points} {t('mission.points_unit')}
                                             </div>
                                             <button
                                                 onClick={() => handleClaimAchievement(ach.id)}
@@ -343,7 +345,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                                                         canClaim ? 'bg-purple-600 text-white hover:bg-purple-500 shadow-lg' : 'bg-stone-800 text-stone-600 cursor-not-allowed'}
                                         `}
                                             >
-                                                {isClaimed ? 'รับแล้ว' : 'รับรางวัล'}
+                                                {isClaimed ? t('mission.claimed') : t('mission.claim')}
                                             </button>
                                         </div>
                                     </div>
@@ -381,12 +383,12 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                                                     {isUnlocked && <span className="bg-stone-800 text-stone-400 text-[10px] px-2 py-0.5 rounded font-bold">{rank.points} Pts</span>}
                                                 </div>
                                                 <p className="text-xs text-stone-400 mt-1">{rank.desc}</p>
-                                                {!isUnlocked && <p className="text-[10px] text-red-400 mt-1">ต้องการ {rank.points} แต้มเพื่อปลดล็อก</p>}
+                                                {!isUnlocked && <p className="text-[10px] text-red-400 mt-1">{t('mission.points_needed').replace('{points}', rank.points.toString())}</p>}
                                             </div>
                                             <div className="w-28 text-center">
                                                 {isPassive ? (
                                                     <div className={`text-xs font-bold py-2 rounded border ${isUnlocked ? 'bg-emerald-900/20 text-emerald-400 border-emerald-900/50' : 'bg-stone-900 text-stone-600 border-stone-800'}`}>
-                                                        {isUnlocked ? <><Check size={12} className="inline mr-1" /> Active</> : <><Lock size={12} className="inline mr-1" /> Locked</>}
+                                                        {isUnlocked ? <><Check size={12} className="inline mr-1" /> {t('mission.active')}</> : <><Lock size={12} className="inline mr-1" /> {t('mission.locked')}</>}
                                                     </div>
                                                 ) : (
                                                     <button
@@ -397,11 +399,11 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                                                                 isUnlocked ? 'bg-yellow-600 text-white hover:bg-yellow-500 shadow-lg' : 'bg-stone-800 text-stone-600 cursor-not-allowed'}
                                                 `}
                                                     >
-                                                        {isClaimed ? 'รับแล้ว' : 'รับรางวัล'}
+                                                        {isClaimed ? t('mission.claimed') : t('mission.claim')}
                                                     </button>
                                                 )}
                                                 {rank.buff && isUnlocked && (
-                                                    <div className="text-[9px] text-emerald-500 mt-1 font-bold animate-pulse">Buff Active</div>
+                                                    <div className="text-[9px] text-emerald-500 mt-1 font-bold animate-pulse">{t('mission.buff_active')}</div>
                                                 )}
                                             </div>
                                         </div>
