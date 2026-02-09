@@ -196,19 +196,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         }
     };
 
-    const handleBanUser = (userId: string) => {
+    const handleBanUser = async (userId: string) => {
         if (confirm('Are you sure you want to BAN this user?')) {
-            MockDB.banUser(userId);
-            refreshData();
-            if (selectedUser?.id === userId) setSelectedUser(prev => prev ? ({ ...prev, isBanned: true }) : null);
+            try {
+                await api.admin.toggleBan(userId);
+                refreshData();
+                if (selectedUser?.id === userId) setSelectedUser(prev => prev ? ({ ...prev, isBanned: true }) : null);
+            } catch (error) {
+                console.error("Failed to ban user", error);
+                alert("Failed to ban user");
+            }
         }
     };
 
-    const handleUnbanUser = (userId: string) => {
+    const handleUnbanUser = async (userId: string) => {
         if (confirm('Unban this user?')) {
-            MockDB.unbanUser(userId);
-            refreshData();
-            if (selectedUser?.id === userId) setSelectedUser(prev => prev ? ({ ...prev, isBanned: false }) : null);
+            try {
+                await api.admin.toggleBan(userId);
+                refreshData();
+                if (selectedUser?.id === userId) setSelectedUser(prev => prev ? ({ ...prev, isBanned: false }) : null);
+            } catch (error) {
+                console.error("Failed to unban user", error);
+                alert("Failed to unban user");
+            }
         }
     };
 
@@ -305,8 +315,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
         try {
             if (confirmAction.type === 'CLAIM') {
-                MockDB.processClaim(confirmAction.id, confirmAction.action); // Still Mock for now
-                // TODO: Implement Claim API
+                // For now, in real backend this might not be needed if claims are automatic
+                // but let's keep a placeholder or implement if API exists
+                // await api.admin.processClaim(confirmAction.id, confirmAction.action); 
+                alert("Processing claim manually is not yet supported in real mode.");
             } else if (confirmAction.type === 'WITHDRAWAL') {
                 await api.admin.processWithdrawal(confirmAction.id, confirmAction.action);
                 // alert(`ดำเนินการถอนเงิน (${confirmAction.action}) เรียบร้อย ✅`);
@@ -496,7 +508,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             <tr>
                                                 <th className="p-3 font-medium">วันที่ (Date)</th>
                                                 <th className="p-3 font-medium text-right">จำนวนเงิน (Amount)</th>
-                                                <th className="p-3 font-medium text-center">QR Code</th>
+                                                <th className="p-3 font-medium text-center">ช่องทาง/ข้อมูล</th>
                                                 <th className="p-3 font-medium text-center">สถานะ (Status)</th>
                                                 <th className="p-3 font-medium text-right">จัดการ (Action)</th>
                                             </tr>
@@ -507,16 +519,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                     <td className="p-3 text-stone-400 text-xs font-mono">{new Date(w.timestamp).toLocaleString()}</td>
                                                     <td className="p-3 text-right font-mono text-white">{w.amount.toLocaleString()}</td>
                                                     <td className="p-3 text-center">
-                                                        {w.bankQrCode ? (
-                                                            <div
-                                                                className="w-8 h-8 bg-white p-0.5 rounded cursor-zoom-in mx-auto overflow-hidden border border-stone-700"
-                                                                onClick={() => setPreviewImage(w.bankQrCode!)}
-                                                            >
-                                                                <img src={w.bankQrCode} alt="QR" className="w-full h-full object-cover" />
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-stone-600 text-[10px] italic">No QR</span>
-                                                        )}
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            {w.method === 'USDT' ? (
+                                                                <div className="flex flex-col items-center">
+                                                                    <span className="text-[10px] font-bold text-blue-400">USDT</span>
+                                                                    {w.walletAddress ? (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                navigator.clipboard.writeText(w.walletAddress!);
+                                                                                alert('Copied Wallet Address');
+                                                                            }}
+                                                                            className="text-[10px] text-stone-400 font-mono hover:text-white truncate max-w-[80px]"
+                                                                            title={w.walletAddress}
+                                                                        >
+                                                                            {w.walletAddress.substring(0, 6)}...{w.walletAddress.substring(w.walletAddress.length - 4)}
+                                                                        </button>
+                                                                    ) : (
+                                                                        <span className="text-[10px] text-red-500 italic">No Address</span>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    {w.bankQrCode ? (
+                                                                        <div
+                                                                            className="w-8 h-8 bg-white p-0.5 rounded cursor-zoom-in overflow-hidden border border-stone-700"
+                                                                            onClick={() => setPreviewImage(w.bankQrCode!)}
+                                                                        >
+                                                                            <img src={w.bankQrCode} alt="QR" className="w-full h-full object-cover" />
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-stone-600 text-[10px] italic">No QR</span>
+                                                                    )}
+                                                                    <span className="text-[10px] font-bold text-stone-500">BANK</span>
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                     <td className="p-3 text-center">
                                                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${w.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-500' :
@@ -755,9 +792,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                         <div>
                                             <div className="font-bold text-white text-sm flex items-center gap-2">
                                                 <span className="text-yellow-500">{w.username}</span>
-                                                <span className="text-xs bg-red-900/40 text-red-300 px-1.5 rounded">ถอนเงิน</span>
+                                                <span className={`text-xs px-1.5 rounded ${w.method === 'USDT' ? 'bg-blue-900/40 text-blue-300' : 'bg-red-900/40 text-red-300'}`}>
+                                                    ถอนเงิน {w.method === 'USDT' ? 'USDT' : 'BANK'}
+                                                </span>
                                             </div>
-                                            <div className="text-xs text-stone-500 font-mono mt-0.5">{new Date(w.timestamp).toLocaleString()}</div>
+                                            <div className="text-xs text-stone-500 font-mono mt-0.5 flex flex-col gap-1">
+                                                <span>{new Date(w.timestamp).toLocaleString()}</span>
+                                                {w.method === 'USDT' && w.walletAddress && (
+                                                    <button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(w.walletAddress!);
+                                                            alert('Copied USDT Address');
+                                                        }}
+                                                        className="text-stone-400 hover:text-white flex items-center gap-1 bg-stone-950 px-2 py-0.5 rounded border border-stone-800 w-fit"
+                                                    >
+                                                        <span className="text-[10px] truncate max-w-[150px]">{w.walletAddress}</span>
+                                                        <FileText size={10} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-6">

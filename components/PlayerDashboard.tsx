@@ -841,12 +841,16 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     };
 
     // ... rest of the component ...
-    const handleWithdraw = async (amount: number, pin: string) => {
+    const handleWithdraw = async (amount: number, pin: string, method: 'BANK' | 'USDT' = 'BANK', walletAddress?: string) => {
         try {
-            await api.createWithdrawalRequest(amount, pin);
+            if (user.isDemo) {
+                MockDB.withdraw(user.id, amount, method, walletAddress);
+            } else {
+                await api.createWithdrawalRequest(amount, pin, method, walletAddress);
+            }
             refreshData();
             triggerGoldRain();
-            addNotification({ id: Date.now().toString(), userId: user.id, message: `ส่งคำร้องขอถอนเงินจำนวน ${amount.toLocaleString()} ${CURRENCY} แล้ว`, type: 'INFO', read: false, timestamp: Date.now() });
+            addNotification({ id: Date.now().toString(), userId: user.id, message: `ส่งคำร้องขอถอนเงินผ่าน ${method} จำนวน ${amount.toLocaleString()} ${CURRENCY} แล้ว`, type: 'INFO', read: false, timestamp: Date.now() });
         } catch (e: any) {
             alert(e.response?.data?.message || e.message);
         }
@@ -1512,7 +1516,16 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 }}
                 addNotification={addNotification}
             />
-            <WithdrawModal isOpen={isWithdrawModalOpen} onClose={() => setIsWithdrawModalOpen(false)} walletBalance={user.balance} onWithdraw={handleWithdraw} savedQrCode={user.bankQrCode} onSaveQr={handleSaveQr} addNotification={addNotification} />
+            <WithdrawModal
+                isOpen={isWithdrawModalOpen}
+                onClose={() => setIsWithdrawModalOpen(false)}
+                walletBalance={user.balance}
+                onWithdraw={handleWithdraw}
+                savedQrCode={user.bankQrCode}
+                onSaveQr={handleSaveQr}
+                currentWalletAddress={user.walletAddress}
+                addNotification={addNotification}
+            />
             <DepositModal isOpen={isDepositModalOpen} onClose={() => setIsDepositModalOpen(false)} user={user} onDepositSuccess={handleDepositSuccess} addNotification={addNotification} />
             <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} user={user} onSuccess={refreshData} addNotification={addNotification} />
             <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} userId={user.id} addNotification={addNotification} />

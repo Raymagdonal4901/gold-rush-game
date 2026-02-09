@@ -159,6 +159,7 @@ export interface User {
 
   // Overclock
   overclockExpiresAt?: number;
+  walletAddress?: string; // BSC Wallet Address for USDT
 }
 
 export interface ClaimRequest {
@@ -191,6 +192,8 @@ export interface WithdrawalRequest {
   amount: number;
   timestamp: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  method?: 'BANK' | 'USDT';
+  walletAddress?: string;
   bankQrCode?: string;
   transactionId?: string;
 }

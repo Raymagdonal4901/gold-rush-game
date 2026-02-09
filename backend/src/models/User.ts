@@ -24,6 +24,7 @@ export interface IUser extends Document {
     unlockedSlots: number;
     lastLuckyDraw?: number;
     overclockExpiresAt?: Date; // Overclock boost expiration
+    walletAddress?: string; // BSC Wallet Address for USDT
     createdAt: Date;
     lastEnergyUpdate: Date;
 }
@@ -33,6 +34,7 @@ const UserSchema = new Schema<IUser>({
     pin: { type: String }, // 6-digit PIN
     balance: { type: Number, default: 0 },
     bankQrCode: { type: String },
+    walletAddress: { type: String, unique: true, sparse: true },
     energy: { type: Number, default: 100 },
     role: { type: String, default: 'USER' },
     unlockedSlots: { type: Number, default: 3 }, // Default 3 slots (1-3)

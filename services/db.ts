@@ -377,7 +377,7 @@ export const MockDB = {
             throw new Error('Not enough materials');
         }
 
-        const market = this.getMarketState();
+        const market = MockDB.getMarketState();
         const price = market.trends[tier]?.currentPrice || (MATERIAL_CONFIG as any).PRICES[tier] || 0;
         const subTotal = price * amount;
         const tax = Math.floor(subTotal * 0.15); // 15% Market Tax
@@ -545,8 +545,34 @@ export const MockDB = {
 
         return { id: 'dep_' + Date.now(), status: 'SUCCESS' };
     },
-    withdraw: (userId: string, amount: number, qrCode: string) => {
-        return { id: 'wd_' + Date.now(), status: 'PENDING' };
+    withdraw: (userId: string, amount: number, method: 'BANK' | 'USDT' = 'BANK', address?: string) => {
+        const users = getStore<User[]>(STORAGE_KEYS.USERS, []);
+        const user = users.find(u => u.id === userId);
+        if (!user) throw new Error('User not found');
+        if (user.balance < amount) throw new Error('Insufficient balance');
+
+        user.balance -= amount;
+        const updatedUsers = users.map(u => u.id === userId ? user : u);
+        setStore(STORAGE_KEYS.USERS, updatedUsers);
+        syncSession(user);
+
+        const withdrawal: WithdrawalRequest = {
+            id: `W${Date.now()}`,
+            userId,
+            username: user.username,
+            amount,
+            timestamp: Date.now(),
+            status: 'PENDING',
+            method,
+            walletAddress: method === 'USDT' ? (address || user.walletAddress) : undefined,
+            bankQrCode: method === 'BANK' ? user.bankQrCode : undefined
+        };
+
+        const withdrawals = getStore<WithdrawalRequest[]>(STORAGE_KEYS.WITHDRAWALS, []);
+        withdrawals.push(withdrawal);
+        setStore(STORAGE_KEYS.WITHDRAWALS, withdrawals);
+
+        return withdrawal;
     },
     craftMaterial: (userId: string, sourceTier: number) => {
         // Placeholder

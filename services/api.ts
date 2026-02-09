@@ -145,8 +145,8 @@ export const api = {
         const res = await client.post('/transactions/deposit', { amount, slipImage });
         return res.data;
     },
-    createWithdrawalRequest: async (amount: number, pin: string): Promise<any> => {
-        const res = await client.post('/transactions/withdraw', { amount, pin });
+    createWithdrawalRequest: async (amount: number, pin: string, method?: 'BANK' | 'USDT', walletAddress?: string): Promise<any> => {
+        const res = await client.post('/transactions/withdraw', { amount, pin, method, walletAddress });
         return res.data;
     },
     claimReward: async (rigId: string, amount: number): Promise<any> => {
@@ -395,6 +395,10 @@ export const api = {
         },
         deactivateOverclock: async (): Promise<{ success: boolean, overclockExpiresAt: null, newBalance: number }> => {
             const res = await client.post('/users/overclock/deactivate');
+            return res.data;
+        },
+        updateProfile: async (data: { walletAddress?: string }): Promise<any> => {
+            const res = await client.post('/users/profile', data);
             return res.data;
         }
     },

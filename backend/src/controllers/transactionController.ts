@@ -17,7 +17,7 @@ import bcrypt from 'bcryptjs';
 // Create Withdrawal Request (User)
 export const createWithdrawalRequest = async (req: AuthRequest, res: Response) => {
     try {
-        const { amount, pin } = req.body;
+        const { amount, pin, method, walletAddress } = req.body;
         const userId = req.userId;
 
         if (!amount || amount <= 0) {
@@ -32,6 +32,18 @@ export const createWithdrawalRequest = async (req: AuthRequest, res: Response) =
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Validation based on method
+        if (method === 'USDT') {
+            if (!walletAddress && !user.walletAddress) {
+                return res.status(400).json({ message: 'โปรดระบุหรือผูกที่อยู่กระเป๋า USDT ก่อนถอนเงิน' });
+            }
+        } else {
+            // Default to BANK
+            if (!user.bankQrCode) {
+                return res.status(400).json({ message: 'โปรดตั้งค่าบัญชีรับเงิน (QR Code) ก่อนถอนเงิน' });
+            }
         }
 
         // Verify PIN (Optional if bypassed by frontend)
@@ -54,7 +66,9 @@ export const createWithdrawalRequest = async (req: AuthRequest, res: Response) =
             userId,
             username: user.username,
             amount,
-            bankQrCode: user.bankQrCode,
+            method: method === 'USDT' ? 'USDT' : 'BANK',
+            walletAddress: method === 'USDT' ? (walletAddress || user.walletAddress) : undefined,
+            bankQrCode: method === 'BANK' ? user.bankQrCode : undefined,
             status: 'PENDING'
         });
 

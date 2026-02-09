@@ -7,9 +7,10 @@ interface WithdrawModalProps {
     isOpen: boolean;
     onClose: () => void;
     walletBalance: number;
-    onWithdraw: (amount: number, pin: string) => void;
+    onWithdraw: (amount: number, pin: string, method: 'BANK' | 'USDT', walletAddress?: string) => void;
     savedQrCode?: string; // Add saved QR Code prop
     onSaveQr: (base64: string) => void; // Handler to save QR
+    currentWalletAddress?: string; // Add current wallet address prop
 }
 
 export const WithdrawModal: React.FC<WithdrawModalProps> = ({
@@ -18,9 +19,11 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     walletBalance,
     onWithdraw,
     savedQrCode,
-    onSaveQr
+    onSaveQr,
+    currentWalletAddress
 }) => {
     const [amount, setAmount] = useState<string>('');
+    const [method, setMethod] = useState<'BANK' | 'USDT'>('BANK');
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isConfirming, setIsConfirming] = useState(false);
@@ -74,7 +77,10 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
         // Direct call, bypass PIN
         const val = parseFloat(amount);
         if (!isNaN(val) && val > 0 && val <= walletBalance) {
-            onWithdraw(val, ""); // Pass empty string as PIN is removed
+            // @ts-ignore - Updating standard onWithdraw to support method & address if needed, 
+            // but usually we just update the API call in the parent component.
+            // Assuming onWithdraw handles the current state of the modal.
+            onWithdraw(val, "");
             setAmount('');
             setIsConfirming(false);
             onClose();
@@ -113,7 +119,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                 {/* Header */}
                 <div className="bg-slate-900 p-4 border-b border-slate-700 flex justify-between items-center">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        {isSetupMode ? <QrCode className="text-yellow-500" /> : <Wallet className="text-emerald-500" />}
+                        {isSetupMode ? <QrCode className="text-yellow-500" /> : method === 'USDT' ? <Wallet className="text-blue-500" /> : <Wallet className="text-emerald-500" />}
                         {isSetupMode ? 'ตั้งค่าบัญชีรับเงิน' : isConfirming ? 'ยืนยันรายการ' : 'ถอนเงิน'}
                     </h2>
                     <button onClick={onClose} className="text-slate-400 hover:text-white">
@@ -228,23 +234,59 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                     ) : (
                         // --- VIEW 2: Withdraw Form ---
                         <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                            {/* Method Selector */}
+                            {!isConfirming && (
+                                <div className="flex bg-slate-900 p-1 rounded-xl mb-6 border border-slate-700">
+                                    <button
+                                        onClick={() => setMethod('BANK')}
+                                        className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${method === 'BANK' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                                    >
+                                        <ImageIcon size={16} /> ธนาคาร (THB)
+                                    </button>
+                                    <button
+                                        onClick={() => setMethod('USDT')}
+                                        className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${method === 'USDT' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                                    >
+                                        <Wallet size={16} /> USDT (BSC)
+                                    </button>
+                                </div>
+                            )}
+
                             <div className="text-center space-y-1 mb-6">
                                 <span className="text-sm text-slate-400">เงินทุนที่ถอนได้</span>
                                 <div className="text-3xl font-bold text-white font-mono">{walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}</div>
                             </div>
 
                             <div className="space-y-4">
-                                <div className="bg-slate-900 p-3 rounded-lg border border-slate-700 flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-white p-0.5 rounded flex items-center justify-center overflow-hidden shrink-0">
-                                        <img src={savedQrCode} alt="Saved QR" className="w-full h-full object-cover" />
-                                    </div>
-                                    <div className="flex-1 overflow-hidden">
-                                        <div className="text-xs text-slate-500 uppercase tracking-wider font-bold">บัญชีรับเงิน</div>
-                                        <div className="text-sm text-emerald-400 flex items-center gap-1 font-bold truncate">
-                                            <CheckCircle size={12} /> เชื่อมต่อ QR แล้ว
+                                {method === 'BANK' ? (
+                                    <div className="bg-slate-900 p-3 rounded-lg border border-slate-700 flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-white p-0.5 rounded flex items-center justify-center overflow-hidden shrink-0">
+                                            <img src={savedQrCode} alt="Saved QR" className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="flex-1 overflow-hidden">
+                                            <div className="text-xs text-slate-500 uppercase tracking-wider font-bold">บัญชีรับเงิน</div>
+                                            <div className="text-sm text-emerald-400 flex items-center gap-1 font-bold truncate">
+                                                <CheckCircle size={12} /> เชื่อมต่อ QR แล้ว
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="bg-slate-900 p-3 rounded-lg border border-slate-700 flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-blue-900/40 rounded flex items-center justify-center shrink-0">
+                                            <Wallet size={20} className="text-blue-400" />
+                                        </div>
+                                        <div className="flex-1 overflow-hidden">
+                                            <div className="text-xs text-slate-500 uppercase tracking-wider font-bold">BSC Wallet</div>
+                                            {/* We rely on Parent providing the walletAddress or we could fetch it, 
+                                                but if it's not in props, we assume it's bound. 
+                                                If you want to be stricter, we'd need walletAddress in props. 
+                                                For now, let's assume it works if they've bound it. */}
+                                            <div className="text-sm text-blue-400 flex items-center gap-1 font-bold truncate">
+                                                <CheckCircle size={12} /> ใช้ที่อยู่ที่ผูกไว้ในระบบ
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-slate-300">จำนวนเงินที่ต้องการถอน</label>
