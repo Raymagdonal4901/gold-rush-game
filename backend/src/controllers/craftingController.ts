@@ -13,35 +13,35 @@ const MATERIAL_CONFIG = {
 const SHOP_ITEMS = [
     {
         id: 'hat', name: 'หมวกนิรภัยมาตรฐาน', minBonus: 0.1, maxBonus: 0.5, lifespanDays: 30, tier: 1,
-        craftingRecipe: { 1: 3 }, craftingFee: 10, craftDurationMinutes: 30, specialEffect: 'ลดค่าซ่อม -5%'
+        craftingRecipe: { 1: 3 }, craftingFee: 0.2857, craftDurationMinutes: 30, specialEffect: 'ลดค่าซ่อม -5%'
     },
     {
         id: 'uniform', name: 'ชุดหมีช่างกล', minBonus: 0.5, maxBonus: 1.5, lifespanDays: 30, tier: 1,
-        craftingRecipe: { 1: 4, 2: 3 }, craftingFee: 10, craftDurationMinutes: 60, specialEffect: 'อายุใช้งาน +5 วัน'
+        craftingRecipe: { 1: 4, 2: 3 }, craftingFee: 0.2857, craftDurationMinutes: 60, specialEffect: 'อายุใช้งาน +5 วัน'
     },
     {
         id: 'bag', name: 'กระเป๋าผ้าใบ', minBonus: 1.0, maxBonus: 2.0, lifespanDays: 45, tier: 2,
-        craftingRecipe: { 2: 4, 3: 2 }, craftingFee: 20, craftDurationMinutes: 180, specialEffect: 'ราคาขาย +1%'
+        craftingRecipe: { 2: 4, 3: 2 }, craftingFee: 0.5714, craftDurationMinutes: 180, specialEffect: 'ราคาขาย +1%'
     },
     {
         id: 'boots', name: 'รองเท้าบูทกันน้ำ', minBonus: 2.0, maxBonus: 3.0, lifespanDays: 45, tier: 2,
-        craftingRecipe: { 3: 5, 4: 2 }, craftingFee: 25, craftDurationMinutes: 300, specialEffect: 'โอกาสประหยัดไฟ 5%'
+        craftingRecipe: { 3: 5, 4: 2 }, craftingFee: 0.7143, craftDurationMinutes: 300, specialEffect: 'โอกาสประหยัดไฟ 5%'
     },
     {
         id: 'glasses', name: 'แว่นตานิรภัยใส', minBonus: 2.5, maxBonus: 3.5, lifespanDays: 60, tier: 2,
-        craftingRecipe: { 4: 3, 3: 4 }, craftingFee: 80, craftDurationMinutes: 420, specialEffect: 'โอกาสดรอป +2%'
+        craftingRecipe: { 4: 3, 3: 4 }, craftingFee: 2.2857, craftDurationMinutes: 420, specialEffect: 'โอกาสดรอป +2%'
     },
     {
         id: 'mobile', name: 'มือถือรุ่นปุ่มกด', minBonus: 3.0, maxBonus: 4.0, lifespanDays: 90, tier: 2,
-        craftingRecipe: { 5: 1, 4: 4 }, craftingFee: 120, craftDurationMinutes: 540, specialEffect: 'ลดภาษีตลาด 2%'
+        craftingRecipe: { 5: 1, 4: 4 }, craftingFee: 3.4286, craftDurationMinutes: 540, specialEffect: 'ลดภาษีตลาด 2%'
     },
     {
         id: 'pc', name: 'พีซีสำนักงาน', minBonus: 4.0, maxBonus: 5.0, lifespanDays: 90, tier: 3,
-        craftingRecipe: { 5: 2, 4: 3 }, craftingFee: 180, craftDurationMinutes: 720, specialEffect: 'โอกาสเบิ้ลรายได้ 1%'
+        craftingRecipe: { 5: 2, 4: 3 }, craftingFee: 5.1429, craftDurationMinutes: 720, specialEffect: 'โอกาสเบิ้ลรายได้ 1%'
     },
     {
         id: 'auto_excavator', name: 'รถขุดไฟฟ้า (Electric)', minBonus: 10.0, maxBonus: 12.0, lifespanDays: 120, tier: 3,
-        craftingRecipe: { 6: 1, 5: 2 }, craftingFee: 500, craftDurationMinutes: 1440, specialEffect: 'โอกาส Jackpot 2%'
+        craftingRecipe: { 6: 1, 5: 2 }, craftingFee: 14.2857, craftDurationMinutes: 1440, specialEffect: 'โอกาส Jackpot 2%'
     }
 ];
 

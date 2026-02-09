@@ -3,9 +3,9 @@ import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 
 const SLOT_EXPANSION_CONFIG: Record<number, { title: string; cost: number; mats: Record<number, number>; item?: string; itemCount?: number }> = {
-    4: { title: 'ขยายพื้นที่ขุดเจาะช่องที่ 4', cost: 2000, mats: { 3: 30, 4: 10 }, item: 'chest_key', itemCount: 1 },
-    5: { title: 'ขยายพื้นที่ขุดเจาะช่องที่ 5', cost: 3000, mats: { 5: 10, 6: 5 }, item: 'upgrade_chip', itemCount: 5 },
-    6: { title: 'สร้างแท่นขุดเจาะพิเศษ (Master Wing)', cost: 5000, mats: { 7: 1, 8: 1, 9: 1 }, item: undefined, itemCount: 0 },
+    4: { title: 'ขยายพื้นที่ขุดเจาะช่องที่ 4', cost: 57.1429, mats: { 3: 30, 4: 10 }, item: 'chest_key', itemCount: 1 },
+    5: { title: 'ขยายพื้นที่ขุดเจาะช่องที่ 5', cost: 85.7143, mats: { 5: 10, 6: 5 }, item: 'upgrade_chip', itemCount: 5 },
+    6: { title: 'สร้างแท่นขุดเจาะพิเศษ (Master Wing)', cost: 142.8571, mats: { 7: 1, 8: 1, 9: 1 }, item: undefined, itemCount: 0 },
 };
 
 export const unlockSlot = async (req: AuthRequest, res: Response) => {

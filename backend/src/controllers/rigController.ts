@@ -218,8 +218,8 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + durationDays);
 
-        // Calculate rig rarity based on investment
-        const rigRarity = investment >= 3000 ? 'LEGENDARY' : investment >= 2000 ? 'EPIC' : investment >= 1000 ? 'RARE' : 'COMMON';
+        // Calculate rig rarity based on investment (USD scale: ~3000 -> 85, ~2000 -> 57, ~1000 -> 28)
+        const rigRarity = investment >= 85 ? 'LEGENDARY' : investment >= 57 ? 'EPIC' : investment >= 28 ? 'RARE' : 'COMMON';
 
         console.log(`[BUY_RIG DEBUG] Creating rig for user: ${userId}, name: ${name}, rarity: ${rigRarity}`);
 
