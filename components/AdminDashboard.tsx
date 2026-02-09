@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check } from 'lucide-react';
+import { Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check, TrendingUp } from 'lucide-react';
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
 import { User, OilRig, ClaimRequest, WithdrawalRequest, DepositRequest, Notification } from '../services/types';
@@ -22,8 +22,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         energy_items: number;
         market_fees: number;
         withdrawal_fees: number;
+        withdrawal_fees_bank: number;
+        withdrawal_fees_usdt: number;
         repair_fees: number;
         total: number;
+        usdt_deposits: number;
+        bank_deposits: number;
+        usdt_withdrawals: number;
+        bank_withdrawals: number;
     } | null>(null);
 
     // Notifications
@@ -975,9 +981,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 <div className="text-xs text-stone-500 uppercase font-bold mb-1">ค่าธรรมเนียมตลาด</div>
                                 <div className="text-2xl font-mono font-bold text-emerald-400">+{globalRevenue.market_fees.toLocaleString()}</div>
                             </div>
-                            <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
+                            <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors group relative">
                                 <div className="text-xs text-stone-500 uppercase font-bold mb-1">ค่าธรรมเนียมถอน</div>
                                 <div className="text-2xl font-mono font-bold text-emerald-400">+{globalRevenue.withdrawal_fees.toLocaleString()}</div>
+                                <div className="absolute top-2 right-2 flex flex-col items-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-[10px] text-stone-400">BANK: {globalRevenue.withdrawal_fees_bank.toLocaleString()}</span>
+                                    <span className="text-[10px] text-blue-400">USDT: {globalRevenue.withdrawal_fees_usdt.toLocaleString()}</span>
+                                </div>
                             </div>
                             <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
                                 <div className="text-xs text-stone-500 uppercase font-bold mb-1">ค่าบริการซ่อม</div>
@@ -986,6 +996,46 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             <div className="bg-yellow-900/10 p-4 rounded border border-yellow-500/30 hover:bg-yellow-900/20 transition-colors">
                                 <div className="text-xs text-yellow-500 uppercase font-bold mb-1">รายได้รวมทั้งหมด</div>
                                 <div className="text-2xl font-mono font-bold text-yellow-400">+{globalRevenue.total.toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-stone-800/50">
+                            <div className="bg-stone-950/50 p-4 rounded border border-stone-800 flex items-center justify-between">
+                                <div>
+                                    <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">Total Deposit Volume</div>
+                                    <div className="flex gap-4">
+                                        <div>
+                                            <span className="text-xs text-stone-400 block">Bank</span>
+                                            <span className="text-lg font-mono font-bold text-white">{globalRevenue.bank_deposits.toLocaleString()}</span>
+                                        </div>
+                                        <div className="w-px h-8 bg-stone-800 self-center"></div>
+                                        <div>
+                                            <span className="text-xs text-blue-400 block">USDT</span>
+                                            <span className="text-lg font-mono font-bold text-blue-400">{globalRevenue.usdt_deposits.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-emerald-900/10 p-2 rounded text-emerald-500">
+                                    <TrendingUp size={20} />
+                                </div>
+                            </div>
+                            <div className="bg-stone-950/50 p-4 rounded border border-stone-800 flex items-center justify-between">
+                                <div>
+                                    <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">Total Withdrawal Volume</div>
+                                    <div className="flex gap-4">
+                                        <div>
+                                            <span className="text-xs text-stone-400 block">Bank</span>
+                                            <span className="text-lg font-mono font-bold text-white">{globalRevenue.bank_withdrawals.toLocaleString()}</span>
+                                        </div>
+                                        <div className="w-px h-8 bg-stone-800 self-center"></div>
+                                        <div>
+                                            <span className="text-xs text-blue-400 block">USDT</span>
+                                            <span className="text-lg font-mono font-bold text-blue-400">{globalRevenue.usdt_withdrawals.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-red-900/10 p-2 rounded text-red-500">
+                                    <ArrowUpRight size={20} />
+                                </div>
                             </div>
                         </div>
                     </div>

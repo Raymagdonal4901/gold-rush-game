@@ -355,7 +355,8 @@ export const getPendingClaims = async (req: AuthRequest, res: Response) => {
 export const getGlobalRevenueStats = async (req: AuthRequest, res: Response) => {
     try {
         console.log('[ADMIN DEBUG] getGlobalRevenueStats called');
-        // Aggregating all transactions
+
+        // 1. Basic Transaction aggregation
         const revenueStats = await Transaction.aggregate([
             {
                 $group: {
@@ -368,14 +369,42 @@ export const getGlobalRevenueStats = async (req: AuthRequest, res: Response) => 
         const revenueMap: Record<string, number> = {};
         revenueStats.forEach(s => revenueMap[s._id] = s.total);
 
+        // 2. Deposit Method aggregation (APPROVED only)
+        const depositStats = await DepositRequest.aggregate([
+            { $match: { status: 'APPROVED' } },
+            {
+                $group: {
+                    _id: { $toUpper: { $cond: { if: { $eq: ["$slipImage", "CRYPTO_USDT_BSC"] }, then: "USDT", else: "BANK" } } },
+                    total: { $sum: "$amount" }
+                }
+            }
+        ]);
+        const depMap: Record<string, number> = {};
+        depositStats.forEach(s => depMap[s._id] = s.total);
+
+        // 3. Withdrawal Method aggregation (APPROVED only)
+        const withdrawStats = await WithdrawalRequest.aggregate([
+            { $match: { status: 'APPROVED' } },
+            {
+                $group: {
+                    _id: '$method',
+                    total: { $sum: "$amount" }
+                }
+            }
+        ]);
+        const withMap: Record<string, number> = {};
+        withdrawStats.forEach(s => withMap[s._id] = s.total);
+
         // 3.1 Energy/Overclock/Battery (Energy Refill + Accessory Purchase)
         const rev_energy_items = (revenueMap['ENERGY_REFILL'] || 0) + (revenueMap['ACCESSORY_PURCHASE'] || 0);
 
         // 3.2 Market Fee (Tax from Selling)
         const rev_market_fees = revenueMap['MARKET_TAX'] || 0;
 
-        // 3.3 Withdrawal Fee
-        const rev_withdrawal_fees = 0;
+        // 3.3 Withdrawal Fee (10% of approved withdrawals)
+        const withdrawal_fees_bank = (withMap['BANK'] || 0) * 0.1;
+        const withdrawal_fees_usdt = (withMap['USDT'] || 0) * 0.1;
+        const rev_withdrawal_fees = withdrawal_fees_bank + withdrawal_fees_usdt;
 
         // 3.4 Repair Fee
         const rev_repair_fees = revenueMap['REPAIR'] || 0;
@@ -383,14 +412,18 @@ export const getGlobalRevenueStats = async (req: AuthRequest, res: Response) => 
         // 3.5 Total Revenue
         const total_revenue = rev_energy_items + rev_market_fees + rev_withdrawal_fees + rev_repair_fees;
 
-        console.log('[ADMIN DEBUG] Global Revenue Stats calculated:', { total_revenue });
-
         res.json({
             energy_items: rev_energy_items,
             market_fees: rev_market_fees,
             withdrawal_fees: rev_withdrawal_fees,
+            withdrawal_fees_bank: withdrawal_fees_bank,
+            withdrawal_fees_usdt: withdrawal_fees_usdt,
             repair_fees: rev_repair_fees,
-            total: total_revenue
+            total: total_revenue,
+            usdt_deposits: depMap['USDT'] || 0,
+            bank_deposits: depMap['BANK'] || 0,
+            usdt_withdrawals: withMap['USDT'] || 0,
+            bank_withdrawals: withMap['BANK'] || 0
         });
     } catch (error) {
         console.error('[ADMIN ERROR] getGlobalRevenueStats failed:', error);
