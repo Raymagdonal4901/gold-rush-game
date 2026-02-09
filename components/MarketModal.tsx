@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, TrendingUp, TrendingDown, Minus, RefreshCw, BarChart2, DollarSign, ShoppingCart, CheckCircle2, History, ArrowRight, Bot } from 'lucide-react';
 import { MarketState, Transaction, MarketItemData, AccessoryItem } from '../services/types';
-import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, ROBOT_CONFIG } from '../constants';
+import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, ROBOT_CONFIG, EXCHANGE_RATE_USD_THB } from '../constants';
 import { MaterialIcon } from './MaterialIcon';
 import { useTranslation } from './LanguageContext';
 import { api } from '../services/api';
@@ -262,7 +262,8 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="font-mono font-bold text-white text-sm">{data.currentPrice.toFixed(2)}</div>
+                                        <div className="font-mono font-bold text-white text-sm">{(data.currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} ฿</div>
+                                        <div className="text-[10px] text-stone-500 font-mono">({CURRENCY}{data.currentPrice.toFixed(2)})</div>
                                         <div className={`text-[10px] flex items-center justify-end gap-1 ${data.trend === 'UP' ? 'text-emerald-400' : data.trend === 'DOWN' ? 'text-red-400' : 'text-stone-500'}`}>
                                             {data.trend === 'UP' ? <TrendingUp size={10} /> : data.trend === 'DOWN' ? <TrendingDown size={10} /> : <Minus size={10} />}
                                             {Math.abs((data.multiplier - 1) * 100).toFixed(1)}%
@@ -313,16 +314,16 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                             <h3 className="text-lg font-bold text-white mb-4 text-center border-b border-stone-800 pb-2">{t('market.confirm_title')}</h3>
                                             <div className="space-y-3 mb-6 text-sm">
                                                 <div className="flex justify-between items-center"><span className="text-stone-400">{language === 'th' ? 'รายการ' : 'Item'}</span><span className="text-white font-bold flex items-center gap-2"><MaterialIcon id={selectedTier} size="w-6 h-6" iconSize={12} /> {matName}</span></div>
-                                                <div className="flex justify-between items-center"><span className="text-stone-400">{language === 'th' ? 'ราคาต่อหน่วย' : 'Unit Price'}</span><span className="text-stone-300 font-mono">{unitPrice.toFixed(2)}</span></div>
+                                                <div className="flex justify-between items-center"><span className="text-stone-400">{language === 'th' ? 'ราคาต่อหน่วย' : 'Unit Price'}</span><span className="text-stone-300 font-mono">{(unitPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} ฿ <span className="text-[10px] text-stone-500">({CURRENCY}{unitPrice.toFixed(2)})</span></span></div>
                                                 <div className="flex justify-between items-center"><span className="text-stone-400">{language === 'th' ? 'จำนวน' : 'Amount'}</span><span className="text-white font-bold">x{amount}</span></div>
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-stone-400">{action === 'BUY' ? t('market.spread') : t('market.tax')}</span>
                                                     <span className="text-stone-500 font-mono">
-                                                        {action === 'BUY' ? `+${buyTax.toFixed(2)}` : `-${sellTax.toFixed(2)}`}
+                                                        {action === 'BUY' ? `+${(buyTax * EXCHANGE_RATE_USD_THB).toFixed(2)} ฿` : `-${(sellTax * EXCHANGE_RATE_USD_THB).toFixed(2)} ฿`}
                                                     </span>
                                                 </div>
                                                 <div className="h-px bg-stone-800 my-2"></div>
-                                                <div className="flex justify-between items-center text-base"><span className="text-stone-300">{t('market.total_price')}</span><span className={`font-mono font-bold ${action === 'BUY' ? 'text-red-400' : 'text-emerald-400'}`}>{totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}</span></div>
+                                                <div className="flex justify-between items-center text-base"><span className="text-stone-300">{t('market.total_price')}</span><span className={`font-mono font-bold ${action === 'BUY' ? 'text-red-400' : 'text-emerald-400'}`}>{(totalPrice * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿ <span className="text-xs font-normal opacity-70">({totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY})</span></span></div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <button onClick={() => setShowConfirm(false)} className="py-3 rounded bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold transition-colors">{t('common.cancel')}</button>
@@ -343,8 +344,8 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                                     {isBotActive && <div className="bg-emerald-900/40 text-emerald-400 text-[10px] px-2 py-0.5 rounded flex items-center gap-1 border border-emerald-500/30 animate-pulse"><Bot size={10} /> Assistant Monitoring</div>}
                                                 </h3>
                                                 <div className="flex gap-4 text-sm">
-                                                    <span className="text-stone-500">Base: {item.basePrice}</span>
-                                                    <span className={item.trend === 'UP' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>Last: {item.currentPrice.toFixed(2)}</span>
+                                                    <span className="text-stone-500">Base: {(item.basePrice * EXCHANGE_RATE_USD_THB).toFixed(2)} ฿ ({CURRENCY}{item.basePrice})</span>
+                                                    <span className={item.trend === 'UP' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>Last: {(item.currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} ฿ ({CURRENCY}{item.currentPrice.toFixed(2)})</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -372,15 +373,16 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                             </div>
                                         </div>
                                         <div className="bg-stone-900 p-4 rounded-xl border border-stone-800 space-y-2">
-                                            <div className="flex justify-between text-sm"><span className="text-stone-400">ราคาตลาด (Price)</span><span className="text-white font-mono">{item.currentPrice.toFixed(2)}</span></div>
+                                            <div className="flex justify-between text-sm"><span className="text-stone-400">{language === 'th' ? 'ราคาตลาด' : 'Market Price'}</span><span className="text-white font-mono">{(item.currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} ฿ <span className="text-[10px] text-stone-500">({CURRENCY}{item.currentPrice.toFixed(2)})</span></span></div>
                                             <div className="flex justify-between text-sm">
-                                                <span className="text-stone-400">{action === 'BUY' ? 'ค่าธรรมเนียม (Spread)' : 'ภาษีตลาด (Market Tax)'}</span>
+                                                <span className="text-stone-400">{action === 'BUY' ? (language === 'th' ? 'ค่าธรรมเนียม' : 'Spread') : (language === 'th' ? 'ภาษีตลาด' : 'Market Tax')}</span>
                                                 <span className={action === 'BUY' && userMastery >= 1000 ? "text-cyan-400 font-bold font-mono" : "text-stone-500 font-mono"}>
                                                     {action === 'BUY' ? `+${spreadLabel}%` : '-15%'}
                                                 </span>
                                             </div>
                                             <div className="h-px bg-stone-800 my-2"></div>
-                                            <div className="flex justify-between text-lg font-bold"><span className="text-stone-200">รวมสุทธิ (Total)</span><span className={action === 'BUY' ? 'text-red-400' : 'text-emerald-400'}>{totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}</span></div>
+                                            <div className="flex justify-between text-lg font-bold"><span className="text-stone-200">{language === 'th' ? 'รวมสุทธิ' : 'Total'}</span><span className={action === 'BUY' ? 'text-red-400' : 'text-emerald-400'}>{(totalPrice * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</span></div>
+                                            <div className="text-right text-xs text-stone-500 font-mono mt-1 opacity-60">({totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY})</div>
                                         </div>
                                         <button
                                             onClick={() => setShowConfirm(true)}
@@ -416,7 +418,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                                             <div className="text-xs text-stone-500 font-mono">{new Date(tx.timestamp).toLocaleString()}</div>
                                                         </div>
                                                     </div>
-                                                    <div className={`font-mono font-bold text-sm ${tx.type === 'MATERIAL_SELL' ? 'text-emerald-400' : 'text-red-400'}`}>{tx.type === 'MATERIAL_SELL' ? '+' : ''}{tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                                    <div className={`font-mono font-bold text-sm ${tx.type === 'MATERIAL_SELL' ? 'text-emerald-400' : 'text-red-400'}`}>{tx.type === 'MATERIAL_SELL' ? '+' : ''}{(tx.amount * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿ <div className="text-[10px] font-normal opacity-50 text-right">{tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}</div></div>
                                                 </div>
                                             ))}
                                         </div>

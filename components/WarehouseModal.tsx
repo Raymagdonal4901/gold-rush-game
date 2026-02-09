@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Hourglass, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown, FileText } from 'lucide-react';
-import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, RARITY_SETTINGS, SHOP_ITEMS, MATERIAL_RECIPES } from '../constants';
+import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, RARITY_SETTINGS, SHOP_ITEMS, MATERIAL_RECIPES, EXCHANGE_RATE_USD_THB } from '../constants';
 import { MarketState, MarketItemData, AccessoryItem } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
 import { InfinityGlove } from './InfinityGlove';
@@ -392,10 +392,10 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                     <Coins size={24} />
                                                 </div>
                                                 <span className={`absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[10px] font-black border border-stone-950 shadow-lg animate-in zoom-in ${balance >= confirmState.recipe.fee ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
-                                                    x{confirmState.recipe.fee}
+                                                    x{(confirmState.recipe.fee * EXCHANGE_RATE_USD_THB).toFixed(2)}
                                                 </span>
                                             </div>
-                                            <span className="text-[9px] text-stone-500 font-bold uppercase">บาท</span>
+                                            <span className="text-[9px] text-stone-500 font-bold uppercase">บาท <span className="text-[8px] opacity-70">({CURRENCY}{confirmState.recipe.fee})</span></span>
                                         </div>
                                     </>
                                 )}
@@ -549,7 +549,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                                 <div className="flex flex-col">
                                                                     <div className="flex items-center gap-1.5">
                                                                         <Tag size={10} className="text-stone-500 group-hover/price:text-emerald-400" />
-                                                                        <span className="text-[11px] text-emerald-400 font-mono font-bold">{currentPrice.toFixed(2)} {CURRENCY}</span>
+                                                                        <span className="text-[11px] text-emerald-400 font-mono font-bold">{(currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} ฿ <span className="text-[9px] text-stone-500 font-normal">({CURRENCY}{currentPrice.toFixed(2)})</span></span>
                                                                     </div>
                                                                     {marketState?.trends[tier]?.history && renderSparkline(marketState.trends[tier].history)}
                                                                 </div>
@@ -716,7 +716,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                         <div className="flex items-center gap-2">
                             <Coins className="text-yellow-500" size={18} />
                             <span className="text-sm text-stone-400 font-bold uppercase tracking-widest">{t('common.balance')}:</span>
-                            <span className="text-lg font-mono font-bold text-white">{balance.toLocaleString()} {CURRENCY}</span>
+                            <span className="text-lg font-mono font-bold text-white">{(balance * EXCHANGE_RATE_USD_THB).toLocaleString()} ฿ <span className="text-sm font-normal opacity-50">({balance.toLocaleString()} {CURRENCY})</span></span>
                         </div>
                         <div className="flex items-center gap-2 bg-stone-950 px-3 py-1 rounded-lg border border-stone-800">
                             <span className="text-[10px] font-bold text-stone-600 uppercase tracking-widest">สถานะโต๊ะช่าง:</span>
