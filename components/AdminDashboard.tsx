@@ -249,6 +249,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         }
     };
 
+    const handleConvertCurrency = async () => {
+        if (!confirm('⚠️ คำเตือน: ยืนยันการแปลงฐานข้อมูลทั้งหมดเป็น USD ($)? \n\nการดำเนินการนี้จะหารยอดเงินคงเหลือและราคาทั้งหมดด้วย 35 และไม่สามารถย้อนกลับได้!')) return;
+
+        try {
+            await api.admin.convertCurrencyToUSD();
+            refreshData();
+            alert('แปลงข้อมูลทั้งหมดเป็น USD เรียบร้อยแล้ว! 💵');
+        } catch (error) {
+            console.error("Failed to convert currency", error);
+            alert('เกิดข้อผิดพลาดในการแปลงเงิน');
+        }
+    };
+
     const initiateProcessClaim = (claim: ClaimRequest, status: 'APPROVED' | 'REJECTED') => {
         setConfirmAction({
             type: 'CLAIM',
@@ -1149,7 +1162,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     </div>
                                     <input
                                         type="number"
-                                        placeholder="จำนวนเงิน (THB)"
+                                        placeholder={`จำนวนเงิน (${CURRENCY})`}
                                         className="flex-1 bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
                                         value={economyForm.compAmount || ''}
                                         onChange={e => setEconomyForm({ ...economyForm, compAmount: parseFloat(e.target.value) || 0 })}

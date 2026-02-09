@@ -241,13 +241,13 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                                         onClick={() => setMethod('BANK')}
                                         className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${method === 'BANK' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
                                     >
-                                        <ImageIcon size={16} /> ธนาคาร (THB)
+                                        <ImageIcon size={16} /> ธนาคาร (USD)
                                     </button>
                                     <button
                                         onClick={() => setMethod('USDT')}
                                         className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${method === 'USDT' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
                                     >
-                                        <Wallet size={16} /> USDT (BSC)
+                                        <Wallet size={16} /> USDT (USD)
                                     </button>
                                 </div>
                             )}

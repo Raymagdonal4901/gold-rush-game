@@ -10,6 +10,54 @@ import ClaimRequest from '../models/ClaimRequest';
 import SystemConfig from '../models/SystemConfig';
 import Transaction from '../models/Transaction';
 
+// Convert All Currency Data to USD (1 USD = 35 THB)
+export const adminConvertCurrencyToUSD = async (req: AuthRequest, res: Response) => {
+    try {
+        const rate = 35;
+
+        // 1. Convert User Balances
+        await User.updateMany({}, [
+            { $set: { balance: { $divide: ["$balance", rate] } } }
+        ]);
+
+        // 2. Convert Rig Data
+        await Rig.updateMany({}, [
+            {
+                $set: {
+                    investment: { $divide: ["$investment", rate] },
+                    dailyProfit: { $divide: ["$dailyProfit", rate] },
+                    bonusProfit: { $divide: ["$bonusProfit", rate] }
+                }
+            }
+        ]);
+
+        // 3. Convert Transaction History
+        await Transaction.updateMany({}, [
+            { $set: { amount: { $divide: ["$amount", rate] } } }
+        ]);
+
+        // 4. Convert Deposit Requests
+        await DepositRequest.updateMany({}, [
+            { $set: { amount: { $divide: ["$amount", rate] } } }
+        ]);
+
+        // 5. Convert Withdrawal Requests
+        await WithdrawalRequest.updateMany({}, [
+            { $set: { amount: { $divide: ["$amount", rate] } } }
+        ]);
+
+        // 6. Convert Claim Requests
+        await ClaimRequest.updateMany({}, [
+            { $set: { amount: { $divide: ["$amount", rate] } } }
+        ]);
+
+        res.json({ message: 'Global currency conversion to USD completed successfully' });
+    } catch (error) {
+        console.error('[ADMIN ERROR] adminConvertCurrencyToUSD failed:', error);
+        res.status(500).json({ message: 'Server error during conversion', error });
+    }
+};
+
 // Give Compensation (Add Balance)
 export const adminGiveCompensation = async (req: AuthRequest, res: Response) => {
     try {

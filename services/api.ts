@@ -360,6 +360,10 @@ export const api = {
         clearGlobalRevenue: async (): Promise<any> => {
             const res = await client.post('/admin/revenue/clear');
             return res.data;
+        },
+        convertCurrencyToUSD: async (): Promise<any> => {
+            const res = await client.post('/admin/convert-currency');
+            return res.data;
         }
     },
     // Chat

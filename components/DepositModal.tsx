@@ -150,7 +150,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
                             </div>
 
                             <div className="grid grid-cols-3 gap-2">
-                                {[500, 1000, 5000].map(val => (
+                                {[10, 50, 100].map(val => (
                                     <button
                                         key={val}
                                         onClick={() => setAmount(val.toString())}

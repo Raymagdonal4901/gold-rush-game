@@ -29,4 +29,6 @@ router.delete('/users/:userId', deleteUser);
 router.post('/revenue/clear', clearRevenueStats);
 router.get('/revenue', getGlobalRevenueStats);
 
+router.post('/convert-currency', adminAuth, adminController.adminConvertCurrencyToUSD);
+
 export default router;
