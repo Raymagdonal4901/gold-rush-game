@@ -194,7 +194,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
                                     <div className="bg-emerald-900/10 border border-emerald-500/30 p-4 rounded-xl">
                                         <p className="text-xs text-stone-400 mb-2">ที่อยู่กระเป๋า USDT (BSC BEP-20)</p>
                                         <div className="bg-black/40 p-3 rounded border border-stone-800 break-all font-mono text-[10px] text-emerald-400 select-all">
-                                            0xYourProjectHotWalletAddressHere
+                                            0xc523c42cb3dce0df59b998d8ae899fa4132b6de7
                                         </div>
                                         <p className="text-[9px] text-stone-500 mt-2 italic">* โอนยอดเท่ากับจำนวนที่แจ้ง ระบบจะอัปเดตยอดอัตโนมัติ</p>
                                     </div>
