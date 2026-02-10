@@ -552,4 +552,9 @@ export const chatApi = {
             isVip: msg.isVip
         };
     }
+    // System
+    getSystemConfig: async (): Promise<{ receivingQrCode: string; isMaintenanceMode: boolean }> => {
+        const res = await client.get('/admin/config');
+        return res.data;
+    },
 };

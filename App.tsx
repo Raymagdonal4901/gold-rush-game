@@ -8,24 +8,32 @@ import { AlertTriangle } from 'lucide-react'; // Added import for AlertTriangle
 
 const App: React.FC = () => {
   // --- Auth State ---
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSystemMaintenance, setIsSystemMaintenance] = useState(false); // Added state for maintenance mode
+  // Force Maintenance Mode for emergency
+  const [isSystemMaintenance, setIsSystemMaintenance] = useState(true);
 
   // Initialize: Check for session
   useEffect(() => {
     const checkSession = async () => {
       try {
+        // Try to fetch config, if it fails, we stay in maintenance (default true)
+        // If it succeeds, we respect the server's setting (or keep it true if backend says true)
+        // For this critical update, let's trust the server config BUT default to true on error.
+
+        try {
+          const config = await api.getSystemConfig();
+          setIsSystemMaintenance(config.isMaintenanceMode);
+        } catch (confError) {
+          console.warn('Could not fetch system config, defaulting to Maintenance Mode', confError);
+          setIsSystemMaintenance(true); // Fail safe to maintenance
+        }
+
         const token = localStorage.getItem('token');
         if (token) {
           const userData = await api.getMe();
           setUser(userData);
         }
-        // Fetch system config to check maintenance mode
-        const config = await api.getSystemConfig(); // Assuming an API call to get system config
-        setIsSystemMaintenance(config.isMaintenanceMode);
       } catch (error) {
-        console.error('Session check failed or config fetch failed', error);
+        console.error('Session check failed', error);
         localStorage.removeItem('token');
       } finally {
         setIsLoading(false);

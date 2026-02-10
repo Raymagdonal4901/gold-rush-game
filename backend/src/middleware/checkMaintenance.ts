@@ -12,26 +12,17 @@ export const checkMaintenance = async (req: AuthRequest, res: Response, next: Ne
         // If it's a login request, we might not have userId yet.
         // We should check config first.
 
+        // Bypass for Auth and Admin routes
+        if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/admin')) {
+            return next();
+        }
+
         const config = await SystemConfig.findOne();
         if (config && config.isMaintenanceMode) {
-            // Allow Admin to bypass
-            // Requirements: "Users (except Admin) will be blocked"
-
-            // If user is already authenticated (req.role exists)
-            if (req.role === 'ADMIN' || req.role === 'SUPER_ADMIN') {
-                return next();
-            }
-
-            // If it's a login attempt, we might need to let them try to login to check if admin?
-            // Or just block everyone at API level except specific admin endpoints?
-            // "Login" is usually /api/auth/login.
-            // If we block login, admins can't login to turn it off.
-            // So we must allow /api/auth/login to proceed, but maybe handle logic there?
-            // OR checks req.path?
-
-            if (req.path.startsWith('/api/auth/login')) {
-                return next();
-            }
+            // Additional check: If user is authenticated via header manually (since this runs before auth middleware)
+            // We can try to decode strictly for other routes if needed, but for now blocking all NON-ADMIN routes is the goal.
+            // Since we allowed /api/admin, admins can use the dashboard.
+            // Game routes (/api/rigs, etc.) will be blocked.
 
             return res.status(503).json({
                 message: 'System is under maintenance.',
