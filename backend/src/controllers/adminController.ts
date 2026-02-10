@@ -61,35 +61,56 @@ export const adminConvertCurrencyToUSD = async (req: AuthRequest, res: Response)
 // Give Compensation (Add Balance)
 export const adminGiveCompensation = async (req: AuthRequest, res: Response) => {
     try {
-        console.log('[ADMIN DEBUG] adminGiveCompensation called body:', req.body);
+        console.log('[ADMIN DEBUG] adminGiveCompensation called. Payload:', JSON.stringify(req.body));
         const { userId, amount, reason } = req.body;
-        let user;
-        if (userId.match(/^[0-9a-fA-F]{24}$/)) {
-            user = await User.findById(userId);
+
+        if (!userId) {
+            console.warn('[ADMIN DEBUG] Missing userId in payload');
+            return res.status(400).json({ message: 'Missing userId' });
         }
+
+        let user;
+        // Check if userId is a valid ObjectId (Hex 24 chars)
+        if (typeof userId === 'string' && userId.match(/^[0-9a-fA-F]{24}$/)) {
+            user = await User.findById(userId);
+            if (user) console.log(`[ADMIN DEBUG] User found by ID: ${userId}`);
+        }
+
         if (!user) {
+            console.log(`[ADMIN DEBUG] User not found by ID (or invalid ID), checking username: ${userId}`);
             user = await User.findOne({ username: userId });
         }
 
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        if (!user) {
+            console.warn(`[ADMIN DEBUG] User not found: ${userId}`);
+            return res.status(404).json({ message: 'User not found' });
+        }
 
         const amountNum = Number(amount);
         if (isNaN(amountNum) || amountNum <= 0) {
+            console.warn(`[ADMIN DEBUG] Invalid amount: ${amount}`);
             return res.status(400).json({ message: 'Invalid amount' });
         }
 
+        console.log(`[ADMIN DEBUG] Adding ${amountNum} to user ${user.username} (Current Balance: ${user.balance})`);
         user.balance += amountNum;
         await user.save();
 
         // Create Transaction Record
-        const transaction = new Transaction({
-            userId: user.id,
-            type: 'COMPENSATION',
-            amount: amountNum,
-            status: 'COMPLETED',
-            description: reason || 'Server Maintenance Compensation'
-        });
-        await transaction.save();
+        try {
+            const transaction = new Transaction({
+                userId: user.id || user._id,
+                type: 'COMPENSATION',
+                amount: amountNum,
+                status: 'COMPLETED',
+                description: reason || 'Server Maintenance Compensation'
+            });
+            await transaction.save();
+            console.log('[ADMIN DEBUG] Transaction created successfully');
+        } catch (txError) {
+            console.error('[ADMIN ERROR] Failed to create transaction record:', txError);
+            // We don't fail the request if transaction logs fail, but good to know
+        }
 
         res.json({ message: 'Compensation successful', newBalance: user.balance });
     } catch (error) {
@@ -431,6 +452,7 @@ export const getGlobalRevenueStats = async (req: AuthRequest, res: Response) => 
         res.status(500).json({ message: 'Server error', error });
     }
 };
+
 
 
 // Delete User Permanently
