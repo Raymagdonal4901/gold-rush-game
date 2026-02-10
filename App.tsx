@@ -8,7 +8,9 @@ import { AlertTriangle } from 'lucide-react'; // Added import for AlertTriangle
 
 const App: React.FC = () => {
   // --- Auth State ---
-  // Force Maintenance Mode for emergency
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  // Force Maintenance Mode for emergency check on start
   const [isSystemMaintenance, setIsSystemMaintenance] = useState(true);
 
   // Initialize: Check for session

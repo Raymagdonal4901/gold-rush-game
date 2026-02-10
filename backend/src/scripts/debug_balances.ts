@@ -5,7 +5,7 @@ import User from '../models/User';
 
 dotenv.config();
 
-const resetBalances = async () => {
+const checkBalances = async () => {
     try {
         let uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/gold-rush';
         if (uri.includes('localhost')) {
@@ -16,22 +16,22 @@ const resetBalances = async () => {
         await mongoose.connect(uri);
         console.log('MongoDB Connected');
 
-        const initialCount = await User.countDocuments();
-        console.log(`Found ${initialCount} users in database.`);
+        const users = await User.find({});
+        console.log(`Found ${users.length} users.`);
 
+        users.forEach(u => {
+            console.log(`- User: ${u.username}, Balance: ${u.balance}`);
+        });
+
+        // Force reset just in case
         const result = await User.updateMany({}, { $set: { balance: 0 } });
-        console.log(`Reset balances for ${result.modifiedCount} users.`);
-
-        const debugUser = await User.findOne();
-        if (debugUser) {
-            console.log(`Sample user balance after reset: ${debugUser.balance}`);
-        }
+        console.log(`Forced reset command run. Modified: ${result.modifiedCount}, Matched: ${result.matchedCount}`);
 
         process.exit(0);
     } catch (error) {
-        console.error('Error resetting balances:', error);
+        console.error('Error:', error);
         process.exit(1);
     }
 };
 
-resetBalances();
+checkBalances();

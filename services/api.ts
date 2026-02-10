@@ -118,6 +118,12 @@ export const api = {
         localStorage.removeItem('token');
     },
 
+    // System
+    getSystemConfig: async (): Promise<{ receivingQrCode: string; isMaintenanceMode: boolean }> => {
+        const res = await client.get('/admin/config');
+        return res.data;
+    },
+
     // Rigs
     getMyRigs: async (): Promise<OilRig[]> => {
         const res = await client.get('/rigs');
@@ -169,10 +175,7 @@ export const api = {
         const res = await client.get('/transactions/stats');
         return res.data;
     },
-    getSystemConfig: async (): Promise<{ receivingQrCode: string | null, isMaintenanceMode: boolean }> => {
-        const res = await client.get('/transactions/config');
-        return res.data;
-    },
+
     getMarketStatus: async (): Promise<MarketState> => {
         const res = await client.get('/transactions/market');
         return res.data;
@@ -552,9 +555,4 @@ export const chatApi = {
             isVip: msg.isVip
         };
     }
-    // System
-    getSystemConfig: async (): Promise<{ receivingQrCode: string; isMaintenanceMode: boolean }> => {
-        const res = await client.get('/admin/config');
-        return res.data;
-    },
 };
