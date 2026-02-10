@@ -1021,12 +1021,12 @@ export const RigCard: React.FC<RigCardProps> = ({
                         <div className="text-right w-full">
                             <div className={`text-xl font-mono font-bold tabular-nums flex items-center justify-end gap-1 text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.1)]`}>
                                 {isOverclockActive && <span className="text-emerald-400 text-xs mr-0.5 animate-pulse">x2</span>}
-                                {formatCurrency(currentAmount)} <Sparkles size={12} className={!isExpired && !isBroken && isPowered && !isExploring ? "animate-pulse text-yellow-500" : "hidden"} />
+                                {formatCurrency(currentAmount)} <Sparkles size={12} className={!isExpired && !isBroken && isPowered && !isExploring ? "text-yellow-500" : "hidden"} />
                             </div>
                         </div>
                     </div>
 
-                    {isRenewable && !isRenewConfirming ? (
+                    {isRenewable && !isRenewConfirming && !preset?.specialProperties?.cannotRenew ? (
                         <div className="grid grid-cols-2 gap-2">
                             <button
                                 onClick={handleClaimClick}

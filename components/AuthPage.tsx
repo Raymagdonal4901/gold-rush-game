@@ -4,6 +4,7 @@ import { Pickaxe, Lock, User as UserIcon, ShieldAlert, Mountain, KeyRound } from
 import { MockDB } from '../services/db';
 import { User, OilRig } from '../services/types';
 import { MAX_RIGS_PER_USER, RIG_PRESETS } from '../constants';
+import { ServerResetAnnouncement } from './ServerResetAnnouncement';
 
 interface AuthPageProps {
   onLogin: (user: User) => void;
@@ -17,6 +18,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
 
   React.useEffect(() => {
     console.log("--- SYSTEM DIAGNOSTICS ---");
@@ -82,6 +84,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
+      {showAnnouncement && <ServerResetAnnouncement onClose={() => setShowAnnouncement(false)} />}
       <div className="absolute inset-0 bg-stone-950/95 backdrop-blur-md z-[10]"></div>
 
       <div className="relative z-[100] bg-stone-900/90 border border-yellow-600/30 w-full max-w-md p-10 shadow-[0_0_60px_rgba(0,0,0,0.9)] backdrop-blur-2xl">

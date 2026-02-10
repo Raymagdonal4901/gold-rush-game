@@ -24,7 +24,8 @@ const ItemIcon: React.FC<{ typeId?: string, name?: string, materialId?: number, 
         return <MaterialIcon id={materialId} size="w-32 h-32" iconSize={80} />;
     }
 
-    const itemName = name || '';
+    const itemNameInput = name || '';
+    const itemName = typeof itemNameInput === 'object' ? (itemNameInput as any).en || (itemNameInput as any).th || '' : String(itemNameInput);
 
     // Name-Based Overrides (Robust Fallback)
     if (itemName.includes('ชิป') || itemName.includes('Chip')) return <Cpu className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;

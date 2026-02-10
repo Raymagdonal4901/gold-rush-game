@@ -1,9 +1,10 @@
 import express from 'express';
-import { register, login, seedAdmin, getProfile, refillEnergy, updateBankQr } from '../controllers/authController';
+import { register, login, seedAdmin, getProfile, refillEnergy, updateBankQr, getPublicConfig } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
+router.get('/config', getPublicConfig);
 router.post('/register', register);
 router.post('/login', login);
 router.get('/me', authenticate, getProfile);

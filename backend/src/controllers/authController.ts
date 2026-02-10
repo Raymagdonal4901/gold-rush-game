@@ -3,6 +3,21 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import Rig from '../models/Rig';
+import SystemConfig from '../models/SystemConfig';
+
+// Public System Config (Maintenance only)
+export const getPublicConfig = async (req: Request, res: Response) => {
+    try {
+        const config = await SystemConfig.findOne();
+        res.json({
+            isMaintenanceMode: config ? config.isMaintenanceMode : false,
+            receivingQrCode: config ? config.receivingQrCode : null
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
 // Register
 export const register = async (req: Request, res: Response) => {
     try {

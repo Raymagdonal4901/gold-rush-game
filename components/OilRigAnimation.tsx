@@ -619,8 +619,76 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
     </g>
   );
 
+  // --- SPECIAL: Rotten Glove (Zombie Hand Digging) ---
+  const renderRottenGlove = () => (
+    <g transform="translate(100, 75)">
+      {/* Dirty Ground */}
+      <path d="M-40 60 Q0 50 40 60 L40 80 L-40 80 Z" fill="#292524" stroke="#1c1917" strokeWidth="2" />
+      <circle cx="-20" cy="65" r="3" fill="#44403c" />
+      <circle cx="10" cy="70" r="4" fill="#1c1917" opacity="0.5" />
+
+      {/* The Rotten Hand */}
+      <g className={isActive ? `animate-[dig-scratch_${1.5 * speedScale}s_ease-in-out_infinite]` : ""} style={{ transformOrigin: '0 60px' }}>
+        {/* Forearm (Bone exposed) */}
+        <rect x="-8" y="-40" width="16" height="40" fill="#4d7c0f" stroke="#365314" strokeWidth="1" rx="2" /> {/* Green Skin */}
+        <rect x="-3" y="-35" width="6" height="20" fill="#e5e5e5" opacity="0.6" rx="1" /> {/* Bone */}
+
+        {/* Hand Palm */}
+        <path d="M-12 0 L12 0 L10 15 L-10 15 Z" fill="#4d7c0f" stroke="#365314" strokeWidth="1" />
+
+        {/* Fingers (Claw shape) */}
+        <g transform="translate(0, 15)">
+          <path d="M-10 0 L-12 10 L-8 10 L-6 0 Z" fill="#365314" /> {/* Thumb */}
+          <path d="M-5 0 L-5 12 L-1 12 L-1 0 Z" fill="#365314" /> {/* Index */}
+          <path d="M1 0 L1 14 L5 14 L5 0 Z" fill="#365314" /> {/* Middle */}
+          <path d="M6 0 L6 10 L10 10 L10 0 Z" fill="#365314" /> {/* Pinky */}
+        </g>
+      </g>
+
+      {/* Fly Swarm (Stench Effect) */}
+      {isActive && (
+        <g>
+          <circle cx="-15" cy="0" r="1" fill="#1e293b" className={`animate-[fly-swarm_${2 * speedScale}s_infinite]`} />
+          <circle cx="15" cy="-10" r="1" fill="#1e293b" className={`animate-[fly-swarm_${2.5 * speedScale}s_infinite_reverse]`} />
+          <circle cx="0" cy="-20" r="1" fill="#1e293b" className={`animate-[fly-swarm_${1.8 * speedScale}s_infinite]`} style={{ animationDelay: '0.5s' }} />
+        </g>
+      )}
+
+      {/* Stench Cloud (Green gas) */}
+      {isActive && (
+        <g opacity="0.4">
+          <circle cx="0" cy="40" r="10" fill="#84cc16" className="animate-[float-gold_3s_infinite]" />
+          <circle cx="-10" cy="30" r="8" fill="#bef264" className="animate-[float-gold_4s_infinite]" style={{ animationDelay: '1s' }} />
+        </g>
+      )}
+
+      {/* Flying Dirt Particles */}
+      {isActive && (
+        <g>
+          <circle cx="0" cy="60" r="2" fill="#57534e" className={`animate-[dirt-fly_${1.5 * speedScale}s_infinite]`} style={{ animationDelay: '0.6s' }} />
+          <circle cx="5" cy="55" r="1.5" fill="#292524" className={`animate-[dirt-fly_${1.5 * speedScale}s_infinite]`} style={{ animationDelay: '0.7s' }} />
+        </g>
+      )}
+
+      <style>{`
+        @keyframes dig-scratch {
+           0% { transform: rotate(-20deg) translateY(-10px); }
+           40% { transform: rotate(10deg) translateY(5px); } /* Scratch Down */
+           60% { transform: rotate(10deg) translateY(5px); }
+           100% { transform: rotate(-20deg) translateY(-10px); }
+        }
+        @keyframes fly-swarm {
+           0% { transform: translate(0,0); }
+           25% { transform: translate(5px, -5px); }
+           50% { transform: translate(0, -10px); }
+           75% { transform: translate(-5px, -5px); }
+           100% { transform: translate(0,0); }
+        }
+      `}</style>
+    </g>
+  );
+
   const renderVisuals = () => {
-    // Name-specific mappings
     // Name-specific mappings
     if (rigName === 'พลั่วสนิมเขรอะ' || rigName === 'Rusty Shovel') return renderTier1(); // Tier 1: Shovel
     if (rigName === 'สว่านพกพา' || rigName === 'Portable Drill') return renderDrill(); // Tier 2: Drill
@@ -630,6 +698,7 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
     if (rigName === 'เครื่องขุดทองคำ' || rigName === 'Gold Excavator') return renderTier4(); // Tier 6: Gold Smelter
     if (rigName === 'เครื่องขุดเพชร' || rigName === 'Diamond Excavator') return renderTier5(); // Tier 7: Diamond Press
     if (rigName.includes('ไวเบรเนียม') || rigName.includes('Vibranium')) return renderTier6(); // Tier 8: Vibranium Reactor
+    if (rigName === 'ถุงมือเน่า' || rigName === 'Rotten Glove') return renderRottenGlove(); // Special: Rotten Glove
 
     // Fallback to tier-based animations
     // Note: The 'tier' prop might not perfectly align if presets changed, so relying on name is safer.

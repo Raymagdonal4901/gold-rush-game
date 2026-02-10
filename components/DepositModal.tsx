@@ -63,8 +63,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
         }
     };
 
-    const handleConfirmPayment = () => {
-        if (!slipPreview || !user || isLoading) return;
+    const handleConfirmPayment = (isUSDT: boolean = false) => {
+        if (!isUSDT && !slipPreview) return;
+        if (!user || isLoading) return;
 
         setIsLoading(true);
 
@@ -74,12 +75,14 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
             finalAmount = finalAmount / EXCHANGE_RATE_USD_THB;
         }
 
+        // For USDT we use a placeholder slip or indicate it's a USDT direct transfer
+        const slipData = isUSDT ? "USDT_DIRECT_TRANSFER" : slipPreview!;
+
         api.createDepositRequest(
             finalAmount,
-            slipPreview
+            slipData
         ).then(() => {
             setStep('SUCCESS');
-            // We don't call onDepositSuccess here because it's not instant anymore
         }).catch(err => {
             console.error("Deposit failed", err);
             if (addNotification) addNotification({
@@ -260,11 +263,39 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
                                         </p>
                                     </div>
 
+                                    <div className="space-y-2 text-left">
+                                        <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest pl-1">{t('deposit.amount_label')}</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                value={amount}
+                                                onChange={(e) => setAmount(e.target.value)}
+                                                placeholder="0.00"
+                                                className="w-full bg-stone-950 border border-stone-800 rounded-lg py-3 px-4 text-center text-xl font-mono font-bold text-emerald-400 focus:border-emerald-500 outline-none"
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-stone-600 font-bold">{CURRENCY}</span>
+                                        </div>
+                                    </div>
+
                                     <button
-                                        onClick={onClose}
-                                        className="w-full py-3 rounded-xl bg-stone-800 hover:bg-stone-700 text-white font-bold text-sm transition-all"
+                                        onClick={() => handleConfirmPayment(true)}
+                                        disabled={isLoading || !amount || parseFloat(amount) <= 0}
+                                        className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-800 disabled:text-stone-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
                                     >
-                                        {t('common.close')}
+                                        {isLoading ? (
+                                            <div className="animate-spin h-4 w-4 border-2 border-white/50 border-t-white rounded-full"></div>
+                                        ) : (
+                                            <>
+                                                <CheckCircle size={18} /> {t('common.confirm')}
+                                            </>
+                                        )}
+                                    </button>
+
+                                    <button
+                                        onClick={() => setStep('INPUT')}
+                                        className="text-xs text-stone-500 hover:text-stone-300 underline block text-center mt-2"
+                                    >
+                                        {t('deposit.change_amount')}
                                     </button>
                                 </div>
                             ) : (

@@ -254,6 +254,7 @@ export const updateSystemConfig = async (req: AuthRequest, res: Response) => {
 
         if (receivingQrCode !== undefined) config.receivingQrCode = receivingQrCode;
         if (isMaintenanceMode !== undefined) config.isMaintenanceMode = isMaintenanceMode;
+        if (req.body.dropRate !== undefined) config.dropRate = req.body.dropRate;
 
         await config.save();
         res.json(config);
@@ -472,7 +473,11 @@ export const clearRevenueStats = async (req: AuthRequest, res: Response) => {
         // For now we delete them to reset the sum to 0
         const result = await Transaction.deleteMany({ type: { $in: revenueTypes } });
 
-        console.log(`[ADMIN] Revenue stats cleared. Deleted ${result.deletedCount} transactions.`);
+        // Add: Clear Deposit and Withdrawal history to reset Volume metrics
+        const depResult = await DepositRequest.deleteMany({});
+        const withResult = await WithdrawalRequest.deleteMany({});
+
+        console.log(`[ADMIN] Revenue stats cleared. Deleted ${result.deletedCount} transactions, ${depResult.deletedCount} deposits, ${withResult.deletedCount} withdrawals.`);
         res.json({
             message: 'Revenue stats cleared successfully',
             deletedCount: result.deletedCount
@@ -480,5 +485,26 @@ export const clearRevenueStats = async (req: AuthRequest, res: Response) => {
     } catch (error) {
         console.error('[ADMIN ERROR] clearRevenueStats failed:', error);
         res.status(500).json({ message: 'Server error', error });
+    }
+};
+// Reset All User Balances to Zero
+export const resetAllBalances = async (req: AuthRequest, res: Response) => {
+    try {
+        console.log('[ADMIN] Resetting all user balances to 0...');
+
+        // Reset everyone to 0
+        const result = await User.updateMany({}, { $set: { balance: 0 } });
+
+        // Also clear any pending withdrawal/deposit? 
+        // For safety, let's just reset the balance as requested first.
+
+        console.log(`[ADMIN] All balances reset. Updated ${result.modifiedCount} users.`);
+        res.json({
+            message: 'All balances reset to 0 successfully',
+            count: result.modifiedCount
+        });
+    } catch (error) {
+        console.error('[ADMIN ERROR] resetAllBalances failed:', error);
+        res.status(500).json({ message: 'Server error during reset', error });
     }
 };

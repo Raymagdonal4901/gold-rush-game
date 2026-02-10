@@ -98,6 +98,25 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
     // Size based on tier level for premium feel
     const sizeClass = id <= 2 ? "w-10 h-10" : id <= 5 ? "w-12 h-12" : "w-14 h-14";
 
+    // Tier 9: Rotten Glove (Custom Icon)
+    if (id === 9) {
+      return (
+        <div className={`${baseClass} ${sizeClass} ${colorClass} rounded-lg overflow-hidden flex items-center justify-center bg-stone-900`}>
+          <div className="relative">
+            <div className="absolute inset-0 bg-green-500 blur-md opacity-20 animate-pulse"></div>
+            <div className="relative z-10 text-green-600">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
+                <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
+                <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
+                <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className={`${baseClass} ${sizeClass} ${colorClass} rounded-lg overflow-hidden`}>
         <img
@@ -182,8 +201,10 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
               }
 
               const canBuy = isAffordable && !isSlotLimitReached && !isMaxReached;
+              // Calculate total duration in days
+              const durationDays = preset.durationDays || (preset.durationMonths || 1) * 30;
               // Use bonusProfit for Tier 1-2, calculate for others
-              const netProfit = preset.bonusProfit !== undefined ? preset.bonusProfit : (preset.dailyProfit * 30 * (preset.durationMonths || 1)) - preset.price;
+              const netProfit = preset.bonusProfit !== undefined ? preset.bonusProfit : (preset.dailyProfit * durationDays) - preset.price;
               const styles = getTierStyles(preset.id);
               const isCrafting = !!preset.craftingRecipe;
 
@@ -264,6 +285,7 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
                     <button
                       onClick={() => handleBuy(preset)}
                       disabled={!canBuy}
+                      data-tutorial={preset.id === 9 ? "tier-9-buy" : undefined}
                       className={`w-full py-2 rounded font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all text-xs
                                             ${!isSlotLimitReached && !isMaxReached
                           ? isAffordable

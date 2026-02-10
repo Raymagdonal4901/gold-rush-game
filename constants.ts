@@ -249,7 +249,13 @@ export interface RigPreset {
     repairCost: number;
     energyCostPerDay: number;
     craftingRecipe?: { materials?: Record<number, number>; items?: Record<string, number> };
-    specialProperties?: { infiniteDurability?: boolean; zeroEnergy?: boolean; maxAllowed?: number; noGift?: boolean };
+    specialProperties?: {
+        infiniteDurability?: boolean;
+        zeroEnergy?: boolean;
+        maxAllowed?: number;
+        noGift?: boolean;
+        cannotRenew?: boolean;
+    };
     image?: string;
     description?: { th: string; en: string };
     type?: string;
@@ -278,6 +284,19 @@ export const RIG_PRESETS: RigPreset[] = [
         },
         specialProperties: { infiniteDurability: false, zeroEnergy: false, maxAllowed: 1 },
         type: 'ULTRA_LEGENDARY'
+    },
+    {
+        id: 9,
+        name: { th: 'ถุงมือเน่า', en: 'Rotten Glove' },
+        price: 0,
+        dailyProfit: 0.57142857, // 20 THB / 35
+        bonusProfit: 0,
+        durationDays: 3,
+        repairCost: 0, // Free repair
+        energyCostPerDay: 0.02857143, // 1 THB / 35
+        specialProperties: { infiniteDurability: false, noGift: true, maxAllowed: 1, cannotRenew: true },
+        description: { th: 'ถุงมือเก่าๆ สำหรับผู้เริ่มต้น (จำกัด 1 ชิ้น/ไอดี)', en: 'Old glove for beginners (Limit 1/ID)' },
+        type: 'COMMON'
     }
 ];
 
@@ -293,9 +312,14 @@ export const TRANSACTION_LIMITS = {
         MAX: 1000,
     },
     WITHDRAW: {
-        MIN: 3,
-        MAX: 100,
+        MIN: 100,
+        MAX: 1000,
     }
+};
+
+export const USDT_WITHDRAW_LIMITS = {
+    MIN: 5,
+    MAX: 50,
 };
 
 export const WITHDRAWAL_FEE_PERCENT = 0.10;
@@ -380,35 +404,35 @@ export const SHOP_ITEMS: ShopItemConfig[] = [
     { id: 'repair_kit', name: { th: 'ชุดบำรุงรักษาพิเศษ', en: 'Repair Kit' }, price: 1.4, icon: 'Tool', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ซ่อมแซมเครื่องจักรจนเต็ม 100%', en: 'Fully repairs a rig to 100%' }, buyable: false },
 
     {
-        id: 'hat', name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Helmet' }, price: 1.4, icon: 'HardHat', minBonus: 0.1, maxBonus: 0.5, durationBonus: 1, lifespanDays: 30, tier: 1,
+        id: 'hat', name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Helmet' }, price: 1.4, icon: 'HardHat', minBonus: 0.01428571, maxBonus: 0.02857143, durationBonus: 1, lifespanDays: 30, tier: 1, // 0.5 - 1.0 THB
         craftingRecipe: { 1: 3 }, craftingFee: 0.3, craftDurationMinutes: 30, buyable: false, specialEffect: { th: 'ลดค่าดูแล -5%', en: 'Maintenance cost -5%' }
     },
     {
-        id: 'uniform', name: { th: 'ชุดป้องกัน', en: 'Safety Uniform' }, price: 3.4, icon: 'Shirt', minBonus: 0.5, maxBonus: 1.5, durationBonus: 3, lifespanDays: 30, tier: 1,
+        id: 'uniform', name: { th: 'ชุดป้องกัน', en: 'Safety Uniform' }, price: 3.4, icon: 'Shirt', minBonus: 0.02857143, maxBonus: 0.05714286, durationBonus: 3, lifespanDays: 30, tier: 1, // 1.0 - 2.0 THB
         craftingRecipe: { 1: 4, 2: 3 }, craftingFee: 0.3, craftDurationMinutes: 60, buyable: false, specialEffect: { th: 'ลดค่าชาร์จแบต 5%', en: 'Reduce charging cost 5%' }
     },
     {
-        id: 'bag', name: { th: 'เป้สนามอเนกประสงค์', en: 'Utility Backpack' }, price: 5.7, icon: 'Backpack', minBonus: 1.0, maxBonus: 2.0, durationBonus: 5, lifespanDays: 45, tier: 2,
+        id: 'bag', name: { th: 'เป้สนามอเนกประสงค์', en: 'Utility Backpack' }, price: 5.7, icon: 'Backpack', minBonus: 0.04285714, maxBonus: 0.08571429, durationBonus: 5, lifespanDays: 45, tier: 2, // 1.5 - 3.0 THB
         craftingRecipe: { 2: 4, 3: 2 }, craftingFee: 0.6, craftDurationMinutes: 180, buyable: false, specialEffect: { th: 'ราคาขาย +1%', en: 'Sell price +1%' }
     },
     {
-        id: 'boots', name: { th: 'รองเท้าเซฟตี้', en: 'Safety Boots' }, price: 10.0, icon: 'Footprints', minBonus: 2.0, maxBonus: 3.0, durationBonus: 5, lifespanDays: 45, tier: 2,
+        id: 'boots', name: { th: 'รองเท้าเซฟตี้', en: 'Safety Boots' }, price: 10.0, icon: 'Footprints', minBonus: 0.05714286, maxBonus: 0.11428571, durationBonus: 5, lifespanDays: 45, tier: 2, // 2.0 - 4.0 THB
         craftingRecipe: { 3: 5, 4: 2 }, craftingFee: 0.7, craftDurationMinutes: 300, buyable: false, specialEffect: { th: 'ประหยัดพลังงาน 5%', en: 'Energy saving 5%' }
     },
     {
-        id: 'glasses', name: { th: 'แว่นตากันฝุ่น', en: 'Safety Glasses' }, price: 11.4, icon: 'Glasses', minBonus: 2.5, maxBonus: 3.5, durationBonus: 7, lifespanDays: 60, tier: 2,
+        id: 'glasses', name: { th: 'แว่นตากันฝุ่น', en: 'Safety Glasses' }, price: 11.4, icon: 'Glasses', minBonus: 0.07142857, maxBonus: 0.14285714, durationBonus: 7, lifespanDays: 60, tier: 2, // 2.5 - 5.0 THB
         craftingRecipe: { 4: 3, 3: 4 }, craftingFee: 2.2, craftDurationMinutes: 420, buyable: false, specialEffect: { th: 'โบนัส +2%', en: 'Bonus +2%' }
     },
     {
-        id: 'mobile', name: { th: 'สมาทโฟน', en: 'Smartphone' }, price: 12.8, icon: 'Smartphone', minBonus: 3.0, maxBonus: 4.0, durationBonus: 7, lifespanDays: 90, tier: 2,
+        id: 'mobile', name: { th: 'สมาทโฟน', en: 'Smartphone' }, price: 12.8, icon: 'Smartphone', minBonus: 0.08571429, maxBonus: 0.17142857, durationBonus: 7, lifespanDays: 90, tier: 2, // 3.0 - 6.0 THB
         craftingRecipe: { 5: 1, 4: 4 }, craftingFee: 3.4, craftDurationMinutes: 540, buyable: false, specialEffect: { th: 'ลดค่าใช้จ่าย 2%', en: 'Reduce expenses 2%' }
     },
     {
-        id: 'pc', name: { th: 'โน๊ตบุ๊ค', en: 'Notebook' }, price: 14.2, icon: 'Monitor', minBonus: 4.0, maxBonus: 5.0, durationBonus: 7, lifespanDays: 90, tier: 3,
+        id: 'pc', name: { th: 'โน๊ตบุ๊ค', en: 'Notebook' }, price: 14.2, icon: 'Monitor', minBonus: 0.11428571, maxBonus: 0.22857143, durationBonus: 7, lifespanDays: 90, tier: 3, // 4.0 - 8.0 THB
         craftingRecipe: { 5: 2, 4: 3 }, craftingFee: 5.1, craftDurationMinutes: 720, buyable: false, specialEffect: { th: 'โอกาสโบนัส 1%', en: 'Bonus chance 1%' }
     },
     {
-        id: 'auto_excavator', name: { th: 'รถไฟฟ้า', en: 'Electric Vehicle' }, price: 18.5, icon: 'TrainFront', minBonus: 10.0, maxBonus: 12.0, durationBonus: 0, lifespanDays: 120, tier: 3,
+        id: 'auto_excavator', name: { th: 'รถไฟฟ้า', en: 'Electric Vehicle' }, price: 18.5, icon: 'TrainFront', minBonus: 0.28571429, maxBonus: 0.42857143, durationBonus: 0, lifespanDays: 120, tier: 3, // 10.0 - 15.0 THB
         craftingRecipe: { 6: 1, 5: 2 }, craftingFee: 14.2, craftDurationMinutes: 1440, buyable: false, specialEffect: { th: 'Jackpot 2%', en: 'Jackpot 2%' }
     }
 ];

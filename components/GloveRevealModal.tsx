@@ -7,7 +7,7 @@ import { CURRENCY } from '../constants';
 interface GloveRevealModalProps {
     isOpen: boolean;
     onClose: () => void;
-    gloveName: string;
+    gloveName: string | { th: string; en: string };
     gloveRarity: string;
     gloveBonus: number;
 }
@@ -19,7 +19,7 @@ export const GloveRevealModal: React.FC<GloveRevealModalProps> = ({
     gloveRarity,
     gloveBonus
 }) => {
-    const { t } = useTranslation();
+    const { t, getLocalized } = useTranslation();
     const [stage, setStage] = useState<'opening' | 'reveal' | 'done'>('opening');
 
     useEffect(() => {
@@ -108,7 +108,7 @@ export const GloveRevealModal: React.FC<GloveRevealModalProps> = ({
                         <div className="text-center">
                             <div className="text-sm text-stone-500 mb-1">{t('glove_reveal.received')}</div>
                             <div className={`text-2xl font-bold ${getRarityColor(gloveRarity)}`}>
-                                {gloveName}
+                                {getLocalized(gloveName)}
                             </div>
                             <div className={`text-xl font-mono mt-2 ${getRarityColor(gloveRarity)}`}>
                                 +{gloveBonus.toFixed(2)} {CURRENCY}{t('common.per_day')}

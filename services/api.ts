@@ -119,8 +119,8 @@ export const api = {
     },
 
     // System
-    getSystemConfig: async (): Promise<{ receivingQrCode: string; isMaintenanceMode: boolean }> => {
-        const res = await client.get('/admin/config');
+    getSystemConfig: async (): Promise<{ isMaintenanceMode: boolean, receivingQrCode: string | null }> => {
+        const res = await client.get('/auth/config');
         return res.data;
     },
 
@@ -344,7 +344,12 @@ export const api = {
             const res = await client.post('/admin/users/items', { userId, itemId, amount });
             return res.data;
         },
+        resetAllBalances: async (): Promise<any> => {
+            const res = await client.post('/admin/users/reset-balances');
+            return res.data;
+        },
         deleteUser: async (userId: string): Promise<any> => {
+
             const res = await client.delete(`/admin/users/${userId}`);
             return res.data;
         },

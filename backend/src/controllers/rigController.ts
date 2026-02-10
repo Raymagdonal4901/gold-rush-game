@@ -170,12 +170,12 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
         // --- GLOVE GENERATION (Free Starter Glove) ---
         const rand = Math.random() * 100;
         let rarity = 'COMMON';
-        let bonus = 0.5;
-        if (rand < 80) { rarity = 'COMMON'; bonus = 0.5; }
-        else if (rand < 91) { rarity = 'RARE'; bonus = 1.0; }
-        else if (rand < 96) { rarity = 'SUPER_RARE'; bonus = 1.5; }
-        else if (rand < 99) { rarity = 'EPIC'; bonus = 2.0; }
-        else { rarity = 'LEGENDARY'; bonus = 3.0; }
+        let bonus = 0.01428571; // 0.5 THB / 35
+        if (rand < 80) { rarity = 'COMMON'; bonus = 0.01428571; }
+        else if (rand < 91) { rarity = 'RARE'; bonus = 0.02857143; } // 1.0 THB
+        else if (rand < 96) { rarity = 'SUPER_RARE'; bonus = 0.04285714; } // 1.5 THB
+        else if (rand < 99) { rarity = 'EPIC'; bonus = 0.05714286; } // 2.0 THB
+        else { rarity = 'LEGENDARY'; bonus = 0.08571429; } // 3.0 THB
 
         const gloveId = Math.random().toString(36).substr(2, 9);
         // Updated names based on user requirement

@@ -23,7 +23,7 @@ import { VIPModal } from './VIPModal';
 import { AccessoryManagementModal } from './AccessoryManagementModal';
 import { SlotUnlockModal } from './SlotUnlockModal';
 import { DungeonModal } from './DungeonModal';
-import { GameGuideModal } from './GameGuideModal';
+import { AIHelpBot } from './AIHelpBot';
 import { GloveRevealModal } from './GloveRevealModal';
 import { GoldRain } from './GoldRain';
 import { ChatSystem } from './ChatSystem';
@@ -120,7 +120,6 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     const [isMissionOpen, setIsMissionOpen] = useState(false);
     const [isVIPOpen, setIsVIPOpen] = useState(false);
     const [isDungeonOpen, setIsDungeonOpen] = useState(false);
-    const [isGameGuideOpen, setIsGameGuideOpen] = useState(false);
 
     // SLOT UNLOCK
     const [unlockTargetSlot, setUnlockTargetSlot] = useState<number | null>(null);
@@ -137,6 +136,39 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     const [lootResult, setLootResult] = useState<{ rarity: Rarity, bonus: number, itemTypeId?: string, itemName?: string, materialId?: number } | null>(null);
     const [marketState, setMarketState] = useState<MarketState | null>(null);
     const [gloveReveal, setGloveReveal] = useState<{ name: string, rarity: string, bonus: number } | null>(null);
+
+    // TUTORIAL STATE
+    const [tutorialStep, setTutorialStep] = useState<number>(0);
+
+    // --- TUTORIAL LOGIC ---
+    useEffect(() => {
+        // Only start tutorial if user has no rigs and haven't finished it
+        const finished = localStorage.getItem(`tutorial_finished_${user.id}`);
+        if (!finished && rigs.length === 0 && tutorialStep === 0) {
+            setTutorialStep(1);
+        }
+
+        // Auto-advance to step 2 if shop is opened during step 1
+        if (tutorialStep === 1 && isBuyModalOpen) {
+            setTutorialStep(2);
+        }
+
+        // Auto-advance to step 3 if a rig (Rotten Glove) is purchased
+        if (tutorialStep === 2 && rigs.length > 0) {
+            setTutorialStep(3);
+        }
+    }, [rigs.length, isBuyModalOpen, user.id]);
+
+    const handleTutorialNext = () => {
+        if (tutorialStep === 1) {
+            setIsBuyModalOpen(true);
+        } else if (tutorialStep === 2) {
+            // Just stay in modal, user needs to find the card
+        } else if (tutorialStep === 3) {
+            setTutorialStep(0);
+            localStorage.setItem(`tutorial_finished_${user.id}`, 'true');
+        }
+    };
 
     // ... useEffects and helper functions ...
     // Ref to block refresh during sensitive operations
@@ -935,13 +967,6 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-4">
-                        <button
-                            onClick={() => setIsGameGuideOpen(true)}
-                            className="bg-stone-800 p-2 sm:p-3 rounded-full border border-stone-700 hover:border-yellow-500 hover:text-yellow-500 transition-all text-stone-400 shadow-lg relative group"
-                        >
-                            <BookOpen size={20} className="sm:w-6 sm:h-6" />
-                            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">{t('dashboard.game_guide')}</span>
-                        </button>
                         <div className="hidden lg:flex items-center gap-2">
                             <button onClick={() => setIsWarehouseOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-800/50 bg-blue-900/20 text-blue-500 hover:bg-blue-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
                                 <Package size={14} /> {t('dashboard.warehouse')}
@@ -1553,6 +1578,18 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 }}
                 addNotification={addNotification}
             />
+
+            <AIHelpBot
+                tutorialStep={tutorialStep}
+                onTutorialNext={handleTutorialNext}
+                onTutorialClose={() => {
+                    setTutorialStep(0);
+                    localStorage.setItem(`tutorial_finished_${user.id}`, 'true');
+                }}
+                language={language as any}
+                user={user}
+            />
+
             <WithdrawModal
                 isOpen={isWithdrawModalOpen}
                 onClose={() => setIsWithdrawModalOpen(false)}
@@ -1577,8 +1614,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             <DailyBonusModal isOpen={isDailyBonusOpen} onClose={() => setIsDailyBonusOpen(false)} user={user} onRefresh={refreshData} addNotification={addNotification} />
             <MissionModal isOpen={isMissionOpen} onClose={() => setIsMissionOpen(false)} user={user} onRefresh={refreshData} addNotification={addNotification} />
             <VIPModal isOpen={isVIPOpen} onClose={() => setIsVIPOpen(false)} user={user} addNotification={addNotification} />
-            <DungeonModal isOpen={isDungeonOpen} onClose={() => setIsDungeonOpen(false)} user={user} onRefresh={refreshData} addNotification={addNotification} />
-            <GameGuideModal isOpen={isGameGuideOpen} onClose={() => setIsGameGuideOpen(false)} addNotification={addNotification} />
+            <DungeonModal isOpen={isDungeonOpen} onClose={() => setIsDungeonOpen(false)} user={user} rigs={rigs} onRefresh={refreshData} addNotification={addNotification} />
 
             {/* Equip Selection */}
 
@@ -1641,7 +1677,6 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             <button onClick={() => { setIsMarketOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><BarChart2 className="text-emerald-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.market')}</span></button>
                             <button onClick={() => { setIsHistoryOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><History className="text-stone-400" size={32} /><span className="text-sm font-bold text-stone-300">{t('common.history')}</span></button>
                             <button onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Settings className="text-stone-400" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.settings')}</span></button>
-                            <button onClick={() => { setIsGameGuideOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><BookOpen className="text-blue-400" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.game_guide')}</span></button>
                         </div>
                         <div className="mt-auto">
                             <button onClick={onLogout} className="w-full py-4 bg-red-900/20 text-red-400 border border-red-900/50 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-900/30 transition-colors"><LogOut size={20} /> {t('common.logout')}</button>
@@ -1717,7 +1752,6 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             <ChatSystem currentUser={user} />
 
             {/* Global Modals */}
-            <GameGuideModal isOpen={isGameGuideOpen} onClose={() => setIsGameGuideOpen(false)} />
 
             {/* Glove Reveal Modal */}
             <GloveRevealModal

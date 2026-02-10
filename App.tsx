@@ -4,39 +4,38 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { PlayerDashboard } from './components/PlayerDashboard';
 import { User } from './services/types';
 import { api } from './services/api';
-import { AlertTriangle } from 'lucide-react'; // Added import for AlertTriangle
+import { AlertTriangle } from 'lucide-react';
 
 const App: React.FC = () => {
-  // --- Auth State ---
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // Force Maintenance Mode for emergency check on start
-  const [isSystemMaintenance, setIsSystemMaintenance] = useState(true);
+  const [isSystemMaintenance, setIsSystemMaintenance] = useState(false);
 
-  // Initialize: Check for session
   useEffect(() => {
     const checkSession = async () => {
       try {
-        // Try to fetch config, if it fails, we stay in maintenance (default true)
-        // If it succeeds, we respect the server's setting (or keep it true if backend says true)
-        // For this critical update, let's trust the server config BUT default to true on error.
-
+        // 1. Fetch system config first (can fail if server is down, handle catch)
         try {
           const config = await api.getSystemConfig();
           setIsSystemMaintenance(config.isMaintenanceMode);
-        } catch (confError) {
-          console.warn('Could not fetch system config, defaulting to Maintenance Mode', confError);
-          setIsSystemMaintenance(true); // Fail safe to maintenance
+          console.log('[SYSTEM] Maintenance status:', config.isMaintenanceMode);
+        } catch (e) {
+          console.error('[SYSTEM] Failed to fetch system config', e);
         }
 
+        // 2. Check for token
         const token = localStorage.getItem('token');
         if (token) {
-          const userData = await api.getMe();
-          setUser(userData);
+          try {
+            const userData = await api.getMe();
+            setUser(userData);
+          } catch (authError) {
+            console.error('[SYSTEM] Token invalid', authError);
+            localStorage.removeItem('token');
+          }
         }
-      } catch (error) {
-        console.error('Session check failed', error);
-        localStorage.removeItem('token');
+      } catch (err) {
+        console.error('[SYSTEM] Critical init error', err);
       } finally {
         setIsLoading(false);
       }
@@ -53,73 +52,35 @@ const App: React.FC = () => {
     setUser(null);
   };
 
-  // --- Render ---
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-stone-950 flex items-center justify-center">
-        <div className="text-yellow-500 font-display animate-pulse text-xl">Initializing System...</div>
+      <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center p-4">
+        <div className="w-16 h-16 border-4 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin mb-4"></div>
+        <div className="text-yellow-500 font-display animate-pulse text-xl tracking-widest uppercase">
+          Initializing System...
+        </div>
       </div>
     );
   }
 
-  // 1. Not Logged In -> Auth Page
-  if (!user) {
-    return <AuthPage onLogin={handleLogin} />;
-  }
+  const isAdmin = user && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN');
 
-  // 2. Logged In as Admin -> Back End
-  if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
-    return <AdminDashboard currentUser={user} onLogout={handleLogout} />;
-  }
+  // --- Routing Logic ---
 
-  // 3. Maintenance Check (For Regular Users)
-  // const sysConfig = MockDB.getSystemConfig(); // Old mock
-  // In real app, we might check a global state or API error 503
-  // For now, let's assume we use the isSystemMaintenance state we added (or will add)
-  // But wait, the previous `replace_file_content` to App.tsx FAILED or was partial?
-  // I need to be careful. The previous view showed lines 1-86.
-  // The maintenance block is lines 61-80.
+  // 1. If Maintenance is ON and user is NOT Admin -> show Maintenance
+  if (isSystemMaintenance && !isAdmin) {
+    // If not logged in, we must show AuthPage so they can attempt Admin login
+    if (!user) {
+      return <AuthPage onLogin={handleLogin} />;
+    }
 
-  // I will assume `isSystemMaintenance` state was added in previous step (even if it said "failed with 1 error", often it applies partially or I can retry).
-  // Actually, I should check if `isSystemMaintenance` exists. 
-  // Getting `api.getSystemConfig()` might fail if server is down (503).
-  // If server returns 503, `api` interceptor should probably handle it or throw.
-  // If `checkSession` fails, `user` is null, so it goes to `AuthPage`.
-  // `AuthPage` might need to show maintenance too?
-  // Or `App` handles it before `AuthPage`?
-
-  // If maintenance is ON, the backend blocks `/api/rigs` etc. with 503.
-  // The `api.getMe()` call in `useEffect` will fail with 503.
-  // `checkSession` catches error -> `localStorage.removeItem`.
-  // User becomes `null`.
-  // Renders `AuthPage`.
-
-  // So the Maintenance Screen in `App.tsx` (lines 61+) is only reachable if `user` is LOGGED IN.
-  // But if `getMe` fails, they are logged out.
-  // So users will see `AuthPage`.
-
-  // We need `AuthPage` to ALSO check maintenance or `App` to check maintenance BEFORE `user` check?
-  // Or `api.getSystemConfig()` should be called regardless of user state.
-
-  // Let's move Maintenance Check to be the FIRST render guard, or inside `useEffect`.
-  // I will add `isMaintenance` state to App, check it on mount.
-
-  // RE-READING App.tsx from previous step:
-  // It has `const [isSystemMaintenance, setIsSystemMaintenance] = useState(false);` added?
-  // The tool output said "We did our best to apply changes...".
-  // Let's verify `App.tsx` content again to be safe? 
-  // No, I will just overwrite the `useEffect` and the render logic to be robust.
-
-  if (isSystemMaintenance && user?.role !== 'ADMIN' && user?.role !== 'SUPER_ADMIN') {
+    // Is logged in as regular user -> Maintenance screen
     return (
       <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center p-4 text-center z-50 relative overflow-hidden">
-        {/* Background Effect */}
-        <div className="absolute inset-0 bg-[url('/images/bg-pattern.png')] opacity-10"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-red-900/10 to-stone-950"></div>
 
         <div className="w-24 h-24 mb-6 rounded-full bg-red-900/20 flex items-center justify-center border-4 border-red-500/30 animate-pulse relative z-10">
-          <AlertTriangle size={48} className="text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
+          <AlertTriangle size={48} className="text-red-500" />
         </div>
 
         <h1 className="text-4xl font-black text-red-500 mb-6 tracking-wider uppercase drop-shadow-md relative z-10 font-display">
@@ -135,8 +96,7 @@ const App: React.FC = () => {
           </p>
 
           <div className="bg-red-950/40 p-4 rounded-xl border border-red-500/30 text-left space-y-2">
-            <p className="text-red-400 font-bold text-sm uppercase flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            <p className="text-red-400 font-bold text-sm uppercase">
               หมายเหตุ (Important Note)
             </p>
             <p className="text-stone-300 text-sm">
@@ -148,14 +108,27 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-8 text-xs text-stone-600 font-mono relative z-10">
-          SECURITY PROTOCOL: ACTIVE • STATUS: LOCKED
-        </div>
+        <button
+          onClick={handleLogout}
+          className="mt-6 text-stone-500 hover:text-white transition-colors text-sm underline z-10"
+        >
+          Logout / Switch Account
+        </button>
       </div>
     );
   }
 
-  // 3. Logged In as User -> Front End
+  // 2. Not logged in -> Auth Page
+  if (!user) {
+    return <AuthPage onLogin={handleLogin} />;
+  }
+
+  // 3. Logged in as Admin -> Dashboard
+  if (isAdmin) {
+    return <AdminDashboard currentUser={user} onLogout={handleLogout} />;
+  }
+
+  // 4. Regular user (No maintenance) -> Player Dashboard
   return <PlayerDashboard initialUser={user} onLogout={handleLogout} />;
 };
 

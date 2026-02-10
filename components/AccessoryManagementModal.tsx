@@ -179,14 +179,19 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
 
     const getItemDisplayName = (item: any) => {
+        if (!item) return '';
         const typeId = item.typeId || '';
-        const name = item.name || '';
-        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return t('items.mining_key');
-        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return t('items.upgrade_chip');
-        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return t('items.material_mixer');
-        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return t('items.magnifying_glass');
-        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return t('items.ai_robot');
-        return name;
+        const nameRaw = item.name;
+
+        // 1. Try Config-based name first (Bilingual)
+        if (typeId === 'chest_key' || (typeof nameRaw === 'string' && (nameRaw.includes('กุญแจ') || nameRaw.includes('Key')))) return t('items.mining_key');
+        if (typeId === 'upgrade_chip' || (typeof nameRaw === 'string' && (nameRaw.includes('ชิป') || nameRaw.includes('Chip')))) return t('items.upgrade_chip');
+        if (typeId === 'mixer' || (typeof nameRaw === 'string' && (nameRaw.includes('โต๊ะช่าง') || nameRaw.includes('Mixer')))) return t('items.material_mixer');
+        if (typeId === 'magnifying_glass' || (typeof nameRaw === 'string' && (nameRaw.includes('แว่นขยาย') || nameRaw.includes('Search')))) return t('items.magnifying_glass');
+        if (typeId === 'robot' || (typeof nameRaw === 'string' && (nameRaw.includes('หุ่นยนต์') || nameRaw.includes('Robot')))) return t('items.ai_robot');
+
+        // 2. Use localization helper
+        return getLocalized(nameRaw);
     };
 
     const getAccessoryIcon = (item: AccessoryItem, size: number = 64) => {
@@ -194,27 +199,30 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
         // Fix: Force detecting type by name if typeId is generic or missing specific handling
         let typeId = item.typeId || '';
-        const name = item.name || '';
+        const nameRaw = item.name;
+        // Safely extract string for .includes() check
+        const enName = typeof nameRaw === 'object' ? (nameRaw as any).en || '' : String(nameRaw || '');
+        const thName = typeof nameRaw === 'object' ? (nameRaw as any).th || '' : String(nameRaw || '');
 
         // Name-based overrides to fix "Glove" icon issue
-        if (name.includes('ชิป') || name.includes('Chip')) typeId = 'upgrade_chip';
-        else if (name.includes('กุญแจ') || name.includes('Key')) typeId = 'chest_key';
-        else if (name.includes('เครื่องผสม') || name.includes('Mixer')) typeId = 'mixer';
-        else if (name.includes('แว่นขยาย') || name.includes('Magnifying')) typeId = 'magnifying_glass';
-        else if (name.includes('ใบประกัน') || name.includes('Insurance')) typeId = 'insurance_card';
-        else if (name.includes('นาฬิกาทราย') || name.includes('Hourglass')) typeId = 'hourglass_small';
-        else if (name.includes('แร่ปริศนา') || name.includes('Mystery Ore')) typeId = 'mystery_ore';
-        else if (name.includes('แร่ในตำนาน') || name.includes('Legendary Ore')) typeId = 'legendary_ore';
-        else if (name.includes('รถขุด') || name.includes('Excavator')) typeId = 'auto_excavator';
-        else if (name.includes('หุ่นยนต์') || name.includes('Robot')) typeId = 'robot';
+        if (enName.includes('Chip') || thName.includes('ชิป')) typeId = 'upgrade_chip';
+        else if (enName.includes('Key') || thName.includes('กุญแจ')) typeId = 'chest_key';
+        else if (enName.includes('Mixer') || thName.includes('เครื่องผสม')) typeId = 'mixer';
+        else if (enName.includes('Magnifying') || thName.includes('แว่นขยาย')) typeId = 'magnifying_glass';
+        else if (enName.includes('Insurance') || thName.includes('ใบประกัน')) typeId = 'insurance_card';
+        else if (enName.includes('Hourglass') || thName.includes('นาฬิกาทราย')) typeId = 'hourglass_small';
+        else if (enName.includes('Mystery Ore') || thName.includes('แร่ปริศนา')) typeId = 'mystery_ore';
+        else if (enName.includes('Legendary Ore') || thName.includes('แร่ในตำนาน')) typeId = 'legendary_ore';
+        else if (enName.includes('Excavator') || thName.includes('รถขุด')) typeId = 'auto_excavator';
+        else if (enName.includes('Robot') || thName.includes('หุ่นยนต์')) typeId = 'robot';
         // Classic Equipment Fallbacks
-        else if (name.includes('หมวก') || name.includes('Helmet')) typeId = 'hat';
-        else if (name.includes('แว่น') || name.includes('Glasses')) typeId = 'glasses'; // Note: Magnifying Glass handled above
-        else if (name.includes('ชุด') || name.includes('Uniform') || name.includes('Suit')) typeId = 'uniform';
-        else if (name.includes('กระเป๋า') || name.includes('Bag') || name.includes('Backpack')) typeId = 'bag';
-        else if (name.includes('รองเท้า') || name.includes('Boots')) typeId = 'boots';
-        else if (name.includes('มือถือ') || name.includes('Mobile') || name.includes('Phone')) typeId = 'mobile';
-        else if (name.includes('คอม') || name.includes('PC') || name.includes('Computer')) typeId = 'pc';
+        else if (enName.includes('Helmet') || thName.includes('หมวก')) typeId = 'hat';
+        else if (enName.includes('Glasses') || thName.includes('แว่น')) typeId = 'glasses'; // Note: Magnifying Glass handled above
+        else if (enName.includes('Uniform') || enName.includes('Suit') || thName.includes('ชุด')) typeId = 'uniform';
+        else if (enName.includes('Bag') || enName.includes('Backpack') || thName.includes('กระเป๋า')) typeId = 'bag';
+        else if (enName.includes('Boots') || thName.includes('รองเท้า')) typeId = 'boots';
+        else if (enName.includes('Mobile') || enName.includes('Phone') || thName.includes('มือถือ')) typeId = 'mobile';
+        else if (enName.includes('PC') || enName.includes('Computer') || thName.includes('คอม')) typeId = 'pc';
 
         if (typeId.includes('glove')) return <InfinityGlove rarity={item.rarity} size={size} />;
 
@@ -418,7 +426,8 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
     };
 
     const renderManageView = () => {
-        const rarityConfig = equippedItem ? RARITY_SETTINGS[equippedItem.rarity] : RARITY_SETTINGS['COMMON'];
+        const itemRarity = equippedItem?.rarity || 'COMMON';
+        const rarityConfig = RARITY_SETTINGS[itemRarity] || RARITY_SETTINGS['COMMON'];
         const currentLevel = equippedItem?.level || 1;
         const nextLevel = currentLevel + 1;
 
@@ -480,7 +489,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                             {/* Tech overlay on card */}
                             <div className="absolute inset-0 bg-[linear-gradient(0deg,transparent_45%,rgba(255,255,255,0.05)_50%,transparent_55%)] bg-[length:100%_4px] opacity-20 pointer-events-none"></div>
 
-                            <div className="absolute inset-0 bg-gradient-to-br ${rarityConfig.bgGradient} opacity-20"></div>
+                            <div className={`absolute inset-0 bg-gradient-to-br ${rarityConfig.bgGradient} opacity-20`}></div>
                             <div className="relative z-10 mb-2 scale-100 drop-shadow-lg">
                                 {getAccessoryIcon(equippedItem, 48)}
                             </div>

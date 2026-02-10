@@ -12,11 +12,12 @@ interface DungeonModalProps {
     isOpen: boolean;
     onClose: () => void;
     user: User;
+    rigs: OilRig[];
     onRefresh: () => void;
     addNotification?: (n: any) => void;
 }
 
-export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, user, onRefresh, addNotification }) => {
+export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, user, rigs, onRefresh, addNotification }) => {
     const { t, language, getLocalized, formatCurrency } = useTranslation();
     const [activeExpedition, setActiveExpedition] = useState<Expedition | null>(null);
     const [selectedDungeonId, setSelectedDungeonId] = useState<number | null>(null);
@@ -39,12 +40,17 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                 setActiveExpedition(user.activeExpedition || null);
             }
 
-            const rigs = MockDB.getMyRigs(user.id).filter(r => {
+            const availableRigs = (rigs.length > 0 ? rigs : MockDB.getMyRigs(user.id)).filter(r => {
                 const baseDurationMs = r.durationMonths * 30 * 24 * 60 * 60 * 1000;
                 const expiryTime = r.purchasedAt + baseDurationMs;
-                return Date.now() < expiryTime;
+                const isExpired = Date.now() >= expiryTime;
+
+                // Exclude rigs that are already on an expedition
+                const isExploring = user.activeExpedition && user.activeExpedition.rigId === r.id && !user.activeExpedition.isCompleted;
+
+                return !isExpired && !isExploring;
             });
-            setUserRigs(rigs);
+            setUserRigs(availableRigs);
 
             const inv = user.inventory || [];
             setHourglasses({

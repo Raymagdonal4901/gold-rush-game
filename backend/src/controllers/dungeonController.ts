@@ -3,6 +3,7 @@ import User from '../models/User';
 import Rig from '../models/Rig';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
+import SystemConfig from '../models/SystemConfig';
 
 const SHOP_ITEMS = [
     { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 5, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
@@ -173,6 +174,18 @@ export const claimExpedition = async (req: AuthRequest, res: Response) => {
             const idx = Math.floor(Math.random() * dungeon.rewards.rare.length);
             rewards.push({ ...dungeon.rewards.rare[idx], type: 'rare' });
             rewardType = 'rare'; // Set type to rare for jackpot styling
+        }
+
+        // 3. Global Key Drop Chance (Configurable via Admin)
+        const config = await SystemConfig.findOne();
+        const dropRate = config?.dropRate || 0; // percentage (0-100)
+
+        if (dropRate > 0) {
+            const rollKey = Math.random() * 100;
+            if (rollKey <= dropRate) {
+                rewards.push({ itemId: 'chest_key', amount: 1, chance: dropRate, type: 'rare' });
+                rewardType = 'rare'; // Upgrade visual to rare if key drops
+            }
         }
 
         const materialNames: any = {

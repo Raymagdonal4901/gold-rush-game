@@ -3,12 +3,13 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ISystemConfig extends Document {
     receivingQrCode: string | null;
     isMaintenanceMode: boolean;
-    // Add other global configs here later (tax, dropRate, etc.)
+    dropRate: number;
 }
 
 const SystemConfigSchema: Schema = new Schema({
     receivingQrCode: { type: String, default: null },
-    isMaintenanceMode: { type: Boolean, default: false }
+    isMaintenanceMode: { type: Boolean, default: false },
+    dropRate: { type: Number, default: 0 }
 }, {
     timestamps: true
 });

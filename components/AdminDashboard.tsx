@@ -3,7 +3,7 @@ import { Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bel
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
 import { User, OilRig, ClaimRequest, WithdrawalRequest, DepositRequest, Notification } from '../services/types';
-import { CURRENCY, SHOP_ITEMS, MATERIAL_CONFIG } from '../constants';
+import { CURRENCY, SHOP_ITEMS, MATERIAL_CONFIG, EXCHANGE_RATE_USD_THB } from '../constants';
 import { ChatSystem } from './ChatSystem';
 import { useTranslation } from './LanguageContext';
 
@@ -82,6 +82,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         compAmount: 0,
         compReason: 'Server Maintenance'
     });
+    const [compCurrency, setCompCurrency] = useState<'THB' | 'USDT'>('THB');
 
     // Confirmation Modal State
     const [confirmAction, setConfirmAction] = useState<{
@@ -100,7 +101,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     // Polling
     useEffect(() => {
         const interval = setInterval(() => {
-            refreshData();
+            refreshData(true);
 
             /*
             // Notifications (Keep MockDB for now until Backend Notification Implemented)
@@ -120,9 +121,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         return () => clearInterval(interval);
     }, [currentUser.id]);
 
-    const refreshData = async () => {
+    const refreshData = async (silent = false) => {
         try {
-            setIsLoading(true);
+            if (!silent) setIsLoading(true);
             setFetchError(null);
 
             // Fetch data with individual error handling to prevent dashboard crash
@@ -270,7 +271,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         }
     };
 
+    const handleResetBalances = async () => {
+        if (!confirm('⚠️ คำเตือน: ยืนยันการรีเซ็ตยอดเงินของผู้เล่นทุกคนเป็น 0? \n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้!')) return;
+
+        try {
+            const res = await api.admin.resetAllBalances();
+            refreshData();
+            alert(`${t('admin.reset_balances_success')} (อัปเดต ${res.count} บัญชี)`);
+        } catch (error) {
+            console.error("Failed to reset balances", error);
+            alert('เกิดข้อผิดพลาดในการรีเซ็ตเงิน');
+        }
+    };
+
     const initiateProcessClaim = (claim: ClaimRequest, status: 'APPROVED' | 'REJECTED') => {
+
         setConfirmAction({
             type: 'CLAIM',
             id: claim.id,
@@ -296,10 +311,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
     const handleGiveCompensation = async () => {
         if (!economyForm.compUser || economyForm.compAmount <= 0) return;
-        if (!confirm(`ยืนยันการชดเชยเงิน ${economyForm.compAmount.toLocaleString()} THB ให้กับ ${economyForm.compUser}?`)) return;
+
+        let finalAmount = economyForm.compAmount;
+        let currencyLabel = 'บาท';
+
+        if (compCurrency === 'USDT') {
+            finalAmount = economyForm.compAmount * EXCHANGE_RATE_USD_THB;
+            currencyLabel = `USDT (~${finalAmount.toLocaleString()} บาท)`;
+        }
+
+        if (!confirm(`ยืนยันการชดเชยเงิน ${economyForm.compAmount.toLocaleString()} ${currencyLabel} ให้กับ ${economyForm.compUser}?`)) return;
 
         try {
-            await api.admin.giveCompensation(economyForm.compUser, economyForm.compAmount, economyForm.compReason);
+            await api.admin.giveCompensation(economyForm.compUser, finalAmount, economyForm.compReason);
             alert('ส่งเงินชดเชยเรียบร้อยแล้ว! (Compensation sent successfully)');
             setEconomyForm(prev => ({ ...prev, compUser: '', compAmount: 0 }));
             // Refresh data to show updated balance if user is in list, though this is global refresh
@@ -329,6 +353,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             details: `คำร้องฝากเงินโดย ${d.username}`,
             amount: d.amount
         });
+    };
+
+    const handleDirectProcessDeposit = async (id: string, status: 'APPROVED' | 'REJECTED') => {
+        try {
+            await api.admin.processDeposit(id, status);
+            refreshData();
+        } catch (error: any) {
+            console.error("Failed to process deposit", error);
+            const errorMsg = error.response?.data?.message || error.message || "Unknown error";
+            alert(`เกิดข้อผิดพลาดในการอนุมัติ: ${errorMsg}`);
+        }
     };
 
     const handleConfirmAction = async () => {
@@ -641,7 +676,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                             className="w-8 h-8 bg-stone-800 p-0.5 rounded cursor-zoom-in mx-auto overflow-hidden border border-stone-700"
                                                             onClick={() => setPreviewImage(d.slipImage)}
                                                         >
-                                                            <img src={d.slipImage} alt="Slip" className="w-full h-full object-cover" />
+                                                            {d.slipImage === 'USDT_DIRECT_TRANSFER' ? (
+                                                                <div className="w-full h-full flex items-center justify-center bg-blue-900/20 text-blue-400" title="USDT Direct Transfer">
+                                                                    <Wallet size={16} />
+                                                                </div>
+                                                            ) : (
+                                                                <img src={d.slipImage} alt="Slip" className="w-full h-full object-cover" />
+                                                            )}
                                                         </div>
                                                     </td>
                                                     <td className="p-3 text-center">
@@ -656,7 +697,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                         {d.status === 'PENDING' && (
                                                             <div className="flex justify-end gap-1">
                                                                 <button
-                                                                    onClick={() => initiateProcessDeposit(d, 'APPROVED')}
+                                                                    onClick={() => handleDirectProcessDeposit(d.id, 'APPROVED')}
                                                                     className="p-1.5 bg-emerald-900/30 text-emerald-500 hover:bg-emerald-900/50 rounded transition-colors"
                                                                     title="Approve"
                                                                 >
@@ -781,8 +822,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             <div className="text-xs text-stone-500 font-mono mt-0.5">{new Date(d.timestamp).toLocaleString()}</div>
                                         </div>
                                         {/* Slip Preview */}
-                                        <div className="w-12 h-16 bg-stone-950 border border-stone-700 rounded overflow-hidden cursor-pointer hover:scale-150 transition-transform origin-center shadow-lg" onClick={() => downloadQr(d.slipImage, d.username + "_slip")}>
-                                            <img src={d.slipImage} className="w-full h-full object-cover" alt="Slip" />
+                                        <div
+                                            className={`w-12 h-16 bg-stone-950 border border-stone-700 rounded overflow-hidden shadow-lg ${d.slipImage === 'USDT_DIRECT_TRANSFER' ? 'cursor-default' : 'cursor-pointer hover:scale-125 transition-transform origin-center'}`}
+                                            onClick={() => d.slipImage !== 'USDT_DIRECT_TRANSFER' && setPreviewImage(d.slipImage)}
+                                        >
+                                            {d.slipImage === 'USDT_DIRECT_TRANSFER' ? (
+                                                <div className="w-full h-full flex flex-col items-center justify-center bg-blue-900/10 text-blue-400 gap-1">
+                                                    <Wallet size={16} />
+                                                    <span className="text-[8px] font-bold">USDT</span>
+                                                </div>
+                                            ) : (
+                                                <img src={d.slipImage} className="w-full h-full object-cover" alt="Slip" />
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
@@ -795,7 +846,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                 <XCircle size={14} /> {t('admin.reject')}
                                             </button>
                                             <button
-                                                onClick={() => initiateProcessDeposit(d, 'APPROVED')}
+                                                onClick={() => handleDirectProcessDeposit(d.id, 'APPROVED')}
                                                 className="px-3 py-1.5 rounded border border-emerald-500 bg-emerald-600 text-white text-xs font-bold uppercase hover:bg-emerald-500 flex items-center gap-1 transition-colors shadow-lg shadow-emerald-900/20"
                                             >
                                                 <CheckCircle size={14} /> {t('admin.approve')}
@@ -967,13 +1018,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 <Coins size={20} />
                             </div>
                             <div className="flex-1 flex justify-between items-center">
-                                <h3 className="text-lg font-bold text-white uppercase tracking-wider">{t('admin.dev_revenue')}</h3>
-                                <button
-                                    onClick={handleClearRevenue}
-                                    className="px-3 py-1 bg-red-900/20 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded text-xs font-bold transition-all flex items-center gap-2"
-                                >
-                                    <Trash2 size={14} /> {t('admin.clear_all_revenue')}
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleResetBalances}
+                                        className="px-3 py-1 bg-orange-900/20 hover:bg-orange-900/40 text-orange-500 border border-orange-900/30 rounded text-xs font-bold transition-all flex items-center gap-2"
+                                    >
+                                        <AlertTriangle size={14} /> {t('admin.reset_balances')}
+                                    </button>
+                                    <button
+                                        onClick={handleClearRevenue}
+                                        className="px-3 py-1 bg-red-900/20 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded text-xs font-bold transition-all flex items-center gap-2"
+                                    >
+                                        <Trash2 size={14} /> {t('admin.clear_all_revenue')}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -1210,13 +1268,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     value={economyForm.compUser}
                                     onChange={e => setEconomyForm({ ...economyForm, compUser: e.target.value })}
                                 />
-                                <div className="flex gap-2">
-                                    <div className="w-1/3 bg-emerald-900/20 border border-emerald-900/50 rounded p-3 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <div className="sm:w-1/3 bg-emerald-900/20 border border-emerald-900/50 rounded p-3 text-emerald-400 flex items-center justify-center font-bold text-xs">
                                         {t('admin.add_funds')}
+                                    </div>
+                                    <div className="flex bg-stone-950 border border-stone-700 rounded overflow-hidden shadow-lg shrink-0">
+                                        <button
+                                            className={`px-3 py-1 text-xs font-bold transition-colors ${compCurrency === 'THB' ? 'bg-emerald-600 text-white' : 'bg-stone-900 text-stone-500 hover:text-stone-300'}`}
+                                            onClick={() => setCompCurrency('THB')}
+                                        >
+                                            THB
+                                        </button>
+                                        <button
+                                            className={`px-3 py-1 text-xs font-bold transition-colors ${compCurrency === 'USDT' ? 'bg-blue-600 text-white' : 'bg-stone-900 text-stone-500 hover:text-stone-300'}`}
+                                            onClick={() => setCompCurrency('USDT')}
+                                        >
+                                            USDT
+                                        </button>
                                     </div>
                                     <input
                                         type="number"
-                                        placeholder={`${t('admin.amount')} (${CURRENCY})`}
+                                        placeholder={`${t('admin.amount')} (${compCurrency})`}
                                         className="flex-1 bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
                                         value={economyForm.compAmount || ''}
                                         onChange={e => setEconomyForm({ ...economyForm, compAmount: parseFloat(e.target.value) || 0 })}
