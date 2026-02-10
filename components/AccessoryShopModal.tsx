@@ -6,6 +6,7 @@ import { CraftingQueueItem } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
+import { useTranslation } from './LanguageContext';
 
 interface AccessoryShopModalProps {
     isOpen: boolean;
@@ -18,6 +19,7 @@ interface AccessoryShopModalProps {
 }
 
 export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, onClose, walletBalance, onBuy, onRefresh, addNotification, userId }) => {
+    const { t, getLocalized, formatCurrency, language } = useTranslation();
     const [activeTab, setActiveTab] = useState<'SHOP' | 'WORKSHOP'>('SHOP');
     const [buyingId, setBuyingId] = useState<string | null>(null);
     const [confirmItem, setConfirmItem] = useState<{ id: string, price: number, quantity: number, name: string } | null>(null);
@@ -68,7 +70,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
             if (addNotification) addNotification({
                 id: Date.now().toString(),
                 userId: userId || '',
-                message: 'เงินสดไม่พอ!',
+                message: t('common.insufficient_balance'),
                 type: 'ERROR',
                 read: false,
                 timestamp: Date.now()
@@ -139,7 +141,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                 if (addNotification) addNotification({
                     id: Date.now().toString(),
                     userId: userId || '',
-                    message: `ไม่สามารถสร้างได้: ขาดวัตถุดิบ "${name}" (มี ${have}/${need})`,
+                    message: `${t('item_shop.insufficient_mats')}: "${name}" (${have}/${need})`,
                     type: 'ERROR',
                     read: false,
                     timestamp: Date.now()
@@ -181,14 +183,10 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
 
     const getItemDisplayName = (item: any) => {
         if (!item) return '';
-        const typeId = item.typeId || item.id || '';
-        const name = item.name || '';
-        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return 'กุญแจเข้าเหมือง';
-        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return 'ชิปอัปเกรด';
-        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return 'โต๊ะช่างสกัดแร่';
-        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return 'แว่นขยายส่องแร่';
-        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return 'หุ่นยนต์ AI';
-        return name;
+        if (item.name && typeof item.name === 'object') {
+            return getLocalized(item.name);
+        }
+        return item.name || '';
     };
 
     const getIcon = (iconName: string, className: string, itemId?: string) => {
@@ -258,7 +256,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
             <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-64 bg-stone-950 border border-stone-700 rounded-xl shadow-2xl p-3 z-50 opacity-0 group-hover/icon:opacity-100 transition-opacity duration-200 pointer-events-none">
                 <div className="text-center">
                     <div className="text-yellow-500 font-bold text-xs uppercase tracking-widest mb-1">{getItemDisplayName(item)}</div>
-                    <div className="text-[10px] text-stone-300 leading-relaxed">{item.description || 'ไอเทมช่วยในการอัปเกรดและประกอบอุปกรณ์'}</div>
+                    <div className="text-[10px] text-stone-300 leading-relaxed">{getLocalized(item.description) || t('item_shop.default_desc')}</div>
                 </div>
                 <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-stone-950 border-t border-l border-stone-700 transform rotate-45"></div>
             </div>
@@ -286,29 +284,29 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
                     if (days > 0) {
                         isCooldown = true;
-                        cooldownText = `คูลดาวน์ ${days} วัน`;
+                        cooldownText = t('item_shop.cooldown', { days });
                         canAfford = false; // Disable buy
                     }
                 } else {
                     // Fallback: If no expireAt, assume it's active and on 30 day CD?
                     // But typically our MockDB adds expireAt.
                     isCooldown = true;
-                    cooldownText = `คันดาวน์`; // Or 'Active'
+                    cooldownText = t('item_shop.active'); // Or 'Active'
                     canAfford = false;
                 }
             }
         }
 
         let bonusRange = '';
-        if (item.id === 'chest_key') bonusRange = 'ใช้เปิดกล่องพัสดุ';
-        else if (item.id === 'mixer') bonusRange = 'ใช้ผสมวัสดุ';
-        else if (item.id === 'magnifying_glass') bonusRange = 'ช่วยในการสำรวจ';
-        else if (item.id === 'robot') bonusRange = 'หุ่นยนต์ดูแลเหมืองอัตโนมัติ';
-        else if (item.id === 'upgrade_chip') bonusRange = 'ใช้อัปเกรดเครื่องจักร';
-        else if (item.id === 'insurance_card') bonusRange = 'ประกันความเสียหาย';
-        else if (item.id === 'hourglass_small') bonusRange = '- 30 นาที';
-        else if (item.id === 'hourglass_medium') bonusRange = '- 2 ชั่วโมง';
-        else if (item.id === 'hourglass_large') bonusRange = '- 6 ชั่วโมง';
+        if (item.id === 'chest_key') bonusRange = t('item_shop.chest_key_desc');
+        else if (item.id === 'mixer') bonusRange = t('item_shop.mixer_desc');
+        else if (item.id === 'magnifying_glass') bonusRange = t('item_shop.lens_desc');
+        else if (item.id === 'robot') bonusRange = t('item_shop.robot_desc');
+        else if (item.id === 'upgrade_chip') bonusRange = t('item_shop.chip_desc');
+        else if (item.id === 'insurance_card') bonusRange = t('item_shop.insurance_desc');
+        else if (item.id === 'hourglass_small') bonusRange = '- 30 ' + t('time.minutes');
+        else if (item.id === 'hourglass_medium') bonusRange = '- 2 ' + t('time.hours');
+        else if (item.id === 'hourglass_large') bonusRange = '- 6 ' + t('time.hours');
         else bonusRange = `${item.minBonus}-${item.maxBonus}`;
 
         let rarityStyle = RARITY_SETTINGS.COMMON;
@@ -358,11 +356,16 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                 <div className="p-4 flex-1 flex flex-col items-center text-center border-t border-stone-800">
                     <h3 className={`font-display font-bold text-lg mb-1 text-white`}>{getItemDisplayName(item)}</h3>
 
-                    <div className="text-xs text-stone-400 mb-1">
+                    <div className="text-xs text-stone-400 mb-1 flex items-center justify-center gap-1">
                         {item.id === 'robot' ? (
                             <span className="text-emerald-400 font-bold uppercase tracking-wider italic">Automation Active</span>
                         ) : (
-                            <>รายได้เพิ่ม: <span className="text-yellow-500 font-bold">{bonusRange}</span> {item.maxBonus > 0 ? `${CURRENCY}/วัน` : ''}</>
+                            <>
+                                <CalendarDays size={12} className="text-stone-500" />
+                                {item.lifespanDays > 0 ?
+                                    (language === 'th' ? `อายุการใช้งาน ${item.lifespanDays} วัน` : `Lifespan: ${item.lifespanDays} Days`)
+                                    : (language === 'th' ? 'ถาวร' : 'Permanent')}
+                            </>
                         )}
                     </div>
 
@@ -370,11 +373,11 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                         {['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'insurance_card', 'robot'].includes(item.id) ? (
                             <div className="text-[9px] text-stone-400 flex items-center gap-1 bg-stone-800 px-2 py-0.5 rounded border border-stone-700">
                                 {item.id === 'robot' ? <Zap size={10} className="text-emerald-400" /> : <Zap size={10} className="text-yellow-500" />}
-                                {item.id === 'robot' ? 'ระบบช่วยดูแลเหมือง' : 'ใช้แล้วหมดไป'}
+                                {item.id === 'robot' ? t('item_shop.automation_system') : t('item_shop.consumable')}
                             </div>
                         ) : (
                             <div className="text-[9px] text-yellow-500 flex items-center gap-1 bg-yellow-950/20 px-2 py-0.5 rounded border border-yellow-900/30">
-                                <Star size={10} /> โบนัส: +{item.maxBonus} / วัน
+                                <Star size={10} /> {t('item_shop.bonus')}: +{item.maxBonus} / {t('time.day')}
                             </div>
                         )}
                     </div>
@@ -398,7 +401,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                     )}
 
                     <button
-                        onClick={() => handleBuyClick(item.id, item.price, item.name)}
+                        onClick={() => handleBuyClick(item.id, item.price, getItemDisplayName(item))}
                         disabled={!canAfford || isBuying || isCooldown}
                         className={`w-full py-3 rounded-lg font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 transition-all
                         ${isBuying ? 'bg-stone-700 text-stone-400 cursor-wait' :
@@ -409,10 +412,9 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             }
                     `}
                     >
-                        {isBuying ? 'กำลังซื้อ...' : isCooldown ? cooldownText : (
+                        {isBuying ? t('common.loading') : isCooldown ? cooldownText : (
                             <>
-                                <span>{(item.price * (buyQuantities[item.id] || 1)).toLocaleString()}</span>
-                                <span className="text-[10px]">{CURRENCY}</span>
+                                <span>{formatCurrency(item.price * (buyQuantities[item.id] || 1))}</span>
                             </>
                         )}
                     </button>
@@ -431,7 +433,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                     <div className="absolute inset-0 bg-gradient-to-br from-yellow-900/10 to-stone-900/50 pointer-events-none"></div>
 
                     <h3 className="text-2xl font-black text-white text-center uppercase tracking-wider mb-2 font-display">
-                        ยืนยันการซื้อสินค้า
+                        {t('item_shop.confirm_title')}
                     </h3>
                     <div className="w-full h-px bg-gradient-to-r from-transparent via-yellow-600 to-transparent mb-6"></div>
 
@@ -441,16 +443,16 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                 {getIcon(SHOP_ITEMS.find(i => i.id === confirmItem.id)?.icon || 'Box', "w-8 h-8 text-yellow-500", confirmItem.id)}
                             </div>
                             <div>
-                                <div className="text-stone-400 text-xs uppercase tracking-widest font-bold">สินค้า</div>
+                                <div className="text-stone-400 text-xs uppercase tracking-widest font-bold">{t('item_shop.product')}</div>
                                 <div className="text-white font-bold text-lg">{getItemDisplayName(confirmItem)}</div>
-                                <div className="text-stone-500 text-xs">x{confirmItem.quantity} ชิ้น</div>
+                                <div className="text-stone-500 text-xs">x{confirmItem.quantity} {t('item_shop.quantity')}</div>
                             </div>
                         </div>
 
                         <div className="flex justify-between items-end bg-stone-950/50 p-4 rounded-xl border border-stone-800">
-                            <div className="text-stone-400 font-bold text-xs uppercase tracking-widest mb-1">ยอดรวมราคา</div>
+                            <div className="text-stone-400 font-bold text-xs uppercase tracking-widest mb-1">{t('item_shop.total_price')}</div>
                             <div className="text-yellow-400 font-mono font-bold text-2xl flex items-baseline gap-1">
-                                {total.toLocaleString()} <span className="text-xs text-yellow-600 font-sans">บาท</span>
+                                {formatCurrency(total)}
                             </div>
                         </div>
                     </div>
@@ -460,13 +462,13 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             onClick={() => setConfirmItem(null)}
                             className="flex-1 py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold uppercase tracking-wider rounded-xl transition-colors border border-stone-700"
                         >
-                            ยกเลิก
+                            {t('item_shop.confirm_cancel')}
                         </button>
                         <button
                             onClick={handleConfirmBuy}
                             className="flex-1 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:shadow-[0_0_30px_rgba(234,179,8,0.4)] border border-yellow-500"
                         >
-                            ยืนยันการซื้อ
+                            {t('item_shop.confirm_buy')}
                         </button>
                     </div>
                 </div>
@@ -523,7 +525,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                     {item.lifespanDays && (
                                         <div className="flex items-center gap-1 text-[10px] text-yellow-500 mt-0.5">
                                             <Star size={10} />
-                                            <span>โบนัส: +{item.maxBonus} / วัน</span>
+                                            <span>{t('item_shop.bonus')}: +{item.maxBonus} / {t('time.day')}</span>
                                         </div>
                                     )}
                                 </div>
@@ -531,12 +533,15 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                     <span className="flex items-center gap-1"><Clock size={10} /> {item.craftDurationMinutes ? item.craftDurationMinutes / 60 : 0} ชม.</span>
                                 </div>
                             </div>
-                            <div className="text-xs text-stone-400 mt-1">
-                                โบนัส: <span className="text-yellow-500">+{item.maxBonus} {CURRENCY}/วัน</span>
+                            <div className="text-xs text-stone-400 mt-1 flex items-center gap-1">
+                                <CalendarDays size={12} className="text-stone-500" />
+                                {item.lifespanDays > 0 ?
+                                    (language === 'th' ? `อายุการใช้งาน ${item.lifespanDays} วัน` : `Lifespan: ${item.lifespanDays} Days`)
+                                    : (language === 'th' ? 'ถาวร' : 'Permanent')}
                             </div>
                             {item.specialEffect && (
                                 <div className="text-[10px] text-emerald-400 mt-1 font-bold">
-                                    {item.specialEffect}
+                                    {getLocalized(item.specialEffect)}
                                 </div>
                             )}
                         </div>
@@ -548,13 +553,13 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                     </div>
 
                     <div className="bg-stone-950 p-3 rounded-lg border border-stone-800 space-y-2">
-                        <div className="text-[10px] text-stone-500 uppercase font-bold tracking-wider">วัสดุที่ต้องใช้</div>
+                        <div className="text-[10px] text-stone-500 uppercase font-bold tracking-wider">{t('item_shop.materials_required')}</div>
                         <div className="grid grid-cols-2 gap-2">
                             {matsList.map((m, i) => (
                                 <div key={i} className="flex items-center justify-between text-xs bg-stone-900 p-1.5 rounded">
                                     <div className="flex items-center gap-2">
                                         <MaterialIcon id={m.tier} size="w-4 h-4" iconSize={12} />
-                                        <span className="text-stone-300">{MATERIAL_CONFIG.NAMES[m.tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span>
+                                        <span className="text-stone-300">{getLocalized(MATERIAL_CONFIG.NAMES[m.tier as keyof typeof MATERIAL_CONFIG.NAMES])}</span>
                                     </div>
                                     <span className={m.owned >= m.needed ? 'text-green-400' : 'text-red-400'}>
                                         {m.owned}/{m.needed}
@@ -564,10 +569,10 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             <div className="flex items-center justify-between text-xs bg-stone-900 p-1.5 rounded col-span-2">
                                 <div className="flex items-center gap-2">
                                     <Coins size={14} className="text-yellow-500" />
-                                    <span className="text-stone-300">ค่าธรรมเนียม</span>
+                                    <span className="text-stone-300">{t('item_shop.fee')}</span>
                                 </div>
                                 <span className={canAffordFee ? 'text-green-400' : 'text-red-400'}>
-                                    {fee.toLocaleString()} {CURRENCY}
+                                    {formatCurrency(fee)}
                                 </span>
                             </div>
                         </div>
@@ -580,7 +585,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                       ${canCraft ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg' : 'bg-stone-800 text-stone-600 cursor-not-allowed border border-stone-700'}
                   `}
                     >
-                        <Hammer size={16} /> เริ่มสร้าง
+                        <Hammer size={16} /> {t('item_shop.start_craft')}
                     </button>
                 </div>
             </div>
@@ -591,13 +596,13 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         // Defensive check: ensure craftingQueue is an array
         if (!craftingQueue || !Array.isArray(craftingQueue) || craftingQueue.length === 0) return (
             <div className="text-center py-8 text-stone-500 text-sm border-2 border-dashed border-stone-800 rounded-xl">
-                ไม่มีงานที่กำลังทำ
+                {t('item_shop.no_active_tasks')}
             </div>
         );
 
         return (
             <div className="space-y-3 mb-6">
-                <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">กำลังสร้าง ({craftingQueue.length})</h4>
+                <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">{t('item_shop.crafting_status', { count: craftingQueue.length })}</h4>
                 {craftingQueue.map(q => {
                     const item = SHOP_ITEMS.find(i => i.id === q.itemId);
                     if (!item) return null;
@@ -633,7 +638,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                 <div className="flex justify-between items-center mb-1">
                                     <span className="font-bold text-stone-200 text-sm">{getItemDisplayName(item)}</span>
                                     {isReady ? (
-                                        <span className="text-green-400 text-xs font-bold animate-pulse">เสร็จสิ้น!</span>
+                                        <span className="text-green-400 text-xs font-bold animate-pulse">{t('item_shop.complete')}</span>
                                     ) : (
                                         <span className="text-stone-500 text-xs font-mono">{hours}h {mins}m</span>
                                     )}
@@ -646,7 +651,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             <div className="relative z-10">
                                 {isReady ? (
                                     <button onClick={() => handleClaimCraft(q.id)} className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded flex items-center gap-1 shadow-lg animate-bounce">
-                                        <Star size={12} /> รับสินค้า
+                                        <Star size={12} /> {t('item_shop.claim_item')}
                                     </button>
                                 ) : (
                                     <div className="text-xs text-stone-500 font-mono"><Clock size={14} className="animate-spin-slow" /></div>
@@ -669,13 +674,13 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                 <ShoppingBag size={24} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-display font-bold text-white">ร้านค้า</h2>
+                                <h2 className="text-xl font-display font-bold text-white">{t('item_shop.title')}</h2>
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
                             <div className="hidden sm:flex bg-stone-900 px-4 py-2 rounded-lg border border-stone-700 items-center gap-2">
                                 <Coins size={18} className="text-emerald-500" />
-                                <span className="font-mono font-bold text-emerald-400">{walletBalance.toLocaleString()} {CURRENCY}</span>
+                                <span className="font-mono font-bold text-emerald-400">{formatCurrency(walletBalance)}</span>
                             </div>
                             <button onClick={onClose} className="text-stone-500 hover:text-white bg-stone-900 p-2 rounded-full hover:bg-stone-800"><X size={24} /></button>
                         </div>
@@ -685,13 +690,13 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             onClick={() => setActiveTab('SHOP')}
                             className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'SHOP' ? 'text-yellow-500 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
                         >
-                            <ShoppingBag size={16} /> ไอเทม
+                            <ShoppingBag size={16} /> {t('item_shop.items_tab')}
                         </button>
                         <button
                             onClick={() => setActiveTab('WORKSHOP')}
                             className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'WORKSHOP' ? 'text-orange-500 border-orange-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
                         >
-                            <Hammer size={16} /> ศูนย์ประกอบอุปกรณ์
+                            <Hammer size={16} /> {t('item_shop.workshop_tab')}
                         </button>
                     </div>
                 </div>
@@ -702,7 +707,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             <div className="mb-8">
                                 <div className="flex items-center gap-2 mb-4">
                                     <Star className="text-yellow-500" size={20} />
-                                    <h3 className="text-lg font-bold text-stone-200 uppercase tracking-wider">สินค้าแนะนำ</h3>
+                                    <h3 className="text-lg font-bold text-stone-200 uppercase tracking-wider">{t('item_shop.recommended')}</h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                     {specialItems.map(item => renderItemCard(item, true))}
@@ -714,7 +719,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             {renderQueue()}
                             <div className="flex items-center gap-2 mb-4">
                                 <Hammer className="text-orange-500" size={20} />
-                                <h3 className="text-lg font-bold text-stone-200 uppercase tracking-wider">ประกอบอุปกรณ์</h3>
+                                <h3 className="text-lg font-bold text-stone-200 uppercase tracking-wider">{t('item_shop.workshop_tab')}</h3>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 {craftableItems.map(item => renderCraftCard(item))}
@@ -733,7 +738,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent"></div>
                         <div className="absolute -top-[100px] left-1/2 -translate-x-1/2 w-[200px] h-[200px] bg-yellow-500/20 blur-[50px] rounded-full"></div>
 
-                        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 mb-6 drop-shadow-md tracking-wider">สร้างเสร็จเรียบร้อย!</h2>
+                        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 mb-6 drop-shadow-md tracking-wider">{t('item_shop.craft_success_title')}</h2>
 
                         <div className="w-32 h-32 bg-stone-950 rounded-full border-4 border-yellow-600/50 flex items-center justify-center mb-6 shadow-inner relative group">
                             <div className="absolute inset-0 bg-yellow-500/10 rounded-full animate-pulse"></div>
@@ -744,21 +749,21 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                         <div className="text-center mb-6 w-full">
                             <h3 className="text-xl font-bold text-white mb-2">{getItemDisplayName(claimedItem)}</h3>
                             <div className={`inline-block px-3 py-1 rounded text-xs font-bold uppercase mb-4 border ${RARITY_SETTINGS.RARE.border} ${RARITY_SETTINGS.RARE.color} bg-stone-900`}>
-                                สินค้าที่ได้
+                                {t('item_shop.obtained_label')}
                             </div>
 
                             <div className="bg-stone-950/50 rounded-xl p-4 space-y-3 border border-stone-800 text-sm w-full">
                                 <div className="flex justify-between items-center text-stone-400">
-                                    <span>ข้อมูลโบนัส</span>
-                                    <span className="text-yellow-400 font-bold">+{(claimedItem.dailyBonus || 0).toFixed(1)} {CURRENCY}/วัน</span>
+                                    <span>{t('item_shop.bonus_info')}</span>
+                                    <span className="text-yellow-400 font-bold">+{formatCurrency(claimedItem.dailyBonus || 0)}/{t('time.day')}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-stone-400">
-                                    <span>สถานะ</span>
-                                    <span className="text-white font-bold">ประกอบสำเร็จ</span>
+                                    <span>{t('item_shop.status_label')}</span>
+                                    <span className="text-white font-bold">{t('item_shop.success_status')}</span>
                                 </div>
                                 {claimedItem.specialEffect && (
                                     <div className="pt-2 border-t border-stone-800 text-xs text-emerald-400 text-center font-bold">
-                                        คุณสมบัติ: {claimedItem.specialEffect}
+                                        {t('item_shop.property_label')}: {claimedItem.specialEffect}
                                     </div>
                                 )}
                             </div>
@@ -768,7 +773,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             onClick={() => setClaimedItem(null)}
                             className="w-full py-3 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-stone-900 font-bold rounded-xl shadow-lg transform hover:-translate-y-1 transition-all"
                         >
-                            นำไปติดตั้ง
+                            {t('item_shop.equip_action')}
                         </button>
                     </div>
                 </div>

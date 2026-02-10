@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Dices, RefreshCw, Zap, Wallet, Box, Sparkles, Star } from 'lucide-react';
-import { LUCKY_DRAW_CONFIG, CURRENCY } from '../constants';
+import { LUCKY_DRAW_CONFIG, CURRENCY, EXCHANGE_RATE_USD_THB } from '../constants';
 import { api } from '../services/api';
 import { User } from '../services/types';
 import { useTranslation } from './LanguageContext';
@@ -15,11 +15,11 @@ interface LuckyDrawModalProps {
 }
 
 export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose, user, onRefresh, addNotification }) => {
-    const { t, language } = useTranslation();
+    const { t, language, getLocalized, formatCurrency } = useTranslation();
     const [gameState, setGameState] = useState<'IDLE' | 'SHUFFLING' | 'PICKING' | 'REVEALED'>('IDLE');
     const [cards, setCards] = useState<number[]>([0, 1, 2, 3, 4]);
     const [selectedCard, setSelectedCard] = useState<number | null>(null);
-    const [reward, setReward] = useState<{ label: string, type: string, amount?: number } | null>(null);
+    const [reward, setReward] = useState<{ label: any, type: string, amount?: number } | null>(null);
     const [canPlayFree, setCanPlayFree] = useState(false);
     const [showResultPopup, setShowResultPopup] = useState(false);
 
@@ -137,7 +137,7 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                             <ul className="space-y-1.5 w-40">
                                 {LUCKY_DRAW_CONFIG.PROBABILITIES.map((p, i) => (
                                     <li key={i} className="flex justify-between text-[10px]">
-                                        <span className="text-stone-400">{p.label.split(' ')[0]}</span>
+                                        <span className="text-stone-400">{getLocalized(p.label)}</span>
                                         <span className="font-mono text-yellow-500 font-bold">{p.chance}%</span>
                                     </li>
                                 ))}
@@ -214,7 +214,7 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                                         </>
                                     ) : (
                                         <>
-                                            {user.balance < LUCKY_DRAW_CONFIG.COST ? t('lucky_draw.insufficient_funds') : <span>{t('lucky_draw.pay_spin').replace('{cost}', LUCKY_DRAW_CONFIG.COST.toString())}</span>}
+                                            {user.balance < LUCKY_DRAW_CONFIG.COST ? t('lucky_draw.insufficient_funds') : <span>{t('lucky_draw.pay_spin').replace('{cost}', formatCurrency(LUCKY_DRAW_CONFIG.COST))}</span>}
                                         </>
                                     )}
                                 </button>
@@ -254,11 +254,11 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                             </div>
 
                             <h2 className="text-4xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-stone-400 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] mb-2 uppercase tracking-widest">
-                                {reward.type === 'money' ? 'BIG WIN!' : 'REWARD!'}
+                                {reward.type === 'money' ? t('lucky_draw.win_money') : t('lucky_draw.win_reward')}
                             </h2>
 
                             <div className="text-2xl font-bold text-yellow-400 mb-8 drop-shadow-md">
-                                {reward.label}
+                                {getLocalized(reward.label)}
                             </div>
 
                             <div className="flex gap-4">

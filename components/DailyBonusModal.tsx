@@ -5,6 +5,7 @@ import { DAILY_CHECKIN_REWARDS } from '../constants';
 import { api } from '../services/api';
 import { User } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
+import { useTranslation } from './LanguageContext';
 
 interface DailyBonusModalProps {
     isOpen: boolean;
@@ -15,6 +16,7 @@ interface DailyBonusModalProps {
 }
 
 export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClose, user, onRefresh, addNotification }) => {
+    const { t, getLocalized } = useTranslation();
     const [canCheckIn, setCanCheckIn] = useState(false);
     const [todayStreak, setTodayStreak] = useState(0);
     const [hasCheckedInSession, setHasCheckedInSession] = useState(false);
@@ -39,10 +41,6 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
             const lastResetId = getResetDayIdentifier(lastTime);
             const nowResetId = getResetDayIdentifier(nowTime);
 
-            // Robust check: If streak is 0, they haven't checked in (or were reset).
-            // But if lastResetId === nowResetId, they DID check in today.
-            // But if streak is 0 and they checked in today, something is wrong with the streak.
-            // We'll prioritize the date check but log it.
             const checkable = !hasCheckedInSession && (lastTime === 0 || lastResetId !== nowResetId);
             setCanCheckIn(checkable);
             setTodayStreak(user.checkInStreak || 0);
@@ -62,7 +60,7 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
                 if (addNotification) addNotification({
                     id: Date.now().toString(),
                     userId: user.id,
-                    message: 'เช็คอินสำเร็จ!',
+                    message: t('daily_checkin.checkin_success'),
                     type: 'SUCCESS',
                     read: false,
                     timestamp: Date.now()
@@ -112,8 +110,8 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
                             <CalendarCheck size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-display font-bold text-white">ปฏิทินของรางวัล 30 วัน</h2>
-                            <p className="text-xs text-stone-500 uppercase tracking-wider">เช็คอินทุกวันเพื่อรับวัตถุดิบและรางวัลใหญ่</p>
+                            <h2 className="text-xl font-display font-bold text-white">{t('daily_checkin.calendar_title')}</h2>
+                            <p className="text-xs text-stone-500 uppercase tracking-wider">{t('daily_checkin.calendar_subtitle')}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
@@ -149,7 +147,7 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
 
                                     {/* Label */}
                                     <div className={`text-[9px] text-center w-full px-1 truncate font-medium ${isGrandPrize ? 'text-purple-200' : reward.highlight ? 'text-yellow-200' : 'text-stone-400'}`}>
-                                        {reward.label}
+                                        {getLocalized(reward.label)}
                                     </div>
 
                                     {isCollected && (
@@ -172,7 +170,7 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
                 <div className="p-6 bg-stone-900 border-t border-stone-800 text-center shrink-0">
                     <div className="flex flex-col items-center gap-3">
                         <div className="text-sm text-stone-300">
-                            เช็คอินต่อเนื่อง: <span className="text-emerald-400 font-bold font-mono text-lg">{todayStreak}</span> / 30 วัน
+                            {t('daily_checkin.streak_label')} <span className="text-emerald-400 font-bold font-mono text-lg">{todayStreak}</span> / 30 {t('time.days')}
                         </div>
 
                         <button
@@ -184,13 +182,13 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
                                     : 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'}
                     `}
                         >
-                            <span>{canCheckIn ? 'ลงชื่อรับรางวัล' : 'รับรางวัลแล้ว'}</span>
+                            <span>{canCheckIn ? t('daily_checkin.checkin_button_ready') : t('daily_checkin.checkin_button_claimed')}</span>
                             {!canCheckIn && (
-                                <span className="text-[10px] opacity-60 font-medium">รีเซ็ตอีกครั้งเวลา 07:00 น. ของวันพรุ่งนี้</span>
+                                <span className="text-[10px] opacity-60 font-medium">{t('daily_checkin.reset_hint')}</span>
                             )}
                         </button>
                         <p className="text-[10px] text-stone-500">
-                            *หากไม่ล็อกอินต่อเนื่องเกิน 48 ชม. ระบบจะรีเซ็ตวันเป็นวันที่ 1 ใหม่
+                            {t('daily_checkin.streak_reset_warning')}
                         </p>
                     </div>
                 </div>

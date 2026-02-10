@@ -5,6 +5,7 @@ import { api } from '../services/api';
 import { User, OilRig, ClaimRequest, WithdrawalRequest, DepositRequest, Notification } from '../services/types';
 import { CURRENCY, SHOP_ITEMS, MATERIAL_CONFIG } from '../constants';
 import { ChatSystem } from './ChatSystem';
+import { useTranslation } from './LanguageContext';
 
 interface AdminDashboardProps {
     currentUser: User;
@@ -12,6 +13,7 @@ interface AdminDashboardProps {
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onLogout }) => {
+    const { t, getLocalized } = useTranslation();
     const [users, setUsers] = useState<User[]>([]);
     const [rigs, setRigs] = useState<OilRig[]>([]);
     const [pendingClaims, setPendingClaims] = useState<ClaimRequest[]>([]);
@@ -165,7 +167,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
         } catch (error: any) {
             console.error("Failed to fetch admin data", error);
-            setFetchError(error.message || "เกิดข้อผิดพลาดในการดึงข้อมูลจาก Server");
+            setFetchError(error.message || t('admin.fetch_error'));
         } finally {
             setIsLoading(false);
         }
@@ -180,10 +182,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 try {
                     await api.admin.updateSystemConfig({ receivingQrCode: base64 });
                     setSystemQr(base64);
-                    alert("อัปเดต QR Code ขึ้น Server เรียบร้อยแล้ว ✅");
+                    alert(t('admin.qr_update_success'));
                 } catch (error) {
                     console.error("Failed to upload QR", error);
-                    alert("เกิดข้อผิดพลาดในการอัปโหลด");
+                    alert(t('admin.upload_error'));
                 }
             };
             reader.readAsDataURL(file);
@@ -195,10 +197,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         try {
             await api.admin.updateSystemConfig({ isMaintenanceMode: newState });
             setIsMaintenance(newState);
-            alert(`เปลี่ยนสถานะ Server เป็น: ${newState ? 'ปิดปรับปรุง' : 'เปิดออนไลน์'} แล้ว`);
+            alert(`${t('admin.status_update_success') || 'Status updated'}: ${newState ? 'MAINTENANCE' : 'ONLINE'}`);
         } catch (error) {
             console.error("Failed to update maintenance mode", error);
-            alert("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ");
+            alert(t('admin.status_update_error'));
         }
     };
 
@@ -229,16 +231,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     };
 
     const handleDeleteUser = async (userId: string) => {
-        if (!confirm('DANGER: ยืนยันการลบผู้ใช้แบบถาวร? (การกระทำนี้ไม่สามารถย้อนกลับได้ และข้อมูลทั้งหมดจะถูกลบ)')) return;
+        if (!confirm(t('admin.delete_user_confirm'))) return;
 
         try {
             await api.admin.deleteUser(userId);
             refreshData();
             setSelectedUser(null);
-            alert('ลบข้อมูลผู้ใช้ออกจากระบบเรียบร้อยแล้ว ✅');
+            alert(t('admin.delete_user_success'));
         } catch (error) {
             console.error("Failed to delete user", error);
-            alert('เกิดข้อผิดพลาดในการลบผู้ใช้');
+            alert(t('admin.item_send_error')); // Reuse or add generic error
         }
     };
 
@@ -248,7 +250,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         try {
             await api.admin.clearGlobalRevenue();
             refreshData();
-            alert('เคลียร์รายได้ผู้พัฒนาเรียบร้อยแล้ว ✅');
+            alert(t('admin.clear_revenue_success'));
         } catch (error) {
             console.error("Failed to clear revenue", error);
             alert('เกิดข้อผิดพลาดในการเคลียร์รายได้');
@@ -261,7 +263,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         try {
             await api.admin.convertCurrencyToUSD();
             refreshData();
-            alert('แปลงข้อมูลทั้งหมดเป็น USD เรียบร้อยแล้ว! 💵');
+            alert(t('admin.convert_usd_success'));
         } catch (error) {
             console.error("Failed to convert currency", error);
             alert('เกิดข้อผิดพลาดในการแปลงเงิน');
@@ -380,7 +382,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         return (
             <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center gap-4">
                 <div className="w-12 h-12 border-4 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin"></div>
-                <div className="text-yellow-500 font-display animate-pulse uppercase tracking-widest text-sm">กำลังโหลดข้อมูลระบบจัดการ...</div>
+                <div className="text-yellow-500 font-display animate-pulse uppercase tracking-widest text-sm">{t('common.loading')}...</div>
             </div>
         );
     }
@@ -391,14 +393,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 <div className="w-20 h-20 mb-6 rounded-full bg-red-900/20 flex items-center justify-center border-2 border-red-500/50 text-red-500">
                     <AlertTriangle size={40} />
                 </div>
-                <h1 className="text-2xl font-display font-bold text-white mb-2 uppercase">เกิดข้อผิดพลาดในการดึงข้อมูล</h1>
+                <h1 className="text-2xl font-display font-bold text-white mb-2 uppercase">{t('admin.fetch_error')}</h1>
                 <p className="text-stone-400 max-w-md mx-auto mb-8 font-mono text-sm">{fetchError}</p>
                 <div className="flex gap-4">
                     <button onClick={refreshData} className="px-8 py-3 bg-yellow-600 hover:bg-yellow-500 text-stone-900 font-bold rounded shadow-lg transition-all flex items-center gap-2">
-                        ลองใหม่อีกครั้ง
+                        {t('common.retry')}
                     </button>
                     <button onClick={onLogout} className="px-8 py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold rounded transition-colors">
-                        ออกจากระบบ
+                        {t('settings.logout')}
                     </button>
                 </div>
             </div>
@@ -434,7 +436,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             </div>
 
                             <h3 className="text-xl font-bold text-white mb-2">
-                                ยืนยันการ {confirmAction.action === 'APPROVED' ? 'อนุมัติ' : 'ปฏิเสธ'}?
+                                {t('admin.approve')}
+                                /
+                                {t('admin.reject')}?
                             </h3>
                             <p className="text-stone-400 text-sm mb-4">
                                 {confirmAction.details}
@@ -452,14 +456,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     onClick={() => setConfirmAction(null)}
                                     className="py-3 rounded bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold transition-colors"
                                 >
-                                    ยกเลิก
+                                    {t('common.cancel')}
                                 </button>
                                 <button
                                     onClick={handleConfirmAction}
                                     className={`py-3 rounded font-bold text-white shadow-lg transition-transform hover:scale-[1.02]
                                 ${confirmAction.action === 'APPROVED' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'}`}
                                 >
-                                    ยืนยัน
+                                    {t('common.confirm')}
                                 </button>
                             </div>
                         </div>
@@ -734,8 +738,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             <ShieldCheck size={24} />
                         </div>
                         <div>
-                            <h1 className="text-xl font-display font-bold text-white">แผงควบคุมผู้บริหาร</h1>
-                            <span className="text-[10px] text-stone-500 uppercase tracking-widest">ระบบจัดการหลังบ้าน</span>
+                            <h1 className="text-xl font-display font-bold text-white">{t('admin.title')}</h1>
+                            <span className="text-[10px] text-stone-500 uppercase tracking-widest">{t('admin.subtitle')}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -757,7 +761,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                     <div className="bg-stone-900 border-l-4 border-yellow-500 shadow-2xl overflow-hidden rounded-r-lg animate-in slide-in-from-top-4 duration-500">
                         <div className="bg-yellow-900/20 p-3 flex items-center justify-between border-b border-yellow-900/30">
                             <div className="flex items-center gap-2 text-yellow-500 font-bold uppercase tracking-wider text-sm">
-                                <Bell className="animate-pulse" size={16} /> คำร้องที่เข้ามาใหม่ ({pendingWithdrawals.length + pendingDeposits.length})
+                                <Bell className="animate-pulse" size={16} /> {t('admin.pending_requests')} ({pendingWithdrawals.length + pendingDeposits.length})
                             </div>
                         </div>
                         <div className="max-h-96 overflow-y-auto custom-scrollbar">
@@ -788,13 +792,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                 onClick={() => initiateProcessDeposit(d, 'REJECTED')}
                                                 className="px-3 py-1.5 rounded border border-red-900/50 bg-stone-900 text-stone-400 text-xs font-bold uppercase hover:bg-red-900/20 hover:text-red-400 flex items-center gap-1 transition-colors"
                                             >
-                                                <XCircle size={14} /> ปฏิเสธ
+                                                <XCircle size={14} /> {t('admin.reject')}
                                             </button>
                                             <button
                                                 onClick={() => initiateProcessDeposit(d, 'APPROVED')}
                                                 className="px-3 py-1.5 rounded border border-emerald-500 bg-emerald-600 text-white text-xs font-bold uppercase hover:bg-emerald-500 flex items-center gap-1 transition-colors shadow-lg shadow-emerald-900/20"
                                             >
-                                                <CheckCircle size={14} /> อนุมัติ
+                                                <CheckCircle size={14} /> {t('admin.approve')}
                                             </button>
                                         </div>
                                     </div>
@@ -812,7 +816,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             <div className="font-bold text-white text-sm flex items-center gap-2">
                                                 <span className="text-yellow-500">{w.username}</span>
                                                 <span className={`text-xs px-1.5 rounded ${w.method === 'USDT' ? 'bg-blue-900/40 text-blue-300' : 'bg-red-900/40 text-red-300'}`}>
-                                                    ถอนเงิน {w.method === 'USDT' ? 'USDT' : 'BANK'}
+                                                    {t('admin.withdraw_label')} {w.method === 'USDT' ? 'USDT' : 'BANK'}
                                                 </span>
                                             </div>
                                             <div className="text-xs text-stone-500 font-mono mt-0.5 flex flex-col gap-1">
@@ -839,13 +843,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                 onClick={() => initiateProcessWithdrawal(w, 'REJECTED')}
                                                 className="px-3 py-1.5 rounded border border-red-900/50 bg-stone-900 text-stone-400 text-xs font-bold uppercase hover:bg-red-900/20 hover:text-red-400 flex items-center gap-1 transition-colors"
                                             >
-                                                <XCircle size={14} /> ปฏิเสธ
+                                                <XCircle size={14} /> {t('admin.reject')}
                                             </button>
                                             <button
                                                 onClick={() => initiateProcessWithdrawal(w, 'APPROVED')}
                                                 className="px-3 py-1.5 rounded border border-red-500 bg-red-600 text-white text-xs font-bold uppercase hover:bg-red-500 flex items-center gap-1 transition-colors shadow-lg shadow-red-900/20"
                                             >
-                                                <CheckCircle size={14} /> อนุมัติ
+                                                <CheckCircle size={14} /> {t('admin.approve')}
                                             </button>
                                         </div>
                                     </div>
@@ -864,8 +868,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             <QrCode size={32} />
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-white">ตั้งค่าบัญชีรับเงิน (QR)</h3>
-                            <p className="text-sm text-stone-400">ตั้งค่า QR Code และสถานะเซิร์ฟเวอร์</p>
+                            <h3 className="text-lg font-bold text-white">{t('admin.setup_qr')}</h3>
+                            <p className="text-sm text-stone-400">{t('admin.setup_qr_desc')}</p>
                         </div>
                     </div>
 
@@ -903,7 +907,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 onChange={handleQrUpload}
                             />
                             <Upload size={18} className="text-stone-400" />
-                            <span className="text-sm font-bold text-stone-300">อัปโหลด QR ใหม่</span>
+                            <span className="text-sm font-bold text-stone-300">{t('admin.upload_new_qr')}</span>
                         </div>
                     </div>
                 </div>
@@ -915,7 +919,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         className="bg-stone-900 p-5 border border-stone-800 shadow-lg cursor-pointer hover:bg-stone-800 transition-all transform hover:scale-[1.02] active:scale-95 group"
                     >
                         <div className="flex justify-between items-start mb-2">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-blue-400 transition-colors">ผู้ใช้งานทั้งหมด</span>
+                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-blue-400 transition-colors">{t('admin.total_users')}</span>
                             <Users size={16} className="text-blue-400" />
                         </div>
                         <div className="text-3xl font-display font-bold text-white group-hover:text-blue-200">{users.length}</div>
@@ -926,7 +930,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         className="bg-stone-900 p-5 border border-stone-800 shadow-lg cursor-pointer hover:bg-stone-800 transition-all transform hover:scale-[1.02] active:scale-95 group"
                     >
                         <div className="flex justify-between items-start mb-2">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-yellow-500 transition-colors">เหมืองทั้งหมด</span>
+                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-yellow-500 transition-colors">{t('admin.total_rigs')}</span>
                             <Hammer size={16} className="text-yellow-500" />
                         </div>
                         <div className="text-3xl font-display font-bold text-white group-hover:text-yellow-200">{rigs.length}</div>
@@ -937,7 +941,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         className="bg-stone-900 p-5 border border-stone-800 shadow-lg cursor-pointer hover:bg-stone-800 transition-all transform hover:scale-[1.02] active:scale-95 group"
                     >
                         <div className="flex justify-between items-start mb-2">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-emerald-500 transition-colors">ยอดเงินลงทุนรวม</span>
+                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-emerald-500 transition-colors">{t('admin.total_investment')}</span>
                             <Coins size={16} className="text-emerald-500" />
                         </div>
                         <div className="text-3xl font-display font-bold text-white tracking-tight group-hover:text-emerald-200">{totalInvestment.toLocaleString()} <span className="text-sm font-sans font-normal text-stone-600">{CURRENCY}</span></div>
@@ -948,7 +952,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         className="bg-stone-900 p-5 border border-stone-800 shadow-lg cursor-pointer hover:bg-stone-800 transition-all transform hover:scale-[1.02] active:scale-95 group"
                     >
                         <div className="flex justify-between items-start mb-2">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-purple-400 transition-colors">ผลผลิตรายวันรวม</span>
+                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-purple-400 transition-colors">{t('admin.total_daily_profit')}</span>
                             <LayoutDashboard size={16} className="text-purple-400" />
                         </div>
                         <div className="text-3xl font-display font-bold text-white group-hover:text-purple-200">+{totalDailyProduction.toFixed(1)}</div>
@@ -963,12 +967,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 <Coins size={20} />
                             </div>
                             <div className="flex-1 flex justify-between items-center">
-                                <h3 className="text-lg font-bold text-white uppercase tracking-wider">รายได้ผู้พัฒนาทั้งหมด (DEVELOPER REVENUE OVERVIEW)</h3>
+                                <h3 className="text-lg font-bold text-white uppercase tracking-wider">{t('admin.dev_revenue')}</h3>
                                 <button
                                     onClick={handleClearRevenue}
                                     className="px-3 py-1 bg-red-900/20 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded text-xs font-bold transition-all flex items-center gap-2"
                                 >
-                                    <Trash2 size={14} /> เคลียร์รายได้ทั้งหมด
+                                    <Trash2 size={14} /> {t('admin.clear_all_revenue')}
                                 </button>
                             </div>
                         </div>
@@ -1046,13 +1050,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                     <div className="p-4 border-b border-stone-800 flex justify-between items-center bg-stone-950">
                         <div className="flex items-center gap-2">
                             <Users size={20} className="text-blue-400" />
-                            <h3 className="font-bold text-white">จัดการผู้ใช้งาน ({users.length})</h3>
+                            <h3 className="font-bold text-white">{t('admin.manage_users')} ({users.length})</h3>
                         </div>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" size={14} />
                             <input
                                 type="text"
-                                placeholder="ค้นหาชื่อผู้ใช้..."
+                                placeholder={t('admin.search_user')}
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 className="bg-stone-900 border border-stone-700 rounded-full pl-9 pr-4 py-1.5 text-sm text-stone-200 focus:outline-none focus:border-yellow-600 w-64"
@@ -1064,12 +1068,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-stone-900/50 text-stone-500 text-xs uppercase tracking-wider border-b border-stone-800">
-                                    <th className="p-4 font-bold">ข้อมูลผู้ใช้งาน</th>
-                                    <th className="p-4 font-bold text-right">ยอดคงเหลือ</th>
-                                    <th className="p-4 font-bold text-center">เหมือง</th>
-                                    <th className="p-4 font-bold text-right text-emerald-400">กำไรรายวัน</th>
-                                    <th className="p-4 font-bold text-center">สถานะ</th>
-                                    <th className="p-4 font-bold text-right">การจัดการ</th>
+                                    <th className="p-4 font-bold">{t('admin.user_info')}</th>
+                                    <th className="p-4 font-bold text-right">{t('admin.balance')}</th>
+                                    <th className="p-4 font-bold text-center">{t('admin.rigs_count')}</th>
+                                    <th className="p-4 font-bold text-right text-emerald-400">{t('admin.daily_profit')}</th>
+                                    <th className="p-4 font-bold text-center">{t('admin.status')}</th>
+                                    <th className="p-4 font-bold text-right">{t('admin.management')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-800">
@@ -1134,7 +1138,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
                     {filteredUsers.length === 0 && (
                         <div className="p-8 text-center text-stone-500 text-sm">
-                            ไม่พบข้อมูลผู้ใช้งาน
+                            {t('admin.no_user_found')}
                         </div>
                     )}
                 </div>
@@ -1144,13 +1148,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 <div id="economy-control" className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6">
                     <div className="flex items-center gap-2 mb-6 border-b border-stone-800 pb-4">
                         <Coins size={24} className="text-yellow-500" />
-                        <h3 className="text-xl font-bold text-white">ควบคุมระบบเศรษฐกิจ (Economy Control)</h3>
+                        <h3 className="text-xl font-bold text-white">{t('admin.economy_control')}</h3>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Add Item Form */}
                         <div className="space-y-4">
-                            <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">เพิ่มไอเทมให้ผู้เล่น</h4>
+                            <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">{t('admin.add_item')}</h4>
                             <div className="space-y-3">
                                 <input
                                     type="text"
@@ -1164,21 +1168,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     value={economyForm.itemId}
                                     onChange={e => setEconomyForm({ ...economyForm, itemId: e.target.value })}
                                 >
-                                    <option value="">เลือกไอเทม...</option>
+                                    <option value="">{t('admin.choose_item')}</option>
                                     <optgroup label="Items & Equipment">
                                         {SHOP_ITEMS.map(item => (
-                                            <option key={item.id} value={item.id}>{item.name} ({item.id})</option>
+                                            <option key={item.id} value={item.id}>{getLocalized(item.name)} ({item.id})</option>
                                         ))}
                                     </optgroup>
                                     <optgroup label="Materials">
                                         {Object.entries(MATERIAL_CONFIG.NAMES).map(([id, name]) => (
-                                            <option key={`mat-${id}`} value={`material_${id}`}>{name} (Tier {id})</option>
+                                            <option key={`mat-${id}`} value={`material_${id}`}>{getLocalized(name)} (Tier {id})</option>
                                         ))}
                                     </optgroup>
                                 </select>
                                 <input
                                     type="number"
-                                    placeholder="จำนวน"
+                                    placeholder={t('admin.amount')}
                                     className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
                                     value={economyForm.itemAmount}
                                     onChange={e => setEconomyForm({ ...economyForm, itemAmount: parseInt(e.target.value) || 1 })}
@@ -1187,7 +1191,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     className="w-full bg-yellow-600 hover:bg-yellow-500 text-stone-900 font-bold py-3 rounded transition-colors"
                                     onClick={handleAddItem}
                                 >
-                                    ส่งไอเทม
+                                    {t('admin.send_item')}
                                 </button>
                             </div>
                         </div>
@@ -1195,8 +1199,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         {/* Give Compensation Form */}
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">ชดเชยค่าเสียหาย (Compensation)</h4>
-                                <span className="text-xs text-emerald-500 font-mono">Server Issues / Refunds</span>
+                                <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">{t('admin.compensation')}</h4>
+                                <span className="text-xs text-emerald-500 font-mono">{t('admin.server_issues_refunds')}</span>
                             </div>
                             <div className="space-y-3">
                                 <input
@@ -1208,11 +1212,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 />
                                 <div className="flex gap-2">
                                     <div className="w-1/3 bg-emerald-900/20 border border-emerald-900/50 rounded p-3 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                                        ADD FUNDS (+)
+                                        {t('admin.add_funds')}
                                     </div>
                                     <input
                                         type="number"
-                                        placeholder={`จำนวนเงิน (${CURRENCY})`}
+                                        placeholder={`${t('admin.amount')} (${CURRENCY})`}
                                         className="flex-1 bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
                                         value={economyForm.compAmount || ''}
                                         onChange={e => setEconomyForm({ ...economyForm, compAmount: parseFloat(e.target.value) || 0 })}
@@ -1220,7 +1224,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 </div>
                                 <input
                                     type="text"
-                                    placeholder="เหตุผลการชดเชย (เช่น ปิดปรับปรุง)"
+                                    placeholder={t('admin.comp_reason_placeholder')}
                                     className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
                                     value={economyForm.compReason}
                                     onChange={e => setEconomyForm({ ...economyForm, compReason: e.target.value })}
@@ -1229,7 +1233,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     className="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-3 rounded border border-emerald-600 transition-colors"
                                     onClick={handleGiveCompensation}
                                 >
-                                    ยืนยันการชดเชย (Send Compensation)
+                                    {t('admin.confirm_comp')}
                                 </button>
                             </div>
                         </div>
@@ -1240,14 +1244,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 <div id="game-config" className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6">
                     <div className="flex items-center gap-2 mb-6 border-b border-stone-800 pb-4">
                         <LayoutDashboard size={24} className="text-purple-400" />
-                        <h3 className="text-xl font-bold text-white">ตั้งค่าระบบเกม (Game Configuration)</h3>
+                        <h3 className="text-xl font-bold text-white">{t('admin.game_config')}</h3>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Drop Rate */}
                         <div className="bg-stone-950 p-4 rounded border border-stone-800">
                             <div className="flex justify-between items-center mb-4">
-                                <span className="text-stone-400 font-bold text-sm">อัตราดรอป (Drop Rate)</span>
+                                <span className="text-stone-400 font-bold text-sm">{t('admin.drop_rate')}</span>
                                 <div className="flex items-center gap-1">
                                     <input
                                         type="number"
@@ -1270,7 +1274,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         {/* Tax Rate */}
                         <div className="bg-stone-950 p-4 rounded border border-stone-800">
                             <div className="flex justify-between items-center mb-4">
-                                <span className="text-stone-400 font-bold text-sm">ภาษีตลาดกลาง (Tax)</span>
+                                <span className="text-stone-400 font-bold text-sm">{t('admin.tax_rate')}</span>
                                 <div className="flex items-center gap-1">
                                     <input
                                         type="number"
@@ -1291,7 +1295,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         </div>
                         <div className="bg-stone-950 p-4 rounded border border-stone-800">
                             <div className="flex justify-between items-center mb-4">
-                                <span className="text-stone-400 font-bold text-sm">ค่าซ่อมเครื่องจักร</span>
+                                <span className="text-stone-400 font-bold text-sm">{t('admin.repair_cost')}</span>
                                 <div className="flex items-center gap-1">
                                     <span className="text-stone-600 text-xs">x</span>
                                     <input
@@ -1313,8 +1317,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         </div>
                     </div>
                     <div className="mt-4 flex justify-end">
-                        <button className="bg-stone-800 hover:bg-stone-700 text-stone-300 px-6 py-2 rounded font-bold transition-colors" onClick={() => alert('Config saved!')}>
-                            บันทึกการตั้งค่า
+                        <button className="bg-stone-800 hover:bg-stone-700 text-stone-300 px-6 py-2 rounded font-bold transition-colors" onClick={() => alert(t('admin.config_saved'))}>
+                            {t('admin.save_config')}
                         </button>
                     </div>
                 </div>

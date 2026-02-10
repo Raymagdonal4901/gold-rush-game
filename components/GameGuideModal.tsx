@@ -3,6 +3,7 @@ import { X, Building2, Home, Coins, Wrench, Hammer, Map, ArrowRight, Zap, Refres
 import { DUNGEON_CONFIG, MATERIAL_RECIPES, MATERIAL_CONFIG, VIP_TIERS } from '../constants';
 import { OilRigAnimation } from './OilRigAnimation';
 import { MaterialIcon } from './MaterialIcon';
+import { useTranslation } from './LanguageContext';
 
 interface GameGuideModalProps {
     isOpen: boolean;
@@ -10,6 +11,7 @@ interface GameGuideModalProps {
 }
 
 export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose }) => {
+    const { getLocalized } = useTranslation();
     const [activeTab, setActiveTab] = useState('overview');
 
     if (!isOpen) return null;
@@ -322,7 +324,7 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                                 <MaterialIcon id={1} size="w-12 h-12" />
                                 <span className="absolute -bottom-1 -right-1 bg-stone-900 text-[10px] px-2 py-0.5 rounded-lg border border-stone-700 font-bold text-white">x2</span>
                             </div>
-                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{MATERIAL_CONFIG.NAMES[1 as keyof typeof MATERIAL_CONFIG.NAMES]}</span>
+                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{getLocalized(MATERIAL_CONFIG.NAMES[1 as keyof typeof MATERIAL_CONFIG.NAMES])}</span>
                         </div>
                     </div>
 
@@ -337,7 +339,7 @@ export const GameGuideModal: React.FC<GameGuideModalProps> = ({ isOpen, onClose 
                         <div className="w-20 h-20 bg-orange-900/20 rounded-3xl flex items-center justify-center border-2 border-orange-500 shadow-[0_0_30px_rgba(249,115,22,0.3)] animate-pulse overflow-hidden">
                             <MaterialIcon id={2} size="w-16 h-16" />
                         </div>
-                        <span className="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-600 mt-2">{MATERIAL_CONFIG.NAMES[2 as keyof typeof MATERIAL_CONFIG.NAMES]} (Tier 2)</span>
+                        <span className="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-600 mt-2">{getLocalized(MATERIAL_CONFIG.NAMES[2 as keyof typeof MATERIAL_CONFIG.NAMES])} (Tier 2)</span>
                     </div>
                 </div>
 

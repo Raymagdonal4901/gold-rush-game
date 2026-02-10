@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Backpack, DollarSign, ArrowUpCircle, Cpu, Hammer, HardHat, Glasses, Shirt, Footprints, Smartphone, Monitor, Bot, Truck, ShoppingBag, Sparkles, AlertTriangle, Hourglass, Search, Factory, Key, FileText, Timer, Shield, Gem, Star, TrendingUp, TrendingDown } from 'lucide-react';
 import { AccessoryItem } from '../services/types';
-import { CURRENCY, RARITY_SETTINGS, UPGRADE_REQUIREMENTS, MATERIAL_CONFIG } from '../constants';
+import { CURRENCY, RARITY_SETTINGS, UPGRADE_REQUIREMENTS, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
 import { useTranslation } from './LanguageContext';
@@ -20,7 +20,7 @@ interface InventoryModalProps {
 }
 
 export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose, inventory, userId, onRefresh, marketState, materials = {} }) => {
-    const { t, language } = useTranslation();
+    const { t, language, getLocalized, formatCurrency } = useTranslation();
     const [selectedItem, setSelectedItem] = useState<AccessoryItem | null>(null);
     const [action, setAction] = useState<'DETAILS' | 'UPGRADE' | 'SELL'>('DETAILS');
     const [msg, setMsg] = useState('');
@@ -69,40 +69,75 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
     }, [marketState, materials]);
 
     const getItemDisplayName = (item: any) => {
-        const typeId = item.typeId || '';
-        const name = item.name || '';
-        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return language === 'th' ? 'กุญแจเข้าเหมือง' : 'Mining Key';
-        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return language === 'th' ? 'ชิปอัปเกรด' : 'Upgrade Chip';
-        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return language === 'th' ? 'โต๊ะช่างสกัดแร่' : 'Material Extractor';
-        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return language === 'th' ? 'แว่นขยายส่องแร่' : 'Magnifying Glass';
-        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return language === 'th' ? 'หุ่นยนต์ AI' : 'AI Robot';
-        return name;
+        if (!item) return '';
+        // Try to find in SHOP_ITEMS first for bilingual name
+        const typeId = item.typeId || item.id;
+        if (typeId) {
+            const shopItem = SHOP_ITEMS.find(s => s.id === typeId);
+            if (shopItem && shopItem.name) {
+                return getLocalized(shopItem.name);
+            }
+        }
+        // Fallback to item.name if it exists (might be string or object)
+        if (item.name) {
+            return getLocalized(item.name);
+        }
+        return '';
     };
 
     const getIcon = (item: AccessoryItem, className: string) => {
         let typeId = item.typeId || '';
-        const name = item.name || '';
-        const rarity = item.rarity;
+        // Use English name for checking if available, or fallback to name string
+        let nameToCheck = '';
+        if (item.name && typeof item.name === 'object') {
+            nameToCheck = (item.name as any).en || '';
+        } else if (typeof item.name === 'string') {
+            nameToCheck = item.name;
+        }
 
         // Name-based overrides to consistent with AccessoryManagementModal
-        if (name.includes('ชิป') || name.includes('Chip')) typeId = 'upgrade_chip';
-        else if (name.includes('กุญแจ') || name.includes('Key')) typeId = 'chest_key';
-        else if (name.includes('เครื่องผสม') || name.includes('Mixer')) typeId = 'mixer';
-        else if (name.includes('แว่นขยาย') || name.includes('Magnifying')) typeId = 'magnifying_glass';
-        else if (name.includes('ใบประกัน') || name.includes('Insurance')) typeId = 'insurance_card';
-        else if (name.includes('นาฬิกาทราย') || name.includes('Hourglass')) typeId = 'hourglass_small';
-        else if (name.includes('วัสดุปริศนา') || name.includes('Mystery Material')) typeId = 'mystery_ore';
-        else if (name.includes('วัสดุในตำนาน') || name.includes('Legendary Material')) typeId = 'legendary_ore';
-        else if (name.includes('ระบบล็อค') || name.includes('Auto Lock')) typeId = 'auto_excavator';
-        else if (name.includes('หุ่นยนต์') || name.includes('Robot')) typeId = 'robot';
+        if (nameToCheck.includes('Chip')) typeId = 'upgrade_chip';
+        else if (nameToCheck.includes('Key')) typeId = 'chest_key';
+        else if (nameToCheck.includes('Mixer')) typeId = 'mixer';
+        else if (nameToCheck.includes('Magnifying')) typeId = 'magnifying_glass';
+        else if (nameToCheck.includes('Insurance')) typeId = 'insurance_card';
+        else if (nameToCheck.includes('Hourglass')) typeId = 'hourglass_small';
+        else if (nameToCheck.includes('Mystery Material')) typeId = 'mystery_ore';
+        else if (nameToCheck.includes('Legendary Material')) typeId = 'legendary_ore';
+        else if (nameToCheck.includes('Auto Lock')) typeId = 'auto_excavator';
+        else if (nameToCheck.includes('Robot')) typeId = 'robot';
         // Classic Equipment Fallbacks
-        else if (name.includes('หมวก') || name.includes('Helmet')) typeId = 'hat';
-        else if (name.includes('แว่น') || name.includes('Glasses')) typeId = 'glasses';
-        else if (name.includes('ชุด') || name.includes('Uniform') || name.includes('Suit')) typeId = 'uniform';
-        else if (name.includes('กระเป๋า') || name.includes('Bag') || name.includes('Backpack')) typeId = 'bag';
-        else if (name.includes('รองเท้า') || name.includes('Boots')) typeId = 'boots';
-        else if (name.includes('มือถือ') || name.includes('Mobile') || name.includes('Phone')) typeId = 'mobile';
-        else if (name.includes('คอม') || name.includes('PC') || name.includes('Computer')) typeId = 'pc';
+        else if (nameToCheck.includes('Helmet')) typeId = 'hat';
+        else if (nameToCheck.includes('Glasses')) typeId = 'glasses';
+        else if (nameToCheck.includes('Uniform') || nameToCheck.includes('Suit')) typeId = 'uniform';
+        else if (nameToCheck.includes('Bag') || nameToCheck.includes('Backpack')) typeId = 'bag';
+        else if (nameToCheck.includes('Boots')) typeId = 'boots';
+        else if (nameToCheck.includes('Mobile') || nameToCheck.includes('Phone')) typeId = 'mobile';
+        else if (nameToCheck.includes('PC') || nameToCheck.includes('Computer')) typeId = 'pc';
+
+        // Also check Thai if English check failed and we have it (for legacy or direct string)
+        if (!typeId && typeof item.name === 'string') {
+            if (item.name.includes('ชิป')) typeId = 'upgrade_chip';
+            else if (item.name.includes('กุญแจ')) typeId = 'chest_key';
+            else if (item.name.includes('เครื่องผสม')) typeId = 'mixer';
+            else if (item.name.includes('แว่นขยาย')) typeId = 'magnifying_glass';
+            else if (item.name.includes('ใบประกัน')) typeId = 'insurance_card';
+            else if (item.name.includes('นาฬิกาทราย')) typeId = 'hourglass_small';
+            else if (item.name.includes('วัสดุปริศนา')) typeId = 'mystery_ore';
+            else if (item.name.includes('วัสดุในตำนาน')) typeId = 'legendary_ore';
+            else if (item.name.includes('ระบบล็อค')) typeId = 'auto_excavator';
+            else if (item.name.includes('หุ่นยนต์')) typeId = 'robot';
+            else if (item.name.includes('หมวก')) typeId = 'hat';
+            else if (item.name.includes('แว่น')) typeId = 'glasses';
+            else if (item.name.includes('ชุด')) typeId = 'uniform';
+            else if (item.name.includes('กระเป๋า')) typeId = 'bag';
+            else if (item.name.includes('รองเท้า')) typeId = 'boots';
+            else if (item.name.includes('มือถือ')) typeId = 'mobile';
+            else if (item.name.includes('คอม')) typeId = 'pc';
+        }
+
+
+        const rarity = (item.rarity && RARITY_SETTINGS[item.rarity]) ? item.rarity : 'COMMON';
 
         if (!typeId) return <InfinityGlove rarity={rarity} className={className} />;
         if (typeId.includes('glove')) return <InfinityGlove rarity={rarity} className={className} />;
@@ -139,7 +174,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
     const handleSell = async () => {
         try {
             await api.inventory.sell(selectedItem!.id);
-            setMsg(language === 'th' ? `ขายสำเร็จ!` : 'Sold Successfully!');
+            setMsg(t('inventory.sell_success'));
             setTimeout(() => {
                 setMsg('');
                 setSelectedItem(null);
@@ -201,7 +236,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         }
     }
 
-    const matName = MATERIAL_CONFIG.NAMES[matTier as keyof typeof MATERIAL_CONFIG.NAMES];
+    const matName = getLocalized(MATERIAL_CONFIG.NAMES[matTier as keyof typeof MATERIAL_CONFIG.NAMES]);
 
     const renderDetailView = () => {
         if (!selectedItem) return <div className="text-stone-500 text-center mt-10">{t('inventory.select_item')}</div>;
@@ -214,34 +249,34 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         return (
             <div className="p-4 bg-stone-900 border border-stone-800 rounded-xl relative overflow-hidden">
                 <div className="flex justify-between items-start mb-4 relative z-10">
-                    <div className={`w-16 h-16 rounded-lg border-2 ${RARITY_SETTINGS[selectedItem.rarity].border} bg-stone-800 flex items-center justify-center`}>
-                        {getIcon(selectedItem, `w-8 h-8 ${RARITY_SETTINGS[selectedItem.rarity].color}`)}
+                    <div className={`w-16 h-16 rounded-lg border-2 ${RARITY_SETTINGS[selectedItem.rarity || 'COMMON']?.border || 'border-stone-600'} bg-stone-800 flex items-center justify-center`}>
+                        {getIcon(selectedItem, `w-8 h-8 ${RARITY_SETTINGS[selectedItem.rarity || 'COMMON']?.color || 'text-stone-400'}`)}
                     </div>
                     <div className="text-right">
                         <div className={`font-bold ${selectedItem.isHandmade ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' : 'text-white'}`}>{getItemDisplayName(selectedItem)}</div>
-                        <div className={`text-[10px] font-bold tracking-tight uppercase ${RARITY_SETTINGS[selectedItem.rarity].color}`}>{selectedItem.rarity}</div>
+                        <div className={`text-[10px] font-bold tracking-tight uppercase ${RARITY_SETTINGS[selectedItem.rarity || 'COMMON']?.color || 'text-stone-400'}`}>{selectedItem.rarity || 'COMMON'}</div>
                         {selectedItem.level && selectedItem.level > 1 && <div className="text-xs text-yellow-500 font-bold">Lv. {selectedItem.level}</div>}
                     </div>
                 </div>
 
                 <div className="space-y-2 text-sm text-stone-400 mb-6 relative z-10">
                     <div className="flex justify-between">
-                        <span>{language === 'th' ? 'โบนัสรายวัน' : 'Daily Bonus'}</span>
-                        <span className="text-white font-mono">+{(selectedItem.dailyBonus || 0).toFixed(2)} {CURRENCY}</span>
+                        <span>{t('inventory.daily_bonus')}</span>
+                        <span className="text-white font-mono">+{formatCurrency(selectedItem.dailyBonus || 0)}</span>
                     </div>
                     {selectedItem.specialEffect && (
                         <div className="flex justify-between">
-                            <span>{language === 'th' ? 'คุณสมบัติพิเศษ' : 'Special Property'}</span>
+                            <span>{t('inventory.special_property')}</span>
                             <span className="text-emerald-400 font-bold">{selectedItem.specialEffect}</span>
                         </div>
                     )}
                     <div className="flex justify-between">
-                        <span>{language === 'th' ? 'สถานะ' : 'Status'}</span>
+                        <span>{t('inventory.status')}</span>
                         <span className={isEquipped ? 'text-green-400 font-bold' : 'text-stone-500'}>{isEquipped ? t('inventory.equipped') : t('inventory.empty_slot')}</span>
                     </div>
                     <div className="flex justify-between">
-                        <span>{language === 'th' ? 'ราคาขายคืน' : 'Sell Back Price'}</span>
-                        <span className="text-emerald-400 font-mono">{(selectedItem.price * 0.5).toLocaleString()} {CURRENCY}</span>
+                        <span>{t('inventory.sell_price')}</span>
+                        <span className="text-emerald-400 font-mono">{formatCurrency(selectedItem.price * 0.5)}</span>
                     </div>
                 </div>
 
@@ -271,7 +306,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                         <p className="text-red-400 text-sm mb-3">{t('inventory.sell_confirm')}</p>
                         <div className="flex gap-2">
                             <button onClick={() => setAction('DETAILS')} className="flex-1 py-2 bg-stone-800 rounded text-stone-300">{t('common.cancel')}</button>
-                            <button onClick={handleSell} className="flex-1 py-2 bg-red-600 rounded text-white font-bold">{language === 'th' ? 'ยืนยันขาย' : 'Confirm Sell'}</button>
+                            <button onClick={handleSell} className="flex-1 py-2 bg-red-600 rounded text-white font-bold">{t('inventory.confirm_sell')}</button>
                         </div>
                     </div>
                 )}
@@ -298,7 +333,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                     </div>
                                 </div>
                                 <ul className="text-xs text-stone-500 space-y-1">
-                                    <li>• {language === 'th' ? `ใช้ชิป x1 และ ${matName} x${matAmount}` : `Requires Chip x1 and ${matName} x${matAmount}`}</li>
+                                    <li>• {t('inventory.req_chip_mat').replace('{matName}', matName).replace('{matAmount}', matAmount.toString())}</li>
                                     <li>• {t('inventory.upgrade_chance')} {(chance * 100).toFixed(0)}%</li>
                                     <li>• <span className="text-red-400">{t('inventory.upgrade_fail_penalty')}</span></li>
                                 </ul>
@@ -376,9 +411,9 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                             <Sparkles className="absolute -bottom-4 -left-4 text-yellow-200 animate-[spin_2s_linear_infinite]" size={30} />
                                         </div>
                                         <h3 className="text-4xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-100 to-yellow-500 drop-shadow-lg mb-2">
-                                            UPGRADE SUCCESS!
+                                            {t('inventory.upgrade_success_banner')}
                                         </h3>
-                                        <p className="text-yellow-200/80 mb-8 font-bold tracking-widest uppercase">เพิ่มประสิทธิภาพถาวร</p>
+                                        <p className="text-yellow-200/80 mb-8 font-bold tracking-widest uppercase">{t('inventory.permanent_boost')}</p>
                                     </>
                                 ) : (
                                     <>
@@ -390,9 +425,9 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                             <AlertTriangle className="absolute -top-2 -right-2 text-red-500 animate-pulse" size={40} />
                                         </div>
                                         <h3 className="text-3xl font-display font-bold text-red-500 mb-2 tracking-widest">
-                                            FAILED
+                                            {t('inventory.upgrade_failed_banner')}
                                         </h3>
-                                        <p className="text-stone-500 mb-8">{language === 'th' ? 'เสียวัตถุดิบ แต่ผู้จัดการยังอยู่ครบ' : 'Materials lost, but equipment remains safe.'}</p>
+                                        <p className="text-stone-500 mb-8">{t('inventory.upgrade_fail_desc')}</p>
                                     </>
                                 )}
                                 <button onClick={resetAfterUpgrade} className="px-8 py-3 bg-stone-800 hover:bg-stone-700 text-white rounded-lg font-bold border border-stone-600 transition-all hover:scale-105">{t('common.confirm')}</button>
@@ -423,6 +458,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                             {groupedInventory.map((group, idx) => {
                                 const item = group.representative;
                                 const isSelected = selectedItem?.id && group.allIds.includes(selectedItem.id);
+                                const safeRarity = (item.rarity && RARITY_SETTINGS[item.rarity]) ? item.rarity : 'COMMON';
                                 return (
                                     <div
                                         key={idx}
@@ -432,7 +468,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
 `}
                                     >
                                         <div className="relative">
-                                            {getIcon(item, `w-8 h-8 ${RARITY_SETTINGS[item.rarity].color} group-hover:scale-110 transition-transform`)}
+                                            {getIcon(item, `w-8 h-8 ${RARITY_SETTINGS[safeRarity].color} group-hover:scale-110 transition-transform`)}
 
                                             {/* Quantity Badge */}
                                             {group.count > 1 && (
@@ -451,8 +487,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
 
                                             {/* Tooltip */}
                                             <div className="absolute left-[80%] top-0 z-[150] bg-stone-900/95 text-[10px] text-white p-2 rounded-lg border border-stone-700 shadow-xl opacity-0 group-hover:opacity-100 hover:opacity-100 pointer-events-none transition-opacity min-w-[120px] backdrop-blur-sm whitespace-nowrap">
-                                                <div className={`font-bold ${RARITY_SETTINGS[item.rarity].color} mb-1`}>{getItemDisplayName(item)}</div>
-                                                {group.count > 1 && <div className="text-stone-400 text-[9px] mb-1 italic">{language === 'th' ? `จำนวนคงเหลือ: ${group.count} ชิ้น` : `Remaining: ${group.count} pcs`}</div>}
+                                                <div className={`font-bold ${RARITY_SETTINGS[safeRarity].color} mb-1`}>{getItemDisplayName(item)}</div>
+                                                {group.count > 1 && <div className="text-stone-400 text-[9px] mb-1 italic">{t('inventory.remaining_count').replace('{count}', group.count.toString())}</div>}
                                                 {item.specialEffect && (
                                                     <div className="text-[9px] text-emerald-400 mb-1 font-bold">
                                                         {item.specialEffect}
@@ -461,7 +497,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                                 {item.typeId !== 'robot' && (
                                                     <div className="text-[9px] text-stone-400 flex items-center gap-1">
                                                         <Star size={10} className="text-yellow-500" />
-                                                        <span className="font-mono text-yellow-500">{language === 'th' ? `โบนัส: +${(item.dailyBonus || 0).toFixed(2)} / วัน` : `Bonus: +${(item.dailyBonus || 0).toFixed(2)} / day`}</span>
+                                                        <span className="font-mono text-yellow-500">{t('inventory.bonus_per_day').replace('{bonus}', formatCurrency(item.dailyBonus || 0))}</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -485,7 +521,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                     </div>
                                     <div className="text-right">
                                         <div className="text-sm font-bold text-emerald-400 font-mono">
-                                            {totalMaterialsValue.toLocaleString()} {CURRENCY}
+                                            {formatCurrency(totalMaterialsValue)}
                                         </div>
                                         <div className="text-[9px] text-emerald-500/50">{t('inventory.market_ref')}</div>
                                     </div>

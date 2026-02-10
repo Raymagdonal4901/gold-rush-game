@@ -5,7 +5,14 @@ import { AuthRequest } from '../middleware/auth';
 
 // --- MIRRORED CONSTANTS ---
 const MATERIAL_CONFIG = {
-    NAMES: { 1: 'ถ่านหิน', 2: 'ทองแดง', 3: 'เหล็ก', 4: 'ทองคำ', 5: 'เพชร', 7: 'ไวเบรเนียม' } as Record<number, string>
+    NAMES: {
+        1: { th: 'ถ่านหิน', en: 'Coal' },
+        2: { th: 'ทองแดง', en: 'Copper' },
+        3: { th: 'เหล็ก', en: 'Iron' },
+        4: { th: 'ทองคำ', en: 'Gold' },
+        5: { th: 'เพชร', en: 'Diamond' },
+        7: { th: 'ไวเบรเนียม', en: 'Vibranium' }
+    } as Record<number, { th: string; en: string }>
 };
 
 const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, any>> = {
@@ -126,7 +133,7 @@ export const buyAccessory = async (req: AuthRequest, res: Response) => {
             type: 'ACCESSORY_PURCHASE',
             amount: price,
             status: 'COMPLETED',
-            description: `ซื้ออุปกรณ์: ${name}`
+            description: `ซื้ออุปกรณ์: ${typeof name === 'object' ? name.th : name}`
         });
         await purchaseTx.save();
 
@@ -179,7 +186,7 @@ export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
 
         // Validate Materials
         if (!user.materials || (user.materials[matTier.toString()] || 0) < matAmount) {
-            return res.status(400).json({ message: `วัตถุดิบไม่พอ: ${MATERIAL_CONFIG.NAMES[matTier]}` });
+            return res.status(400).json({ message: `วัตถุดิบไม่พอ: ${MATERIAL_CONFIG.NAMES[matTier]?.th || matTier}` });
         }
 
         // Validate Chips
@@ -249,7 +256,7 @@ export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
             type: 'ACCESSORY_UPGRADE',
             amount: cost,
             status: success ? 'COMPLETED' : 'REJECTED',
-            description: `อัปเกรดอุปกรณ์: ${item.name} (ระดับ ${currentLevel} -> ${item.level})`
+            description: `อัปเกรดอุปกรณ์: ${typeof item.name === 'object' ? item.name.th : item.name} (ระดับ ${currentLevel} -> ${item.level})`
         });
         await upgradeTx.save();
 

@@ -23,12 +23,12 @@ export const getQuestStatus = async (req: any, res: Response) => {
 
 // Define Quests (Mirrors frontend constants to avoid shared repo complexity for now)
 const QUESTS = [
-    { id: 'q1', type: 'materials_crafted', target: 20, rewardType: 'points', rewardAmount: 20, rewardId: null },
-    { id: 'q2', type: 'spend', target: 5000, rewardType: 'points', rewardAmount: 30, rewardId: null },
-    { id: 'q3', type: 'dungeon', target: 30, rewardType: 'points', rewardAmount: 50, rewardId: null },
-    { id: 'q4', type: 'items_crafted', target: 20, rewardType: 'points', rewardAmount: 40, rewardId: null },
-    { id: 'q5', type: 'repair', target: 100, rewardType: 'points', rewardAmount: 20, rewardId: null },
-    { id: 'q6', type: 'rare_loot', target: 1, rewardType: 'points', rewardAmount: 60, rewardId: null },
+    { id: 'q1', type: 'materials_crafted', target: 20, rewardType: 'points', rewardAmount: 20, title: { th: 'นักสกัดแร่', en: 'Mineral Refiner' }, rewardId: null },
+    { id: 'q2', type: 'spend', target: 5000, rewardType: 'points', rewardAmount: 30, title: { th: 'นักลงทุนเหมือง', en: 'Mine Investor' }, rewardId: null },
+    { id: 'q3', type: 'dungeon', target: 30, rewardType: 'points', rewardAmount: 50, title: { th: 'นักสำรวจยอดเยี่ยม', en: 'Top Explorer' }, rewardId: null },
+    { id: 'q4', type: 'items_crafted', target: 20, rewardType: 'points', rewardAmount: 40, title: { th: 'ช่างประกอบหัวเจาะ', en: 'Drill Assembler' }, rewardId: null },
+    { id: 'q5', type: 'repair', target: 100, rewardType: 'points', rewardAmount: 20, title: { th: 'ผู้ดูแลเครื่องจักร', en: 'Machine Maintainer' }, rewardId: null },
+    { id: 'q6', type: 'rare_loot', target: 1, rewardType: 'points', rewardAmount: 60, title: { th: 'ดวงมหาเฮง', en: 'Super Lucky' }, rewardId: null },
 ];
 
 export const claimQuestReward = async (req: any, res: Response) => {
@@ -82,7 +82,7 @@ export const claimQuestReward = async (req: any, res: Response) => {
             type: 'QUEST_REWARD',
             amount: quest.rewardType === 'money' ? quest.rewardAmount : 0,
             status: 'COMPLETED',
-            description: `รับรางวัลเควส: ${quest.id}`
+            description: `รับรางวัลเควส: ${typeof quest.title === 'object' ? quest.title.th : quest.title}`
         });
         await questTx.save();
 
@@ -102,19 +102,19 @@ export const claimQuestReward = async (req: any, res: Response) => {
 
 // Achievements
 const ACHIEVEMENTS = [
-    { id: 'log_1', title: 'First Steps', type: 'login', target: 1, points: 10 },
-    { id: 'log_5', title: 'Loyal Miner', type: 'login', target: 5, points: 50 },
-    { id: 'lucky_1', title: 'Fortune Finder', type: 'lucky', target: 1, points: 20 },
-    { id: 'lucky_10', title: 'High Roller', type: 'lucky', target: 10, points: 100 },
+    { id: 'log_1', title: { th: 'ก้าวแรก', en: 'First Steps' }, type: 'login', target: 1, points: 10 },
+    { id: 'log_5', title: { th: 'ผู้ขุดที่ซื่อสัตย์', en: 'Loyal Miner' }, type: 'login', target: 5, points: 50 },
+    { id: 'lucky_1', title: { th: 'แมวกวักนำโชค', en: 'Fortune Finder' }, type: 'lucky', target: 1, points: 20 },
+    { id: 'lucky_10', title: { th: 'เซียนพนัน', en: 'High Roller' }, type: 'lucky', target: 10, points: 100 },
 ];
 
 // Mining Ranks
 const MINING_RANKS = [
-    { id: 'bronze', label: 'Bronze Miner', points: 0, rewardId: null },
-    { id: 'silver', label: 'Silver Miner', points: 100, rewardId: 'starter_pack' },
-    { id: 'gold', label: 'Gold Tycoon', points: 500, rewardId: 'gold_glove' },
-    { id: 'platinum', label: 'Platinum Baron', points: 2000, rewardId: 'expert_rig' },
-    { id: 'diamond', label: 'Diamond Overlord', points: 10000, rewardId: 'royal_permit' },
+    { id: 'bronze', label: { th: 'นักขุดระดับบรอนซ์', en: 'Bronze Miner' }, points: 0, rewardId: null },
+    { id: 'silver', label: { th: 'นักขุดระดับซิลเวอร์', en: 'Silver Miner' }, points: 100, rewardId: 'starter_pack' },
+    { id: 'gold', label: { th: 'นักขุดระดับโกลด์', en: 'Gold Tycoon' }, points: 500, rewardId: 'gold_glove' },
+    { id: 'platinum', label: { th: 'นักขุดระดับแพลตตินัม', en: 'Platinum Baron' }, points: 2000, rewardId: 'expert_rig' },
+    { id: 'diamond', label: { th: 'นักขุดระดับแชมป์', en: 'Diamond Overlord' }, points: 10000, rewardId: 'royal_permit' },
 ];
 
 export const claimAchievement = async (req: any, res: Response) => {
@@ -153,7 +153,7 @@ export const claimAchievement = async (req: any, res: Response) => {
             type: 'QUEST_REWARD',
             amount: 0,
             status: 'COMPLETED',
-            description: `รับรางวัลความสำเร็จ: ${ach.title}`
+            description: `รับรางวัลความสำเร็จ: ${typeof ach.title === 'object' ? ach.title.th : ach.title}`
         });
         await achTx.save();
 
@@ -203,7 +203,7 @@ export const claimRankReward = async (req: any, res: Response) => {
             type: 'RANK_REWARD',
             amount: 0,
             status: 'COMPLETED',
-            description: `รับรางวัลเลื่อนระดับ: ${rank.label}`
+            description: `รับรางวัลเลื่อนระดับ: ${typeof rank.label === 'object' ? rank.label.th : rank.label}`
         });
         await rankTx.save();
 

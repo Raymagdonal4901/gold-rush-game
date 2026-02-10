@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Lock, KeyRound, Save, Shield } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../services/types';
+import { useTranslation } from './LanguageContext';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -11,7 +12,8 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user, onSuccess }) => {
-    const [activeTab, setActiveTab] = useState<'PASSWORD' | 'PIN'>('PASSWORD');
+    const { t } = useTranslation();
+    const [activeTab, setActiveTab] = useState<'PASSWORD' | 'PIN' | 'BANK'>('PASSWORD');
 
     // Form State
     const [currentPassword, setCurrentPassword] = useState('');
@@ -38,17 +40,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
 
         try {
             if (activeTab === 'PASSWORD') {
-                if (newPassword.length < 4) throw new Error('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 4 ตัวอักษร');
+                if (newPassword.length < 4) throw new Error(t('settings.error_password_length'));
                 await api.user.updatePassword(currentPassword, newPassword);
-                setStatus({ type: 'SUCCESS', msg: 'เปลี่ยนรหัสผ่านสำเร็จ' });
+                setStatus({ type: 'SUCCESS', msg: t('settings.success_password') });
             } else if (activeTab === 'PIN') {
-                if (!/^\d{4}$/.test(newPin)) throw new Error('รหัส PIN ต้องเป็นตัวเลข 4 หลัก');
+                if (!/^\d{4}$/.test(newPin)) throw new Error(t('settings.error_pin_format'));
                 await api.user.updatePin(currentPassword, newPin);
-                setStatus({ type: 'SUCCESS', msg: 'เปลี่ยนรหัส PIN สำเร็จ' });
+                setStatus({ type: 'SUCCESS', msg: t('settings.success_pin') });
             } else if (activeTab === 'BANK') {
-                if (!qrImage) throw new Error('กรุณาอัปโหลดรูป QR Code');
+                if (!qrImage) throw new Error(t('settings.error_qr_missing'));
                 await api.user.updateBankQr(qrImage);
-                setStatus({ type: 'SUCCESS', msg: 'อัปเดตบัญชีรับเงินสำเร็จ' });
+                setStatus({ type: 'SUCCESS', msg: t('settings.success_bank') });
             }
             if (onSuccess) onSuccess();
             // Clear inputs except QR
@@ -71,7 +73,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
             const base64String = reader.result as string;
             setQrImage(base64String);
             setIsUploading(false);
-            setStatus({ type: 'SUCCESS', msg: 'อัปโหลดรูปภาพแล้ว อย่าลืมกดบันทึก' });
+            setStatus({ type: 'SUCCESS', msg: t('settings.upload_notice') });
         };
         reader.readAsDataURL(file);
     };
@@ -87,8 +89,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                             <Shield size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-display font-bold text-white">ตั้งค่าความปลอดภัย</h2>
-                            <p className="text-xs text-stone-500 uppercase tracking-wider">จัดการบัญชีผู้ใช้</p>
+                            <h2 className="text-xl font-display font-bold text-white">{t('settings.title')}</h2>
+                            <p className="text-xs text-stone-500 uppercase tracking-wider">{t('settings.subtitle')}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
@@ -103,21 +105,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                         className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2
                 ${activeTab === 'PASSWORD' ? 'bg-stone-900 text-yellow-500 border-b-2 border-yellow-500' : 'text-stone-500 hover:text-stone-300'}`}
                     >
-                        <Lock size={16} /> รหัสผ่าน
+                        <Lock size={16} /> {t('settings.password_tab')}
                     </button>
                     <button
                         onClick={() => { setActiveTab('PIN'); setStatus(null); }}
                         className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2
                 ${activeTab === 'PIN' ? 'bg-stone-900 text-yellow-500 border-b-2 border-yellow-500' : 'text-stone-500 hover:text-stone-300'}`}
                     >
-                        <KeyRound size={16} /> รหัส PIN
+                        <KeyRound size={16} /> {t('settings.pin_tab')}
                     </button>
                     <button
                         onClick={() => { setActiveTab('BANK'); setStatus(null); }}
                         className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2
                 ${activeTab === 'BANK' ? 'bg-stone-900 text-yellow-500 border-b-2 border-yellow-500' : 'text-stone-500 hover:text-stone-300'}`}
                     >
-                        <Save size={16} /> บัญชีรับเงิน
+                        <Save size={16} /> {t('settings.bank_tab')}
                     </button>
                 </div>
 
@@ -132,33 +134,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                         )}
 
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-stone-500 uppercase">ยืนยันรหัสผ่านปัจจุบัน</label>
+                            <label className="text-xs font-bold text-stone-500 uppercase">{t('settings.current_password')}</label>
                             <input
                                 type="password"
                                 required
                                 value={currentPassword}
                                 onChange={e => setCurrentPassword(e.target.value)}
                                 className="w-full bg-stone-900 border border-stone-700 rounded p-3 text-white focus:border-yellow-500 outline-none transition-colors"
-                                placeholder="กรอกรหัสผ่านเดิม"
+                                placeholder={t('settings.password_placeholder')}
                             />
                         </div>
 
                         {activeTab === 'PASSWORD' ? (
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-stone-500 uppercase">รหัสผ่านใหม่</label>
+                                <label className="text-xs font-bold text-stone-500 uppercase">{t('settings.new_password')}</label>
                                 <input
                                     type="password"
                                     required
                                     value={newPassword}
                                     onChange={e => setNewPassword(e.target.value)}
                                     className="w-full bg-stone-900 border border-stone-700 rounded p-3 text-white focus:border-yellow-500 outline-none transition-colors"
-                                    placeholder="กำหนดรหัสผ่านใหม่ (ขั้นต่ำ 4 ตัวอักษร)"
+                                    placeholder={t('settings.new_password_placeholder')}
                                     minLength={4}
                                 />
                             </div>
                         ) : activeTab === 'PIN' ? (
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-stone-500 uppercase">รหัส PIN ใหม่ (4 หลัก)</label>
+                                <label className="text-xs font-bold text-stone-500 uppercase">{t('settings.new_pin')}</label>
                                 <input
                                     type="password"
                                     required
@@ -171,12 +173,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                                         }
                                     }}
                                     className="w-full bg-stone-900 border border-stone-700 rounded p-3 text-white focus:border-yellow-500 outline-none transition-colors text-center tracking-[0.5em] font-mono"
-                                    placeholder="----"
+                                    placeholder={t('settings.pin_placeholder')}
                                 />
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                <label className="text-xs font-bold text-stone-500 uppercase">รูปภาพ QR Code สำหรับรับเงิน</label>
+                                <label className="text-xs font-bold text-stone-500 uppercase">{t('settings.qr_label')}</label>
                                 <div className="flex flex-col items-center gap-4">
                                     <div
                                         onClick={() => fileInputRef.current?.click()}
@@ -186,7 +188,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                                             <>
                                                 <img src={qrImage} alt="Bank QR" className="w-full h-full object-contain p-2" />
                                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                    <span className="text-white text-xs font-bold uppercase">คลิกเพื่อเปลี่ยนรูป</span>
+                                                    <span className="text-white text-xs font-bold uppercase">{t('settings.qr_upload_hint')}</span>
                                                 </div>
                                             </>
                                         ) : (
@@ -194,7 +196,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                                                 <div className="w-12 h-12 rounded-full bg-stone-800 flex items-center justify-center text-stone-500 mb-2">
                                                     <Save size={24} />
                                                 </div>
-                                                <span className="text-xs text-stone-500 font-bold uppercase">อัปโหลดรูป QR</span>
+                                                <span className="text-xs text-stone-500 font-bold uppercase">{t('settings.qr_empty_hint')}</span>
                                             </>
                                         )}
                                         <input
@@ -206,7 +208,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                                         />
                                     </div>
                                     <p className="text-[10px] text-stone-500 text-center px-4 uppercase">
-                                        ใช้สำหรับแอดมินสแกนจ่ายเงินเพื่อความรวดเร็วในการถอนเงิน
+                                        {t('settings.qr_desc')}
                                     </p>
                                 </div>
                             </div>
@@ -216,7 +218,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                             type="submit"
                             className="w-full bg-yellow-600 hover:bg-yellow-500 text-stone-900 font-bold py-3 rounded shadow-lg transition-all flex items-center justify-center gap-2 mt-4"
                         >
-                            <Save size={18} /> บันทึกการเปลี่ยนแปลง
+                            <Save size={18} /> {t('settings.save_changes')}
                         </button>
                     </form>
                 </div>

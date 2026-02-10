@@ -6,17 +6,17 @@ import { AuthRequest } from '../middleware/auth';
 // --- CONSTANTS (Mirrored from frontend for now) ---
 const MATERIAL_CONFIG = {
     NAMES: {
-        0: 'แร่ปริศนา',
-        1: 'ถ่านหิน',
-        2: 'ทองแดง',
-        3: 'เหล็ก',
-        4: 'ทองคำ',
-        5: 'เพชร',
-        6: 'น้ำมันดิบสังเคราะห์',
-        7: 'ไวเบรเนียม',
-        8: 'แร่ลึกลับ',
-        9: 'แร่ในตำนาน',
-    } as Record<number, string>
+        0: { th: 'วัสดุปริศนา', en: 'Mysterious Material' },
+        1: { th: 'ถ่านหิน', en: 'Coal' },
+        2: { th: 'ทองแดง', en: 'Copper' },
+        3: { th: 'เหล็ก', en: 'Iron' },
+        4: { th: 'ทองคำ', en: 'Gold' },
+        5: { th: 'เพชร', en: 'Diamond' },
+        6: { th: 'น้ำมันดิบ', en: 'Crude Oil' },
+        7: { th: 'แร่วาเบรเนียม', en: 'Vibranium' },
+        8: { th: 'แร่ลึกลับ', en: 'Mysterious Ore' },
+        9: { th: 'แร่ในตำนาน', en: 'Legendary Ore' },
+    } as Record<number, { th: string; en: string }>
 };
 
 const MATERIAL_RECIPES: Record<number, { ingredients: Record<number, number>; fee: number; requiredItem?: string }> = {
@@ -29,8 +29,8 @@ const MATERIAL_RECIPES: Record<number, { ingredients: Record<number, number>; fe
 };
 
 const SHOP_ITEMS = [
-    { id: 'mixer', name: 'เครื่องผสมอนุภาค' },
-    { id: 'magnifying_glass', name: 'แว่นขยาย' }
+    { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' } },
+    { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' } }
 ];
 
 // --- MARKET LOGIC ---
@@ -113,7 +113,7 @@ export const craftMaterial = async (req: AuthRequest, res: Response) => {
             const userAmount = user.materials[tier.toString()] || 0; // Access via string key for Mongoose Map or Object
             console.log(`Checking ingredient Tier ${tier}: Needed ${amountNeeded}, Have ${userAmount}`);
             if (userAmount < amountNeeded) {
-                const matName = MATERIAL_CONFIG.NAMES[tier] || `Material #${tier}`;
+                const matName = MATERIAL_CONFIG.NAMES[tier]?.th || `Material #${tier}`;
                 return res.status(400).json({
                     message: `วัตถุดิบไม่พอ: ต้องการ ${matName} จำนวน ${amountNeeded} ชิ้น`
                 });
@@ -133,7 +133,7 @@ export const craftMaterial = async (req: AuthRequest, res: Response) => {
             const hasItem = user.inventory && user.inventory.some((i: any) => i.typeId === recipe.requiredItem);
             if (!hasItem) {
                 console.log(`Missing required item: ${recipe.requiredItem}`);
-                const requiredItemName = SHOP_ITEMS.find(i => i.id === recipe.requiredItem)?.name || recipe.requiredItem;
+                const requiredItemName = SHOP_ITEMS.find(i => i.id === recipe.requiredItem)?.name.th || recipe.requiredItem;
                 return res.status(400).json({
                     message: `จำเป็นต้องมีอุปกรณ์: ${requiredItemName}`
                 });
@@ -191,14 +191,14 @@ export const craftMaterial = async (req: AuthRequest, res: Response) => {
             type: 'MATERIAL_CRAFT',
             amount: recipe.fee,
             status: 'COMPLETED',
-            description: `ผลิตแร่: ${MATERIAL_CONFIG.NAMES[targetTier]}`
+            description: `ผลิตแร่: ${MATERIAL_CONFIG.NAMES[targetTier]?.th || 'Unknown'}`
         });
         await craftTx.save();
 
         res.status(200).json({
             success: true,
-            sourceName: MATERIAL_CONFIG.NAMES[sourceTier] || 'Unknown',
-            targetName: MATERIAL_CONFIG.NAMES[targetTier] || 'Unknown',
+            sourceName: MATERIAL_CONFIG.NAMES[sourceTier]?.th || 'Unknown',
+            targetName: MATERIAL_CONFIG.NAMES[targetTier]?.th || 'Unknown',
             targetTier: targetTier,
             amount: 1,
             balance: user.balance,
@@ -252,7 +252,7 @@ export const sellMaterial = async (req: AuthRequest, res: Response) => {
             type: 'MATERIAL_SELL',
             amount: totalEarned,
             status: 'COMPLETED',
-            description: `ขายแร่: ${MATERIAL_CONFIG.NAMES[tier]} (${amount} ชิ้น)`
+            description: `ขายแร่: ${MATERIAL_CONFIG.NAMES[tier].th} (${amount} ชิ้น)`
         });
         await sellTx.save();
 
@@ -262,7 +262,7 @@ export const sellMaterial = async (req: AuthRequest, res: Response) => {
             type: 'MARKET_TAX',
             amount: tax,
             status: 'COMPLETED',
-            description: `ภาษีตลาดจากการขาย: ${MATERIAL_CONFIG.NAMES[tier]} (${amount} ชิ้น)`
+            description: `ภาษีตลาดจากการขาย: ${MATERIAL_CONFIG.NAMES[tier].th} (${amount} ชิ้น)`
         });
         await taxTx.save();
 
@@ -332,7 +332,7 @@ export const buyMaterial = async (req: AuthRequest, res: Response) => {
             type: 'MATERIAL_BUY',
             amount: totalCost,
             status: 'COMPLETED',
-            description: `ซื้อแร่: ${MATERIAL_CONFIG.NAMES[tier]} (${amount} ชิ้น)`
+            description: `ซื้อแร่: ${MATERIAL_CONFIG.NAMES[tier].th} (${amount} ชิ้น)`
         });
         await buyTx.save();
 
@@ -342,7 +342,7 @@ export const buyMaterial = async (req: AuthRequest, res: Response) => {
             type: 'MARKET_TAX',
             amount: tax,
             status: 'COMPLETED',
-            description: `ค่าธรรมเนียม/ภาษีตลาดจากการซื้อ: ${MATERIAL_CONFIG.NAMES[tier]} (${amount} ชิ้น)`
+            description: `ค่าธรรมเนียม/ภาษีตลาดจากการซื้อ: ${MATERIAL_CONFIG.NAMES[tier].th} (${amount} ชิ้น)`
         });
         await taxTx.save();
 

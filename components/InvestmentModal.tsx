@@ -3,6 +3,7 @@ import { X, AlertCircle, CheckCircle2, Pickaxe, Sparkles, Gem, Hammer, HelpCircl
 import { CURRENCY, RIG_PRESETS, RigPreset, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
 import { AccessoryItem, OilRig } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
+import { useTranslation } from './LanguageContext';
 
 interface InvestmentModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
   rigs,
   addNotification
 }) => {
+  const { t, getLocalized, formatCurrency } = useTranslation();
   if (!isOpen) return null;
 
   const isSlotLimitReached = currentRigCount >= maxRigs;
@@ -38,12 +40,12 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
   const handleBuy = (preset: RigPreset) => {
     // 1. Check Max Allowed
     if (preset.specialProperties?.maxAllowed) {
-      const existingCount = rigs.filter(r => r.name === preset.name).length;
+      const existingCount = rigs.filter(r => getLocalized(r.name) === getLocalized(preset.name)).length;
       if (existingCount >= preset.specialProperties.maxAllowed) {
         if (addNotification) addNotification({
           id: Date.now().toString(),
           userId: '', // Will be handled by notification system
-          message: `จำกัดการครอบครองเพียง ${preset.specialProperties.maxAllowed} เครื่องต่อไอดี`,
+          message: t('machine_shop.limit_msg', { max: preset.specialProperties.maxAllowed }),
           type: 'ERROR',
           read: false,
           timestamp: Date.now()
@@ -57,7 +59,7 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
       if (addNotification) addNotification({
         id: Date.now().toString(),
         userId: '',
-        message: "คุณมีเครื่องจักรครบตามจำนวนที่ปลดล็อกแล้ว กรุณาปลดล็อกพื้นที่เพิ่ม",
+        message: t('machine_shop.slot_full_msg'),
         type: 'ERROR',
         read: false,
         timestamp: Date.now()
@@ -129,20 +131,20 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
         <div className="p-3 border-b border-stone-800 flex justify-between items-center bg-stone-900 shrink-0">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-600">
-              ร้านค้าเครื่องจักร
+              {t('machine_shop.title')}
             </h2>
             <div className="flex gap-2">
               <span className="text-emerald-400 font-mono text-xs font-bold bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-900/50 flex items-center gap-1">
-                <Coins size={12} /> ทุน: {walletBalance.toLocaleString()}
+                <Coins size={12} /> {t('machine_shop.capital')}: {walletBalance.toLocaleString()}
               </span>
               <span className={`text-xs font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${isSlotLimitReached ? 'bg-red-950/30 text-red-400 border-red-900/50' : 'bg-stone-800 text-stone-400 border-stone-700'}`}>
-                <Lock size={12} /> พื้นที่: {currentRigCount}/{maxRigs}
+                <Lock size={12} /> {t('machine_shop.slots_used')}: {currentRigCount}/{maxRigs}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={onOpenRates} className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 bg-purple-900/20 px-2 py-1 rounded border border-purple-900/50">
-              <HelpCircle size={12} /> โอกาสโบนัส
+              <HelpCircle size={12} /> {t('machine_shop.bonus_chance')}
             </button>
             <button onClick={onClose} className="p-1 rounded-full hover:bg-stone-800 text-stone-500 hover:text-white transition-colors">
               <X size={20} />
@@ -157,7 +159,7 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
               // Check Max Limit
               let isMaxReached = false;
               if (preset.specialProperties?.maxAllowed) {
-                const existingCount = rigs.filter(r => r.name === preset.name).length;
+                const existingCount = rigs.filter(r => getLocalized(r.name) === getLocalized(preset.name)).length;
                 if (existingCount >= preset.specialProperties.maxAllowed) isMaxReached = true;
               }
 
@@ -194,7 +196,7 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
                     <div className="min-w-0">
                       <div className="text-xs font-black text-white uppercase tracking-widest mb-0.5">Tier {preset.id}</div>
                       <h3 className={`font-display font-bold text-sm leading-tight truncate ${styles.text}`}>
-                        {preset.name}
+                        {getLocalized(preset.name)}
                       </h3>
                     </div>
                   </div>
@@ -202,27 +204,27 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
                   {/* Compact Stats */}
                   <div className="p-2.5 flex-1 flex flex-col gap-1.5 text-xs">
                     <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
-                      <span className="text-stone-500">ผลผลิต</span>
-                      <span className="text-yellow-500 font-bold font-mono">+{preset.dailyProfit}/วัน</span>
+                      <span className="text-stone-500">{t('machine_shop.production')}</span>
+                      <span className="text-yellow-500 font-bold font-mono">+{formatCurrency(preset.dailyProfit)}/{t('time.day')}</span>
                     </div>
                     <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
-                      <span className="text-stone-500">สัญญา</span>
+                      <span className="text-stone-500">{t('machine_shop.contract')}</span>
                       <span className="text-stone-300 font-mono">
-                        {preset.specialProperties?.infiniteDurability ? 'ถาวร (∞)' : preset.durationDays ? `${preset.durationDays} วัน` : `${preset.durationMonths} เดือน`}
+                        {preset.specialProperties?.infiniteDurability ? t('rig.permanent') : preset.durationDays ? `${preset.durationDays} ${t('time.days')}` : `${preset.durationMonths} ${t('time.months_short')}`}
                       </span>
                     </div>
                     <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
-                      <span className="text-stone-500">ค่าพลังงาน</span>
-                      <span className="text-orange-400 font-mono">-{preset.energyCostPerDay}/{CURRENCY} 24h</span>
+                      <span className="text-stone-500">{t('machine_shop.energy_cost')}</span>
+                      <span className="text-orange-400 font-mono">-{formatCurrency(preset.energyCostPerDay)}/24h</span>
                     </div>
                     <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
-                      <span className="text-stone-500">ค่าซ่อม</span>
-                      <span className="text-red-400 font-mono">{preset.id === 8 ? '-' : `-${preset.repairCost} ${CURRENCY} (15 วัน)`}</span>
+                      <span className="text-stone-500">{t('machine_shop.repair_cost')}</span>
+                      <span className="text-red-400 font-mono">{preset.id === 8 ? '-' : `-${formatCurrency(preset.repairCost)} ${t('machine_shop.days_15')}`}</span>
                     </div>
 
                     {isCrafting ? (
                       <div className="mt-auto pt-2 border-t border-dashed border-stone-800">
-                        <div className="text-[10px] text-stone-400 mb-1">วัตถุดิบที่ต้องใช้:</div>
+                        <div className="text-[10px] text-stone-400 mb-1">{t('machine_shop.craft_req')}:</div>
                         <div className="flex flex-wrap gap-2">
                           {preset.craftingRecipe?.materials && Object.entries(preset.craftingRecipe.materials).map(([tierStr, amt]) => {
                             const tier = parseInt(tierStr);
@@ -251,8 +253,8 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
                       </div>
                     ) : (
                       <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded border border-emerald-900/10">
-                        <span className="text-stone-500">กำไรสุทธิ</span>
-                        <span className="text-emerald-400 font-bold font-mono">+{(netProfit || 0).toLocaleString()}</span>
+                        <span className="text-stone-500">{t('machine_shop.net_profit')}</span>
+                        <span className="text-emerald-400 font-bold font-mono">+{formatCurrency(netProfit)}</span>
                       </div>
                     )}
                   </div>
@@ -272,16 +274,16 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
                                         `}
                     >
                       {isSlotLimitReached ? (
-                        <span>พื้นที่เต็ม</span>
+                        <span>{t('machine_shop.space_full')}</span>
                       ) : isMaxReached ? (
-                        <span>ครบจำกัด ({preset.specialProperties?.maxAllowed})</span>
+                        <span>{t('machine_shop.limit_reached')} ({preset.specialProperties?.maxAllowed})</span>
                       ) : (
                         <>
                           {isAffordable ? null : <AlertCircle size={12} />}
                           {isCrafting ? (
-                            <span>ผลิตเครื่องจักร</span>
+                            <span>{t('shop.craft_action')}</span>
                           ) : (
-                            <span className="font-mono">฿ {preset.price.toLocaleString()}</span>
+                            <span className="font-mono">{formatCurrency(preset.price)}</span>
                           )}
                         </>
                       )}
@@ -293,6 +295,6 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };

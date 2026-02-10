@@ -3,6 +3,7 @@ import { X, History, ArrowUpRight, ArrowDownLeft, ShoppingCart, RefreshCw, Alert
 import { Transaction } from '../services/types';
 import { api } from '../services/api';
 import { CURRENCY } from '../constants';
+import { useTranslation } from './LanguageContext';
 
 interface HistoryModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface HistoryModalProps {
 }
 
 export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, userId }) => {
+  const { t, getLocalized } = useTranslation();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
@@ -137,8 +139,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
               <History size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-display font-bold text-white">ประวัติธุรกรรม</h2>
-              <p className="text-xs text-stone-500 uppercase tracking-wider">บัญชีการเงิน</p>
+              <h2 className="text-xl font-display font-bold text-white">{t('history.title')}</h2>
+              <p className="text-xs text-stone-500 uppercase tracking-wider">{t('history.subtitle')}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
@@ -151,7 +153,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
           {transactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-stone-500 gap-4">
               <AlertCircle size={48} opacity={0.5} />
-              <p>ไม่พบประวัติธุรกรรม</p>
+              <p>{t('history.no_data')}</p>
             </div>
           ) : (
             <div className="divide-y divide-stone-800">
@@ -163,7 +165,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
                     </div>
                     <div>
                       <div className="text-stone-200 font-bold text-sm">
-                        {tx.description}
+                        {getLocalized(tx.description)}
                         {(tx as any).count > 1 && (
                           <span className="text-yellow-500 ml-2">x{(tx as any).count}</span>
                         )}
@@ -180,11 +182,14 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
                           {((tx.amount) * ((tx as any).count || 1)).toLocaleString(undefined, { minimumFractionDigits: tx.amount % 1 === 0 ? 0 : 2 })} {CURRENCY}
                         </>
                       ) : (
-                        <span className="text-stone-500 italic text-[10px]">บันทึกกิจกรรม</span>
+                        <span className="text-stone-500 italic text-[10px]">{t('history.log_activity')}</span>
                       )}
                     </div>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider font-bold ${getStatusColor(tx.status)}`}>
-                      {tx.status}
+                      {tx.status === 'COMPLETED' ? t('history.status_completed') :
+                        tx.status === 'PENDING' ? t('history.status_pending') :
+                          tx.status === 'REJECTED' ? t('history.status_rejected') :
+                            tx.status}
                     </span>
                   </div>
                 </div>

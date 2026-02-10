@@ -5,23 +5,23 @@ import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
 
 const SHOP_ITEMS = [
-    { id: 'upgrade_chip', name: 'ชิปอัปเกรด', price: 5, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'chest_key', name: 'กุญแจเข้าเหมือง', price: 5, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
-    { id: 'mixer', name: 'โต๊ะช่างสกัดแร่', price: 5, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
-    { id: 'magnifying_glass', name: 'แว่นขยายส่องแร่', price: 5, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
-    { id: 'robot', name: 'หุ่นยนต์ AI', price: 100, lifespanDays: 30, minBonus: 0, maxBonus: 0 },
-    { id: 'insurance_card', name: 'ใบประกันความเสี่ยง', price: 300, lifespanDays: 0, minBonus: 0, maxBonus: 0 },
-    { id: 'ancient_blueprint', name: 'แผนที่ขุดทองโบราณ', price: 9999, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'hourglass_small', name: 'นาฬิกาทราย (เล็ก)', price: 5, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'hourglass_medium', name: 'นาฬิกาทราย (กลาง)', price: 20, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'hourglass_large', name: 'นาฬิกาทราย (ใหญ่)', price: 60, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'repair_kit', name: 'ชุดบำรุงรักษาพิเศษ', price: 50, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
+    { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 5, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
+    { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mining Key' }, price: 5, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
+    { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 5, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
+    { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 5, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
+    { id: 'robot', name: { th: 'หุ่นยนต์ AI', en: 'AI Robot' }, price: 100, lifespanDays: 30, minBonus: 0, maxBonus: 0 },
+    { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 300, lifespanDays: 0, minBonus: 0, maxBonus: 0 },
+    { id: 'ancient_blueprint', name: { th: 'แผนที่ขุดทองโบราณ', en: 'Ancient Mining Map' }, price: 9999, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
+    { id: 'hourglass_small', name: { th: 'นาฬิกาทราย (เล็ก)', en: 'Small Hourglass' }, price: 5, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
+    { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Medium Hourglass' }, price: 20, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
+    { id: 'hourglass_large', name: { th: 'นาฬิกาทราย (ใหญ่)', en: 'Large Hourglass' }, price: 60, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
+    { id: 'repair_kit', name: { th: 'ชุดบำรุงรักษาพิเศษ', en: 'Special Maintenance Kit' }, price: 50, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
 ];
 
 const DUNGEON_CONFIG = [
     {
         id: 1,
-        name: 'สำรวจแหล่งแร่พื้นฐาน (Online)',
+        name: { th: 'สำรวจแหล่งแร่พื้นฐาน (Online)', en: 'Basic Mineral Exploration (Online)' },
         cost: 100,
         durationHours: 2,
         keyCost: 2,
@@ -37,7 +37,7 @@ const DUNGEON_CONFIG = [
     },
     {
         id: 2,
-        name: 'ทีมสำรวจมืออาชีพ (Expedition)',
+        name: { th: 'ทีมสำรวจมืออาชีพ (Expedition)', en: 'Professional Expedition' },
         cost: 300,
         durationHours: 6,
         keyCost: 10,
@@ -54,7 +54,7 @@ const DUNGEON_CONFIG = [
     },
     {
         id: 3,
-        name: 'มหกรรมขุดเหมืองโลก (Mining Expo)',
+        name: { th: 'มหกรรมขุดเหมืองโลก (Mining Expo)', en: 'Global Mining Expo' },
         cost: 1000,
         durationHours: 12,
         keyCost: 0,
@@ -105,7 +105,7 @@ export const startExpedition = async (req: AuthRequest, res: Response) => {
                 type: 'DUNGEON_ENTRY',
                 amount: dungeon.cost,
                 status: 'COMPLETED',
-                description: `เข้าสำรวจ: ${dungeon.name}`
+                description: `เข้าสำรวจ: ${typeof dungeon.name === 'object' ? dungeon.name.th : dungeon.name}`
             });
             await tx.save();
         }
@@ -176,17 +176,25 @@ export const claimExpedition = async (req: AuthRequest, res: Response) => {
         }
 
         const materialNames: any = {
-            0: 'แร่ปริศนา', 1: 'ถ่านหิน', 2: 'ทองแดง', 3: 'เหล็ก', 4: 'ทองคำ',
-            5: 'เพชร', 6: 'น้ำมันดิบสังเคราะห์', 7: 'ไวเบรเนียม', 8: 'แร่ลึกลับ', 9: 'แร่ในตำนาน'
+            0: { th: 'วัสดุปริศนา', en: 'Mysterious Material' },
+            1: { th: 'ถ่านหิน', en: 'Coal' },
+            2: { th: 'ทองแดง', en: 'Copper' },
+            3: { th: 'เหล็ก', en: 'Iron' },
+            4: { th: 'ทองคำ', en: 'Gold' },
+            5: { th: 'เพชร', en: 'Diamond' },
+            6: { th: 'น้ำมันดิบ', en: 'Crude Oil' },
+            7: { th: 'แร่วาเบรเนียม', en: 'Vibranium' },
+            8: { th: 'แร่ลึกลับ', en: 'Mysterious Ore' },
+            9: { th: 'แร่ในตำนาน', en: 'Legendary Ore' }
         };
 
         // Apply Rewards
         for (const r of rewards) {
-            let name = '';
+            let nameObj: { th: string, en: string } = { th: '', en: '' };
             if (r.itemId) {
                 const shopItem = SHOP_ITEMS.find((s: any) => s.id === r.itemId);
                 if (shopItem) {
-                    name = shopItem.name;
+                    nameObj = shopItem.name;
                     const lifespan = r.itemId === 'robot' ? 30 : (shopItem.lifespanDays || 30);
                     user.inventory.push({
                         id: Math.random().toString(36).substr(2, 9),
@@ -205,12 +213,13 @@ export const claimExpedition = async (req: AuthRequest, res: Response) => {
             } else if (r.tier !== undefined) {
                 if (!user.materials) user.materials = {};
                 user.materials[r.tier.toString()] = (user.materials[r.tier.toString()] || 0) + (r.amount || 1);
-                name = materialNames[r.tier] || `Unknown Ore (${r.tier})`;
+                nameObj = materialNames[r.tier] || { th: `Unknown Ore (${r.tier})`, en: `Unknown Ore (${r.tier})` };
                 user.markModified('materials');
             }
 
             const label = r.type === 'rare' ? '[JACKPOT] ' : '';
-            rewardString += `${rewardString ? ' + ' : ''}${label}${name} x${r.amount || 1}`;
+            const nameStr = typeof nameObj === 'object' ? nameObj.th : nameObj;
+            rewardString += `${rewardString ? ' + ' : ''}${label}${nameStr} x${r.amount || 1}`;
         }
 
         user.activeExpedition = null; // CRITICAL: Clear expedition BEFORE marking modified

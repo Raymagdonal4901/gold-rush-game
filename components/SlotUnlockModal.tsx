@@ -5,6 +5,7 @@ import { MATERIAL_CONFIG, SLOT_EXPANSION_CONFIG, CURRENCY } from '../constants';
 import { User } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
+import { useTranslation } from './LanguageContext';
 
 interface SlotUnlockModalProps {
     isOpen: boolean;
@@ -15,6 +16,7 @@ interface SlotUnlockModalProps {
 }
 
 export const SlotUnlockModal: React.FC<SlotUnlockModalProps> = ({ isOpen, onClose, targetSlot, user, onSuccess }) => {
+    const { getLocalized } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -99,7 +101,7 @@ export const SlotUnlockModal: React.FC<SlotUnlockModalProps> = ({ isOpen, onClos
                             <div key={i} className="flex justify-between items-center bg-stone-900 p-3 rounded-lg border border-stone-800">
                                 <div className="flex items-center gap-2">
                                     <MaterialIcon id={req.tier} size="w-8 h-8" iconSize={16} />
-                                    <span className="text-sm font-bold text-stone-300">{MATERIAL_CONFIG.NAMES[req.tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span>
+                                    <span className="text-sm font-bold text-stone-300">{getLocalized(MATERIAL_CONFIG.NAMES[req.tier as keyof typeof MATERIAL_CONFIG.NAMES])}</span>
                                 </div>
                                 <div className={req.owned >= req.amt ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
                                     {req.owned}/{req.amt}

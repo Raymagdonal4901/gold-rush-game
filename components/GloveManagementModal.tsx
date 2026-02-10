@@ -4,8 +4,9 @@ import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Spark
 import { AccessoryItem, OilRig } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
 import { CURRENCY, RARITY_SETTINGS, UPGRADE_REQUIREMENTS, MATERIAL_CONFIG } from '../constants';
-import { MockDB } from '../services/db';
+import { api } from '../services/api';
 import { MaterialIcon } from './MaterialIcon';
+import { useTranslation } from './LanguageContext';
 
 interface GloveManagementModalProps {
     isOpen: boolean;
@@ -22,6 +23,7 @@ interface GloveManagementModalProps {
 export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
     isOpen, onClose, rig, equippedGlove, inventory, userId, onEquip, onUnequip, onRefresh
 }) => {
+    const { getLocalized, t } = useTranslation();
     const [view, setView] = useState<'MANAGE' | 'SELECT'>('MANAGE');
     const [isUpgrading, setIsUpgrading] = useState(false);
     const [upgradeMsg, setUpgradeMsg] = useState<{ type: 'SUCCESS' | 'ERROR', text: string, level?: number, subtext?: string } | null>(null);
@@ -33,31 +35,29 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
         (!item.expireAt || item.expireAt > Date.now())
     );
 
-    const handleUpgrade = () => {
+    const handleUpgrade = async () => {
         if (!equippedGlove) return;
         setIsUpgrading(true);
         setUpgradeMsg(null);
 
-        setTimeout(() => {
-            try {
-                const res = MockDB.upgradeAccessory(userId, equippedGlove.id);
-                if (res.success) {
-                    setUpgradeMsg({
-                        type: 'SUCCESS',
-                        text: `UPGRADE SUCCESS!`,
-                        level: res.newItem?.level,
-                        subtext: 'เพิ่มประสิทธิภาพการขุดเรียบร้อย'
-                    });
-                    onRefresh();
-                } else {
-                    // Should not happen with current logic unless resource missing mid-flight
-                    setUpgradeMsg({ type: 'ERROR', text: 'UPGRADE FAILED', subtext: 'วัตถุดิบไม่เพียงพอหรือเกิดข้อผิดพลาด' });
-                }
-            } catch (e: any) {
-                setUpgradeMsg({ type: 'ERROR', text: 'UPGRADE FAILED', subtext: e.message });
+        try {
+            const res = await api.inventory.upgrade(equippedGlove.id, false);
+            if (res.success) {
+                setUpgradeMsg({
+                    type: 'SUCCESS',
+                    text: t('glove_management.upgrade_success'),
+                    level: res.item?.level,
+                    subtext: t('glove_management.upgrade_success_desc')
+                });
+                onRefresh();
+            } else {
+                setUpgradeMsg({ type: 'ERROR', text: t('glove_management.upgrade_failed'), subtext: res.message || t('glove_management.upgrade_failed_desc') });
             }
+        } catch (e: any) {
+            setUpgradeMsg({ type: 'ERROR', text: t('glove_management.upgrade_failed'), subtext: e.response?.data?.message || e.message });
+        } finally {
             setIsUpgrading(false);
-        }, 1500);
+        }
     };
 
     const renderResultPopup = () => {
@@ -112,7 +112,7 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                           ${isSuccess ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30' : 'bg-stone-800 hover:bg-stone-700 border border-stone-600'}
                       `}
                     >
-                        {isSuccess ? 'เยี่ยมมาก!' : 'ปิดหน้าต่าง'}
+                        {isSuccess ? t('glove_management.great') : t('glove_management.close')}
                     </button>
                 </div>
             </div>
@@ -142,7 +142,7 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                             </div>
 
                             <div className="relative z-10 text-center px-4">
-                                <h3 className={`font-bold text-lg leading-tight ${rarityConfig.color}`}>{equippedGlove.name}</h3>
+                                <h3 className={`font-bold text-lg leading-tight ${rarityConfig.color}`}>{getLocalized(equippedGlove.name)}</h3>
                                 <div className="text-xs text-stone-400 mt-1">{rarityConfig.label}</div>
                                 {equippedGlove.level && equippedGlove.level > 1 && (
                                     <span className="inline-block mt-2 px-2 py-0.5 rounded bg-yellow-600 text-white text-xs font-bold shadow-lg">
@@ -152,7 +152,7 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                             </div>
 
                             <div className="absolute bottom-0 w-full bg-stone-950/80 backdrop-blur-sm py-2 text-center border-t border-stone-800">
-                                <div className="text-stone-400 text-[10px] uppercase tracking-wider">โบนัสรายวัน</div>
+                                <div className="text-stone-400 text-[10px] uppercase tracking-wider">{t('glove_management.daily_bonus')}</div>
                                 <div className="text-emerald-400 font-mono font-bold text-lg">+{(equippedGlove.dailyBonus || 0).toFixed(2)} {CURRENCY}</div>
                             </div>
                         </div>
@@ -164,8 +164,8 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                             <div className="w-16 h-16 rounded-full bg-stone-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                 <Plus className="text-stone-500 group-hover:text-yellow-500" size={32} />
                             </div>
-                            <span className="text-stone-500 font-bold group-hover:text-yellow-500">เลือกถุงมือ</span>
-                            <span className="text-xs text-stone-600 mt-1">คลิกเพื่อสวมใส่</span>
+                            <span className="text-stone-500 font-bold group-hover:text-yellow-500">{t('glove_management.select_manager')}</span>
+                            <span className="text-xs text-stone-600 mt-1">{t('glove_management.click_to_assign')}</span>
                         </div>
                     )}
                 </div>
@@ -179,13 +179,13 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                                     onClick={() => setView('SELECT')}
                                     className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg text-white font-bold text-sm shadow-lg transition-colors"
                                 >
-                                    เปลี่ยนถุงมือ
+                                    {t('glove_management.change_manager')}
                                 </button>
                                 <button
                                     onClick={onUnequip}
                                     className="px-4 py-3 bg-red-900/20 hover:bg-red-900/40 border border-red-900/50 rounded-lg text-red-400 font-bold text-sm transition-colors"
                                 >
-                                    ถอดออก
+                                    {t('glove_management.unequip')}
                                 </button>
                             </div>
 
@@ -195,24 +195,24 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                                     <>
                                         <div className="flex justify-between items-center mb-3">
                                             <div className="text-sm font-bold text-stone-300">
-                                                อัปเกรด Lv.{currentLevel} <span className="text-stone-500">➜</span> <span className="text-yellow-500">Lv.{nextLevel}</span>
+                                                {t('glove_management.upgrade_title')} Lv.{currentLevel} <span className="text-stone-500">➜</span> <span className="text-yellow-500">Lv.{nextLevel}</span>
                                             </div>
-                                            <div className="text-xs text-emerald-400 font-mono">+{increment.toFixed(1)}/วัน</div>
+                                            <div className="text-xs text-emerald-400 font-mono">+{increment.toFixed(1)}{t('common.per_day')}</div>
                                         </div>
 
                                         <div className="flex items-center gap-2 mb-4 bg-stone-900 p-2 rounded border border-stone-800">
                                             <div className="flex-1 flex items-center justify-center gap-2 text-xs text-stone-300 border-r border-stone-800 pr-2">
                                                 <div className="bg-stone-800 p-1 rounded"><Cpu size={14} className="text-purple-400" /></div>
-                                                <span>ชิป x1</span>
+                                                <span>{t('glove_management.chip')} x1</span>
                                             </div>
                                             <div className="flex-1 flex items-center justify-center gap-2 text-xs text-stone-300">
                                                 <div className="bg-stone-800 p-1 rounded"><MaterialIcon id={upgradeReq.matTier} size="w-4 h-4" iconSize={12} /></div>
-                                                <span>{matName} x{upgradeReq.matAmount}</span>
+                                                <span>{getLocalized(matName)} x{upgradeReq.matAmount}</span>
                                             </div>
                                             {upgradeReq.cost && upgradeReq.cost > 0 && (
                                                 <div className="flex-1 flex items-center justify-center gap-2 text-xs text-stone-300 border-l border-stone-800 pl-2">
                                                     <div className="bg-stone-800 p-1 rounded text-yellow-500 font-bold">฿</div>
-                                                    <span>{upgradeReq.cost} บาท</span>
+                                                    <span>{upgradeReq.cost} {t('glove_management.baht')}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -223,11 +223,11 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                                             className="w-full py-3 bg-gradient-to-r from-stone-800 to-stone-700 hover:from-yellow-700 hover:to-yellow-600 border border-stone-600 hover:border-yellow-500 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {isUpgrading ? (
-                                                <span className="animate-pulse flex items-center gap-2"><Hammer className="animate-bounce" size={16} /> กำลังตีบวก...</span>
+                                                <span className="animate-pulse flex items-center gap-2"><Hammer className="animate-bounce" size={16} /> {t('glove_management.upgrading')}</span>
                                             ) : (
                                                 <>
                                                     <ArrowUpCircle size={16} className="text-emerald-400 group-hover:text-white" />
-                                                    ตีบวก (โอกาส {(upgradeReq.chance * 100).toFixed(0)}%)
+                                                    {t('glove_management.upgrade_action').replace('{chance}', (upgradeReq.chance * 100).toFixed(0))}
                                                 </>
                                             )}
                                         </button>
@@ -249,7 +249,7 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                         </div>
                     ) : (
                         <div className="text-center text-stone-500 text-sm py-4">
-                            ยังไม่ได้สวมใส่ถุงมือ
+                            {t('glove_management.no_manager_equipped')}
                         </div>
                     )}
                 </div>
@@ -262,11 +262,11 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
             <div className="flex flex-col h-full bg-stone-950">
                 <div className="p-4 border-b border-stone-800 bg-stone-900 flex items-center gap-2">
                     <button onClick={() => setView('MANAGE')} className="p-1 hover:bg-stone-800 rounded"><ArrowUpCircle className="-rotate-90" size={20} /></button>
-                    <span className="font-bold text-white">เลือกถุงมือ</span>
+                    <span className="font-bold text-white">{t('glove_management.select_manager')}</span>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-4 grid grid-cols-2 gap-3">
                     {availableGloves.length === 0 ? (
-                        <div className="col-span-2 text-center text-stone-500 py-10">ไม่มีถุงมือในกระเป๋า</div>
+                        <div className="col-span-2 text-center text-stone-500 py-10">{t('glove_management.no_managers_in_inv')}</div>
                     ) : (
                         availableGloves.map(item => (
                             <div
@@ -279,8 +279,8 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                                     {item.level && item.level > 1 && <div className="absolute -bottom-1 -right-2 bg-yellow-600 text-white text-[9px] px-1 rounded">+{item.level}</div>}
                                 </div>
                                 <div>
-                                    <div className={`text-xs font-bold ${RARITY_SETTINGS[item.rarity].color}`}>{item.name}</div>
-                                    <div className="text-[10px] text-emerald-400 mt-1">+{item.dailyBonus || 0} / วัน</div>
+                                    <div className={`text-xs font-bold ${RARITY_SETTINGS[item.rarity].color}`}>{getLocalized(item.name)}</div>
+                                    <div className="text-[10px] text-emerald-400 mt-1">+{item.dailyBonus || 0}{t('common.per_day')}</div>
                                 </div>
                             </div>
                         ))
@@ -303,8 +303,8 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                                 <Shield size={20} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-display font-bold text-white">จัดการถุงมือ</h2>
-                                <p className="text-[10px] text-stone-500 uppercase tracking-wider">สำหรับเครื่องจักร: {rig.name}</p>
+                                <h2 className="text-lg font-display font-bold text-white">{t('glove_management.title')}</h2>
+                                <p className="text-[10px] text-stone-500 uppercase tracking-wider">{t('glove_management.assign_to')} {getLocalized(rig.name)}</p>
                             </div>
                         </div>
                         <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">

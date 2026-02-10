@@ -25,20 +25,20 @@ export const playLuckyDraw = async (req: any, res: Response) => {
 
         // Random Logic
         const rand = Math.random() * 100;
-        let reward: any = { type: 'money', amount: 10, label: 'รางวัลปลอบใจ 10 บาท' };
+        let reward: any = { type: 'money', amount: 10, label: { th: 'รางวัลปลอบใจ 10 บาท', en: 'Consolation Prize 10 THB' } };
 
         if (rand < 1) {
             // 1% Jackpot
-            reward = { type: 'money', amount: 500, label: 'JACKPOT! 500 บาท' };
+            reward = { type: 'money', amount: 500, label: { th: 'JACKPOT! 500 บาท', en: 'JACKPOT! 500 THB' } };
         } else if (rand < 5) {
             // 4% Rare Item
-            reward = { type: 'item', id: 'upgrade_chip', amount: 10, label: 'ชิปอัปเกรด x10' };
+            reward = { type: 'item', id: 'upgrade_chip', amount: 10, label: { th: 'ชิปอัปเกรด x10', en: 'Upgrade Chip x10' } };
         } else if (rand < 15) {
             // 10% Energy
-            reward = { type: 'energy', amount: 50, label: 'พลังงาน +50' };
+            reward = { type: 'energy', amount: 50, label: { th: 'พลังงาน +50', en: 'Energy +50' } };
         } else if (rand < 40) {
             // 25% Materials
-            reward = { type: 'material', tier: 4, amount: 1, label: 'ทองคำ x1' };
+            reward = { type: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' } };
         }
 
         // Apply Reward
@@ -85,7 +85,7 @@ export const playLuckyDraw = async (req: any, res: Response) => {
             type: 'LUCKY_DRAW',
             amount: reward.type === 'money' ? reward.amount : 0,
             status: 'COMPLETED',
-            description: `รับรางวัลเสี่ยงโชค: ${reward.label}`
+            description: `รับรางวัลเสี่ยงโชค: ${typeof reward.label === 'object' ? reward.label.th : reward.label}`
         });
         await rewardTx.save();
 

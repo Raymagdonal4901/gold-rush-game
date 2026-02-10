@@ -25,7 +25,7 @@ interface AccessoryManagementModalProps {
 export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> = ({
     isOpen, onClose, rig, slotIndex, equippedItem, inventory, userId, onEquip, onUnequip, onRefresh, materials = {}, addNotification
 }) => {
-    const { t, language } = useTranslation();
+    const { t, language, getLocalized } = useTranslation();
     const [view, setView] = useState<'MANAGE' | 'SELECT'>('MANAGE');
     const [isUpgrading, setIsUpgrading] = useState(false);
     const [useInsurance, setUseInsurance] = useState(false);
@@ -95,7 +95,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 if (res.success) {
                     setUpgradeMsg({
                         type: 'SUCCESS',
-                        text: 'UPGRADE SUCCESS!',
+                        text: t('blacksmith.success_title'),
                         level: res.item?.level,
                         subtext: t('blacksmith.upgrade_success'),
                         oldBonus,
@@ -105,7 +105,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 } else {
                     setUpgradeMsg({
                         type: 'ERROR',
-                        text: 'UPGRADE FAILED!',
+                        text: t('blacksmith.fail_title'),
                         subtext: res.message || t('blacksmith.item_damaged'),
                         level: res.item?.level
                     });
@@ -118,7 +118,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             setTimeout(() => {
                 setUpgradeMsg({
                     type: 'ERROR',
-                    text: 'SYSTEM ERROR',
+                    text: t('blacksmith.error_title'),
                     subtext: e.response?.data?.message || e.message || t('blacksmith.error')
                 });
                 setIsUpgrading(false);
@@ -181,11 +181,11 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
     const getItemDisplayName = (item: any) => {
         const typeId = item.typeId || '';
         const name = item.name || '';
-        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return language === 'th' ? 'กุญแจเข้าเหมือง' : 'Mining Key';
-        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return language === 'th' ? 'ชิปอัปเกรด' : 'Upgrade Chip';
-        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return language === 'th' ? 'โต๊ะช่างสกัดแร่' : 'Material Mixer';
-        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return language === 'th' ? 'แว่นขยายส่องแร่' : 'Magnifying Glass';
-        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return language === 'th' ? 'หุ่นยนต์ AI' : 'AI Robot';
+        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return t('items.mining_key');
+        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return t('items.upgrade_chip');
+        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return t('items.material_mixer');
+        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return t('items.magnifying_glass');
+        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return t('items.ai_robot');
         return name;
     };
 
@@ -443,7 +443,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             }
         }
 
-        const matName = upgradeReq ? MATERIAL_CONFIG.NAMES[upgradeReq.matTier as keyof typeof MATERIAL_CONFIG.NAMES] : '';
+        const matName = upgradeReq ? getLocalized(MATERIAL_CONFIG.NAMES[upgradeReq.matTier as keyof typeof MATERIAL_CONFIG.NAMES]) : '';
 
         const currentBonus = equippedItem?.dailyBonus || 0;
         let nextBonusValue = currentBonus;
@@ -612,10 +612,10 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                             <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%] animate-[shimmer_2s_infinite]"></div>
                                             <div className="flex items-center gap-2 text-base relative z-10">
                                                 <Hammer size={18} className={isUpgrading ? "animate-bounce" : ""} />
-                                                <span>{language === 'th' ? 'ตีบวก' : 'UPGRADE'} (UPGRADE)</span>
+                                                <span>{t('blacksmith.upgrade_action')}</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-[9px] font-medium opacity-90 relative z-10">
-                                                <span className={upgradeReq.chance < 0.5 ? "text-red-300" : "text-orange-200"}>{language === 'th' ? 'โอกาส' : 'Chance'}: {(upgradeReq.chance * 100).toFixed(0)}%</span>
+                                                <span className={upgradeReq.chance < 0.5 ? "text-red-300" : "text-orange-200"}>{t('blacksmith.chance')}: {(upgradeReq.chance * 100).toFixed(0)}%</span>
                                             </div>
                                         </button>
                                     </>
@@ -693,7 +693,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                         <div className="bg-orange-900/20 p-2 rounded text-orange-500"><Hammer size={20} /></div>
                         <div>
                             <h2 className="text-lg font-display font-black text-white uppercase tracking-wider">{t('blacksmith.title')}</h2>
-                            <p className="text-[10px] text-stone-500 uppercase tracking-widest">Slot {slotIndex + 1}</p>
+                            <p className="text-[10px] text-stone-500 uppercase tracking-widest">{t('blacksmith.slot')} {slotIndex + 1}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors"><X size={20} /></button>

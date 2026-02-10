@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { X, Users, Copy, Check, Coins, Gift } from 'lucide-react';
 import { User } from '../services/types';
 import { CURRENCY } from '../constants';
+import { useTranslation } from './LanguageContext';
 
 interface ReferralModalProps {
     isOpen: boolean;
@@ -11,6 +12,7 @@ interface ReferralModalProps {
 }
 
 export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, user }) => {
+    const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
 
     if (!isOpen) return null;
@@ -34,8 +36,8 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
                             <Users size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-display font-bold text-white">ชวนเพื่อน</h2>
-                            <p className="text-xs text-stone-500 uppercase tracking-wider">Referral Program</p>
+                            <h2 className="text-xl font-display font-bold text-white">{t('referral.title')}</h2>
+                            <p className="text-xs text-stone-500 uppercase tracking-wider">{t('referral.subtitle')}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
@@ -48,13 +50,13 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
                     {/* Stats */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center justify-center">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest mb-1">รายได้สะสม</span>
+                            <span className="text-stone-500 text-xs uppercase tracking-widest mb-1">{t('referral.total_earnings')}</span>
                             <div className="text-2xl font-mono font-bold text-emerald-400">
                                 {user.referralEarnings?.toLocaleString() || 0} <span className="text-xs text-stone-500">{CURRENCY}</span>
                             </div>
                         </div>
                         <div className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center justify-center">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest mb-1">รหัสแนะนำ</span>
+                            <span className="text-stone-500 text-xs uppercase tracking-widest mb-1">{t('referral.referral_code')}</span>
                             <div className="text-xl font-mono font-bold text-white tracking-widest">
                                 {user.referralCode || '-'}
                             </div>
@@ -63,7 +65,7 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
 
                     {/* Copy Section */}
                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-stone-400">ลิงก์/รหัสแนะนำของคุณ</label>
+                        <label className="text-sm font-bold text-stone-400">{t('referral.your_link')}</label>
                         <div className="flex gap-2">
                             <div className="flex-1 bg-stone-950 border border-stone-700 rounded-lg px-4 py-3 text-white font-mono text-sm truncate flex items-center">
                                 {user.referralCode}
@@ -73,7 +75,7 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
                                 className={`px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${copied ? 'bg-emerald-600 text-white' : 'bg-blue-600 hover:bg-blue-500 text-white'}`}
                             >
                                 {copied ? <Check size={18} /> : <Copy size={18} />}
-                                {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                                {copied ? t('referral.copied') : t('referral.copy')}
                             </button>
                         </div>
                     </div>
@@ -81,20 +83,20 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, u
                     {/* Rules */}
                     <div className="bg-stone-900/50 p-4 rounded-xl border border-stone-800 space-y-3">
                         <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                            <Gift size={16} className="text-yellow-500" /> สิทธิประโยชน์
+                            <Gift size={16} className="text-yellow-500" /> {t('referral.benefits')}
                         </h4>
                         <ul className="text-xs text-stone-400 space-y-2">
                             <li className="flex items-start gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-stone-600 mt-1.5"></div>
-                                <span>รับทันที <strong>2%</strong> จากยอดซื้อเครื่องจักรของเพื่อน</span>
+                                <span>{t('referral.benefit_1')}</span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-stone-600 mt-1.5"></div>
-                                <span>รับทันที <strong>5%</strong> จากยอดซื้ออุปกรณ์ในร้านค้า</span>
+                                <span>{t('referral.benefit_2')}</span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-stone-600 mt-1.5"></div>
-                                <span>เพื่อนที่สมัครผ่านคุณจะได้รับโบนัสเริ่มต้นพิเศษ (หากมีกิจกรรม)</span>
+                                <span>{t('referral.benefit_3')}</span>
                             </li>
                         </ul>
                     </div>

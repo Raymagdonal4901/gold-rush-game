@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 export interface IRig extends Document {
     ownerId: string;
-    name: string;
+    name: any; // Can be string or { th: string, en: string }
     investment: number;
     dailyProfit: number;
     bonusProfit: number;
@@ -18,7 +18,7 @@ export interface IRig extends Document {
 }
 const RigSchema = new Schema<IRig>({
     ownerId: { type: String, required: true },
-    name: { type: String, required: true },
+    name: { type: Schema.Types.Mixed, required: true },
     investment: { type: Number, required: true },
     dailyProfit: { type: Number, required: true },
     purchaseDate: { type: Date, default: Date.now },

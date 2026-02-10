@@ -6,41 +6,47 @@ import { AuthRequest } from '../middleware/auth';
 // --- CONSTANTS (Mirrored from frontend) ---
 const MATERIAL_CONFIG = {
     NAMES: {
-        1: 'ถ่านหิน', 2: 'ทองแดง', 3: 'เหล็ก', 4: 'ทองคำ', 5: 'เพชร', 6: 'น้ำมันดิบสังเคราะห์', 7: 'ไวเบรเนียม'
-    } as Record<number, string>
+        1: { th: 'ถ่านหิน', en: 'Coal' },
+        2: { th: 'ทองแดง', en: 'Copper' },
+        3: { th: 'เหล็ก', en: 'Iron' },
+        4: { th: 'ทองคำ', en: 'Gold' },
+        5: { th: 'เพชร', en: 'Diamond' },
+        6: { th: 'น้ำมันดิบสังเคราะห์', en: 'Synthetic Crude Oil' },
+        7: { th: 'ไวเบรเนียม', en: 'Vibranium' }
+    } as Record<number, { th: string; en: string }>
 };
 
 const SHOP_ITEMS = [
     {
-        id: 'hat', name: 'หมวกนิรภัยมาตรฐาน', minBonus: 0.1, maxBonus: 0.5, lifespanDays: 30, tier: 1,
+        id: 'hat', name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Safety Hat' }, minBonus: 0.1, maxBonus: 0.5, lifespanDays: 30, tier: 1,
         craftingRecipe: { 1: 3 }, craftingFee: 0.2857, craftDurationMinutes: 30, specialEffect: 'ลดค่าซ่อม -5%'
     },
     {
-        id: 'uniform', name: 'ชุดหมีช่างกล', minBonus: 0.5, maxBonus: 1.5, lifespanDays: 30, tier: 1,
+        id: 'uniform', name: { th: 'ชุดหมีช่างกล', en: 'Mechanic Uniform' }, minBonus: 0.5, maxBonus: 1.5, lifespanDays: 30, tier: 1,
         craftingRecipe: { 1: 4, 2: 3 }, craftingFee: 0.2857, craftDurationMinutes: 60, specialEffect: 'อายุใช้งาน +5 วัน'
     },
     {
-        id: 'bag', name: 'กระเป๋าผ้าใบ', minBonus: 1.0, maxBonus: 2.0, lifespanDays: 45, tier: 2,
+        id: 'bag', name: { th: 'กระเป๋าผ้าใบ', en: 'Canvas Bag' }, minBonus: 1.0, maxBonus: 2.0, lifespanDays: 45, tier: 2,
         craftingRecipe: { 2: 4, 3: 2 }, craftingFee: 0.5714, craftDurationMinutes: 180, specialEffect: 'ราคาขาย +1%'
     },
     {
-        id: 'boots', name: 'รองเท้าบูทกันน้ำ', minBonus: 2.0, maxBonus: 3.0, lifespanDays: 45, tier: 2,
+        id: 'boots', name: { th: 'รองเท้าบูทกันน้ำ', en: 'Waterproof Boots' }, minBonus: 2.0, maxBonus: 3.0, lifespanDays: 45, tier: 2,
         craftingRecipe: { 3: 5, 4: 2 }, craftingFee: 0.7143, craftDurationMinutes: 300, specialEffect: 'โอกาสประหยัดไฟ 5%'
     },
     {
-        id: 'glasses', name: 'แว่นตานิรภัยใส', minBonus: 2.5, maxBonus: 3.5, lifespanDays: 60, tier: 2,
+        id: 'glasses', name: { th: 'แว่นตานิรภัยใส', en: 'Clear Safety Glasses' }, minBonus: 2.5, maxBonus: 3.5, lifespanDays: 60, tier: 2,
         craftingRecipe: { 4: 3, 3: 4 }, craftingFee: 2.2857, craftDurationMinutes: 420, specialEffect: 'โอกาสดรอป +2%'
     },
     {
-        id: 'mobile', name: 'มือถือรุ่นปุ่มกด', minBonus: 3.0, maxBonus: 4.0, lifespanDays: 90, tier: 2,
+        id: 'mobile', name: { th: 'มือถือรุ่นปุ่มกด', en: 'Button Phone' }, minBonus: 3.0, maxBonus: 4.0, lifespanDays: 90, tier: 2,
         craftingRecipe: { 5: 1, 4: 4 }, craftingFee: 3.4286, craftDurationMinutes: 540, specialEffect: 'ลดภาษีตลาด 2%'
     },
     {
-        id: 'pc', name: 'พีซีสำนักงาน', minBonus: 4.0, maxBonus: 5.0, lifespanDays: 90, tier: 3,
+        id: 'pc', name: { th: 'พีซีสำนักงาน', en: 'Office PC' }, minBonus: 4.0, maxBonus: 5.0, lifespanDays: 90, tier: 3,
         craftingRecipe: { 5: 2, 4: 3 }, craftingFee: 5.1429, craftDurationMinutes: 720, specialEffect: 'โอกาสเบิ้ลรายได้ 1%'
     },
     {
-        id: 'auto_excavator', name: 'รถขุดไฟฟ้า (Electric)', minBonus: 10.0, maxBonus: 12.0, lifespanDays: 120, tier: 3,
+        id: 'auto_excavator', name: { th: 'รถขุดไฟฟ้า (Electric)', en: 'Electric Excavator' }, minBonus: 10.0, maxBonus: 12.0, lifespanDays: 120, tier: 3,
         craftingRecipe: { 6: 1, 5: 2 }, craftingFee: 14.2857, craftDurationMinutes: 1440, specialEffect: 'โอกาส Jackpot 2%'
     }
 ];
@@ -85,7 +91,8 @@ export const startCrafting = async (req: AuthRequest, res: Response) => {
             const owned = userMaterials[tier.toString()] || 0;
 
             if (owned < needed) {
-                const matName = MATERIAL_CONFIG.NAMES[tier] || `Material #${tier}`;
+                const matNameObj = MATERIAL_CONFIG.NAMES[tier] || { th: `แร่ #${tier}`, en: `Material #${tier}` };
+                const matName = typeof matNameObj === 'object' ? matNameObj.th : matNameObj;
                 return res.status(400).json({
                     message: `วัตถุดิบไม่พอ: ต้องการ ${matName} (${owned}/${needed})`,
                     missing: { id: tier, name: matName, need: needed, have: owned }
@@ -142,7 +149,7 @@ export const startCrafting = async (req: AuthRequest, res: Response) => {
             type: 'ACCESSORY_CRAFT_START',
             amount: fee,
             status: 'COMPLETED',
-            description: `เริ่มผลิต: ${itemConfig.name}`
+            description: `เริ่มผลิต: ${typeof itemConfig.name === 'object' ? itemConfig.name.th : itemConfig.name}`
         });
         await craftTx.save();
 
@@ -240,7 +247,7 @@ export const claimCraftedItem = async (req: AuthRequest, res: Response) => {
             type: 'ACCESSORY_CRAFT_CLAIM',
             amount: 0,
             status: 'COMPLETED',
-            description: `รับไอเทม: ${itemConfig.name}${isGreatSuccess ? ' (Great Success!)' : ''}`
+            description: `รับไอเทม: ${typeof itemConfig.name === 'object' ? itemConfig.name.th : itemConfig.name}${isGreatSuccess ? ' (Great Success!)' : ''}`
         });
         await claimTx.save();
 

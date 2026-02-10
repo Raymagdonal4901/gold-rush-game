@@ -41,9 +41,10 @@ const CRAFTABLE_RIGS: Record<string, any> = {
         id: 8,
         recipe: { materials: { 7: 1, 8: 2, 9: 3 } },
         dailyProfit: 100,
-        durationDays: 365,
-        energyCostPerDay: 50,
-        rarity: 'ULTRA_LEGENDARY'
+        durationHours: 365 * 24, // Use hours for consistency if model expects it
+        dailyEnergyCost: 50,
+        rarity: 'ULTRA_LEGENDARY',
+        name: { th: 'เครื่องขุดปฏิกรณ์ไวเบรเนียม', en: 'Vibranium Reactor Rig' }
     }
 };
 
@@ -100,7 +101,7 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
             type: 'ASSET_PURCHASE',
             amount: 0,
             status: 'COMPLETED',
-            description: `ผลิตเครื่องจักร: ${name}`
+            description: `ผลิตเครื่องจักร: ${typeof name === 'object' ? name.th : name}`
         });
         await craftTx.save();
 
@@ -108,7 +109,7 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
         const starterGlove = {
             id: Math.random().toString(36).substr(2, 9),
             typeId: 'glove',
-            name: 'ถุงมือไวเบรเนียม (Starter)',
+            name: { th: 'ถุงมือไวเบรเนียม (Starter)', en: 'Vibranium Glove (Starter)' },
             price: 0,
             dailyBonus: 20, // High bonus for T8
             durationBonus: 0,
@@ -129,14 +130,14 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
 
         const rig = await Rig.create({
             ownerId: userId,
-            name,
+            name, // Keep string for DB consistency if model hasn't changed
             investment: 0,
             dailyProfit: preset.dailyProfit,
             expiresAt,
             slots: [starterGlove.id, null, null, null, null], // Set starter glove
             rarity: preset.rarity,
             repairCost: 0,
-            energyCostPerDay: preset.energyCostPerDay,
+            energyCostPerDay: preset.dailyEnergyCost,
             bonusProfit: 0,
             lastClaimAt: new Date()
         });
@@ -179,11 +180,11 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
         const gloveId = Math.random().toString(36).substr(2, 9);
         // Updated names based on user requirement
         const names: any = {
-            COMMON: 'ถุงมือทำงาน (WORK)',
-            RARE: 'ถุงมือเสริมแรง (REINFORCED)',
-            SUPER_RARE: 'ถุงมือยุทธวิธี (TACTICAL)',
-            EPIC: 'ถุงมือพาวเวอร์ (POWER)',
-            LEGENDARY: 'ถุงมืออินฟินิตี้ (INFINITY)'
+            COMMON: { th: 'ถุงมือทำงาน (WORK)', en: 'Work Glove (WORK)' },
+            RARE: { th: 'ถุงมือเสริมแรง (REINFORCED)', en: 'Reinforced Glove (REINFORCED)' },
+            SUPER_RARE: { th: 'ถุงมือยุทธวิธี (TACTICAL)', en: 'Tactical Glove (TACTICAL)' },
+            EPIC: { th: 'ถุงมือพาวเวอร์ (POWER)', en: 'Power Glove (POWER)' },
+            LEGENDARY: { th: 'ถุงมืออินฟินิตี้ (INFINITY)', en: 'Infinity Glove (INFINITY)' }
         };
 
         const newGlove = {
@@ -210,7 +211,7 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
             type: 'ASSET_PURCHASE',
             amount: investment,
             status: 'COMPLETED',
-            description: `ซื้อเครื่องจักร: ${name}`
+            description: `ซื้อเครื่องจักร: ${typeof name === 'object' ? name.th : name}`
         });
         await rigPurchaseTx.save();
 
@@ -277,7 +278,7 @@ export const claimRigProfit = async (req: AuthRequest, res: Response) => {
             type: 'MINING_CLAIM',
             amount: amount,
             status: 'COMPLETED',
-            description: `เก็บผลผลิตจากเครื่องขุด: ${rig.name}`
+            description: `เก็บผลผลิตจากเครื่องขุด: ${typeof rig.name === 'object' ? rig.name.th : rig.name}`
         });
         await claimTx.save();
 
@@ -322,9 +323,19 @@ export const refillRigEnergy = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ message: 'Energy is already full' });
         }
 
+        // Check for "Safety Uniform" (id: 'uniform') in slots for 5% discount
+        let discountMultiplier = 1.0;
+        if (rig.slots && rig.slots.length > 0) {
+            const equippedItems = user.inventory.filter((i: any) => rig.slots.includes(i.id || i._id));
+            const hasUniform = equippedItems.some((i: any) => i.typeId === 'uniform');
+            if (hasUniform) {
+                discountMultiplier = 0.95; // 5% discount
+            }
+        }
+
         // Cost is proportional to needed energy
         const baseCost = rig.energyCostPerDay || 0;
-        let cost = (needed / 100) * baseCost;
+        let cost = (needed / 100) * baseCost * discountMultiplier;
 
         // Apply Overclock X2 Energy Cost
         if (user.overclockExpiresAt && user.overclockExpiresAt.getTime() > Date.now()) {
@@ -351,7 +362,7 @@ export const refillRigEnergy = async (req: AuthRequest, res: Response) => {
             type: 'ENERGY_REFILL',
             amount: cost,
             status: 'COMPLETED',
-            description: `เติมพลังงานเครื่องขุด: ${rig.name}`
+            description: `เติมพลังงานเครื่องขุด: ${typeof rig.name === 'object' ? rig.name.th : rig.name}`
         });
         await energyTx.save();
 
@@ -434,7 +445,39 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
         user.materials[derivedTier.toString()] = currentAmount + (amount || 0);
 
 
+        // --- 10% Chance for Chest Key Drop ---
+        let bonusItem = null;
+        if (Math.random() < 0.10) {
+            bonusItem = {
+                id: Math.random().toString(36).substr(2, 9),
+                typeId: 'chest_key',
+                name: { th: 'กุญแจเข้าเหมือง', en: 'Mining Key' },
+                price: 0,
+                dailyBonus: 0,
+                durationBonus: 0,
+                rarity: 'COMMON',
+                purchasedAt: Date.now(),
+                lifespanDays: 365,
+                expireAt: Date.now() + (365 * 24 * 60 * 60 * 1000),
+                level: 1
+            };
+
+            if (!user.inventory) user.inventory = [];
+            user.inventory.push(bonusItem);
+
+            // Log Transaction for Bonus
+            const bonusTx = new Transaction({
+                userId,
+                type: 'GIFT_CLAIM',
+                amount: 0,
+                status: 'COMPLETED',
+                description: `ได้รับโบนัสจากการขุด: กุญแจเข้าเหมือง`
+            });
+            await bonusTx.save();
+        }
+
         user.markModified('materials');
+        user.markModified('inventory'); // Ensure inventory is marked modified if key is added
         rig.lastCollectionAt = new Date();
 
         await user.save();
@@ -446,14 +489,15 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
             type: 'MATERIAL_MINED',
             amount: 0,
             status: 'COMPLETED',
-            description: `เก็บแร่จากเครื่องขุด: ${rig.name} (${amount} ชิ้น)`
+            description: `เก็บแร่จากเครื่องขุด: ${typeof rig.name === 'object' ? rig.name.th : rig.name} (${amount} ชิ้น)`
         });
         await collectTx.save();
 
         res.json({
             success: true,
             materials: user.materials,
-            lastCollectionAt: rig.lastCollectionAt
+            lastCollectionAt: rig.lastCollectionAt,
+            bonusItem // Return the bonus item to frontend
         });
         console.log(`[DEBUG_COLLECT] Success. User Materials:`, JSON.stringify(user.materials));
     } catch (error) {
@@ -477,7 +521,15 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
         // We'll need RIG_PRESETS and SHOP_ITEMS (or simple local copy/lookup)
         // For brevity and to ensure it works, I'll use the tier logic from previous plan.
 
-        const tierNames = ['ถ่านหิน', 'ทองแดง', 'เหล็ก', 'ทองคำ', 'เพชร', 'น้ำมัน', 'ไวเบรเนียม'];
+        const tierNames = [
+            { th: 'ถ่านหิน', en: 'Coal' },
+            { th: 'ทองแดง', en: 'Copper' },
+            { th: 'เหล็ก', en: 'Iron' },
+            { th: 'ทองคำ', en: 'Gold' },
+            { th: 'เพชร', en: 'Diamond' },
+            { th: 'น้ำมัน', en: 'Oil' },
+            { th: 'ไวเบรเนียม', en: 'Vibranium' }
+        ];
         let matTier = -1;
         let minAmount = 0;
         let maxAmount = 0;
@@ -493,10 +545,10 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
         if (matTier === -1) {
             // Drop random item
             const potentialRewards = [
-                { id: 'hat', name: 'หมวกนิรภัย', bonus: 15 },
-                { id: 'uniform', name: 'ชุดยูนิฟอร์ม', bonus: 20 },
-                { id: 'bag', name: 'กระเป๋าเก็บของ', bonus: 25 },
-                { id: 'boots', name: 'รองเท้าเซฟตี้', bonus: 10 }
+                { id: 'hat', name: { th: 'หมวกนิรภัย', en: 'Safety Hat' }, bonus: 15 },
+                { id: 'uniform', name: { th: 'ชุดยูนิฟอร์ม', en: 'Uniform' }, bonus: 20 },
+                { id: 'bag', name: { th: 'กระเป๋าเก็บของ', en: 'Storage Bag' }, bonus: 25 },
+                { id: 'boots', name: { th: 'รองเท้าเซฟตี้', en: 'Safety Boots' }, bonus: 10 }
             ];
             const reward = potentialRewards[Math.floor(Math.random() * potentialRewards.length)];
 
@@ -548,7 +600,7 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
             type: 'GIFT_CLAIM',
             amount: 0,
             status: 'COMPLETED',
-            description: `ได้รับรางวัลจากเครื่องขุด: ${tierNames[matTier - 1]} x${amount} ชิ้น`
+            description: `ได้รับรางวัลจากเครื่องขุด: ${typeof tierNames[matTier - 1] === 'object' ? tierNames[matTier - 1].th : tierNames[matTier - 1]} x${amount} ชิ้น`
         });
         await giftTx.save();
 
@@ -556,7 +608,7 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
             type: 'MATERIAL',
             tier: matTier,
             amount: amount,
-            name: tierNames[matTier - 1],
+            name: tierNames[matTier - 1], // Passing the whole object is fine if frontend uses getLocalized
             materials: user.materials
         });
     } catch (error) {
@@ -727,7 +779,7 @@ export const repairRig = async (req: AuthRequest, res: Response) => {
             type: 'REPAIR',
             amount: repairCost,
             status: 'COMPLETED',
-            description: `ซ่อมบำรุงเครื่องขุด: ${rig.name}`
+            description: `ซ่อมบำรุงเครื่องขุด: ${typeof rig.name === 'object' ? rig.name.th : rig.name}`
         });
         await repairTx.save();
 

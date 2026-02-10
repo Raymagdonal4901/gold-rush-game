@@ -3,6 +3,7 @@ import React from 'react';
 import { X, PackageOpen } from 'lucide-react';
 import { RARITY_SETTINGS, CURRENCY } from '../constants';
 import { InfinityGlove } from './InfinityGlove';
+import { useTranslation } from './LanguageContext';
 
 interface LootRatesModalProps {
     isOpen: boolean;
@@ -10,14 +11,15 @@ interface LootRatesModalProps {
 }
 
 export const LootRatesModal: React.FC<LootRatesModalProps> = ({ isOpen, onClose }) => {
+    const { t, formatCurrency } = useTranslation();
     if (!isOpen) return null;
 
     const rates = [
-        { key: 'COMMON', chance: '80%', name: 'พนักงานทั่วไป (Staff)', ...RARITY_SETTINGS.COMMON },
-        { key: 'RARE', chance: '11%', name: 'หัวหน้างาน (Supervisor)', ...RARITY_SETTINGS.RARE },
-        { key: 'SUPER_RARE', chance: '5%', name: 'ผู้จัดการหอพัก (Manager)', ...RARITY_SETTINGS.SUPER_RARE },
-        { key: 'EPIC', chance: '3%', name: 'ผู้บริหารอาคาร (Executive)', ...RARITY_SETTINGS.EPIC },
-        { key: 'LEGENDARY', chance: '1%', name: 'หุ้นส่วนใหญ่ (Partner)', ...RARITY_SETTINGS.LEGENDARY },
+        { key: 'COMMON', chance: '80%', name: t('loot_rates.staff'), ...RARITY_SETTINGS.COMMON },
+        { key: 'RARE', chance: '11%', name: t('loot_rates.supervisor'), ...RARITY_SETTINGS.RARE },
+        { key: 'SUPER_RARE', chance: '5%', name: t('loot_rates.manager'), ...RARITY_SETTINGS.SUPER_RARE },
+        { key: 'EPIC', chance: '3%', name: t('loot_rates.executive'), ...RARITY_SETTINGS.EPIC },
+        { key: 'LEGENDARY', chance: '1%', name: t('loot_rates.partner'), ...RARITY_SETTINGS.LEGENDARY },
     ];
 
     return (
@@ -30,8 +32,8 @@ export const LootRatesModal: React.FC<LootRatesModalProps> = ({ isOpen, onClose 
                             <PackageOpen size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-display font-bold text-white">อัตราการจ้างผู้จัดการ</h2>
-                            <p className="text-xs text-stone-500 uppercase tracking-wider">โอกาสได้รับผู้เชี่ยวชาญ</p>
+                            <h2 className="text-xl font-display font-bold text-white">{t('loot_rates.title')}</h2>
+                            <p className="text-xs text-stone-500 uppercase tracking-wider">{t('loot_rates.subtitle')}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
@@ -42,9 +44,9 @@ export const LootRatesModal: React.FC<LootRatesModalProps> = ({ isOpen, onClose 
                 {/* Content */}
                 <div className="p-6">
                     <p className="text-stone-400 text-sm mb-6 font-light">
-                        การเปิดห้องพักใหม่ทุกครั้งจะมาพร้อมกับโอกาสจ้าง
-                        <span className="text-yellow-500 font-bold"> ผู้จัดการส่วนตัว </span>
-                        โดยจะช่วยเพิ่มรายได้รายวันให้กับห้องพักของคุณอย่างถาวร
+                        {t('loot_rates.description_pre')}
+                        <span className="text-yellow-500 font-bold"> {t('loot_rates.manager_highlight')} </span>
+                        {t('loot_rates.description_post')}
                     </p>
 
                     <div className="space-y-3">
@@ -62,13 +64,13 @@ export const LootRatesModal: React.FC<LootRatesModalProps> = ({ isOpen, onClose 
                                         <h3 className={`font-bold font-display uppercase tracking-wide text-sm ${tier.color}`}>
                                             {tier.name}
                                         </h3>
-                                        <p className="text-xs text-stone-500">ระดับ {tier.label}</p>
+                                        <p className="text-xs text-stone-500">{t('loot_rates.level_label')} {tier.label}</p>
                                     </div>
                                 </div>
 
                                 <div className="text-right">
                                     <div className="text-sm font-bold text-stone-300">{tier.chance}</div>
-                                    <div className="text-xs font-mono text-green-400">+{tier.bonus} {CURRENCY}/วัน</div>
+                                    <div className="text-xs font-mono text-green-400">+{formatCurrency(tier.bonus)}{t('common.per_day')}</div>
                                 </div>
                             </div>
                         ))}
@@ -78,7 +80,7 @@ export const LootRatesModal: React.FC<LootRatesModalProps> = ({ isOpen, onClose 
                 {/* Footer */}
                 <div className="p-4 bg-stone-900/50 border-t border-stone-800 text-center">
                     <button onClick={onClose} className="text-sm text-stone-500 hover:text-stone-300 uppercase tracking-widest font-bold">
-                        ปิดหน้าต่าง
+                        {t('loot_rates.close')}
                     </button>
                 </div>
             </div>

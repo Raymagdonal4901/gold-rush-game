@@ -16,7 +16,7 @@ interface MissionModalProps {
 }
 
 export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, user, onRefresh, addNotification }) => {
-    const { t, language } = useTranslation();
+    const { t, language, getLocalized } = useTranslation();
     const [activeTab, setActiveTab] = useState<'QUEST' | 'MASTERY'>('QUEST');
     const [weeklyStats, setWeeklyStats] = useState<any>(null);
     const [claimedQuests, setClaimedQuests] = useState<string[]>([]);
@@ -176,7 +176,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
             const item = SHOP_ITEMS.find(i => i.id === quest.rewardId);
             return (
                 <div className="text-purple-400 font-bold mb-2 flex items-center justify-center gap-1 text-xs truncate">
-                    <Gift size={14} /> {item?.name} x{quest.rewardAmount}
+                    <Gift size={14} /> {getLocalized(item?.name)} x{quest.rewardAmount}
                 </div>
             );
         }
@@ -218,7 +218,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
 
                 <div className="flex justify-between text-xs text-stone-500 font-bold">
                     <span>0</span>
-                    {nextRank && <span>{t('mission.next_rank')}: {nextRank.label} ({nextRank.points})</span>}
+                    {nextRank && <span>{t('mission.next_rank')}: {getLocalized(nextRank.label)} ({nextRank.points})</span>}
                     {!nextRank && <span>{t('mission.max_rank')}</span>}
                 </div>
             </div>
@@ -286,8 +286,8 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                                             <Target size={24} />
                                         </div>
                                         <div className="flex-1">
-                                            <h4 className="font-bold text-white">{quest.title}</h4>
-                                            <p className="text-xs text-stone-400 mb-2">{quest.desc}</p>
+                                            <h4 className="font-bold text-white">{getLocalized(quest.title)}</h4>
+                                            <p className="text-xs text-stone-400 mb-2">{getLocalized(quest.desc)}</p>
                                             <div className="w-full h-2 bg-stone-800 rounded-full overflow-hidden">
                                                 <div className="h-full bg-blue-600 transition-all duration-500" style={{ width: `${percent}%` }}></div>
                                             </div>
@@ -326,8 +326,8 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                                             <Trophy size={24} />
                                         </div>
                                         <div className="flex-1 z-10">
-                                            <h4 className="font-bold text-white">{ach.title}</h4>
-                                            <p className="text-xs text-stone-400 mb-2">{ach.desc}</p>
+                                            <h4 className="font-bold text-white">{getLocalized(ach.title)}</h4>
+                                            <p className="text-xs text-stone-400 mb-2">{getLocalized(ach.desc)}</p>
                                             <div className="w-full h-2 bg-stone-800 rounded-full overflow-hidden">
                                                 <div className="h-full bg-purple-600 transition-all duration-500" style={{ width: `${percent}%` }}></div>
                                             </div>
@@ -379,10 +379,10 @@ export const MissionModal: React.FC<MissionModalProps> = ({ isOpen, onClose, use
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2">
-                                                    <h4 className={`font-bold uppercase tracking-wider ${isUnlocked ? rankColor : 'text-stone-500'}`}>{rank.label}</h4>
+                                                    <h4 className={`font-bold uppercase tracking-wider ${isUnlocked ? rankColor : 'text-stone-500'}`}>{getLocalized(rank.label)}</h4>
                                                     {isUnlocked && <span className="bg-stone-800 text-stone-400 text-[10px] px-2 py-0.5 rounded font-bold">{rank.points} Pts</span>}
                                                 </div>
-                                                <p className="text-xs text-stone-400 mt-1">{rank.desc}</p>
+                                                <p className="text-xs text-stone-400 mt-1">{getLocalized(rank.desc)}</p>
                                                 {!isUnlocked && <p className="text-[10px] text-red-400 mt-1">{t('mission.points_needed').replace('{points}', rank.points.toString())}</p>}
                                             </div>
                                             <div className="w-28 text-center">

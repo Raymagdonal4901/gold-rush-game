@@ -22,9 +22,9 @@ interface WarehouseModalProps {
 }
 
 export const WarehouseModal: React.FC<WarehouseModalProps> = ({
-    isOpen, onClose, userId, materials, inventory, balance, marketState, onSell, onCraft, onPlayGoldRain, onOpenMarket
+    isOpen, onClose, userId, materials = {}, inventory = [], balance = 0, marketState, onSell, onCraft, onPlayGoldRain, onOpenMarket
 }) => {
-    const { t, language } = useTranslation();
+    const { t, language, getLocalized } = useTranslation();
     const [hasMixer, setHasMixer] = useState(false); // Deprecated state, removing logic but keeping to avoid breaking if referenced elsewhere briefly. Actually, removing it.
     const [activeTab, setActiveTab] = useState<'MATERIALS' | 'ITEMS' | 'EQUIPMENT'>('MATERIALS');
 
@@ -59,7 +59,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
             // For consumables (items), group by typeId only to combine all of the same type
             // For equipment, group by typeId + rarity + level for differentiation
             const key = groupByTypeIdOnly
-                ? item.typeId || item.name
+                ? item.typeId || getLocalized(item.name)
                 : `${item.typeId}_${item.rarity}_${item.level || 1}_${item.isHandmade ? 'hm' : 'std'}`;
             if (!groups[key]) {
                 groups[key] = { representative: item, count: 0, originalItems: [] };
@@ -79,20 +79,28 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
 
     const isItem = (i: AccessoryItem) => {
         if (!i.typeId && !i.name) return false;
-        if (i.typeId === 'glove' || i.name?.includes('หุ่นยนต์')) return false;
+
+        // Safely extract name string for internal mapping
+        let nameStr = '';
+        if (i.name && typeof i.name === 'object') {
+            nameStr = (i.name as any).en || '';
+        } else if (typeof i.name === 'string') {
+            nameStr = i.name;
+        }
+
+        if (i.typeId === 'glove' || nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) return false;
 
         // Check by typeId
         if (i.typeId && itemTypes.includes(i.typeId)) return true;
 
         // Fallback check by name (Crucial for mismatched records)
-        const name = i.name || '';
-        if (name.includes('ชิป') || name.includes('Chip')) return true;
-        if (name.includes('กุญแจ') || name.includes('Key')) return true;
-        if (name.includes('ผสม') || name.includes('Mixer')) return true;
-        if (name.includes('แว่นขยาย') || name.includes('Magnifying')) return true;
-        if (name.includes('หุ่นยนต์') || name.includes('Robot')) return true;
-        if (name.includes('นาฬิกาทราย') || name.includes('Hourglass')) return true;
-        if (name.includes('ประกัน') || name.includes('Insurance')) return true;
+        if (nameStr.includes('ชิป') || nameStr.includes('Chip')) return true;
+        if (nameStr.includes('กุญแจ') || nameStr.includes('Key')) return true;
+        if (nameStr.includes('ผสม') || nameStr.includes('Mixer')) return true;
+        if (nameStr.includes('แว่นขยาย') || nameStr.includes('Magnifying')) return true;
+        if (nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) return true;
+        if (nameStr.includes('นาฬิกาทราย') || nameStr.includes('Hourglass')) return true;
+        if (nameStr.includes('ประกัน') || nameStr.includes('Insurance')) return true;
 
         return false;
     };
@@ -101,22 +109,23 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
     // - Items: in itemTypes list or matching item names
     // - Equipment: Everything else that isn't a glove and isn't an item
     const itemsList = inventory.filter(i => {
-        if (i.typeId === 'glove' || i.name?.includes('หุ่นยนต์')) return false;
+        if (i.typeId === 'glove') return false;
         return isItem(i);
     });
 
     const equipmentList = inventory.filter(i => {
-        if (i.typeId === 'glove' || i.name?.includes('หุ่นยนต์')) return false;
+        if (i.typeId === 'glove') return false;
         return !isItem(i);
     });
 
-    const groupedItems = groupInventoryItems(itemsList, true);  // Group by typeId only for consumables
-    const groupedEquipment = groupInventoryItems(equipmentList, false);  // Full grouping for equipment
+    const groupedItems = isOpen ? groupInventoryItems(itemsList, true) : [];  // Group by typeId only for consumables
+    const groupedEquipment = isOpen ? groupInventoryItems(equipmentList, false) : [];  // Full grouping for equipment
 
     if (!isOpen) return null;
 
     const handleCraftClick = (sourceTier: number) => {
-        const name = MATERIAL_CONFIG.NAMES[sourceTier as keyof typeof MATERIAL_CONFIG.NAMES];
+        const nameData = MATERIAL_CONFIG.NAMES[sourceTier as keyof typeof MATERIAL_CONFIG.NAMES];
+        const name = getLocalized(nameData);
         const recipe = MATERIAL_RECIPES[sourceTier];
         setConfirmState({
             type: 'CRAFT',
@@ -196,39 +205,56 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
 
     const getItemDisplayName = (item: any) => {
         const typeId = item.typeId || '';
-        const name = item.name || '';
-        if (typeId === 'chest_key' || name.includes('กุญแจ') || name.includes('Key')) return language === 'th' ? 'กุญแจเข้าเหมือง' : 'Mining Key';
-        if (typeId === 'upgrade_chip' || name.includes('ชิป') || name.includes('Chip')) return language === 'th' ? 'ชิปอัปเกรด' : 'Upgrade Chip';
-        if (typeId === 'mixer' || name.includes('โต๊ะช่าง') || name.includes('Mixer')) return language === 'th' ? 'โต๊ะช่างสกัดแร่' : 'Material Extractor';
-        if (typeId === 'magnifying_glass' || name.includes('แว่นขยาย') || name.includes('Search')) return language === 'th' ? 'แว่นขยายส่องแร่' : 'Magnifying Glass';
-        if (typeId === 'robot' || name.includes('หุ่นยนต์') || name.includes('Robot')) return language === 'th' ? 'หุ่นยนต์ AI' : 'AI Robot';
-        return name;
+
+        // Safely extract name string
+        let nameStr = '';
+        if (item.name && typeof item.name === 'object') {
+            nameStr = (item.name as any).en || '';
+        } else if (typeof item.name === 'string') {
+            nameStr = item.name;
+        }
+
+        if (typeId === 'chest_key' || nameStr.includes('กุญแจ') || nameStr.includes('Key')) return t('rig.mining_key');
+        if (typeId === 'upgrade_chip' || nameStr.includes('ชิป') || nameStr.includes('Chip')) return t('inventory.upgrade');
+        if (typeId === 'mixer' || nameStr.includes('โต๊ะช่าง') || nameStr.includes('Mixer')) return t('warehouse.extract');
+        if (typeId === 'magnifying_glass' || nameStr.includes('แว่นขยาย') || nameStr.includes('Search')) return t('warehouse.click_stats');
+        if (typeId === 'robot' || nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) return t('dashboard.shop'); // Shop key used for Generic Icon label fallback
+
+        return getLocalized(item.name);
     };
 
     const getIcon = (item: any, className: string) => {
         let typeId = item.typeId || '';
-        const name = item.name || '';
-        const rarity = item.rarity;
+
+        // Safely extract name string for internal mapping
+        let nameStr = '';
+        if (item.name && typeof item.name === 'object') {
+            nameStr = (item.name as any).en || '';
+        } else if (typeof item.name === 'string') {
+            nameStr = item.name;
+        }
+
+        const rarity = (item.rarity && RARITY_SETTINGS[item.rarity]) ? item.rarity : 'COMMON';
 
         // Name-based overrides
-        if (name.includes('ชิป') || name.includes('Chip')) typeId = 'upgrade_chip';
-        else if (name.includes('กุญแจ') || name.includes('Key')) typeId = 'chest_key';
-        else if (name.includes('โต๊ะช่าง') || name.includes('Mixer')) typeId = 'mixer';
-        else if (name.includes('แว่นขยาย') || name.includes('Magnifying')) typeId = 'magnifying_glass';
-        else if (name.includes('ใบประกัน') || name.includes('Insurance')) typeId = 'insurance_card';
-        else if (name.includes('นาฬิกาทราย') || name.includes('Hourglass')) typeId = 'hourglass_small';
-        else if (name.includes('วัสดุปริศนา') || name.includes('Mystery Item')) typeId = 'mystery_ore';
-        else if (name.includes('วัสดุหายาก') || name.includes('Legendary Item')) typeId = 'legendary_ore';
-        else if (name.includes('รถกอล์ฟ') || name.includes('Golf Cart')) typeId = 'auto_excavator';
-        else if (name.includes('หุ่นยนต์') || name.includes('Robot')) typeId = 'robot';
+        if (nameStr.includes('ชิป') || nameStr.includes('Chip')) typeId = 'upgrade_chip';
+        else if (nameStr.includes('กุญแจ') || nameStr.includes('Key')) typeId = 'chest_key';
+        else if (nameStr.includes('โต๊ะช่าง') || nameStr.includes('Mixer')) typeId = 'mixer';
+        else if (nameStr.includes('แว่นขยาย') || nameStr.includes('Magnifying')) typeId = 'magnifying_glass';
+        else if (nameStr.includes('ใบประกัน') || nameStr.includes('Insurance')) typeId = 'insurance_card';
+        else if (nameStr.includes('นาฬิกาทราย') || nameStr.includes('Hourglass')) typeId = 'hourglass_small';
+        else if (nameStr.includes('วัสดุปริศนา') || nameStr.includes('Mystery Item')) typeId = 'mystery_ore';
+        else if (nameStr.includes('วัสดุหายาก') || nameStr.includes('Legendary Item')) typeId = 'legendary_ore';
+        else if (nameStr.includes('รถกอล์ฟ') || nameStr.includes('Golf Cart')) typeId = 'auto_excavator';
+        else if (nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) typeId = 'robot';
         // Classic Equipment
-        else if (name.includes('หมวก') || name.includes('Helmet')) typeId = 'hat';
-        else if (name.includes('แว่น') || name.includes('Glasses')) typeId = 'glasses';
-        else if (name.includes('ชุด') || name.includes('Uniform') || name.includes('Suit')) typeId = 'uniform';
-        else if (name.includes('กระเป๋า') || name.includes('Bag') || name.includes('Backpack')) typeId = 'bag';
-        else if (name.includes('รองเท้า') || name.includes('Boots')) typeId = 'boots';
-        else if (name.includes('มือถือ') || name.includes('Mobile') || name.includes('Phone')) typeId = 'mobile';
-        else if (name.includes('คอม') || name.includes('PC') || name.includes('Computer')) typeId = 'pc';
+        else if (nameStr.includes('หมวก') || nameStr.includes('Helmet')) typeId = 'hat';
+        else if (nameStr.includes('แว่น') || nameStr.includes('Glasses')) typeId = 'glasses';
+        else if (nameStr.includes('ชุด') || nameStr.includes('Uniform') || nameStr.includes('Suit')) typeId = 'uniform';
+        else if (nameStr.includes('กระเป๋า') || nameStr.includes('Bag') || nameStr.includes('Backpack')) typeId = 'bag';
+        else if (nameStr.includes('รองเท้า') || nameStr.includes('Boots')) typeId = 'boots';
+        else if (nameStr.includes('มือถือ') || nameStr.includes('Mobile') || nameStr.includes('Phone')) typeId = 'mobile';
+        else if (nameStr.includes('คอม') || nameStr.includes('PC') || nameStr.includes('Computer')) typeId = 'pc';
 
         if (!typeId) return <InfinityGlove rarity={rarity} className={className} />;
         if (typeId.includes('glove')) return <InfinityGlove rarity={rarity} className={className} />;
@@ -295,7 +321,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                             {t('warehouse.extract')}...
                         </h2>
                         <p className="text-yellow-600/80 text-sm tracking-[0.5em] font-bold uppercase animate-pulse">
-                            EXTRACTION PROCESSING (TIER {craftingTargetTier})
+                            {t('warehouse.extract_processing').replace('{tier}', craftingTargetTier.toString())}
                         </p>
                     </div>
                 </div>
@@ -318,7 +344,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                 <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 uppercase tracking-widest drop-shadow-sm flex items-center gap-2 justify-center">
                                     <Sparkles size={24} className="text-purple-400" /> {t('common.success')}!
                                 </h2>
-                                <p className="text-stone-500 text-xs font-bold uppercase tracking-[0.3em] mt-1">CRAFTING COMPLETE</p>
+                                <p className="text-stone-500 text-xs font-bold uppercase tracking-[0.3em] mt-1">{t('warehouse.crafting_complete')}</p>
                             </div>
 
                             <div className="relative mb-6">
@@ -332,7 +358,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                             </div>
 
                             <div className="text-center mb-8">
-                                <div className="text-stone-400 text-xs font-bold uppercase tracking-widest mb-1">{language === 'th' ? 'ได้รับไอเทม' : 'Item Received'}</div>
+                                <div className="text-stone-400 text-xs font-bold uppercase tracking-widest mb-1">{t('warehouse.item_received')}</div>
                                 <div className={`text-xl font-bold ${getTierColor(successItem.tier)}`}>{successItem.name}</div>
                             </div>
 
@@ -340,7 +366,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                 onClick={() => setSuccessItem(null)}
                                 className="w-full py-3 bg-stone-800 hover:bg-stone-700 border border-stone-600 hover:border-stone-500 text-white font-bold rounded-xl transition-all uppercase tracking-widest shadow-lg"
                             >
-                                {t('common.confirm')} (OK)
+                                {t('common.confirm')}
                             </button>
                         </div>
                     </div>
@@ -353,9 +379,9 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                     <div className="bg-stone-900 border border-stone-700 w-full max-w-2xl rounded-2xl p-6 shadow-2xl">
                         <div className="text-center mb-6">
                             <h3 className="text-xl font-bold text-white flex items-center justify-center gap-2">
-                                <Gem className="text-yellow-500" size={20} /> {language === 'th' ? 'ยืนยันการสกัดแร่' : 'Confirm Extraction'}
+                                <Gem className="text-yellow-500" size={20} /> {t('warehouse.confirm_extraction')}
                             </h3>
-                            <p className="text-yellow-600/50 text-xs mt-1 uppercase tracking-widest font-bold">CONFIRM EXTRACTION</p>
+                            <p className="text-yellow-600/50 text-xs mt-1 uppercase tracking-widest font-bold">{t('warehouse.extract_desc').replace('{tier}', confirmState.tier.toString())}</p>
                         </div>
 
                         {/* VISUAL FORMULA BOX (Horizontal Layout) */}
@@ -375,7 +401,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                         x{needed as number}
                                                     </span>
                                                 </div>
-                                                <span className="text-[9px] text-stone-500 font-bold uppercase truncate max-w-[50px]">{MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span>
+                                                <span className="text-[9px] text-stone-500 font-bold uppercase truncate max-w-[50px]">{getLocalized(MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES])}</span>
                                             </div>
                                             {idx < arr.length - 1 && <Plus size={12} className="text-stone-800" />}
                                         </React.Fragment>
@@ -395,7 +421,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                     x{(confirmState.recipe.fee * EXCHANGE_RATE_USD_THB).toFixed(2)}
                                                 </span>
                                             </div>
-                                            <span className="text-[9px] text-stone-500 font-bold uppercase">บาท <span className="text-[8px] opacity-70">({CURRENCY}{confirmState.recipe.fee})</span></span>
+                                            <span className="text-[9px] text-stone-500 font-bold uppercase">{t('common.thb')} <span className="text-[8px] opacity-70">({CURRENCY}{confirmState.recipe.fee})</span></span>
                                         </div>
                                     </>
                                 )}
@@ -424,7 +450,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                     </div>
                                 </div>
                                 <span className="text-sm text-yellow-500 font-black uppercase tracking-widest mt-2 drop-shadow-md">
-                                    {MATERIAL_CONFIG.NAMES[confirmState.tier + 1 as keyof typeof MATERIAL_CONFIG.NAMES]}
+                                    {getLocalized(MATERIAL_CONFIG.NAMES[confirmState.tier + 1 as keyof typeof MATERIAL_CONFIG.NAMES])}
                                 </span>
                             </div>
                         </div>
@@ -439,10 +465,10 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                     <div className="flex justify-between items-center text-xs">
                                         <span className="text-stone-500 font-bold uppercase tracking-wider flex items-center gap-2">
                                             {getIcon({ typeId: reqId, name: itemInfo?.name || reqId }, "text-stone-400")}
-                                            ต้องการ: {itemInfo?.name || reqId}
+                                            {t('warehouse.req_item')} {itemInfo ? getLocalized(itemInfo.name) : reqId}
                                         </span>
                                         <span className={hasItem ? "text-emerald-500 font-bold flex items-center gap-1" : "text-red-500 font-bold flex items-center gap-1"}>
-                                            {hasItem ? <><CheckCircle2 size={12} /> {language === 'th' ? `มีอยู่ ${itemCount} ชิ้น` : `Own ${itemCount} pcs`}</> : <><AlertTriangle size={12} /> {language === 'th' ? 'ยังไม่มี' : 'Missing'}</>}
+                                            {hasItem ? <><CheckCircle2 size={12} /> {t('warehouse.owned_count_pcs').replace('{count}', itemCount.toString())}</> : <><AlertTriangle size={12} /> {t('warehouse.missing')}</>}
                                         </span>
                                     </div>
                                 );
@@ -477,26 +503,26 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                         {t('warehouse.title')}
                                     </h2>
                                     {marketState?.trends && (() => {
-                                        const trends = Object.values(marketState.trends) as MarketItemData[];
+                                        const trends = marketState?.trends ? Object.values(marketState.trends) as MarketItemData[] : [];
                                         const ups = trends.filter(t => t.trend === 'UP').length;
                                         const downs = trends.filter(t => t.trend === 'DOWN').length;
 
                                         if (ups > downs) return (
                                             <div className="flex items-center gap-1.5 text-emerald-500 animate-pulse">
                                                 <TrendingUp size={12} />
-                                                <span className="text-[10px] font-black uppercase tracking-widest">{language === 'th' ? 'ตลาดช่วงขาขึ้น (BULLISH MARKET)' : 'BULLISH MARKET'}</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest">{t('warehouse.bullish_market')}</span>
                                             </div>
                                         );
                                         if (downs > ups) return (
                                             <div className="flex items-center gap-1.5 text-red-500 animate-pulse">
                                                 <TrendingDown size={12} />
-                                                <span className="text-[10px] font-black uppercase tracking-widest">{language === 'th' ? 'ตลาดช่วงขาลง (BEARISH MARKET)' : 'BEARISH MARKET'}</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest">{t('warehouse.bearish_market')}</span>
                                             </div>
                                         );
                                         return (
                                             <div className="flex items-center gap-1.5 text-stone-500">
                                                 <Minus size={12} />
-                                                <span className="text-[10px] font-black uppercase tracking-widest">{language === 'th' ? 'ตลาดคงที่ (STABLE MARKET)' : 'STABLE MARKET'}</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest">{t('warehouse.stable_market')}</span>
                                             </div>
                                         );
                                     })()}
@@ -510,9 +536,9 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                             </button>
                         </div>
                         <div className="flex px-5 gap-8">
-                            <button onClick={() => setActiveTab('MATERIALS')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${activeTab === 'MATERIALS' ? 'text-blue-400 border-blue-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>{language === 'th' ? 'วัตถุดิบ' : 'Materials'}</button>
-                            <button onClick={() => setActiveTab('ITEMS')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${activeTab === 'ITEMS' ? 'text-yellow-500 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>{language === 'th' ? 'ไอเทม' : 'Items'}</button>
-                            <button onClick={() => setActiveTab('EQUIPMENT')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${activeTab === 'EQUIPMENT' ? 'text-emerald-500 border-emerald-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>{language === 'th' ? 'อุปกรณ์เครื่องจักร' : 'Equipment'}</button>
+                            <button onClick={() => setActiveTab('MATERIALS')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${activeTab === 'MATERIALS' ? 'text-blue-400 border-blue-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>{t('warehouse.materials_tab')}</button>
+                            <button onClick={() => setActiveTab('ITEMS')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${activeTab === 'ITEMS' ? 'text-yellow-500 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>{t('warehouse.items_tab')}</button>
+                            <button onClick={() => setActiveTab('EQUIPMENT')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${activeTab === 'EQUIPMENT' ? 'text-emerald-500 border-emerald-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>{t('warehouse.equipment_tab')}</button>
                         </div>
                     </div>
 
@@ -521,10 +547,10 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {displayTiers.map((tier) => {
                                     const count = materials[tier] || 0;
-                                    const name = MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES];
+                                    const name = getLocalized(MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES]);
                                     const recipe = MATERIAL_RECIPES[tier];
                                     const canCraft = checkRecipeAvailability(recipe);
-                                    const currentPrice = marketState?.trends[tier]?.currentPrice || MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES];
+                                    const currentPrice = marketState?.trends?.[tier]?.currentPrice || MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES];
 
                                     return (
                                         <div key={tier} className={`bg-stone-900/80 border border-stone-800 rounded-2xl p-5 flex flex-col gap-4 relative transition-all hover:border-stone-700`}>
@@ -538,20 +564,32 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                     {tier < 8 && (
                                                         <div className="space-y-1 mt-1">
                                                             <div className="flex items-center justify-between text-[10px] text-stone-500 font-bold uppercase tracking-wider">
-                                                                <span>ราคาเริ่มต้น</span>
-                                                                <span>{MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES].toFixed(2)}</span>
+                                                                <span>{t('warehouse.base_price')}</span>
+                                                                <span>{
+                                                                    (MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES] * (language === 'th' ? EXCHANGE_RATE_USD_THB : 1)).toFixed(2)
+                                                                } {language === 'th' ? t('common.thb') : CURRENCY}</span>
                                                             </div>
                                                             <div
                                                                 className="flex items-center justify-between cursor-pointer hover:bg-stone-800/50 p-1 -mx-1 rounded transition-colors group/price"
                                                                 onClick={() => onOpenMarket?.(tier)}
-                                                                title="คลิกเพื่อดูสถิติตลาด"
+                                                                title={t('warehouse.click_stats')}
                                                             >
                                                                 <div className="flex flex-col">
                                                                     <div className="flex items-center gap-1.5">
                                                                         <Tag size={10} className="text-stone-500 group-hover/price:text-emerald-400" />
-                                                                        <span className="text-[11px] text-emerald-400 font-mono font-bold">{(currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} ฿ <span className="text-[9px] text-stone-500 font-normal">({CURRENCY}{currentPrice.toFixed(2)})</span></span>
+                                                                        {language === 'th' ? (
+                                                                            <span className="text-[11px] text-emerald-400 font-mono font-bold">
+                                                                                {(currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} {t('common.thb')}
+                                                                                <span className="text-[9px] text-stone-500 font-normal ml-1">({CURRENCY}{currentPrice.toFixed(2)})</span>
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="text-[11px] text-emerald-400 font-mono font-bold">
+                                                                                {CURRENCY}{currentPrice.toFixed(2)}
+                                                                                <span className="text-[9px] text-stone-500 font-normal ml-1">({(currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} {t('common.thb')})</span>
+                                                                            </span>
+                                                                        )}
                                                                     </div>
-                                                                    {marketState?.trends[tier]?.history && renderSparkline(marketState.trends[tier].history)}
+                                                                    {marketState?.trends?.[tier]?.history && renderSparkline(marketState.trends[tier].history)}
                                                                 </div>
                                                                 <div className="text-right">
                                                                     {(() => {
@@ -562,7 +600,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                                         if (percent >= 0) return (
                                                                             <div className="flex flex-col items-end">
                                                                                 <div className="flex items-center text-[10px] text-emerald-500 font-bold animate-pulse">
-                                                                                    <TrendingUp size={10} className="mr-0.5" /> ขึ้น
+                                                                                    <TrendingUp size={10} className="mr-0.5" /> {t('warehouse.market_up')}
                                                                                 </div>
                                                                                 <div className="text-[9px] text-emerald-400 font-bold">+{percent.toFixed(1)}%</div>
                                                                             </div>
@@ -570,7 +608,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                                         return (
                                                                             <div className="flex flex-col items-end">
                                                                                 <div className="flex items-center text-[10px] text-red-500 font-bold animate-pulse">
-                                                                                    <TrendingDown size={10} className="mr-0.5" /> ลง
+                                                                                    <TrendingDown size={10} className="mr-0.5" /> {t('warehouse.market_down')}
                                                                                 </div>
                                                                                 <div className="text-[9px] text-red-400 font-bold">{percent.toFixed(1)}%</div>
                                                                             </div>
@@ -597,7 +635,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                             {tier === 8 ? '✨ COLLECTION ✨' : '👑 LEGENDARY 👑'}
                                                         </div>
                                                     ) : (
-                                                        <div className="text-[10px] text-stone-600 text-center uppercase tracking-widest font-bold py-2.5">สูงสุด (Max Tier)</div>
+                                                        <div className="text-[10px] text-stone-600 text-center uppercase tracking-widest font-bold py-2.5">{t('warehouse.max_tier')}</div>
                                                     )
                                                 )}
                                             </div>
@@ -609,7 +647,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                         {activeTab === 'ITEMS' && (
                             <div className="space-y-6">
                                 {groupedItems.length === 0 ? (
-                                    <div className="text-center py-20 text-stone-600 italic">ยังไม่มีไอเทมในขณะนี้</div>
+                                    <div className="text-center py-20 text-stone-600 italic">{t('warehouse.no_items')}</div>
                                 ) : (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                         {groupedItems.map((group, idx) => {
@@ -657,7 +695,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                                 {item.level && item.level > 1 && <span className="ml-1 text-[10px] text-yellow-500">+{item.level}</span>}
                                                             </div>
                                                             <div className="text-[10px] text-stone-500 truncate">
-                                                                {item.dailyBonus > 0 ? `+${item.dailyBonus.toFixed(1)} ${CURRENCY}/${language === 'th' ? 'วัน' : 'day'}` : (item.specialEffect || (language === 'th' ? 'ไอเทมใช้งาน' : 'Utility Item'))}
+                                                                {item.dailyBonus > 0 ? `+${item.dailyBonus.toFixed(1)} ${CURRENCY}/${t('time.day')}` : (item.specialEffect || (activeTab === 'ITEMS' ? t('warehouse.items_tab') : t('warehouse.equipment_tab')))}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -674,29 +712,30 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                         {activeTab === 'EQUIPMENT' && (
                             <div className="space-y-6">
                                 {groupedEquipment.length === 0 ? (
-                                    <div className="text-center py-20 text-stone-600 italic">ยังไม่มีอุปกรณ์เครื่องจักรในขณะนี้</div>
+                                    <div className="text-center py-20 text-stone-600 italic">{t('warehouse.no_equipment')}</div>
                                 ) : (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                         {groupedEquipment.map((group, idx) => {
                                             const item = group.representative;
-                                            let containerClass = `bg-stone-900/80 border ${RARITY_SETTINGS[item.rarity].border}`;
+                                            const safeRarity = (item.rarity && RARITY_SETTINGS[item.rarity]) ? item.rarity : 'COMMON';
+                                            let containerClass = `bg-stone-900/80 border ${RARITY_SETTINGS[safeRarity].border}`;
 
                                             return (
                                                 <div key={idx} className={`${containerClass} rounded-xl p-4 flex items-center justify-between relative overflow-hidden group hover:border-emerald-500/50 transition-all`}>
                                                     <div className="flex items-center gap-3 relative z-10 min-w-0 flex-1">
                                                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 bg-stone-950 border-stone-800`}>
-                                                            {getIcon(item, `w-6 h-6 ${RARITY_SETTINGS[item.rarity].color}`)}
+                                                            {getIcon(item, `w-6 h-6 ${RARITY_SETTINGS[safeRarity].color}`)}
                                                         </div>
                                                         <div className="min-w-0">
                                                             <div className={`text-sm font-bold truncate ${item.isHandmade ? 'text-yellow-400' : 'text-white'}`}>
-                                                                {item.name}
+                                                                {getLocalized(item.name)}
                                                                 {item.level && item.level > 1 && <span className="ml-1 text-[10px] text-yellow-500">+{item.level}</span>}
                                                             </div>
                                                             <div className="text-[10px] text-stone-500 truncate">
-                                                                {item.dailyBonus > 0 ? `+${item.dailyBonus.toFixed(1)} ${CURRENCY}/${language === 'th' ? 'วัน' : 'day'}` : (item.specialEffect || (language === 'th' ? 'อุปกรณ์เครื่องจักร' : 'Equipment'))}
+                                                                {item.dailyBonus > 0 ? `+${item.dailyBonus.toFixed(1)} ${CURRENCY}/${t('time.day')}` : (item.specialEffect || (activeTab === 'ITEMS' ? t('warehouse.items_tab') : t('warehouse.equipment_tab')))}
                                                             </div>
-                                                            <div className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${RARITY_SETTINGS[item.rarity].color}`}>
-                                                                {item.rarity}
+                                                            <div className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${RARITY_SETTINGS[safeRarity].color}`}>
+                                                                {safeRarity}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -716,11 +755,17 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                         <div className="flex items-center gap-2">
                             <Coins className="text-yellow-500" size={18} />
                             <span className="text-sm text-stone-400 font-bold uppercase tracking-widest">{t('common.balance')}:</span>
-                            <span className="text-lg font-mono font-bold text-white">{(balance * EXCHANGE_RATE_USD_THB).toLocaleString()} ฿ <span className="text-sm font-normal opacity-50">({balance.toLocaleString()} {CURRENCY})</span></span>
+                            <span className="text-lg font-mono font-bold text-white">
+                                {language === 'th' ? (
+                                    <>{(balance * EXCHANGE_RATE_USD_THB).toLocaleString()} {t('common.thb')} <span className="text-sm font-normal opacity-50">({balance.toLocaleString()} {CURRENCY})</span></>
+                                ) : (
+                                    <>{balance.toLocaleString()} {CURRENCY} <span className="text-sm font-normal opacity-50">({(balance * EXCHANGE_RATE_USD_THB).toLocaleString()} {t('common.thb')})</span></>
+                                )}
+                            </span>
                         </div>
                         <div className="flex items-center gap-2 bg-stone-950 px-3 py-1 rounded-lg border border-stone-800">
-                            <span className="text-[10px] font-bold text-stone-600 uppercase tracking-widest">สถานะโต๊ะช่าง:</span>
-                            <span className={hasMixer ? "text-emerald-500 text-xs font-bold" : "text-red-500 text-xs font-bold"}>{hasMixer ? "เชื่อมต่ออยู่" : "ไม่ได้ติดตั้ง"}</span>
+                            <span className="text-[10px] font-bold text-stone-600 uppercase tracking-widest">{t('warehouse.extractor_status')}</span>
+                            <span className={hasMixer ? "text-emerald-500 text-xs font-bold" : "text-red-500 text-xs font-bold"}>{hasMixer ? t('warehouse.connected') : t('warehouse.not_installed')}</span>
                         </div>
                     </div>
                 </div>

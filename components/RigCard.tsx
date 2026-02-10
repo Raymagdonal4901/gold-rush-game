@@ -6,6 +6,7 @@ import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, 
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
+import { useTranslation } from './LanguageContext';
 
 interface RigCardProps {
     rig: OilRig;
@@ -55,20 +56,21 @@ export const RigCard: React.FC<RigCardProps> = ({
     isDemo = false,
     addNotification
 }) => {
+    const { t, language, getLocalized, formatCurrency } = useTranslation();
     const handleDestroyClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isExploring) return;
-        if (!window.confirm('ยืนยันการทุบทิ้งเครื่องขุด? อุปกรณ์ที่ติดตั้งอยู่ทั้งหมดจะถูกทำลายหายไปพร้อมกับเครื่อง')) return;
+        if (!window.confirm(t('rig.destroy_confirm'))) return;
 
         try {
             const result = await api.destroyRig(rig.id);
             if (result.success) {
-                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: 'ทำลายเครื่องจักรและอุปกรณ์ที่ติดตั้งอยู่แล้ว', type: 'SUCCESS', read: false, timestamp: Date.now() });
+                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: t('rig.destroy_success'), type: 'SUCCESS', read: false, timestamp: Date.now() });
                 if (onRenew) onRenew(rig.id);
             }
         } catch (e: any) {
             console.error('[DESTROY_RIG] Error:', e);
-            if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: e.response?.data?.message || 'เกิดข้อผิดพลาดในการทำลายเครื่อง', type: 'ERROR', read: false, timestamp: Date.now() });
+            if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: e.response?.data?.message || t('common.error'), type: 'ERROR', read: false, timestamp: Date.now() });
         }
     };
     const [currentAmount, setCurrentAmount] = useState(BASE_CLAIM_AMOUNT);
@@ -91,11 +93,12 @@ export const RigCard: React.FC<RigCardProps> = ({
 
 
     useEffect(() => {
-        console.log(`[RigCard DEBUG] ${rig.name} (${rig.id}) - ClaimAt: ${rig.lastClaimAt}, Mat: ${rig.currentMaterials}, CollectAt: ${rig.lastCollectionAt}`);
+        console.log(`[RigCard DEBUG] ${getLocalized(rig.name)} (${rig.id}) - ClaimAt: ${rig.lastClaimAt}, Mat: ${rig.currentMaterials}, CollectAt: ${rig.lastCollectionAt}`);
     }, [rig]);
 
     // Find preset first to get static data like type/rarity
-    const preset = RIG_PRESETS.find(p => p.name === rig.name) || RIG_PRESETS.find(p => p.price === rig.investment);
+    const nameStr = typeof rig.name === 'string' ? rig.name : (rig.name?.en || rig.name?.th || '');
+    const preset = RIG_PRESETS.find(p => p.name.en === nameStr || p.name.th === nameStr) || RIG_PRESETS.find(p => p.price === rig.investment);
 
     // Rarity Logic: Prefer preset.type (from constants), then rig.rarity (from DB), then default
     const rarityKey = (preset?.type?.toUpperCase() || rig.rarity || 'COMMON') as keyof typeof RARITY_SETTINGS;
@@ -114,7 +117,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     const gloveItem = equippedItems[0];
 
     // Force remove bonus for specific rigs (Legacy data compatibility)
-    const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา'].includes(rig.name);
+    const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
     const effectiveBonusProfit = isNoBonusRig ? 0 : (rig.bonusProfit || 0);
 
     // Override base profit for specific rigs (Balance Patch)
@@ -225,11 +228,11 @@ export const RigCard: React.FC<RigCardProps> = ({
         if (hatItem) {
             const series = EQUIPMENT_SERIES.hat.tiers.find(t => t.rarity === hatItem.rarity);
             if (series) {
-                const match = series.stat.match(/-(\d+)%/);
+                const match = getLocalized(series.stat).match(/-(\d+)%/);
                 if (match) {
                     const p = parseInt(match[1]);
                     discountMultiplier += (p / 100);
-                    hatDiscountText = `(แหล่งจ่ายไฟ -${p}%)`;
+                    hatDiscountText = `(${t('rig.maintenance_fee')} -${p}%)`;
                 }
             }
         }
@@ -237,6 +240,15 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     const isVibranium = rig.investment === 0 || rig.name.includes('Vibranium');
     const repairCost = isVibranium ? 0 : Math.floor(baseRepairCost * (1 - discountMultiplier));
+
+    // --- Uniform Energy Discount ---
+    const uniformId = rig.slots ? rig.slots.find(id => {
+        if (!id) return false;
+        const item = inventory.find(i => i.id === id);
+        return item && (item.typeId === 'uniform' || item.typeId.startsWith('uniform'));
+    }) : null;
+    const energyDiscount = uniformId ? 0.05 : 0;
+    const effectiveEnergyCostPerDay = energyCostPerDay * (1 - energyDiscount);
 
     const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || Date.now();
     const elapsedMs = now - lastUpdate;
@@ -294,13 +306,13 @@ export const RigCard: React.FC<RigCardProps> = ({
     const formatTimeLeft = (ms: number) => {
         const gameMs = ms;
 
-        if (isInfiniteContract) return 'ถาวร (∞)';
-        if (gameMs <= 0) return 'หมดสัญญา';
+        if (isInfiniteContract) return t('rig.permanent');
+        if (gameMs <= 0) return t('rig.contract_expired');
         const days = Math.floor(gameMs / (1000 * 60 * 60 * 24));
         const hours = Math.floor((gameMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((gameMs % (1000 * 60 * 60)) / (1000 * 60));
 
-        if (days > 0) return `${days}วัน ${hours}ชม.`;
+        if (days > 0) return `${days}${t('time.days')} ${hours}${t('time.hours')}`;
         return `${hours}:${minutes.toString().padStart(2, '0')}:${Math.floor((gameMs % (1000 * 60)) / 1000).toString().padStart(2, '0')}`;
     };
 
@@ -308,18 +320,18 @@ export const RigCard: React.FC<RigCardProps> = ({
         const gameMs = ms;
         const days = Math.floor(gameMs / (1000 * 60 * 60 * 24));
         const hours = Math.floor((gameMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        if (days > 0) return `${days}วัน`;
-        if (hours > 0) return `${hours}ชม.`;
+        if (days > 0) return `${days}${t('time.days')}`;
+        if (hours > 0) return `${hours}${t('time.hours')}`;
         const minutes = Math.floor((gameMs % (1000 * 60 * 60)) / (1000 * 60));
-        return `${minutes}น.`;
+        return `${minutes}${t('time.minutes')}`;
     };
 
     const formatSimpleTime = (ms: number) => {
         const gameMs = ms;
         const days = Math.floor(gameMs / (1000 * 60 * 60 * 24));
         const hours = Math.floor((gameMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        if (days > 0) return `${days}วัน`;
-        return `${hours}ชม.`;
+        if (days > 0) return `${days}${t('time.days')}`;
+        return `${hours}${t('time.hours')}`;
     }
 
     const animate = () => {
@@ -462,10 +474,10 @@ export const RigCard: React.FC<RigCardProps> = ({
         if (isGiftAvailable) {
             if (hasKey && !isOutOfEnergy) onClaimGift(rig.id);
             else if (isOutOfEnergy) {
-                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: 'เครื่องจักรไม่มีพลังงาน (Out of Energy)', type: 'ERROR', read: false, timestamp: Date.now() });
+                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: t('rig.out_of_energy_msg'), type: 'ERROR', read: false, timestamp: Date.now() });
             }
             else {
-                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: 'คุณต้องมี "กุญแจเข้าเหมือง" เพื่อเปิดหีบสมบัติ (ซื้อได้ที่ร้านค้า ราคา 5 บาท)', type: 'ERROR', read: false, timestamp: Date.now() });
+                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: t('rig.need_key_msg'), type: 'ERROR', read: false, timestamp: Date.now() });
             }
         }
     };
@@ -554,11 +566,11 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <div className="bg-yellow-500/10 p-3 rounded-full mb-3">
                         <Coins className="text-yellow-500 animate-pulse" size={24} />
                     </div>
-                    <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">ยืนยันการเคลมรายได้</h4>
-                    <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">{currentAmount.toFixed(4)}</div>
+                    <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_claim')}</h4>
+                    <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">{formatCurrency(currentAmount)}</div>
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
-                        <button onClick={(e) => { e.stopPropagation(); setIsConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">ยกเลิก</button>
-                        <button onClick={confirmClaim} className="py-2.5 rounded bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> ยืนยัน</button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">{t('common.cancel')}</button>
+                        <button onClick={confirmClaim} className="py-2.5 rounded bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> {t('common.confirm')}</button>
                     </div>
                 </div>
             )}
@@ -567,8 +579,8 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <div className="bg-purple-500/20 p-4 rounded-full mb-4 animate-[pulse_2s_infinite]">
                         <Skull className="text-purple-400" size={32} />
                     </div>
-                    <h4 className="text-purple-300 font-bold text-lg uppercase tracking-wider mb-2">กำลังหาคนงานเหมือง</h4>
-                    <p className="text-purple-200/60 text-xs px-4">เครื่องนี้หยุดทำงานชั่วคราวเพื่อหาคนงานใหม่</p>
+                    <h4 className="text-purple-300 font-bold text-lg uppercase tracking-wider mb-2">{t('dungeon.exploring')}</h4>
+                    <p className="text-purple-200/60 text-xs px-4">{t('rig.exploring_desc')}</p>
                 </div>
             )}
 
@@ -577,11 +589,11 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <div className="bg-blue-500/10 p-3 rounded-full mb-3">
                         <RefreshCw className="text-blue-500 animate-spin-slow" size={24} />
                     </div>
-                    <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">ยืนยันการต่ออายุ</h4>
-                    <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">-{renewalCost.toLocaleString()}</div>
+                    <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_renew')}</h4>
+                    <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">-{formatCurrency(renewalCost)}</div>
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
-                        <button onClick={(e) => { e.stopPropagation(); setIsRenewConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">ยกเลิก</button>
-                        <button onClick={confirmRenew} className="py-2.5 rounded bg-blue-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> ชำระเงิน</button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsRenewConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">{t('common.cancel')}</button>
+                        <button onClick={confirmRenew} className="py-2.5 rounded bg-blue-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> {t('rig.pay')}</button>
                     </div>
                 </div>
             )}
@@ -591,13 +603,13 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <div className="bg-red-500/10 p-3 rounded-full mb-3">
                         <Wrench className="text-red-500 animate-bounce" size={24} />
                     </div>
-                    <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">ยืนยันการซ่อมแซม</h4>
-                    <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">-{repairCost.toLocaleString()}</div>
-                    {hasSilverBuff && <div className="text-xs text-stone-500">(Silver Owner -5%)</div>}
+                    <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_repair')}</h4>
+                    <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">-{formatCurrency(repairCost)}</div>
+                    {hasSilverBuff && <div className="text-xs text-stone-500">({t('rig.silver_owner_discount')})</div>}
                     {hatDiscountText && <div className="text-xs text-emerald-400">{hatDiscountText}</div>}
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
-                        <button onClick={(e) => { e.stopPropagation(); setIsRepairConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">ยกเลิก</button>
-                        <button onClick={confirmRepair} className="py-2.5 rounded bg-red-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> ซ่อมแซมทันที</button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsRepairConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">{t('common.cancel')}</button>
+                        <button onClick={confirmRepair} className="py-2.5 rounded bg-red-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> {t('rig.repair_now')}</button>
                     </div>
                 </div>
             )}
@@ -605,7 +617,7 @@ export const RigCard: React.FC<RigCardProps> = ({
             {isRepairing && (
                 <div className="absolute inset-0 z-50 bg-stone-950/90 flex flex-col items-center justify-center animate-in fade-in">
                     <Wrench className="text-orange-500 animate-spin mb-4" size={48} />
-                    <div className="text-orange-400 font-bold uppercase tracking-widest animate-pulse">กำลังซ่อมแซม...</div>
+                    <div className="text-orange-400 font-bold uppercase tracking-widest animate-pulse">{t('rig.repairing')}</div>
                 </div>
             )}
 
@@ -614,14 +626,12 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <div className="bg-orange-500/10 p-3 rounded-full mb-3">
                         <Flame className="text-orange-500 animate-pulse" size={24} />
                     </div>
-                    <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">ยืนยันการเติมพลังงาน</h4>
-                    <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">
-                        -{Math.max(0.1, ((100 - energyPercent) / 100) * energyCostPerDay).toFixed(2)}
-                    </div>
-                    <div className="text-xs text-stone-500 mb-4">ชาร์จพลังงานจนเต็ม 100%</div>
+                    <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_refill')}</h4>
+                    -{formatCurrency(((100 - energyPercent) / 100) * effectiveEnergyCostPerDay)}
+                    <div className="text-xs text-stone-500 mb-4">{t('rig.refill_desc')}</div>
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
-                        <button onClick={(e) => { e.stopPropagation(); setIsChargeConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">ยกเลิก</button>
-                        <button onClick={confirmCharge} className="py-2.5 rounded bg-orange-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> เติมทันที</button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsChargeConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">{t('common.cancel')}</button>
+                        <button onClick={confirmCharge} className="py-2.5 rounded bg-orange-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> {t('rig.refill_now')}</button>
                     </div>
                 </div>
             )}
@@ -629,15 +639,15 @@ export const RigCard: React.FC<RigCardProps> = ({
             {showRestored && (
                 <div className="absolute inset-0 z-50 bg-emerald-950/90 flex flex-col items-center justify-center animate-in zoom-in">
                     <CheckCircle2 className="text-emerald-500 mb-4" size={48} />
-                    <div className="text-emerald-400 font-bold uppercase tracking-widest">ซ่อมแซมเสร็จสิ้น</div>
+                    <div className="text-emerald-400 font-bold uppercase tracking-widest">{t('rig.repair_complete')}</div>
                 </div>
             )}
 
             {showRenewed && (
                 <div className="absolute inset-0 z-50 bg-blue-950/90 flex flex-col items-center justify-center animate-in zoom-in backdrop-blur-sm">
                     <CalendarClock className="text-blue-400 mb-4 animate-bounce" size={48} />
-                    <div className="text-blue-300 font-bold text-2xl mb-1">+{rig.durationMonths * 30} วัน</div>
-                    <div className="text-blue-500 text-xs uppercase tracking-widest">ต่อสัญญาเรียบร้อย</div>
+                    <div className="text-blue-300 font-bold text-2xl mb-1">+{rig.durationMonths * 30} {t('time.days')}</div>
+                    <div className="text-blue-500 text-xs uppercase tracking-widest">{t('rig.renew_complete')}</div>
                 </div>
             )}
 
@@ -648,7 +658,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <div className="flex flex-col">
                         <span className={`text-xs font-display font-bold uppercase tracking-widest flex items-center gap-1.5 drop-shadow-sm ${(globalMultiplier > 1 || reactorMultiplier > 1) ? 'text-white' : styles.accentColor}`}>
                             {React.cloneElement(styles.icon as React.ReactElement, { size: 12 })}
-                            {rig.name}
+                            {preset ? getLocalized(preset.name) : getLocalized(rig.name)}
                         </span>
                         <div className="flex items-center gap-2 mt-1">
                             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded bg-stone-900 border border-stone-800 ${rarityConfig.color} uppercase tracking-wider`}>
@@ -665,26 +675,26 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <div className="flex flex-col items-end gap-1">
                         <div className={`px-1.5 py-0.5 rounded border text-[9px] flex items-center gap-1 shadow-sm ${isOverclockActive ? 'bg-emerald-900/50 border-emerald-500 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : (globalMultiplier > 1 || reactorMultiplier > 1) ? 'bg-purple-900/30 border-purple-500 text-purple-300' : 'bg-emerald-950/30 border-emerald-900/50 text-emerald-400'}`}>
                             <Clock size={10} />
-                            <span className={isOverclockActive ? 'text-emerald-300 font-bold' : ''}>+{totalDailyProfit.toFixed(1)}/วัน</span>
+                            <span className={isOverclockActive ? 'text-emerald-300 font-bold' : ''}>+{formatCurrency(totalDailyProfit)}/{t('time.day')}</span>
                             {isOverclockActive && <Zap size={10} className="text-yellow-400 animate-pulse" />}
                         </div>
                         {isOverclockActive && (
                             <div className="text-[9px] text-emerald-400 flex items-center gap-1 font-extrabold bg-emerald-950 border border-emerald-500 px-2 py-0.5 rounded animate-[pulse_1s_infinite] shadow-[0_0_15px_rgba(16,185,129,0.5)]">
                                 <Zap size={10} className="text-yellow-400 fill-yellow-400" />
-                                ⚡ OVERCLOCK x2 POWER
+                                ⚡ {t('rig.overclock_active')}
                             </div>
                         )}
                         <div className="flex flex-col items-end mb-1">
-                            {rig.bonusProfit > 0 && !['พลั่วสนิมเขรอะ', 'สว่านพกพา'].includes(rig.name) && (
+                            {rig.bonusProfit > 0 && !['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr) && (
                                 <div className={`text-[9px] ${rarityConfig.color} flex items-center gap-1 font-bold`}>
                                     <Zap size={8} />
-                                    โบนัส +{rig.bonusProfit.toFixed(1)}
+                                    {t('shop.bonus')} +{formatCurrency(rig.bonusProfit)}
                                 </div>
                             )}
                             {equippedBonus > 0 && (
                                 <div className="text-[9px] text-blue-400 flex items-center gap-1 font-bold">
                                     <Briefcase size={8} />
-                                    อุปกรณ์ +{equippedBonus.toFixed(1)}
+                                    {t('rig.equipment_bonus')} +{formatCurrency(equippedBonus)}
                                 </div>
                             )}
                         </div>
@@ -705,7 +715,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                         >
                             {gloveItem ? (
                                 <div className="relative w-full h-full flex items-center justify-center">
-                                    <div className={`absolute inset-0 bg-gradient-to-br ${RARITY_SETTINGS[gloveItem.rarity].bgGradient} opacity-30`}></div>
+                                    <div className={`absolute inset-0 bg-gradient-to-br ${RARITY_SETTINGS[gloveItem.rarity && RARITY_SETTINGS[gloveItem.rarity] ? gloveItem.rarity : 'COMMON'].bgGradient} opacity-30`}></div>
                                     <InfinityGlove rarity={gloveItem.rarity} size={24} className="relative z-10 drop-shadow-md" />
                                     {gloveItem.level && gloveItem.level > 1 && (
                                         <span className="absolute -bottom-0.5 right-0 text-[8px] font-bold bg-black/80 text-yellow-500 px-1 rounded-tl-md">+{gloveItem.level}</span>
@@ -713,10 +723,10 @@ export const RigCard: React.FC<RigCardProps> = ({
 
                                     {/* Tooltip */}
                                     <div className="absolute right-full top-0 mr-2 z-[60] bg-stone-900/95 text-xs text-white p-2 rounded-lg border border-yellow-500/30 shadow-xl opacity-0 hover:opacity-100 group-hover/glove:opacity-100 pointer-events-none transition-opacity min-w-[120px] backdrop-blur-sm">
-                                        <div className="font-bold text-yellow-500 mb-1">{gloveItem.name}</div>
+                                        <div className="font-bold text-yellow-500 mb-1">{getLocalized(gloveItem.name)}</div>
                                         <div className="text-[10px] text-yellow-400 flex items-center gap-1">
                                             <Star size={10} />
-                                            โบนัส: +{gloveItem.dailyBonus.toFixed(1)} / วัน
+                                            {t('shop.bonus')}: +{formatCurrency(gloveItem.dailyBonus)} / {t('time.day')}
                                         </div>
                                     </div>
                                 </div>
@@ -743,7 +753,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                     onClick={handleChargeClick}
                                     disabled={isExploring || energyPercent >= 100}
                                     className={`w-11 h-11 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center hover:bg-stone-800 transition-all group/charge relative shadow-lg backdrop-blur-sm ${isOutOfEnergy ? 'animate-bounce border-emerald-500' : ''} disabled:opacity-30`}
-                                    title={`ชาร์จไฟ: ${energyCostPerDay} บาท/วัน`}
+                                    title={`${t('rig.refill')}: ${formatCurrency(effectiveEnergyCostPerDay)}/${t('time.day')}${uniformId ? ' (-5%)' : ''}`}
                                 >
                                     <Zap size={18} className={`text-emerald-400 transition-transform group-hover/charge:scale-110 ${isOutOfEnergy ? 'animate-pulse' : ''}`} />
                                     {isOutOfEnergy && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full animate-pulse border-2 border-black" />}
@@ -805,7 +815,7 @@ export const RigCard: React.FC<RigCardProps> = ({
 
                                                 {/* Tooltip for Accessories */}
                                                 <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[100] bg-stone-900/95 text-xs text-white p-2 rounded-lg border border-stone-700 shadow-xl opacity-0 group-hover/item:opacity-100 hover:opacity-100 pointer-events-none transition-opacity min-w-[140px] backdrop-blur-sm whitespace-nowrap">
-                                                    <div className="font-bold text-yellow-500 mb-1">{item.name}</div>
+                                                    <div className="font-bold text-yellow-500 mb-1">{getLocalized(item.name)}</div>
                                                     {item.specialEffect && (
                                                         <div className="text-[9px] text-emerald-400 mb-1 font-bold">
                                                             {item.specialEffect}
@@ -814,7 +824,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                                     <div className="text-[10px] text-yellow-400 flex items-center gap-1">
                                                         <Star size={10} />
                                                         <span className="font-mono">
-                                                            โบนัส: +{item.dailyBonus.toFixed(1)} / วัน
+                                                            {t('rig.bonus')}: +{formatCurrency(item.dailyBonus)} / {t('time.day')}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -871,7 +881,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                 isActive={!isExpired && !isBroken && !isExploring && !isOutOfEnergy}
                                 rarity={rig.rarity}
                                 tier={currentTier}
-                                rigName={rig.name}
+                                rigName={getLocalized(rig.name)}
                                 isOverclockActive={isOverclockActive}
                             />
 
@@ -887,7 +897,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                     onClick={handleRepairClick}
                                     disabled={isExploring}
                                     className={`w-11 h-11 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center hover:bg-stone-800 transition-all group/repair relative shadow-lg backdrop-blur-sm ${isBroken ? 'animate-bounce border-red-500' : ''}`}
-                                    title={`ซ่อมแซม: ${repairCost} บาท`}
+                                    title={`${t('rig.repair_now')}: ${formatCurrency(repairCost)}`}
                                 >
                                     <Wrench size={18} className={`${styles.wrench} transition-transform group-hover/repair:rotate-45`} />
                                     {isBroken && <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-black" />}
@@ -962,7 +972,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                 {isBroken && !isExpired && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 backdrop-blur-[1px]">
                         <div className="bg-red-900/80 px-3 py-1.5 rounded border border-red-500 text-red-100 text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-xl animate-pulse">
-                            <AlertTriangle size={14} /> เครื่องจักรชำรุด
+                            <AlertTriangle size={14} /> {t('rig.broken')}
                         </div>
                     </div>
                 )}
@@ -988,10 +998,10 @@ export const RigCard: React.FC<RigCardProps> = ({
 
                                 <div className="flex flex-col">
                                     <span className={`text-[10px] font-bold uppercase tracking-wide ${currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-400'}`}>
-                                        {currentMaterials > 0 ? 'กุญแจเข้าเหมือง' : 'รอการค้นพบ'}
+                                        {currentMaterials > 0 ? t('rig.mining_key') : t('rig.waiting_discovery')}
                                     </span>
                                     <div className="flex gap-2 text-[10px] items-center mt-0.5">
-                                        {currentMaterials > 0 ? <span className="text-red-500 font-extrabold tracking-wider bg-red-950/30 px-1 rounded">เต็ม (FULL)</span> : <span className="text-stone-600">ความจุ 1</span>}
+                                        {currentMaterials > 0 ? <span className="text-red-500 font-extrabold tracking-wider bg-red-950/30 px-1 rounded">{language === 'th' ? 'เต็ม (FULL)' : 'FULL'}</span> : <span className="text-stone-600">{t('rig.capacity')} 1</span>}
                                     </div>
                                 </div>
                             </div>
@@ -1001,7 +1011,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                     onClick={handleCollectMaterialsClick}
                                     className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-3 py-1.5 rounded shadow-lg transition-all active:scale-95 flex items-center gap-1"
                                 >
-                                    <ArrowDownToLine size={14} /> เก็บ
+                                    <ArrowDownToLine size={14} /> {t('rig.collect')}
                                 </button>
                             )}
                         </div>
@@ -1011,7 +1021,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                         <div className="text-right w-full">
                             <div className={`text-xl font-mono font-bold tabular-nums flex items-center justify-end gap-1 text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.1)]`}>
                                 {isOverclockActive && <span className="text-emerald-400 text-xs mr-0.5 animate-pulse">x2</span>}
-                                {currentAmount.toFixed(4)} <Sparkles size={12} className={!isExpired && !isBroken && isPowered && !isExploring ? "animate-pulse text-yellow-500" : "hidden"} />
+                                {formatCurrency(currentAmount)} <Sparkles size={12} className={!isExpired && !isBroken && isPowered && !isExploring ? "animate-pulse text-yellow-500" : "hidden"} />
                             </div>
                         </div>
                     </div>
@@ -1023,14 +1033,14 @@ export const RigCard: React.FC<RigCardProps> = ({
                                 disabled={(isExpired || isBroken || !effectiveIsPowered || isExploring) && currentAmount <= 0}
                                 className="font-bold py-2 rounded border border-stone-600 bg-stone-800 hover:bg-stone-700 text-stone-200 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-1 active:scale-95"
                             >
-                                <Coins size={14} /> เก็บ
+                                <Coins size={14} /> {t('rig.collect')}
                             </button>
                             <button
                                 onClick={handleRenewClick}
                                 disabled={isExploring}
                                 className="font-bold py-2 rounded border border-blue-500 bg-blue-600 hover:bg-blue-500 text-white transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-1 shadow-lg shadow-blue-900/20 active:scale-95"
                             >
-                                <RefreshCw size={14} /> ต่ออายุ
+                                <RefreshCw size={14} /> {t('rig.pay')}
                             </button>
                         </div>
                     ) : (
@@ -1065,13 +1075,13 @@ export const RigCard: React.FC<RigCardProps> = ({
                       `}
                         >
                             {isExploring ? (
-                                <><Skull size={18} /> กำลังสำรวจ...</>
+                                <><Skull size={18} /> {language === 'th' ? 'กำลังสำรวจ...' : 'Exploring...'}</>
                             ) : isBroken && !isExpired && !isVibranium ? (
-                                <><Wrench size={18} /> ซ่อมแซม ({baseRepairCost})</>
+                                <><Wrench size={18} /> {t('rig.repair_now')} ({formatCurrency(baseRepairCost)})</>
                             ) : !effectiveIsPowered && !isExpired ? (
-                                <><ZapOff size={18} /> พลังงานหมด</>
+                                <><ZapOff size={18} /> {t('rig.out_of_energy')}</>
                             ) : (
-                                <><Coins size={18} strokeWidth={2.5} /> {isExpired ? 'หมดอายุ' : 'เก็บค่าเช่า'}</>
+                                <><Coins size={18} strokeWidth={2.5} /> {isExpired ? t('rig.expired') : t('rig.claim_rent')}</>
                             )}
                         </button>
                     )}
@@ -1081,7 +1091,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                             onClick={handleDestroyClick}
                             className="w-full font-bold py-2 rounded border border-red-500 bg-red-900/20 hover:bg-red-500 text-red-500 hover:text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-wider"
                         >
-                            <Trash2 size={18} /> ทุบทิ้ง (Destroy)
+                            <Trash2 size={18} /> {t('rig.destroy')}
                         </button>
                     )}
                 </div>

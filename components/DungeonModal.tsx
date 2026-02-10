@@ -17,7 +17,7 @@ interface DungeonModalProps {
 }
 
 export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, user, onRefresh, addNotification }) => {
-    const { t, language } = useTranslation();
+    const { t, language, getLocalized, formatCurrency } = useTranslation();
     const [activeExpedition, setActiveExpedition] = useState<Expedition | null>(null);
     const [selectedDungeonId, setSelectedDungeonId] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState<string>('');
@@ -77,7 +77,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                 const h = Math.floor(ms / (1000 * 60 * 60));
                 const m = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
                 const s = Math.floor((ms % (1000 * 60)) / 1000);
-                setTimeLeft(`${h}h ${m}m ${s}s`);
+                setTimeLeft(`${h}${t('time.hour')} ${m}${t('time.minute')} ${s}${t('time.second')}`);
             }
         };
 
@@ -148,6 +148,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
             console.error("Claim Expedition Error:", e);
             // Clear stale state if backend says no expedition exists
             const errorMsg = e.response?.data?.message || e.message || "";
+            // Check for both languages or generic key
             if (errorMsg.includes('ไม่มีการสำรวจ') || errorMsg.includes('No active expedition')) {
                 setActiveExpedition(null);
                 onRefresh(); // Sync with backend
@@ -228,10 +229,10 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                         <div>
                             <h2 className="text-xl font-display font-bold text-white">
                                 {activeExpedition
-                                    ? DUNGEON_CONFIG.find(d => d.id === activeExpedition.dungeonId)?.name
+                                    ? getLocalized(DUNGEON_CONFIG.find(d => d.id === activeExpedition.dungeonId)?.name)
                                     : selectedDungeonId
-                                        ? DUNGEON_CONFIG.find(d => d.id === selectedDungeonId)?.name
-                                        : (language === 'th' ? 'เลือกแหล่งสำรวจ' : 'Select Exploration Site')}
+                                        ? getLocalized(DUNGEON_CONFIG.find(d => d.id === selectedDungeonId)?.name)
+                                        : t('dungeon.select_site')}
                             </h2>
                             <p className="text-xs text-stone-500 uppercase tracking-wider">{t('dungeon.subtitle')}</p>
                         </div>
@@ -255,7 +256,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                 <h3 className="text-2xl font-bold text-white mb-2">{t('dungeon.exploring')}</h3>
                                 <div className="text-4xl font-mono font-bold text-purple-400 mb-4">{timeLeft}</div>
                                 <p className="text-stone-500 text-sm bg-stone-900/50 px-4 py-2 rounded-full border border-stone-800 inline-block">
-                                    {DUNGEON_CONFIG.find(d => d.id === activeExpedition.dungeonId)?.name}
+                                    {getLocalized(DUNGEON_CONFIG.find(d => d.id === activeExpedition.dungeonId)?.name)}
                                 </p>
                                 <div className="mt-2 text-xs text-stone-500">
                                     {t('dungeon.income_warning')}
@@ -282,7 +283,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                             disabled={hourglasses.small === 0}
                                             className={`flex flex-col items-center p-3 rounded border transition-all ${hourglasses.small > 0 ? 'bg-stone-800 border-stone-600 hover:bg-stone-700 hover:border-yellow-500' : 'bg-stone-900 border-stone-800 opacity-50 cursor-not-allowed'}`}
                                         >
-                                            <span className="text-xs font-bold text-white">-30 {language === 'th' ? 'นาที' : 'min'}</span>
+                                            <span className="text-xs font-bold text-white">-30 {t('time.minutes')}</span>
                                             <span className="text-[10px] text-stone-500 mt-1">{t('dungeon.own')} {hourglasses.small}</span>
                                         </button>
                                         <button
@@ -290,7 +291,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                             disabled={hourglasses.medium === 0}
                                             className={`flex flex-col items-center p-3 rounded border transition-all ${hourglasses.medium > 0 ? 'bg-stone-800 border-stone-600 hover:bg-stone-700 hover:border-yellow-500' : 'bg-stone-900 border-stone-800 opacity-50 cursor-not-allowed'}`}
                                         >
-                                            <span className="text-xs font-bold text-white">-2 {language === 'th' ? 'ชม.' : 'hrs'}</span>
+                                            <span className="text-xs font-bold text-white">-2 {t('time.hours')}</span>
                                             <span className="text-[10px] text-stone-500 mt-1">{t('dungeon.own')} {hourglasses.medium}</span>
                                         </button>
                                         <button
@@ -298,7 +299,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                             disabled={hourglasses.large === 0}
                                             className={`flex flex-col items-center p-3 rounded border transition-all ${hourglasses.large > 0 ? 'bg-stone-800 border-stone-600 hover:bg-stone-700 hover:border-yellow-500' : 'bg-stone-900 border-stone-800 opacity-50 cursor-not-allowed'}`}
                                         >
-                                            <span className="text-xs font-bold text-white">-6 {language === 'th' ? 'ชม.' : 'hrs'}</span>
+                                            <span className="text-xs font-bold text-white">-6 {t('time.hours')}</span>
                                             <span className="text-[10px] text-stone-500 mt-1">{t('dungeon.own')} {hourglasses.large}</span>
                                         </button>
                                     </div>
@@ -329,11 +330,11 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                             {/* Text Content - Compact */}
                             <div className="z-10 text-center space-y-3 px-4 w-full max-w-lg">
                                 <h3 className="text-xl md:text-2xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-200 animate-pulse tracking-wider shadow-sm">
-                                    {language === 'th' ? 'ยินดีด้วย!' : 'CONGRATULATIONS!'}
+                                    {t('dungeon.congrats')}
                                 </h3>
 
                                 <div className="bg-stone-900/80 backdrop-blur-sm border border-yellow-500/30 p-4 rounded-xl shadow-lg transform transition-all duration-300">
-                                    <div className="text-xs text-yellow-500/80 uppercase font-bold tracking-widest mb-1">{language === 'th' ? 'ได้รับรางวัล' : 'Rewards Obtained'}</div>
+                                    <div className="text-xs text-yellow-500/80 uppercase font-bold tracking-widest mb-1">{t('dungeon.reward_obtained')}</div>
                                     <div className="font-bold text-white leading-relaxed drop-shadow-md whitespace-pre-line">
                                         {(claimResult.reward || 'Unknown Reward').split('+').map((part, idx) => (
                                             <div key={idx} className={(part || '').includes('JACKPOT') ? 'text-yellow-400 font-extrabold text-lg md:text-xl mt-1 animate-pulse' : 'text-base md:text-lg text-white'}>
@@ -379,7 +380,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                     `}
                                         >
                                             <div className="flex justify-between items-start">
-                                                <div className="font-bold text-white text-sm">{rig.name}</div>
+                                                <div className="font-bold text-white text-sm">{getLocalized(rig.name)}</div>
                                                 {selectedRigId === rig.id && <CheckCircle2 className="text-purple-500" size={18} />}
                                             </div>
                                             {/* Removed Income Text as requested */}
@@ -406,7 +407,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                                     disabled={!selectedRigId}
                                                     className="py-3 bg-stone-800 hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold border border-stone-600 text-[10px] md:text-sm"
                                                 >
-                                                    {t('dungeon.pay_limit').replace('{amount}', dungeon.cost.toLocaleString())}
+                                                    {t('dungeon.pay_limit').replace('{amount}', formatCurrency(dungeon.cost))}
                                                 </button>
                                                 <button
                                                     onClick={() => handleStart(dungeon.id, true)}
@@ -426,7 +427,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                             >
                                                 {!selectedRigId ? t('dungeon.select_rig_first') :
                                                     user.balance < dungeon.cost ? t('common.insufficient_balance') :
-                                                        `${t('dungeon.start_exploration')} (${t('dungeon.pay_limit').replace('{amount}', dungeon.cost.toLocaleString())})`}
+                                                        `${t('dungeon.start_exploration')} (${t('dungeon.pay_limit').replace('{amount}', formatCurrency(dungeon.cost))})`}
                                             </button>
                                         );
                                     }
@@ -453,10 +454,10 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                                         {dungeon.rewards.rare.map((r, i) => {
                                                             if (r.tier !== undefined) {
                                                                 const name = MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES];
-                                                                return <li key={i} className="flex justify-between"><span>• {name}</span> <span>x{r.amount}</span></li>
+                                                                return <li key={i} className="flex justify-between"><span>• {getLocalized(name)}</span> <span>x{r.amount}</span></li>
                                                             } else {
                                                                 const item = SHOP_ITEMS.find(s => s.id === r.itemId);
-                                                                return <li key={i} className="flex justify-between"><span>• {item?.name || r.itemId}</span> <span>x{r.amount}</span></li>
+                                                                return <li key={i} className="flex justify-between"><span>• {item ? getLocalized(item.name) : r.itemId}</span> <span>x{r.amount}</span></li>
                                                             }
                                                         })}
                                                     </ul>
@@ -467,7 +468,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                                 <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">{t('dungeon.common_label')} (80%)</div>
                                                 <ul className="text-[10px] text-stone-300 space-y-1">
                                                     {dungeon.rewards.common.map((r, i) => (
-                                                        <li key={i} className="flex justify-between"><span>• {MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span> <span>x{r.amount}</span></li>
+                                                        <li key={i} className="flex justify-between"><span>• {getLocalized(MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES])}</span> <span>x{r.amount}</span></li>
                                                     ))}
                                                 </ul>
                                             </div>
@@ -476,7 +477,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                                 <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">{t('dungeon.salt_label')} (20%)</div>
                                                 <ul className="text-[10px] text-stone-500 space-y-1">
                                                     {dungeon.rewards.salt.map((r, i) => (
-                                                        <li key={i} className="flex justify-between"><span>• {MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES]}</span> <span>x{r.amount}</span></li>
+                                                        <li key={i} className="flex justify-between"><span>• {getLocalized(MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES])}</span> <span>x{r.amount}</span></li>
                                                     ))}
                                                 </ul>
                                             </div>
@@ -487,16 +488,16 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                         {getDungeonIcon(dungeon.id)}
                                     </div>
                                     <div className="p-4 flex-1 flex flex-col">
-                                        <h3 className="font-bold text-white text-lg mb-1">{dungeon.name}</h3>
-                                        <p className="text-xs text-stone-500 mb-4">{dungeon.description}</p>
+                                        <h3 className="font-bold text-white text-lg mb-1">{getLocalized(dungeon.name)}</h3>
+                                        <p className="text-xs text-stone-500 mb-4">{getLocalized(dungeon.description)}</p>
 
                                         <div className="space-y-2 mb-4 text-xs text-stone-300 flex-1">
                                             <div className="flex justify-between border-b border-stone-800 pb-1">
                                                 <span>{t('dungeon.duration')}</span>
-                                                <span className="font-mono text-white">{dungeon.durationHours} {language === 'th' ? 'ชม.' : 'hrs'}</span>
+                                                <span className="font-mono text-white">{dungeon.durationHours} {t('time.hours')}</span>
                                             </div>
                                             <div className="space-y-1 pt-1">
-                                                <div className="text-[10px] text-stone-500 uppercase font-bold">{language === 'th' ? 'โอกาสได้รับ' : 'Chances'}</div>
+                                                <div className="text-[10px] text-stone-500 uppercase font-bold">{t('dungeon.chances')}</div>
                                                 <div className="flex justify-between"><span>{t('dungeon.common_label')}</span><span className="text-emerald-400">80%</span></div>
                                                 <div className="flex justify-between"><span>{t('dungeon.salt_label')}</span><span className="text-stone-500">20%</span></div>
                                                 {dungeon.id !== 1 && (

@@ -68,7 +68,8 @@ const ItemIcon: React.FC<{ typeId?: string, name?: string, materialId?: number, 
 };
 
 export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rarity, bonus, itemTypeId, itemName, materialId }) => {
-    const { t, language } = useTranslation();
+    const { t, language, getLocalized } = useTranslation();
+    const localizedItemName = getLocalized(itemName);
     // Stages: idle -> shaking -> unlocking (chains break) -> opening (lid lifts) -> flash -> revealed
     const [stage, setStage] = useState<'idle' | 'shaking' | 'unlocking' | 'opening' | 'flash' | 'revealed'>('idle');
 
@@ -112,7 +113,7 @@ export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rar
                     <h2 className={`text-4xl font-display font-black uppercase tracking-widest ${config.color} drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]`}>
                         {config.label}
                     </h2>
-                    <div className={`text-2xl font-bold text-white mt-1 drop-shadow-md`}>{itemName || t('lootbox.unknown')}</div>
+                    <div className={`text-2xl font-bold text-white mt-1 drop-shadow-md`}>{localizedItemName || t('lootbox.unknown')}</div>
                 </div>
 
                 {/* The Treasure Chest Container */}
@@ -233,7 +234,7 @@ export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rar
 
                                 {/* Actual Item Icon */}
                                 <div className="w-48 h-48 relative z-10 flex items-center justify-center drop-shadow-[0_0_25px_rgba(255,255,255,0.4)] animate-[float-gold_4s_ease-in-out_infinite]">
-                                    <ItemIcon typeId={itemTypeId} name={itemName} materialId={materialId} rarity={rarity} className="w-full h-full" />
+                                    <ItemIcon typeId={itemTypeId} name={localizedItemName} materialId={materialId} rarity={rarity} className="w-full h-full" />
                                 </div>
                             </div>
                         </div>

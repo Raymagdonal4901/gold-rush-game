@@ -621,14 +621,15 @@ export const OilRigAnimation: React.FC<OilRigAnimationProps> = ({ isActive = tru
 
   const renderVisuals = () => {
     // Name-specific mappings
-    if (rigName === 'พลั่วสนิมเขรอะ') return renderTier1(); // Tier 1: Shovel
-    if (rigName === 'สว่านพกพา') return renderDrill(); // Tier 2: Drill
-    if (rigName === 'เครื่องขุดถ่านหิน') return renderCoalMachine(); // Tier 3: TNT/Coal Blaster
-    if (rigName === 'เครื่องขุดทองแดง') return renderTier2(); // Tier 4: Copper Furnace
-    if (rigName === 'เครื่องขุดเหล็ก') return renderTier3(); // Tier 5: Iron Forge
-    if (rigName === 'เครื่องขุดทองคำ') return renderTier4(); // Tier 6: Gold Smelter
-    if (rigName === 'เครื่องขุดเพชร') return renderTier5(); // Tier 7: Diamond Press
-    if (rigName.includes('ไวเบรเนียม')) return renderTier6(); // Tier 8: Vibranium Reactor
+    // Name-specific mappings
+    if (rigName === 'พลั่วสนิมเขรอะ' || rigName === 'Rusty Shovel') return renderTier1(); // Tier 1: Shovel
+    if (rigName === 'สว่านพกพา' || rigName === 'Portable Drill') return renderDrill(); // Tier 2: Drill
+    if (rigName === 'เครื่องขุดถ่านหิน' || rigName === 'Coal Excavator') return renderCoalMachine(); // Tier 3: TNT/Coal Blaster
+    if (rigName === 'เครื่องขุดทองแดง' || rigName === 'Copper Excavator') return renderTier2(); // Tier 4: Copper Furnace
+    if (rigName === 'เครื่องขุดเหล็ก' || rigName === 'Iron Excavator') return renderTier3(); // Tier 5: Iron Forge
+    if (rigName === 'เครื่องขุดทองคำ' || rigName === 'Gold Excavator') return renderTier4(); // Tier 6: Gold Smelter
+    if (rigName === 'เครื่องขุดเพชร' || rigName === 'Diamond Excavator') return renderTier5(); // Tier 7: Diamond Press
+    if (rigName.includes('ไวเบรเนียม') || rigName.includes('Vibranium')) return renderTier6(); // Tier 8: Vibranium Reactor
 
     // Fallback to tier-based animations
     // Note: The 'tier' prop might not perfectly align if presets changed, so relying on name is safer.

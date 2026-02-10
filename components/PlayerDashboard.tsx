@@ -28,7 +28,7 @@ import { GloveRevealModal } from './GloveRevealModal';
 import { GoldRain } from './GoldRain';
 import { ChatSystem } from './ChatSystem';
 import { OilRig, User, Rarity, Notification, AccessoryItem, MarketState } from '../services/types';
-import { CURRENCY, RigPreset, MAX_RIGS_PER_USER, RARITY_SETTINGS, SHOP_ITEMS, MAX_ACCESSORIES, RIG_PRESETS, ENERGY_CONFIG, REPAIR_CONFIG, GLOVE_DETAILS, MATERIAL_CONFIG, DEMO_SPEED_MULTIPLIER, ROBOT_CONFIG, GIFT_CYCLE_DAYS } from '../constants';
+import { CURRENCY, RigPreset, MAX_RIGS_PER_USER, RARITY_SETTINGS, SHOP_ITEMS, MAX_ACCESSORIES, RIG_PRESETS, ENERGY_CONFIG, REPAIR_CONFIG, GLOVE_DETAILS, MATERIAL_CONFIG, DEMO_SPEED_MULTIPLIER, ROBOT_CONFIG, GIFT_CYCLE_DAYS, EXCHANGE_RATE_USD_THB } from '../constants';
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
 import { useTranslation } from './LanguageContext';
@@ -91,7 +91,7 @@ interface PlayerDashboardProps {
 }
 
 export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, onLogout }) => {
-    const { t, language, setLanguage } = useTranslation();
+    const { t, language, setLanguage, getLocalized, formatCurrency } = useTranslation();
     const [user, setUser] = useState<User>(initialUser);
     const [rigs, setRigs] = useState<OilRig[]>([]);
     const [inventory, setInventory] = useState<AccessoryItem[]>([]);
@@ -165,18 +165,16 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 const isGiftAvailable = Date.now() >= nextGiftTime;
 
                 if (isGiftAvailable) {
-                    console.log(`[ROBOT] Auto-collecting gift for rig: ${rig.name}`);
+                    console.log(`[ROBOT] Auto-collecting gift for rig: ${getLocalized(rig.name)}`);
                     handleGiftClaim(rig.id);
                 }
             }
 
             // 1.5 Auto-collect Materials (Keys/Ores)
             for (const rig of rigs) {
-                console.log(`[ROBOT DEBUG] Rig ${rig.name}: currentMaterials = ${rig.currentMaterials}`);
                 if ((rig.currentMaterials || 0) > 0) {
-                    console.log(`[ROBOT] Auto-collecting materials for rig: ${rig.name}`);
+                    console.log(`[ROBOT] Auto-collecting materials for rig: ${getLocalized(rig.name)}`);
                     try {
-                        // Inline material collection to avoid stale closure issues
                         const count = rig.currentMaterials || 0;
                         if (count > 0) {
                             const tier = (() => {
@@ -194,7 +192,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             } else {
                                 await api.collectMaterials(rig.id, count, tier);
                             }
-                            console.log(`[ROBOT] Successfully collected ${count} materials from ${rig.name}`);
+                            console.log(`[ROBOT] Successfully collected ${count} materials from ${getLocalized(rig.name)}`);
                         }
                     } catch (e) {
                         console.error(`[ROBOT] Failed to collect materials from ${rig.name}:`, e);
@@ -202,9 +200,9 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 }
             }
 
-            // 1.6 Auto-refill Global Energy (System Power) - with 60s cooldown and balance check
+            // 1.6 Auto-refill Global Energy (System Power)
             const currentGlobalEnergy = user.energy !== undefined ? user.energy : 100;
-            const globalRefillCost = Math.max(2.0, (100 - currentGlobalEnergy) * 0.02); // MIN_REFILL_FEE = 2.0
+            const globalRefillCost = Math.max(2.0, (100 - currentGlobalEnergy) * 0.02);
             const lastGlobalRefill = lastAutoRefillRef.current['global'] || 0;
             if (currentGlobalEnergy <= 1 && (Date.now() - lastGlobalRefill > 60000) && user.balance >= globalRefillCost) {
                 console.log(`[ROBOT] Auto-refilling GLOBAL energy (${currentGlobalEnergy.toFixed(1)}%)`);
@@ -214,14 +212,11 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
             // 2. Auto-refill & Auto-repair
             for (const rig of rigs) {
-                // Calculate Health & Energy matching RigCard logic
                 const durabilityMs = (REPAIR_CONFIG.DURABILITY_DAYS * 24 * 60 * 60 * 1000);
                 const timeSinceRepair = Date.now() - (rig.lastRepairAt || rig.purchasedAt || Date.now());
-
                 const preset = RIG_PRESETS.find(p => p.name === rig.name);
                 const isInfiniteDurability = preset?.specialProperties?.infiniteDurability;
                 const isInfiniteContract = (rig.durationMonths >= 900) || (preset?.specialProperties?.infiniteDurability === true);
-
                 const healthPercent = (isInfiniteContract || isInfiniteDurability) ? 100 : Math.max(0, 100 * (1 - timeSinceRepair / durabilityMs));
 
                 const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || Date.now();
@@ -232,18 +227,17 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 const drain = elapsedHours * drainRate;
                 const energyPercent = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
 
-                // Rig energy refill with 60s cooldown and balance check
                 const rigEnergyCostPerDay = rig.energyCostPerDay || (preset ? preset.energyCostPerDay : 0);
                 const rigRefillCost = Math.max(0.1, ((100 - energyPercent) / 100) * rigEnergyCostPerDay);
                 const lastRigRefill = lastAutoRefillRef.current[rig.id] || 0;
                 if (energyPercent <= 1 && (Date.now() - lastRigRefill > 60000) && user.balance >= rigRefillCost) {
-                    console.log(`[ROBOT] Auto-refilling energy for rig: ${rig.name} (${energyPercent.toFixed(1)}%)`);
+                    console.log(`[ROBOT] Auto-refilling energy for rig: ${getLocalized(rig.name)} (${energyPercent.toFixed(1)}%)`);
                     lastAutoRefillRef.current[rig.id] = Date.now();
                     handleChargeRigEnergy(rig.id);
                 }
 
                 if (healthPercent < 20) {
-                    console.log(`[ROBOT] Auto-repairing rig: ${rig.name} (${healthPercent.toFixed(1)}%)`);
+                    console.log(`[ROBOT] Auto-repairing rig: ${getLocalized(rig.name)} (${healthPercent.toFixed(1)}%)`);
                     handleRepair(rig.id);
                 }
             }
@@ -258,7 +252,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                         addNotification({
                             id: `market-alert-${tier}-${Date.now()}`,
                             userId: user.id,
-                            message: `ราคาวัตถุดิบ Tier ${tier} พุ่งสูงขึ้น! (${prevPrice} -> ${price})`,
+                            message: language === 'th' ? `ราคาวัตถุดิบ Tier ${tier} พุ่งสูงขึ้น! (${prevPrice} -> ${price})` : `Material Tier ${tier} price surged! (${prevPrice} -> ${price})`,
                             type: 'INFO',
                             read: false,
                             timestamp: Date.now()
@@ -269,12 +263,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             }
         };
 
-        // Run immediately on mount, then every 30 seconds
         runRobotAutomation();
         const interval = setInterval(runRobotAutomation, 30000);
-
         return () => clearInterval(interval);
-    }, [inventory, rigs, marketState, user]);
+    }, [inventory, rigs, marketState, user, language]);
 
     const activeInventory = inventory.filter(item => {
         return (!item.expireAt || item.expireAt > Date.now());
@@ -313,8 +305,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             addNotification({
                                 id: `surge_${tier}_${Date.now()}`,
                                 userId: user.id,
-                                title: '📈 Market Surge Alert!',
-                                message: `ราคา ${MATERIAL_CONFIG.NAMES[parseInt(tier) as keyof typeof MATERIAL_CONFIG.NAMES]} พุ่งสูง! (${(priceChange * 100).toFixed(0)}%) รีบไปขายเร็ว!`,
+                                message: `${t('dashboard.market_surge_alert')} ${getLocalized(MATERIAL_CONFIG.NAMES[parseInt(tier) as keyof typeof MATERIAL_CONFIG.NAMES])} ${(priceChange * 100).toFixed(0)}%`,
                                 type: 'INFO',
                                 timestamp: Date.now(),
                                 read: false
@@ -411,7 +402,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             setTimeout(() => {
                 refreshData();
             }, 500);
-            addNotification({ id: Date.now().toString(), userId: user.id, message: `ชำระค่าไฟเรียบร้อย -${cost.toLocaleString()} ${CURRENCY}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            addNotification({ id: Date.now().toString(), userId: user.id, message: `ชำระค่าไฟเรียบร้อย -${formatCurrency(cost)}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
         } catch (e: any) {
             addNotification({
                 id: Date.now().toString(),
@@ -497,12 +488,12 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         if (preset.specialProperties?.maxAllowed) {
             const existingCount = rigs.filter(r => r.name === preset.name).length;
             if (existingCount >= preset.specialProperties.maxAllowed) {
-                alert(`จำกัดการครอบครองเพียง ${preset.specialProperties.maxAllowed} เครื่องต่อไอดี`);
+                alert(language === 'th' ? `จำกัดการครอบครองเพียง ${preset.specialProperties.maxAllowed} เครื่องต่อไอดี` : `Limited to ${preset.specialProperties.maxAllowed} units per account`);
                 return;
             }
         }
 
-        if (rigs.length >= maxRigs) { alert(`พื้นที่ขุดเหมืองเต็มแล้ว (สูงสุด ${maxRigs} เครื่อง)`); return; }
+        if (rigs.length >= maxRigs) { alert(language === 'th' ? `พื้นที่ขุดเหมืองเต็มแล้ว (สูงสุด ${maxRigs} เครื่อง)` : `Mining slots are full (Max ${maxRigs} units)`); return; }
 
         // Crafting Logic
         if (preset.craftingRecipe) {
@@ -510,7 +501,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             if (preset.craftingRecipe.materials) {
                 for (const [tier, amount] of Object.entries(preset.craftingRecipe.materials)) {
                     if ((user.materials?.[parseInt(tier)] || 0) < amount) {
-                        alert(`วัตถุดิบไม่พอ: ต้องการ ${MATERIAL_CONFIG.NAMES[parseInt(tier) as keyof typeof MATERIAL_CONFIG.NAMES]} x${amount}`);
+                        alert(language === 'th' ? `วัตถุดิบไม่พอ: ต้องการ ${getLocalized(MATERIAL_CONFIG.NAMES[parseInt(tier) as keyof typeof MATERIAL_CONFIG.NAMES])} x${amount}` : `Insufficient Materials: Need ${getLocalized(MATERIAL_CONFIG.NAMES[parseInt(tier) as keyof typeof MATERIAL_CONFIG.NAMES])} x${amount}`);
                         return;
                     }
                 }
@@ -521,7 +512,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                     const count = inventory.filter(i => i.typeId === imgId).length;
                     if (count < amount) {
                         const itemConfig = SHOP_ITEMS.find(i => i.id === imgId);
-                        alert(`ไอเทมไม่พอ: ต้องการ ${itemConfig ? itemConfig.name : imgId} x${amount}`);
+                        alert(language === 'th' ? `ไอเทมไม่พอ: ต้องการ ${itemConfig ? getLocalized(itemConfig.name) : imgId} x${amount}` : `Insufficient Items: Need ${itemConfig ? getLocalized(itemConfig.name) : imgId} x${amount}`);
                         return;
                     }
                 }
@@ -551,12 +542,12 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
             // Log Transaction (Only for demo mode since real mode logs on backend)
             if (user.isDemo) {
-                MockDB.logTransaction({ userId: user.id, type: 'ASSET_PURCHASE', amount: 0, status: 'COMPLETED', description: `สร้าง: ${preset.name}` });
+                MockDB.logTransaction({ userId: user.id, type: 'ASSET_PURCHASE', amount: 0, status: 'COMPLETED', description: `สร้าง: ${getLocalized(preset.name)}` });
             }
 
         } else {
             // Normal Purchase via API
-            if (user.balance < preset.price) { alert('เงินไม่พอ'); return; }
+            if (user.balance < preset.price) { alert(language === 'th' ? 'เงินไม่พอ' : 'Insufficient Balance'); return; }
 
             setIsCharging(true);
             try {
@@ -571,7 +562,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                     await new Promise(r => setTimeout(r, 800));
                 } else {
                     // Real Mode: Call API
-                    result = await api.buyRig(preset.name, preset.price, preset.dailyProfit, durationDays, preset.repairCost, preset.energyCostPerDay, preset.bonusProfit);
+                    result = await api.buyRig(getLocalized(preset.name), preset.price, preset.dailyProfit, durationDays, preset.repairCost, preset.energyCostPerDay, preset.bonusProfit);
                 }
 
                 // Show Gold Rain Animation
@@ -580,7 +571,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 // Show Glove Reveal Animation if glove was received
                 if (result.glove) {
                     setGloveReveal({
-                        name: result.glove.name,
+                        name: getLocalized(result.glove.name),
                         rarity: result.glove.rarity,
                         bonus: result.glove.dailyBonus || 0
                     });
@@ -597,10 +588,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 setUser(prev => ({ ...prev, balance: prev.balance - (preset.price || 0) }));
 
                 refreshData();
-                addNotification({ id: Date.now().toString(), userId: user.id, message: `ซื้อเครื่องขุดสำเร็จ: ${preset.name}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+                addNotification({ id: Date.now().toString(), userId: user.id, message: `${language === 'th' ? 'ซื้อเครื่องขุดสำเร็จ' : 'Rig purchased successfully'}: ${getLocalized(preset.name)}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
 
             } catch (err: any) {
-                alert("การซื้อล้มเหลว: " + (err.response?.data?.message || err.message));
+                alert((language === 'th' ? "การซื้อล้มเหลว: " : "Purchase failed: ") + (err.response?.data?.message || err.message));
             } finally {
                 setIsCharging(false);
             }
@@ -609,7 +600,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
         // Create the Rig (Crafting Success)
         setIsCharging(true);
-        console.log(`[HANDEL_PURCHASE] Starting craft for: ${preset.name}, isDemo: ${user.isDemo}`);
+        console.log(`[HANDEL_PURCHASE] Starting craft for: ${getLocalized(preset.name)}, isDemo: ${user.isDemo}`);
         try {
             let result;
             if (user.isDemo) {
@@ -619,8 +610,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 await new Promise(r => setTimeout(r, 800));
             } else {
                 // Real Mode: Call Crafting API
-                console.log(`[HANDEL_PURCHASE] Calling api.craftRig("${preset.name}")`);
-                result = await api.craftRig(preset.name);
+                console.log(`[HANDEL_PURCHASE] Calling api.craftRig("${getLocalized(preset.name)}")`);
+                result = await api.craftRig(preset.name.th);
                 console.log(`[HANDEL_PURCHASE] api.craftRig result:`, result);
             }
 
@@ -634,13 +625,13 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
             // Refresh everything to sync with server
             refreshData();
-            addNotification({ id: Date.now().toString(), userId: user.id, message: `ผลิตเครื่องจักรสำเร็จ: ${preset.name}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            addNotification({ id: Date.now().toString(), userId: user.id, message: `${language === 'th' ? 'ผลิตเครื่องจักรสำเร็จ' : 'Rig crafted successfully'}: ${getLocalized(preset.name)}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
 
         } catch (err: any) {
             console.error("Crafting Failed", err);
             // If it failed, we should probably revert the local state if it was deducted, 
             // but refreshData() will handle that sync-back.
-            alert("การคราฟต์ล้มเหลว: " + (err.response?.data?.message || err.message));
+            alert((language === 'th' ? "การคราฟต์ล้มเหลว: " : "Crafting failed: ") + (err.response?.data?.message || err.message));
         } finally {
             setIsCharging(false);
         }
@@ -663,7 +654,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
             // Optimistic UI Update (or rely on refreshData)
             refreshData();
-            addNotification({ id: Date.now().toString(), userId: user.id, message: `เก็บเกี่ยวสำเร็จ: ${claimedAmount.toFixed(4)} ${CURRENCY}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            addNotification({ id: Date.now().toString(), userId: user.id, message: `เก็บเกี่ยวสำเร็จ: ${formatCurrency(claimedAmount)}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
         } catch (e: any) {
             console.error("Claim failed", e);
             alert("เคลมเหรียญไม่สำเร็จ: " + (e.response?.data?.message || e.message));
@@ -684,11 +675,11 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
             if (res.type === 'ITEM') {
                 const newItem = res.item;
-                setLootResult({ rarity: newItem.rarity, bonus: newItem.dailyBonus, itemTypeId: newItem.typeId, itemName: newItem.name });
-                addNotification({ id: Date.now().toString(), userId: user.id, message: `ได้รับของขวัญ: ${newItem.name}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+                setLootResult({ rarity: newItem.rarity, bonus: newItem.dailyBonus, itemTypeId: newItem.typeId, itemName: getLocalized(newItem.name) });
+                addNotification({ id: Date.now().toString(), userId: user.id, message: `${language === 'th' ? 'ได้รับของขวัญ' : 'Received gift'}: ${getLocalized(newItem.name)}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
             } else {
-                setLootResult({ rarity: 'SUPER_RARE', bonus: 0, itemName: `${res.name} x${res.amount}`, materialId: res.tier });
-                addNotification({ id: Date.now().toString(), userId: user.id, message: `ได้รับของขวัญ: ${res.name} x${res.amount}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+                setLootResult({ rarity: 'SUPER_RARE', bonus: 0, itemName: `${getLocalized(res.name)} x${res.amount}`, materialId: res.tier });
+                addNotification({ id: Date.now().toString(), userId: user.id, message: `${language === 'th' ? 'ได้รับของขวัญ' : 'Received gift'}: ${getLocalized(res.name)} x${res.amount}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
             }
         } catch (e: any) {
             const errMsg = e.response?.data?.message || e.message;
@@ -697,7 +688,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     };
 
 
-    const handleRenew = (rigId: string) => { try { const cost = MockDB.renewRig(user.id, rigId, 0); refreshData(); addNotification({ id: Date.now().toString(), userId: user.id, message: `ต่ออายุเครื่องจักรสำเร็จ (-${cost.toLocaleString()} ${CURRENCY})`, type: 'SUCCESS', read: false, timestamp: Date.now() }); } catch (e: any) { alert(e.message); } };
+    const handleRenew = (rigId: string) => { try { const cost = MockDB.renewRig(user.id, rigId, 0); refreshData(); addNotification({ id: Date.now().toString(), userId: user.id, message: `ต่ออายุเครื่องจักรสำเร็จ (-${formatCurrency(cost)})`, type: 'SUCCESS', read: false, timestamp: Date.now() }); } catch (e: any) { alert(e.message); } };
     const handleRepair = async (rigId: string) => {
         try {
             let cost = 0;
@@ -708,7 +699,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 cost = res.cost;
             }
             refreshData();
-            addNotification({ id: Date.now().toString(), userId: user.id, message: `ซ่อมแซมเครื่องจักรสำเร็จ (-${cost.toLocaleString()} ${CURRENCY})`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            addNotification({ id: Date.now().toString(), userId: user.id, message: `ซ่อมแซมเครื่องจักรสำเร็จ (-${formatCurrency(cost)})`, type: 'SUCCESS', read: false, timestamp: Date.now() });
         } catch (e: any) {
             alert(e.response?.data?.message || e.message);
         }
@@ -738,12 +729,22 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             if (user.isDemo) {
                 MockDB.collectRigMaterials(user.id, rigId);
             } else {
-                await api.collectMaterials(rigId, count, tier);
+                const res = await api.collectMaterials(rigId, count, tier);
+                if (res.bonusItem) {
+                    addNotification({
+                        id: Date.now().toString(),
+                        userId: user.id,
+                        message: language === 'th' ? `ยินดีด้วย! คุณพบ "กุญแจเข้าเหมือง"` : `Congratulations! You found a "Mining Key"`,
+                        type: 'SUCCESS',
+                        read: false,
+                        timestamp: Date.now()
+                    });
+                }
             }
 
             refreshData();
-            const matName = MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES] || 'วัสดุ';
-            addNotification({ id: Date.now().toString(), userId: user.id, message: `เก็บ ${matName} x${count} เข้าคลังแล้ว`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            const matName = (tier as any) === 0 ? (language === 'th' ? 'ไอเทมพิเศษ' : 'Special Item') : getLocalized(MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES]) || (language === 'th' ? 'วัสดุ' : 'Material');
+            addNotification({ id: Date.now().toString(), userId: user.id, message: language === 'th' ? `เก็บ ${matName} x${count} เข้าคลังแล้ว` : `Collected ${matName} x${count} to warehouse`, type: 'SUCCESS', read: false, timestamp: Date.now() });
         } catch (e: any) {
             console.error('[CollectMaterials] Error:', e);
             // Don't show alert for robot auto-collection failures
@@ -770,7 +771,16 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             const currentEnergy = Math.max(0, Math.min(100, (targetRig.energy ?? 100) - drain));
 
             const needed = 100 - currentEnergy;
-            const cost = Math.max(0.1, (needed / 100) * energyCostPerDay);
+
+            // Check for Uniform (5% Discount)
+            let discountMultiplier = 1.0;
+            if (targetRig.slots && targetRig.slots.length > 0 && user.inventory) {
+                const equippedItems = user.inventory.filter((i: any) => targetRig.slots.includes(i.id));
+                const hasUniform = equippedItems.some((i: any) => i.typeId === 'uniform');
+                if (hasUniform) discountMultiplier = 0.95;
+            }
+
+            const cost = Math.max(0.1, (needed / 100) * energyCostPerDay * discountMultiplier);
 
             // 1. Update Balance and Rig optimistically
             skipRefreshRef.current = true; // Block background refresh
@@ -789,7 +799,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 addNotification({
                     id: Date.now().toString(),
                     userId: user.id,
-                    message: `ชาร์จไฟสำเร็จ (-${cost.toFixed(2)} ${CURRENCY})`,
+                    message: `ชาร์จไฟสำเร็จ (-${formatCurrency(cost)})`,
                     type: 'SUCCESS',
                     read: false,
                     timestamp: Date.now()
@@ -801,7 +811,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 addNotification({
                     id: Date.now().toString(),
                     userId: user.id,
-                    message: `ชาร์จไฟสำเร็จ (-${res.cost.toFixed(2)} ${CURRENCY})`,
+                    message: `ชาร์จไฟสำเร็จ (-${formatCurrency(res.cost)})`,
                     type: 'SUCCESS',
                     read: false,
                     timestamp: Date.now()
@@ -823,7 +833,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             const res = await api.buyAccessory({
                 itemId: itemInfo.id,
                 price: itemInfo.price,
-                name: itemInfo.name,
+                name: itemInfo.name.th,
                 dailyBonus: (itemInfo as any).dailyBonus,
                 rarity: (itemInfo as any).rarity,
                 lifespanDays: itemInfo.lifespanDays
@@ -930,29 +940,29 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             className="bg-stone-800 p-2 sm:p-3 rounded-full border border-stone-700 hover:border-yellow-500 hover:text-yellow-500 transition-all text-stone-400 shadow-lg relative group"
                         >
                             <BookOpen size={20} className="sm:w-6 sm:h-6" />
-                            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">{language === 'th' ? 'คู่มือเกม' : 'Game Guide'}</span>
+                            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">{t('dashboard.game_guide')}</span>
                         </button>
                         <div className="hidden lg:flex items-center gap-2">
                             <button onClick={() => setIsWarehouseOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-800/50 bg-blue-900/20 text-blue-500 hover:bg-blue-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
                                 <Package size={14} /> {t('dashboard.warehouse')}
                             </button>
                             <button onClick={() => setIsMarketOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-800/50 bg-emerald-900/20 text-emerald-500 hover:bg-emerald-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
-                                <BarChart2 size={14} /> {language === 'th' ? 'ตลาดกลาง' : 'Market'}
+                                <BarChart2 size={14} /> {t('dashboard.market')}
                             </button>
                             <button onClick={() => setIsDailyBonusOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-800/50 bg-emerald-900/20 text-emerald-500 hover:bg-emerald-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
-                                <CalendarCheck size={14} /> {language === 'th' ? 'เช็คชื่อ' : 'Check-in'}
+                                <CalendarCheck size={14} /> {t('dashboard.check_in')}
                             </button>
                             <button onClick={() => setIsMissionOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-800/50 bg-blue-900/20 text-blue-500 hover:bg-blue-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
-                                <Target size={14} /> {language === 'th' ? 'ภารกิจ' : 'Missions'}
+                                <Target size={14} /> {t('dashboard.missions')}
                             </button>
                             <button onClick={() => setIsDungeonOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-purple-900/50 bg-purple-900/20 text-purple-400 hover:bg-purple-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
-                                <Skull size={14} /> {language === 'th' ? 'เหมืองลับ' : 'Secret Mine'}
+                                <Skull size={14} /> {t('dashboard.secret_mine')}
                             </button>
                             <button onClick={() => setIsVIPOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-yellow-800/50 bg-yellow-900/20 text-yellow-500 hover:bg-yellow-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
                                 <Crown size={14} /> VIP
                             </button>
                             <button onClick={() => setIsLeaderboardOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-orange-800/50 bg-orange-900/20 text-orange-500 hover:bg-orange-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
-                                <Trophy size={14} /> {language === 'th' ? 'อันดับ' : 'Rank'}
+                                <Trophy size={14} /> {t('dashboard.rank')}
                             </button>
                         </div>
 
@@ -967,7 +977,11 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             <div className="flex flex-col items-end px-2 mr-1 sm:mr-2 border-r border-stone-800">
                                 <span className="text-[8px] sm:text-[10px] text-stone-500 uppercase tracking-widest leading-none mb-1">{t('common.balance')}</span>
                                 <span className="text-base sm:text-lg font-mono font-bold text-white tabular-nums leading-none">
-                                    {user.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] sm:text-xs text-stone-500">{CURRENCY}</span>
+                                    {language === 'th' ?
+                                        <>{(user.balance * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] sm:text-xs text-stone-500">฿</span></>
+                                        :
+                                        <>{user.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] sm:text-xs text-stone-500">{CURRENCY}</span></>
+                                    }
                                 </span>
                             </div>
                             <div className="flex gap-1 sm:gap-2">
@@ -1040,9 +1054,15 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                         <div className="text-stone-500 text-[10px] sm:text-xs uppercase tracking-widest font-bold mb-2">{t('dashboard.total_revenue')}</div>
                         <div className="flex flex-col">
                             <div className="text-2xl sm:text-4xl font-display font-bold text-green-400 flex items-center gap-2 group-hover:text-green-300">
-                                {isPowered ? rigDaily.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '0.0'} <span className="text-xs sm:text-sm text-stone-500">{CURRENCY}</span>
+                                {isPowered ?
+                                    (language === 'th' ?
+                                        <>{(rigDaily * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-xs sm:text-sm text-stone-500">฿</span></>
+                                        :
+                                        <>{rigDaily.toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-xs sm:text-sm text-stone-500">{CURRENCY}</span></>
+                                    )
+                                    : '0.0'}
                                 {hasVibranium && isPowered && <span className="text-[10px] sm:text-xs bg-purple-900/50 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500 animate-pulse font-mono">x2 Boost</span>}
-                                {!isPowered && <span className="text-[10px] sm:text-xs bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded border border-red-500 font-bold animate-pulse">หยุดทำงาน</span>}
+                                {!isPowered && <span className="text-[10px] sm:text-xs bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded border border-red-500 font-bold animate-pulse">{language === 'th' ? 'หยุดทำงาน' : 'SHUTDOWN'}</span>}
                             </div>
                         </div>
                     </div>
@@ -1167,7 +1187,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                 {/* 24H Countdown Info */}
                                 <div className="flex items-center justify-center gap-2 text-[10px] text-stone-400 font-mono mb-1 bg-black/20 rounded py-0.5">
                                     <Timer size={10} />
-                                    <span>เวลาที่เหลือ (24h):</span>
+                                    <span>{t('dashboard.time_remaining')}:</span>
                                     {energyLevel > 0 ? <EnergyTimer percent={energyLevel} /> : '--:--:--'}
                                 </div>
 
@@ -1188,7 +1208,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                     `}
                                 >
                                     <Zap size={12} className="fill-white animate-pulse" />
-                                    {energyLevel >= 100 ? 'เติมพลังงาน (เต็มแล้ว)' : 'เติมพลังงาน (2 บาท)'}
+                                    {energyLevel >= 100 ? `${t('dashboard.refill_energy')} (${t('dashboard.refill_full')})` : `${t('dashboard.refill_energy')} (2 ฿)`}
                                 </button>
 
                                 {/* 2. Overclock Toggle (Mobile Style) */}
@@ -1242,8 +1262,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col">
-                                                    <span className="text-[11px] font-bold text-emerald-500 tracking-tight">จ่าย 50 ฿ เพื่อรับคูณ 2</span>
-                                                    <span className="text-[9px] text-stone-500 font-mono italic">ระยะเวลา 48 ชั่วโมง</span>
+                                                    <span className="text-[11px] font-bold text-emerald-500 tracking-tight">{t('dashboard.overclock_desc')}</span>
+                                                    <span className="text-[9px] text-stone-500 font-mono italic">{t('dashboard.overclock_timer')}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -1251,7 +1271,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
                                     {/* The Toggle Switch Wrapper (Activate System Tooltip) */}
                                     <div className="flex flex-col items-end gap-1.5 z-20 relative">
-                                        <span className="text-[8px] font-bold text-stone-500 uppercase tracking-tighter">{isOverclockActive ? 'ปิดระบบ' : 'เปิดระบบ x2'}</span>
+                                        <span className="text-[8px] font-bold text-stone-500 uppercase tracking-tighter">{isOverclockActive ? t('dashboard.deactivate_x2') : t('dashboard.activate_x2')}</span>
                                         <div
                                             onClick={() => !overclockLoading && (isOverclockActive ? handleDeactivateOverclock() : handleActivateOverclock())}
                                             className={`w-14 h-7 rounded-full p-1 transition-all duration-300 relative 
@@ -1266,14 +1286,14 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                         </div>
 
                                         <div className="text-[9px] text-stone-500 font-mono flex items-center gap-1 opacity-70">
-                                            <Clock size={8} /> 48 ชม.
+                                            <Clock size={8} /> {language === 'th' ? '48 ชม.' : '48h'}
                                         </div>
                                     </div>
 
                                 </div>
                                 {!isOverclockActive && (
                                     <div className="mt-2 pt-2 border-t border-stone-800/50 text-[9px] text-center text-stone-500 font-mono flex items-center justify-center gap-1">
-                                        คลิกที่สวิตช์เพื่อเริ่มใช้งานทันที หรือคลิกไอคอนเพื่อดูรายละเอียด
+                                        {language === 'th' ? 'คลิกที่สวิตช์เพื่อเริ่มใช้งานทันที หรือคลิกไอคอนเพื่อดูรายละเอียด' : 'Click the switch to start immediately or click the icon for details'}
                                     </div>
                                 )}
                             </div>
@@ -1289,11 +1309,11 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                         {/* Miners */}
                         {/* Community Stats as Buttons */}
                         <div
-                            onClick={() => addNotification({ id: 'community', userId: user.id, title: 'นักขุดออนไลน์', message: `มีผู้เล่นที่กำลังขุดทองรุ่งเรืองอยู่ในขณะนี้ ${globalStats.onlineMiners.toLocaleString()} ท่าน!`, type: 'INFO', timestamp: Date.now(), read: false })}
+                            onClick={() => addNotification({ id: 'community', userId: user.id, title: t('dashboard.online_miners'), message: language === 'th' ? `มีผู้เล่นที่กำลังขุดทองรุ่งเรืองอยู่ในขณะนี้ ${globalStats.onlineMiners.toLocaleString()} ท่าน!` : `There are ${globalStats.onlineMiners.toLocaleString()} miners active right now!`, type: 'INFO', timestamp: Date.now(), read: false })}
                             className="cursor-pointer hover:bg-stone-900/50 p-2 rounded-lg transition-all active:scale-95 group"
                         >
                             <div className="text-stone-500 text-[10px] uppercase tracking-widest font-bold flex items-center gap-1 mb-1 group-hover:text-blue-400">
-                                <Users size={12} /> นักขุดออนไลน์
+                                <Users size={12} /> {t('dashboard.online_miners')}
                             </div>
                             <div className="text-xl sm:text-2xl font-display font-bold text-blue-400 font-mono animate-pulse group-hover:text-blue-300">
                                 {globalStats.onlineMiners.toLocaleString()}
@@ -1306,10 +1326,13 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             className="cursor-pointer hover:bg-stone-900/50 p-2 rounded-lg transition-all active:scale-95 group"
                         >
                             <div className="text-stone-500 text-[10px] uppercase tracking-widest font-bold flex items-center gap-1 mb-1 group-hover:text-emerald-400">
-                                <BarChart2 size={12} /> มูลค่าตลาด
+                                <BarChart2 size={12} /> {language === 'th' ? 'มูลค่าตลาด' : 'Market Volume'}
                             </div>
                             <div className="text-xl sm:text-2xl font-display font-bold text-emerald-400 font-mono group-hover:text-emerald-300">
-                                {globalStats.marketVolume.toLocaleString()} ฿
+                                {language === 'th' ?
+                                    `${(globalStats.marketVolume * EXCHANGE_RATE_USD_THB).toLocaleString()} ฿` :
+                                    `${globalStats.marketVolume.toLocaleString()} ${CURRENCY}`
+                                }
                             </div>
                         </div>
                     </div>
@@ -1318,7 +1341,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 {/* --- SLOT SYSTEM GRID --- */}
                 <div className="mb-16">
                     <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                        <Grid size={24} className="text-yellow-500" /> พื้นที่ขุดเหมือง
+                        <Grid size={24} className="text-yellow-500" /> {t('dashboard.slots_title')}
                     </h3>
                     <div id="rigs-list" className="grid grid-cols-1 landscape:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-8">
                         {Array.from({ length: MAX_RIGS_PER_USER }).map((_, index) => {
@@ -1360,8 +1383,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                         <div className="w-20 h-20 rounded-full bg-stone-800 flex items-center justify-center mb-4 shadow-inner group-hover:scale-110 transition-transform">
                                             <Plus size={40} className="text-stone-600 group-hover:text-yellow-500" />
                                         </div>
-                                        <h4 className="text-lg font-bold text-stone-500 group-hover:text-yellow-500 uppercase tracking-widest">ว่าง (Empty Slot)</h4>
-                                        <p className="text-xs text-stone-600 mt-2">คลิกเพื่อซื้อเครื่องจักร</p>
+                                        <h4 className="text-lg font-bold text-stone-500 group-hover:text-yellow-500 uppercase tracking-widest">{t('dashboard.empty_slot')}</h4>
+                                        <p className="text-xs text-stone-600 mt-2">{t('dashboard.click_to_buy')}</p>
                                     </div>
                                 );
                             } else {
@@ -1375,10 +1398,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                         <div className="w-20 h-20 rounded-full bg-stone-950 border border-stone-800 flex items-center justify-center mb-4 z-10 group-hover:border-red-500/50 transition-colors">
                                             <Lock size={32} className="text-stone-600 group-hover:text-red-500" />
                                         </div>
-                                        <h4 className="text-lg font-bold text-stone-500 uppercase tracking-widest z-10 group-hover:text-stone-300">พื้นที่ถูกล็อค</h4>
+                                        <h4 className="text-lg font-bold text-stone-500 uppercase tracking-widest z-10 group-hover:text-stone-300">{t('dashboard.locked_slot')}</h4>
                                         <p className="text-xs text-stone-600 mt-2 z-10 bg-stone-950 px-3 py-1 rounded-full border border-stone-800">Slot #{slotNumber}</p>
                                         <div className="mt-6 px-6 py-2 bg-stone-900/80 rounded border border-stone-700 text-xs font-bold text-stone-400 uppercase tracking-wide group-hover:bg-red-900/20 group-hover:text-red-400 group-hover:border-red-900/50 transition-all z-10">
-                                            ปลดล็อกพื้นที่
+                                            {t('dashboard.unlock_slot')}
                                         </div>
                                     </div>
                                 );
@@ -1404,7 +1427,12 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             </div>
                             <div className="bg-stone-900 p-4 rounded-lg border border-stone-800 mb-6 flex justify-between items-center">
                                 <span className="text-xs font-bold text-stone-500 uppercase">ค่าบริการรวม</span>
-                                <span className="text-2xl font-mono font-bold text-white">{energyConfirm.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}</span>
+                                <span className="text-2xl font-mono font-bold text-white">
+                                    {language === 'th' ?
+                                        `${(energyConfirm.cost * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿` :
+                                        `${energyConfirm.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${CURRENCY}`
+                                    }
+                                </span>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <button onClick={() => setEnergyConfirm(null)} className="py-3 rounded bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold transition-colors text-sm">ยกเลิก</button>
@@ -1499,14 +1527,14 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                         addNotification({
                             id: Date.now().toString(),
                             userId: user.id,
-                            message: `ผสมสำเร็จ! ${res.sourceName} -> ${res.targetName}`,
+                            message: `${t('warehouse.craft_success')} ${getLocalized(res.sourceName)} -> ${getLocalized(res.targetName)}`,
                             type: 'SUCCESS',
                             read: false,
                             timestamp: Date.now()
                         });
                         return res;
                     } catch (e: any) {
-                        const errMsg = e.response?.data?.message || e.message || 'เกิดข้อผิดพลาดในการสกัดแร่';
+                        const errMsg = e.response?.data?.message || e.message || t('warehouse.extract_error');
                         addNotification({
                             id: Date.now().toString(),
                             userId: user.id,
@@ -1599,24 +1627,24 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 isMobileMenuOpen && (
                     <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col p-6 animate-in slide-in-from-bottom-10 duration-300 lg:hidden">
                         <div className="flex justify-between items-center mb-8">
-                            <div><h2 className="text-2xl font-bold text-white font-display">เมนูหลัก</h2><p className="text-stone-500 text-xs">จัดการบัญชีและระบบอื่นๆ</p></div>
+                            <div><h2 className="text-2xl font-bold text-white font-display">{t('dashboard.main_menu')}</h2><p className="text-stone-500 text-xs">{t('dashboard.main_menu_desc')}</p></div>
                             <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-stone-900 rounded-full text-stone-400 hover:text-white"><X size={24} /></button>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <button onClick={() => { setIsShopOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><ShoppingBag className="text-orange-500" size={32} /><span className="text-sm font-bold text-stone-300">ร้านค้า</span></button>
-                            <button onClick={() => { setIsWarehouseOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Package className="text-blue-500" size={32} /><span className="text-sm font-bold text-stone-300">คลังวัตถุดิบ</span></button>
-                            <button onClick={() => { setIsLeaderboardOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Trophy className="text-yellow-500" size={32} /><span className="text-sm font-bold text-stone-300">อันดับ</span></button>
-                            <button onClick={() => { setIsDailyBonusOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><CalendarCheck className="text-emerald-500" size={32} /><span className="text-sm font-bold text-stone-300">เช็คชื่อ</span></button>
-                            <button onClick={() => { setIsDungeonOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Skull className="text-purple-500" size={32} /><span className="text-sm font-bold text-stone-300">เหมืองลับ</span></button>
-                            <button onClick={() => { setIsMissionOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Target className="text-blue-400" size={32} /><span className="text-sm font-bold text-stone-300">ภารกิจ</span></button>
+                            <button onClick={() => { setIsShopOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><ShoppingBag className="text-orange-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.shop')}</span></button>
+                            <button onClick={() => { setIsWarehouseOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Package className="text-blue-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.warehouse')}</span></button>
+                            <button onClick={() => { setIsLeaderboardOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Trophy className="text-yellow-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.rank')}</span></button>
+                            <button onClick={() => { setIsDailyBonusOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><CalendarCheck className="text-emerald-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.check_in')}</span></button>
+                            <button onClick={() => { setIsDungeonOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Skull className="text-purple-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.secret_mine')}</span></button>
+                            <button onClick={() => { setIsMissionOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Target className="text-blue-400" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.missions')}</span></button>
                             <button onClick={() => { setIsVIPOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Crown className="text-yellow-400" size={32} /><span className="text-sm font-bold text-stone-300">VIP</span></button>
-                            <button onClick={() => { setIsMarketOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><BarChart2 className="text-emerald-500" size={32} /><span className="text-sm font-bold text-stone-300">ตลาดกลาง</span></button>
-                            <button onClick={() => { setIsHistoryOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><History className="text-stone-400" size={32} /><span className="text-sm font-bold text-stone-300">ประวัติ</span></button>
-                            <button onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Settings className="text-stone-400" size={32} /><span className="text-sm font-bold text-stone-300">ตั้งค่า</span></button>
-                            <button onClick={() => { setIsGameGuideOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><BookOpen className="text-blue-400" size={32} /><span className="text-sm font-bold text-stone-300">คู่มือเกม</span></button>
+                            <button onClick={() => { setIsMarketOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><BarChart2 className="text-emerald-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.market')}</span></button>
+                            <button onClick={() => { setIsHistoryOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><History className="text-stone-400" size={32} /><span className="text-sm font-bold text-stone-300">{t('common.history')}</span></button>
+                            <button onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Settings className="text-stone-400" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.settings')}</span></button>
+                            <button onClick={() => { setIsGameGuideOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><BookOpen className="text-blue-400" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.game_guide')}</span></button>
                         </div>
                         <div className="mt-auto">
-                            <button onClick={onLogout} className="w-full py-4 bg-red-900/20 text-red-400 border border-red-900/50 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-900/30 transition-colors"><LogOut size={20} /> ออกจากระบบ</button>
+                            <button onClick={onLogout} className="w-full py-4 bg-red-900/20 text-red-400 border border-red-900/50 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-900/30 transition-colors"><LogOut size={20} /> {t('common.logout')}</button>
                             <div className="text-center text-[10px] text-stone-600 mt-4">Ver 1.0.7 | ID: {user.username}</div>
                         </div>
                     </div>
@@ -1652,35 +1680,35 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                         className="flex flex-col items-center justify-center py-2 px-1 rounded-lg text-stone-400 hover:text-yellow-500 hover:bg-stone-800/50 transition-all active:scale-95"
                     >
                         <Plus size={20} className="mb-1" />
-                        <span className="text-[10px] font-medium">ซื้อเหมือง</span>
+                        <span className="text-[10px] font-medium">{t('dashboard.buy_rig')}</span>
                     </button>
                     <button
                         onClick={() => setIsWarehouseOpen(true)}
                         className="flex flex-col items-center justify-center py-2 px-1 rounded-lg text-stone-400 hover:text-blue-500 hover:bg-stone-800/50 transition-all active:scale-95"
                     >
                         <Package size={20} className="mb-1" />
-                        <span className="text-[10px] font-medium">คลัง</span>
+                        <span className="text-[10px] font-medium">{t('dashboard.warehouse')}</span>
                     </button>
                     <button
                         onClick={() => setIsMarketOpen(true)}
                         className="flex flex-col items-center justify-center py-2 px-1 rounded-lg text-stone-400 hover:text-emerald-500 hover:bg-stone-800/50 transition-all active:scale-95"
                     >
                         <BarChart2 size={20} className="mb-1" />
-                        <span className="text-[10px] font-medium">ตลาด</span>
+                        <span className="text-[10px] font-medium">{t('dashboard.market')}</span>
                     </button>
                     <button
                         onClick={() => setIsDungeonOpen(true)}
                         className="flex flex-col items-center justify-center py-2 px-1 rounded-lg text-stone-400 hover:text-purple-500 hover:bg-stone-800/50 transition-all active:scale-95"
                     >
                         <Skull size={20} className="mb-1" />
-                        <span className="text-[10px] font-medium">ดันเจียน</span>
+                        <span className="text-[10px] font-medium">{t('dashboard.secret_mine')}</span>
                     </button>
                     <button
                         onClick={() => setIsMobileMenuOpen(true)}
                         className="flex flex-col items-center justify-center py-2 px-1 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800/50 transition-all active:scale-95"
                     >
                         <Grid size={20} className="mb-1" />
-                        <span className="text-[10px] font-medium">เมนู</span>
+                        <span className="text-[10px] font-medium">{t('dashboard.menu')}</span>
                     </button>
                 </div>
             </nav>

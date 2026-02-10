@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { X, Sparkles, Gift } from 'lucide-react';
 import { InfinityGlove } from './InfinityGlove';
+import { useTranslation } from './LanguageContext';
+import { CURRENCY } from '../constants';
 
 interface GloveRevealModalProps {
     isOpen: boolean;
@@ -17,6 +19,7 @@ export const GloveRevealModal: React.FC<GloveRevealModalProps> = ({
     gloveRarity,
     gloveBonus
 }) => {
+    const { t, formatCurrency } = useTranslation();
     const [stage, setStage] = useState<'opening' | 'reveal' | 'done'>('opening');
 
     useEffect(() => {
@@ -67,7 +70,7 @@ export const GloveRevealModal: React.FC<GloveRevealModalProps> = ({
                 {stage === 'opening' && (
                     <div className="flex flex-col items-center gap-6 animate-pulse">
                         <Gift size={100} className="text-yellow-500 animate-bounce" />
-                        <div className="text-2xl font-bold text-yellow-400">กำลังติดต่อผู้จัดการ...</div>
+                        <div className="text-2xl font-bold text-yellow-400">{t('tenant_reveal.contacting')}</div>
                         <div className="flex gap-2">
                             <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
                             <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
@@ -103,15 +106,15 @@ export const GloveRevealModal: React.FC<GloveRevealModalProps> = ({
 
                         {/* Info */}
                         <div className="text-center">
-                            <div className="text-sm text-stone-500 mb-1">คุณได้รับ</div>
+                            <div className="text-sm text-stone-500 mb-1">{t('tenant_reveal.received')}</div>
                             <div className={`text-2xl font-bold ${getRarityColor(gloveRarity)}`}>
                                 {gloveName}
                             </div>
                             <div className={`text-xl font-mono mt-2 ${getRarityColor(gloveRarity)}`}>
-                                +{gloveBonus.toFixed(2)} บาท/วัน
+                                +{formatCurrency(gloveBonus)}/{t('time.day')}
                             </div>
                             <div className="text-stone-500 text-sm mt-4">
-                                ผู้จัดการเริ่มงานทันที
+                                {t('tenant_reveal.starts_working')}
                             </div>
                         </div>
 
@@ -121,7 +124,7 @@ export const GloveRevealModal: React.FC<GloveRevealModalProps> = ({
                                 onClick={onClose}
                                 className="mt-4 px-8 py-3 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white font-bold rounded-lg transition-all"
                             >
-                                เซ็นสัญญา
+                                {t('tenant_reveal.sign_contract')}
                             </button>
                         )}
                     </div>
