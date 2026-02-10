@@ -31,7 +31,12 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 import transactionRoutes from './routes/transactionRoutes';
+import { checkMaintenance } from './middleware/checkMaintenance';
+
 // Routes
+// Apply Global Maintenance Check (Logic inside handles bypass for auth/admin)
+app.use(checkMaintenance);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/rigs', rigRoutes);
 app.use('/api/quests', questRoutes); // Add Quests API
