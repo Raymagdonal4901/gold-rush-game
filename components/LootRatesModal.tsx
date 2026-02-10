@@ -11,7 +11,7 @@ interface LootRatesModalProps {
 }
 
 export const LootRatesModal: React.FC<LootRatesModalProps> = ({ isOpen, onClose }) => {
-    const { t, formatCurrency } = useTranslation();
+    const { t, formatCurrency, language } = useTranslation();
     if (!isOpen) return null;
 
     const rates = [
@@ -21,6 +21,8 @@ export const LootRatesModal: React.FC<LootRatesModalProps> = ({ isOpen, onClose 
         { key: 'EPIC', chance: '3%', name: t('loot_rates.executive'), ...RARITY_SETTINGS.EPIC },
         { key: 'LEGENDARY', chance: '1%', name: t('loot_rates.partner'), ...RARITY_SETTINGS.LEGENDARY },
     ];
+
+    const isThai = language === 'th';
 
     return (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
@@ -70,7 +72,7 @@ export const LootRatesModal: React.FC<LootRatesModalProps> = ({ isOpen, onClose 
 
                                 <div className="text-right">
                                     <div className="text-sm font-bold text-stone-300">{tier.chance}</div>
-                                    <div className="text-xs font-mono text-green-400">+{formatCurrency(tier.bonus)}{t('common.per_day')}</div>
+                                    <div className="text-xs font-mono text-green-400">+{formatCurrency(tier.bonus, { forceUSD: true, hideSymbol: isThai })}{t('common.per_day')}</div>
                                 </div>
                             </div>
                         ))}

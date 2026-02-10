@@ -87,7 +87,11 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
                 </div>
             );
         }
-        if (reward.reward === 'money') return <span className="text-emerald-400 font-display font-bold text-2xl drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">{reward.amount}</span>;
+        if (reward.reward === 'money') {
+            const isThai = user.language === 'th' || localStorage.getItem('game_language') === 'th';
+            const displayAmount = (isThai && reward.amountTHB) ? reward.amountTHB : reward.amount;
+            return <span className="text-emerald-400 font-display font-bold text-2xl drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">{displayAmount}</span>;
+        }
         if (reward.reward === 'material') return <MaterialIcon id={reward.tier} size="w-10 h-10" iconSize={20} />;
         if (reward.reward === 'item') {
             if (reward.id === 'chest_key') return <Key className="text-yellow-500" size={28} />;

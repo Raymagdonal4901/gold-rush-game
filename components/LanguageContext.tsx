@@ -51,7 +51,13 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     const formatCurrency = (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean }): string => {
         const isThai = options?.forceUSD ? false : (language === 'th' || options?.forceTHB);
-        const val = isThai ? amount * EXCHANGE_RATE : amount;
+        let val = isThai ? amount * EXCHANGE_RATE : amount;
+
+        // Epsilon rounding to fix floating point issues (e.g., 299.999999 -> 300)
+        if (Math.abs(val - Math.round(val)) < 0.001) {
+            val = Math.round(val);
+        }
+
         const formatted = val.toLocaleString(undefined, {
             minimumFractionDigits: val % 1 === 0 ? 0 : 2,
             maximumFractionDigits: 4
