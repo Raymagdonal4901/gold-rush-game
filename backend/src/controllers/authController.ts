@@ -21,19 +21,69 @@ export const getPublicConfig = async (req: Request, res: Response) => {
 // Register
 export const register = async (req: Request, res: Response) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, referralCode } = req.body;
         // ตรวจสอบว่า username ซ้ำหรือไม่
         const existingUser = await User.findOne({ username });
         if (existingUser) {
             return res.status(400).json({ message: 'Username already exists' });
         }
+
+        // --- REFERRAL LOGIC: Find Referrer ---
+        let referredBy = null;
+        if (referralCode) {
+            const referrer = await User.findOne({
+                $or: [{ username: referralCode.trim() }, { referralCode: referralCode.trim() }]
+            });
+            if (referrer) {
+                referredBy = referrer._id;
+                console.log(`[REFERRAL] New user ${username} referred by ${referrer.username}`);
+            }
+        }
+
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Define Welcome Pack Item if referred
+        const inventory = [];
+        const notifications = [];
+
+        if (referredBy) {
+            // Reward: Standard Safety Helmet (Manual Claim)
+            const welcomeItem = {
+                typeId: 'hat',
+                name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Helmet' },
+                rarity: 'COMMON',
+                lifespanDays: 10,
+                dailyBonus: 0.02857143,
+                isHandmade: false
+            };
+
+            notifications.push({
+                id: `welcome_${Date.now()}`,
+                userId: '', // Shared subdoc logic
+                title: 'ยินดีต้อนรับสู่เหมือง Gold Rush!',
+                message: 'คุณได้รับ หมวกนิรภัยมาตรฐาน จากการลงทะเบียนผ่านรหัสแนะนำ! กรุณากดปุ่มเพื่อรับอุปกรณ์ของคุณ',
+                type: 'REWARD',
+                read: false,
+                timestamp: Date.now(),
+                hasReward: true,
+                rewardType: 'ITEM',
+                rewardValue: welcomeItem,
+                isClaimed: false
+            });
+        }
+
         // สร้าง User ใหม่
         const user = await User.create({
             username,
-            password: hashedPassword
+            password: hashedPassword,
+            referralCode: username, // Set their own referral code as their username
+            referredBy,
+            inventory,
+            notifications,
+            balance: 0 // New users always start at 0.00 THB
         });
+
         // สร้าง JWT Token
         const token = jwt.sign(
             { userId: user._id, username: user.username },
@@ -50,11 +100,14 @@ export const register = async (req: Request, res: Response) => {
                 materials: user.materials || {},
                 stats: user.stats || {},
                 inventory: user.inventory || [],
+                notifications: user.notifications || [],
                 role: user.role,
-                unlockedSlots: user.unlockedSlots || 3
+                unlockedSlots: user.unlockedSlots || 3,
+                referralCode: user.referralCode
             }
         });
     } catch (error) {
+        console.error('Registration error:', error);
         res.status(500).json({ message: 'Server error', error });
     }
 };

@@ -20,7 +20,7 @@ interface InventoryModalProps {
 }
 
 export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose, inventory, userId, onRefresh, marketState, materials = {} }) => {
-    const { t, language, getLocalized, formatCurrency } = useTranslation();
+    const { t, language, getLocalized, formatCurrency, formatBonus } = useTranslation();
     const [selectedItem, setSelectedItem] = useState<AccessoryItem | null>(null);
     const [action, setAction] = useState<'DETAILS' | 'UPGRADE' | 'SELL'>('DETAILS');
     const [msg, setMsg] = useState('');
@@ -262,7 +262,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                 <div className="space-y-2 text-sm text-stone-400 mb-6 relative z-10">
                     <div className="flex justify-between">
                         <span>{t('inventory.daily_bonus')}</span>
-                        <span className="text-white font-mono">+{formatCurrency(selectedItem.dailyBonus || 0)}</span>
+                        <span className="text-white font-mono">{formatBonus(selectedItem.dailyBonus || 0, selectedItem.typeId)}</span>
                     </div>
                     {selectedItem.specialEffect && (
                         <div className="flex justify-between">
@@ -495,9 +495,9 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                                     </div>
                                                 )}
                                                 {item.typeId !== 'robot' && (
-                                                    <div className="text-[9px] text-stone-400 flex items-center gap-1">
+                                                    <div className="text-[10px] text-stone-400 flex items-center gap-1">
                                                         <Star size={10} className="text-yellow-500" />
-                                                        <span className="font-mono text-yellow-500">{t('inventory.bonus_per_day').replace('{bonus}', formatCurrency(item.dailyBonus || 0))}</span>
+                                                        <span className="font-mono text-yellow-500">{t('inventory.bonus_per_day').replace('{bonus}', formatBonus(item.dailyBonus || 0, item.typeId))}</span>
                                                     </div>
                                                 )}
                                             </div>

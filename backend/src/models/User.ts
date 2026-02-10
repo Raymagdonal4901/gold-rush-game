@@ -25,9 +25,17 @@ export interface IUser extends Document {
     lastLuckyDraw?: number;
     overclockExpiresAt?: Date; // Overclock boost expiration
     walletAddress?: string; // BSC Wallet Address for USDT
+
+    // Referral System
+    referralCode?: string; // Their own code (usually username)
+    referredBy?: string; // User ID of referrer
+    isFirstDepositPaid: boolean;
+    referralCount: number;
+
     createdAt: Date;
     lastEnergyUpdate: Date;
 }
+
 const UserSchema = new Schema<IUser>({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
@@ -54,7 +62,15 @@ const UserSchema = new Schema<IUser>({
     lastQuestReset: { type: Date, default: Date.now },
     activeExpedition: { type: Object, default: null }, // Added for persistence
     craftingQueue: { type: [], default: [] },
+
+    // Referral System
+    referralCode: { type: String, unique: true, sparse: true },
+    referredBy: { type: String },
+    isFirstDepositPaid: { type: Boolean, default: false },
+    referralCount: { type: Number, default: 0 },
+
     createdAt: { type: Date, default: Date.now },
     lastEnergyUpdate: { type: Date, default: Date.now }
 });
+
 export default mongoose.model<IUser>('User', UserSchema);

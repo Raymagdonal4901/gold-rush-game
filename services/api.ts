@@ -35,8 +35,8 @@ client.interceptors.request.use((config) => {
 
 export const api = {
     // Auth
-    register: async (username: string, password?: string, pin?: string): Promise<User> => {
-        const res = await client.post('/auth/register', { username, password });
+    register: async (username: string, password?: string, pin?: string, referralCode?: string): Promise<User> => {
+        const res = await client.post('/auth/register', { username, password, pin, referralCode });
         if (res.data.token) {
             localStorage.setItem('token', res.data.token);
         }
@@ -340,6 +340,10 @@ export const api = {
             const res = await client.post('/admin/users/compensation', { userId, amount, reason });
             return res.data;
         },
+        giveCompensationAll: async (amount: number, reason: string): Promise<any> => {
+            const res = await client.post('/admin/users/compensation-all', { amount, reason });
+            return res.data;
+        },
         addItem: async (userId: string, itemId: string, amount: number): Promise<any> => {
             const res = await client.post('/admin/users/items', { userId, itemId, amount });
             return res.data;
@@ -427,6 +431,17 @@ export const api = {
             const res = await client.post('/dungeons/skip', { itemId });
             return res.data;
         }
+    },
+
+    // Notification API
+    claimNotificationReward: async (notificationId: string): Promise<{ success: boolean; user: User; message: string }> => {
+        const res = await client.post('/users/claim-notification-reward', { notificationId });
+        return res.data;
+    },
+
+    deleteNotification: async (notificationId: string): Promise<{ success: boolean; user: User }> => {
+        const res = await client.delete(`/users/notifications/${notificationId}`);
+        return res.data;
     }
 };
 

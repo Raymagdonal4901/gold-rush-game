@@ -141,3 +141,90 @@ export const getLeaderboard = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
+
+export const claimNotificationReward = async (req: AuthRequest, res: Response) => {
+    try {
+        const { notificationId } = req.body;
+        const user = await User.findById(req.userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const notification = user.notifications.find(n => n.id === notificationId);
+        if (!notification) return res.status(404).json({ message: 'Notification not found' });
+
+        if (!notification.hasReward) {
+            return res.status(400).json({ message: 'This notification has no reward' });
+        }
+
+        if (notification.isClaimed) {
+            return res.status(400).json({ message: 'Reward already claimed' });
+        }
+
+        // Process Reward
+        let rewardMessage = '';
+        if (notification.rewardType === 'CURRENCY') {
+            const amount = Number(notification.rewardValue) || 0;
+            user.balance += amount;
+            rewardMessage = `ได้รับเงินจำนวน ${amount.toLocaleString()} เรียบร้อย!`;
+        } else if (notification.rewardType === 'ITEM') {
+            // Find item in SHOP_ITEMS or constants if available, 
+            // but for now we'll assume rewardValue is the Full Item Object or we map it
+            // Based on previous work, we might have a helper or just push to inventory
+            // Let's assume rewardValue is the item data for now or handled via admin give logic
+            const itemData: any = notification.rewardValue;
+            if (itemData && typeof itemData === 'object') {
+                user.inventory.push({
+                    ...itemData,
+                    id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    purchasedAt: Date.now()
+                });
+                rewardMessage = `ได้รับไอเทม ${itemData.name} เรียบร้อย!`;
+            } else {
+                // Fallback if it's just a string ID
+                rewardMessage = `ได้รับไอเทมเรียบร้อย!`;
+            }
+        }
+
+        // Mark as claimed
+        notification.isClaimed = true;
+        notification.read = true; // Also mark as read
+        user.markModified('notifications');
+        user.markModified('inventory');
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: rewardMessage,
+            user: {
+                balance: user.balance,
+                inventory: user.inventory,
+                notifications: user.notifications
+            }
+        });
+    } catch (error) {
+        console.error('Claim notification reward error:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+export const deleteNotification = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const user = await User.findById(req.userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        user.notifications = user.notifications.filter(n => n.id !== id);
+        user.markModified('notifications');
+        await user.save();
+
+        res.json({
+            success: true,
+            user: {
+                notifications: user.notifications
+            }
+        });
+    } catch (error) {
+        console.error('Delete notification error:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};

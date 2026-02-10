@@ -203,9 +203,14 @@ export interface Notification {
   userId: string;
   title?: string;
   message: string;
-  type: 'SUCCESS' | 'ERROR' | 'INFO';
+  type: 'SUCCESS' | 'ERROR' | 'INFO' | 'REWARD';
   read: boolean;
   timestamp: number;
+  hasReward?: boolean;
+  isClaimed?: boolean;
+  rewardId?: string; // ID of the reward item or transaction reference
+  rewardType?: 'ITEM' | 'CURRENCY' | 'BUFF';
+  rewardValue?: number | string; // Amount or Item ID
 }
 
 export type TransactionType = 'DEPOSIT' | 'WITHDRAWAL' | 'MINING_CLAIM' | 'ASSET_PURCHASE' | 'REFUND' | 'ACCESSORY_PURCHASE' | 'ACCESSORY_SELL' | 'ACCESSORY_UPGRADE' | 'ACCESSORY_CRAFT' | 'EQUIPMENT_CLAIM' | 'RIG_RENEWAL' | 'REPAIR' | 'MATERIAL_SELL' | 'MATERIAL_BUY' | 'MATERIAL_CRAFT' | 'ENERGY_REFILL' | 'REFERRAL_BONUS' | 'DAILY_BONUS' | 'QUEST_REWARD' | 'LUCKY_DRAW' | 'SLOT_EXPANSION' | 'DUNGEON_ENTRY' | 'DUNGEON_REWARD' | 'RANK_REWARD' | 'GIFT_CLAIM' | 'MINING_REVENUE' | 'COMPENSATION' | 'MARKET_TAX' | 'MATERIAL_MINED';

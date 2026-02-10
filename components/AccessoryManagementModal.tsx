@@ -25,7 +25,7 @@ interface AccessoryManagementModalProps {
 export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> = ({
     isOpen, onClose, rig, slotIndex, equippedItem, inventory, userId, onEquip, onUnequip, onRefresh, materials = {}, addNotification
 }) => {
-    const { t, language, getLocalized } = useTranslation();
+    const { t, language, getLocalized, formatBonus } = useTranslation();
     const [view, setView] = useState<'MANAGE' | 'SELECT'>('MANAGE');
     const [isUpgrading, setIsUpgrading] = useState(false);
     const [useInsurance, setUseInsurance] = useState(false);
@@ -546,7 +546,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                                 <div className="text-[9px] text-stone-500 uppercase">{t('blacksmith.bonus')}</div>
                                                 <div className="text-cyan-400 font-bold font-mono text-base flex items-center justify-end gap-1">
                                                     <TrendingUp size={12} />
-                                                    +{bonusDiff.toFixed(2)}
+                                                    {formatBonus(bonusDiff, equippedItem.typeId)}
                                                 </div>
                                             </div>
                                         </div>
@@ -680,8 +680,8 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                             <div>
                                 <div className={`text-xs font-bold ${RARITY_SETTINGS[item.rarity].color} font-mono tracking-tighter`}>{getItemDisplayName(item)}</div>
                                 <div className="flex flex-col items-center mt-1">
-                                    <div className="text-[10px] text-cyan-400 font-mono">+{item.dailyBonus || 0} {t('lootbox.per_day')}</div>
-                                    <div className="text-[9px] text-yellow-500 font-bold uppercase tracking-widest mt-0.5">{t('blacksmith.bonus')}: +{item.dailyBonus || 0} {t('lootbox.per_day')}</div>
+                                    <div className="text-[10px] text-cyan-400 font-mono">{formatBonus(item.dailyBonus || 0, item.typeId)} {t('lootbox.per_day')}</div>
+                                    <div className="text-[9px] text-yellow-500 font-bold uppercase tracking-widest mt-0.5">{t('blacksmith.bonus')}: {formatBonus(item.dailyBonus || 0, item.typeId)} {t('lootbox.per_day')}</div>
                                 </div>
                             </div>
                         </div>

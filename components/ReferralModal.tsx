@@ -1,106 +1,119 @@
-
-import React, { useState } from 'react';
-import { X, Users, Copy, Check, Coins, Gift } from 'lucide-react';
-import { User } from '../services/types';
-import { CURRENCY } from '../constants';
+import React from 'react';
+import { X, Copy, Share2, Users, Gift, Crown, Key } from 'lucide-react';
 import { useTranslation } from './LanguageContext';
 
 interface ReferralModalProps {
     isOpen: boolean;
     onClose: () => void;
-    user: User;
+    referralCode: string;
+    referralCount: number;
 }
 
-export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, user }) => {
-    const { t } = useTranslation();
-    const [copied, setCopied] = useState(false);
+export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, referralCode, referralCount }) => {
+    const { t, language } = useTranslation();
 
     if (!isOpen) return null;
 
-    const handleCopy = () => {
-        if (user.referralCode) {
-            navigator.clipboard.writeText(user.referralCode);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(referralCode);
+        alert(language === 'th' ? 'คัดลอกรหัสแนะนำแล้ว!' : 'Referral code copied!');
     };
 
     return (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-            <div className="bg-stone-950 border border-stone-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-[#1a1a1a] border border-yellow-600/50 rounded-xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
                 {/* Header */}
-                <div className="bg-stone-900 p-5 border-b border-stone-800 flex justify-between items-center">
+                <div className="bg-gradient-to-r from-yellow-900/80 to-[#1a1a1a] p-4 flex justify-between items-center border-b border-yellow-600/30">
                     <div className="flex items-center gap-3">
-                        <div className="bg-blue-900/20 p-2 rounded text-blue-500">
-                            <Users size={24} />
+                        <div className="p-2 bg-yellow-500/20 rounded-lg border border-yellow-500/50">
+                            <Users className="text-yellow-400" size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-display font-bold text-white">{t('referral.title')}</h2>
-                            <p className="text-xs text-stone-500 uppercase tracking-wider">{t('referral.subtitle')}</p>
+                            <h2 className="text-xl font-bold text-white tracking-wide">{t('referral.title') || (language === 'th' ? 'ระบบแนะนำเพื่อน' : 'Referral System')}</h2>
+                            <p className="text-xs text-yellow-500 font-mono tracking-wider">{t('referral.subnet') || 'BUILD YOUR EMPIRE'}</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
-                        <X size={24} />
+                    <button onClick={onClose} className="text-stone-400 hover:text-white transition-colors bg-white/5 p-1.5 rounded-full hover:bg-white/10">
+                        <X size={20} />
                     </button>
                 </div>
 
                 <div className="p-6 space-y-6">
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center justify-center">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest mb-1">{t('referral.total_earnings')}</span>
-                            <div className="text-2xl font-mono font-bold text-emerald-400">
-                                {user.referralEarnings?.toLocaleString() || 0} <span className="text-xs text-stone-500">{CURRENCY}</span>
-                            </div>
+                    {/* Your Code Section */}
+                    <div className="bg-gradient-to-br from-stone-900 to-stone-950 p-6 rounded-xl border border-stone-800 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <Share2 size={80} className="text-white" />
                         </div>
-                        <div className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center justify-center">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest mb-1">{t('referral.referral_code')}</span>
-                            <div className="text-xl font-mono font-bold text-white tracking-widest">
-                                {user.referralCode || '-'}
+
+                        <div className="text-center space-y-4 relative z-10">
+                            <p className="text-stone-400 text-sm uppercase tracking-widest font-bold">{t('referral.your_code') || (language === 'th' ? 'รหัสแนะนำของคุณ' : 'YOUR REFERRAL CODE')}</p>
+
+                            <div className="flex items-center justify-center gap-3 bg-black/40 p-4 rounded-lg border border-yellow-900/30 backdrop-blur-sm">
+                                <span className="text-3xl font-mono font-bold text-yellow-400 tracking-wider drop-shadow-lg">{referralCode}</span>
+                                <button
+                                    onClick={copyToClipboard}
+                                    className="p-2 hover:bg-yellow-500/20 rounded-full transition-all text-yellow-500 hover:text-yellow-300 active:scale-95"
+                                    title="Copy Code"
+                                >
+                                    <Copy size={20} />
+                                </button>
+                            </div>
+
+                            <div className="flex items-center justify-center gap-2 text-sm text-stone-500">
+                                <Users size={14} />
+                                <span>{language === 'th' ? `เพื่อนที่แนะนำ: ${referralCount} คน` : `Friends Referred: ${referralCount}`}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Copy Section */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-bold text-stone-400">{t('referral.your_link')}</label>
-                        <div className="flex gap-2">
-                            <div className="flex-1 bg-stone-950 border border-stone-700 rounded-lg px-4 py-3 text-white font-mono text-sm truncate flex items-center">
-                                {user.referralCode}
+                    {/* Rewards Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Referrer Reward */}
+                        <div className="bg-stone-900/50 p-4 rounded-lg border border-stone-800 hover:border-yellow-900/50 transition-colors">
+                            <div className="flex items-center gap-2 mb-2 text-yellow-500 font-bold text-sm uppercase">
+                                <Crown size={16} />
+                                {language === 'th' ? 'คุณจะได้รับ' : 'You Get'}
                             </div>
-                            <button
-                                onClick={handleCopy}
-                                className={`px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${copied ? 'bg-emerald-600 text-white' : 'bg-blue-600 hover:bg-blue-500 text-white'}`}
-                            >
-                                {copied ? <Check size={18} /> : <Copy size={18} />}
-                                {copied ? t('referral.copied') : t('referral.copy')}
-                            </button>
+                            <div className="flex items-center gap-3 bg-stone-950 p-3 rounded border border-stone-800">
+                                <div className="w-10 h-10 bg-yellow-900/20 rounded flex items-center justify-center border border-yellow-500/30">
+                                    <div className="p-1.5 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-sm shadow-[0_0_10px_rgba(234,179,8,0.5)]">
+                                        <Key className="text-stone-900" size={20} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-white font-bold text-sm">1 Mine Key</div>
+                                    <div className="text-xs text-stone-500">{language === 'th' ? 'เมื่อเพื่อนเติมเงินครั้งแรก' : 'When friend deposits'}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Referee Reward */}
+                        <div className="bg-stone-900/50 p-4 rounded-lg border border-stone-800 hover:border-emerald-900/50 transition-colors">
+                            <div className="flex items-center gap-2 mb-2 text-emerald-500 font-bold text-sm uppercase">
+                                <Gift size={16} />
+                                {language === 'th' ? 'เพื่อนได้รับ' : 'Friend Gets'}
+                            </div>
+                            <div className="flex items-center gap-3 bg-stone-950 p-3 rounded border border-stone-800">
+                                <div className="w-10 h-10 bg-emerald-900/20 rounded flex items-center justify-center border border-emerald-500/30">
+                                    <img src="/assets/items/hat.png" alt="Hat" className="w-6 h-6 object-contain" />
+                                </div>
+                                <div>
+                                    <div className="text-white font-bold text-sm">
+                                        {language === 'th' ? 'หมวกนิรภัยมาตรฐาน' : 'Standard Helmet'}
+                                    </div>
+                                    <div className="text-xs text-stone-500">
+                                        {language === 'th' ? 'กดยืนยันรับจากกล่องจดหมาย' : 'Claim in your mailbox'}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Rules */}
-                    <div className="bg-stone-900/50 p-4 rounded-xl border border-stone-800 space-y-3">
-                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                            <Gift size={16} className="text-yellow-500" /> {t('referral.benefits')}
-                        </h4>
-                        <ul className="text-xs text-stone-400 space-y-2">
-                            <li className="flex items-start gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-stone-600 mt-1.5"></div>
-                                <span>{t('referral.benefit_1')}</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-stone-600 mt-1.5"></div>
-                                <span>{t('referral.benefit_2')}</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-stone-600 mt-1.5"></div>
-                                <span>{t('referral.benefit_3')}</span>
-                            </li>
-                        </ul>
+                    <div className="bg-blue-900/10 border border-blue-900/30 p-3 rounded text-xs text-blue-300 text-center">
+                        {language === 'th'
+                            ? 'Tip: ยิ่งชวนเพื่อนมาก ยิ่งมีโอกาสได้กุญแจเปิดหาแร่มหาศาล!'
+                            : 'Tip: Invite more friends to get more keys for rare minerals!'}
                     </div>
-
                 </div>
             </div>
         </div>

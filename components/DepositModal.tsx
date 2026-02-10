@@ -226,183 +226,149 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
                                 </button>
                             </div>
 
-                            {method === 'USDT' ? (
-                                <div className="space-y-4 text-center">
-                                    <div className="bg-emerald-900/10 border border-emerald-500/30 p-4 rounded-xl">
-                                        <p className="text-xs text-stone-400 mb-2">{t('deposit.wallet_label')}</p>
-                                        <div className="bg-black/40 p-3 rounded border border-stone-800 break-all font-mono text-[10px] text-emerald-400 select-all">
-                                            0xc523c42cb3dce0df59b998d8ae899fa4132b6de7
+                            <div className="space-y-6">
+                                {method === 'USDT' && (
+                                    <div className="space-y-4 text-center">
+                                        <div className="bg-emerald-900/10 border border-emerald-500/30 p-4 rounded-xl">
+                                            <p className="text-xs text-stone-400 mb-2">{t('deposit.wallet_label')}</p>
+                                            <div className="bg-black/40 p-3 rounded border border-stone-800 break-all font-mono text-[10px] text-emerald-400 select-all">
+                                                0xc523c42cb3dce0df59b998d8ae899fa4132b6de7
+                                            </div>
+                                            <p className="text-[9px] text-stone-500 mt-2 italic">* {t('deposit.wallet_hint')}</p>
                                         </div>
-                                        <p className="text-[9px] text-stone-500 mt-2 italic">* {t('deposit.wallet_hint')}</p>
-                                    </div>
 
-                                    <div className="space-y-2 text-left">
-                                        <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest pl-1">{t('deposit.wallet_link_label')}</label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                value={walletAddress}
-                                                onChange={(e) => setWalletAddress(e.target.value)}
-                                                placeholder="0x..."
-                                                className="flex-1 bg-stone-950 border border-stone-800 rounded-lg py-2 px-3 text-xs font-mono text-emerald-400 focus:border-emerald-500 outline-none"
-                                            />
-                                            <button
-                                                onClick={handleUpdateWallet}
-                                                disabled={isSavingWallet || !walletAddress}
-                                                className="px-3 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-300 text-[10px] font-bold border border-stone-700 disabled:opacity-50"
-                                            >
-                                                {isSavingWallet ? '...' : t('deposit.wallet_link_btn')}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-blue-900/20 border border-blue-900/50 p-4 rounded-xl flex items-start gap-3 text-left">
-                                        <AlertCircle className="text-blue-400 shrink-0" size={16} />
-                                        <p className="text-[10px] text-blue-300 leading-relaxed">
-                                            {t('deposit.wallet_warning')}
-                                        </p>
-                                    </div>
-
-                                    <div className="space-y-2 text-left">
-                                        <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest pl-1">{t('deposit.amount_label')}</label>
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                value={amount}
-                                                onChange={(e) => setAmount(e.target.value)}
-                                                placeholder="0.00"
-                                                className="w-full bg-stone-950 border border-stone-800 rounded-lg py-3 px-4 text-center text-xl font-mono font-bold text-emerald-400 focus:border-emerald-500 outline-none"
-                                            />
-                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-stone-600 font-bold">{CURRENCY}</span>
+                                        <div className="space-y-2 text-left">
+                                            <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest pl-1">{t('deposit.wallet_link_label')}</label>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={walletAddress}
+                                                    onChange={(e) => setWalletAddress(e.target.value)}
+                                                    placeholder="0x..."
+                                                    className="flex-1 bg-stone-950 border border-stone-800 rounded-lg py-2 px-3 text-xs font-mono text-emerald-400 focus:border-emerald-500 outline-none"
+                                                />
+                                                <button
+                                                    onClick={handleUpdateWallet}
+                                                    disabled={isSavingWallet || !walletAddress}
+                                                    className="px-3 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-300 text-[10px] font-bold border border-stone-700 disabled:opacity-50"
+                                                >
+                                                    {isSavingWallet ? '...' : t('deposit.wallet_link_btn')}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
+                                )}
 
-                                    <button
-                                        onClick={() => handleConfirmPayment(true)}
-                                        disabled={isLoading || !amount || parseFloat(amount) <= 0}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-800 disabled:text-stone-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
-                                    >
-                                        {isLoading ? (
-                                            <div className="animate-spin h-4 w-4 border-2 border-white/50 border-t-white rounded-full"></div>
-                                        ) : (
-                                            <>
-                                                <CheckCircle size={18} /> {t('common.confirm')}
-                                            </>
-                                        )}
-                                    </button>
-
-                                    <button
-                                        onClick={() => setStep('INPUT')}
-                                        className="text-xs text-stone-500 hover:text-stone-300 underline block text-center mt-2"
-                                    >
-                                        {t('deposit.change_amount')}
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="space-y-6">
-                                    {!systemQr ? (
-                                        <div className="bg-red-900/20 border border-red-900/50 p-6 rounded-xl text-center">
-                                            <AlertCircle className="text-red-500 mx-auto mb-2" size={32} />
-                                            <p className="text-red-400 font-bold">{t('deposit.maintenance_title')}</p>
-                                            <p className="text-stone-500 text-sm mt-1 text-center">{t('deposit.maintenance_desc')}</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {/* QR Section */}
-                                            {!slipFile && (
-                                                <div className="space-y-4 text-center">
-                                                    <div className="bg-white p-4 rounded-xl mx-auto w-48 shadow-[0_0_30px_rgba(16,185,129,0.2)] relative group">
-                                                        <img src={systemQr} alt="Deposit QR" className="w-full h-full object-contain" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-stone-400 text-xs mb-1">{t('deposit.scan_pay')}</p>
-                                                        <div className="text-2xl font-mono font-bold text-white">
-                                                            {depositCurrency === 'THB' ? (
-                                                                <>
-                                                                    {parseFloat(amount).toLocaleString()} ฿
-                                                                    <span className="text-xs text-stone-500 ml-2">({(parseFloat(amount) / EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY})</span>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    {parseFloat(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}
-                                                                </>
-                                                            )}
-                                                        </div>
+                                {method === 'BANK' && !systemQr ? (
+                                    <div className="bg-red-900/20 border border-red-900/50 p-6 rounded-xl text-center">
+                                        <AlertCircle className="text-red-500 mx-auto mb-2" size={32} />
+                                        <p className="text-red-400 font-bold">{t('deposit.maintenance_title')}</p>
+                                        <p className="text-stone-500 text-sm mt-1 text-center">{t('deposit.maintenance_desc')}</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* QR Section (Only for Bank) */}
+                                        {method === 'BANK' && !slipFile && (
+                                            <div className="space-y-4 text-center">
+                                                <div className="bg-white p-4 rounded-xl mx-auto w-48 shadow-[0_0_30px_rgba(16,185,129,0.2)] relative group">
+                                                    <img src={systemQr!} alt="Deposit QR" className="w-full h-full object-contain" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-stone-400 text-xs mb-1">{t('deposit.scan_pay')}</p>
+                                                    <div className="text-2xl font-mono font-bold text-white">
+                                                        {depositCurrency === 'THB' ? (
+                                                            <>
+                                                                {parseFloat(amount).toLocaleString()} ฿
+                                                                <span className="text-xs text-stone-500 ml-2">({(parseFloat(amount) / EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY})</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {parseFloat(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            )}
-
-                                            {/* Divider */}
-                                            {!slipFile && <div className="h-px bg-stone-800 w-full"></div>}
-
-                                            {/* Upload Section */}
-                                            <div
-                                                className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-all ${slipFile
-                                                    ? 'border-emerald-500/50 bg-emerald-900/10 text-center'
-                                                    : 'border-stone-700 hover:border-stone-500 hover:bg-stone-800/50 cursor-pointer text-center'
-                                                    }`}
-                                                onClick={() => fileInputRef.current?.click()}
-                                            >
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    className="hidden"
-                                                    ref={fileInputRef}
-                                                    onChange={handleFileChange}
-                                                />
-
-                                                {slipFile ? (
-                                                    <div className="relative w-full text-center">
-                                                        <div className="w-32 h-40 mx-auto bg-stone-950 rounded-lg overflow-hidden border border-stone-600 mb-2 relative">
-                                                            {slipPreview && <img src={slipPreview} alt="Slip" className="w-full h-full object-cover" />}
-                                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                                                <Upload className="text-white" />
-                                                            </div>
-                                                        </div>
-                                                        <button onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSlipFile(null);
-                                                            setSlipPreview(null);
-                                                        }} className="text-xs text-stone-400 hover:text-white underline">{t('common.cancel')}</button>
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <div className="w-12 h-12 bg-stone-800 rounded-full flex items-center justify-center mb-3 text-stone-400 mx-auto">
-                                                            <Upload size={24} />
-                                                        </div>
-                                                        <span className="text-stone-300 font-bold text-sm block">{t('deposit.upload_slip')}</span>
-                                                        <span className="text-stone-500 text-xs mt-1 block">{t('deposit.drag_drop')}</span>
-                                                    </>
-                                                )}
+                                                <div className="h-px bg-stone-800 w-full"></div>
                                             </div>
+                                        )}
 
-                                            <button
-                                                onClick={handleConfirmPayment}
-                                                disabled={!slipFile || isLoading}
-                                                className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-800 disabled:text-stone-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
-                                            >
-                                                {isLoading ? (
-                                                    <>
-                                                        <div className="animate-spin h-4 w-4 border-2 border-white/50 border-t-white rounded-full"></div>
-                                                        <span>{t('common.loading')}</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <FileText size={18} /> {t('deposit.submit')}
-                                                    </>
-                                                )}
-                                            </button>
+                                        {/* Amount input for USDT (since it doesn't have the QR price display) */}
+                                        {method === 'USDT' && !slipFile && (
+                                            <div className="space-y-4 text-center">
+                                                <div className="text-2xl font-mono font-bold text-white">
+                                                    {parseFloat(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY}
+                                                </div>
+                                                <div className="h-px bg-stone-800 w-full"></div>
+                                            </div>
+                                        )}
 
-                                            <button
-                                                onClick={() => setStep('INPUT')}
-                                                className="text-xs text-stone-500 hover:text-stone-300 underline block text-center mt-2"
-                                            >
-                                                {t('deposit.change_amount')}
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            )}
+                                        {/* Upload Section */}
+                                        <div
+                                            className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-all ${slipFile
+                                                ? 'border-emerald-500/50 bg-emerald-900/10 text-center'
+                                                : 'border-stone-700 hover:border-stone-500 hover:bg-stone-800/50 cursor-pointer text-center'
+                                                }`}
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                ref={fileInputRef}
+                                                onChange={handleFileChange}
+                                            />
+
+                                            {slipFile ? (
+                                                <div className="relative w-full text-center">
+                                                    <div className="w-32 h-40 mx-auto bg-stone-950 rounded-lg overflow-hidden border border-stone-600 mb-2 relative">
+                                                        {slipPreview && <img src={slipPreview} alt="Slip" className="w-full h-full object-cover" />}
+                                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                                            <Upload className="text-white" />
+                                                        </div>
+                                                    </div>
+                                                    <button onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSlipFile(null);
+                                                        setSlipPreview(null);
+                                                    }} className="text-xs text-stone-400 hover:text-white underline">{t('common.cancel')}</button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="w-12 h-12 bg-stone-800 rounded-full flex items-center justify-center mb-3 text-stone-400 mx-auto">
+                                                        <Upload size={24} />
+                                                    </div>
+                                                    <span className="text-stone-300 font-bold text-sm block">{t('deposit.upload_slip')}</span>
+                                                    <span className="text-stone-500 text-xs mt-1 block">{t('deposit.drag_drop')}</span>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        <button
+                                            onClick={() => handleConfirmPayment(false)}
+                                            disabled={!slipFile || isLoading}
+                                            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-800 disabled:text-stone-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+                                        >
+                                            {isLoading ? (
+                                                <>
+                                                    <div className="animate-spin h-4 w-4 border-2 border-white/50 border-t-white rounded-full"></div>
+                                                    <span>{t('common.loading')}</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FileText size={18} /> {t('deposit.submit')}
+                                                </>
+                                            )}
+                                        </button>
+
+                                        <button
+                                            onClick={() => setStep('INPUT')}
+                                            className="text-xs text-stone-500 hover:text-stone-300 underline block text-center mt-2"
+                                        >
+                                            {t('deposit.change_amount')}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     )}
 

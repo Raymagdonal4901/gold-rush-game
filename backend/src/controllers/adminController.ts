@@ -119,6 +119,44 @@ export const adminGiveCompensation = async (req: AuthRequest, res: Response) => 
     }
 };
 
+// Give Compensation to ALL Users
+export const adminGiveCompensationAll = async (req: AuthRequest, res: Response) => {
+    try {
+        console.log('[ADMIN DEBUG] adminGiveCompensationAll called. Payload:', JSON.stringify(req.body));
+        const { amount, reason } = req.body;
+
+        const amountNum = Number(amount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+            return res.status(400).json({ message: 'Invalid amount' });
+        }
+
+        // 1. Update all users' balance
+        const result = await User.updateMany({}, { $inc: { balance: amountNum } });
+
+        // 2. Create Transaction Records for everyone
+        // Note: For large user bases, this should be a background job.
+        // For current scale, we can fetch all IDs and batch insert transactions.
+        const users = await User.find({}, '_id');
+        const transactions = users.map(u => ({
+            userId: u._id,
+            type: 'COMPENSATION',
+            amount: amountNum,
+            status: 'COMPLETED',
+            description: reason || 'Server Maintenance Compensation (Bulk)'
+        }));
+
+        if (transactions.length > 0) {
+            await Transaction.insertMany(transactions);
+        }
+
+        console.log(`[ADMIN DEBUG] Bulk compensation completed. Updated ${result.modifiedCount} users.`);
+        res.json({ message: `Compensation successful for ${result.modifiedCount} users`, count: result.modifiedCount });
+    } catch (error) {
+        console.error('[ADMIN ERROR] adminGiveCompensationAll failed:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
 // Add Item to User
 export const adminAddItem = async (req: AuthRequest, res: Response) => {
     try {
@@ -312,6 +350,42 @@ export const processDepositRequest = async (req: AuthRequest, res: Response) => 
             const user = await User.findById(deposit.userId);
             if (user) {
                 user.balance += deposit.amount;
+
+                // --- REFERRAL LOGIC: First Deposit Reward ---
+                if (!user.isFirstDepositPaid && user.referredBy) {
+                    const referrer = await User.findById(user.referredBy);
+                    if (referrer) {
+                        // Reward: 1 Gacha Key (Key to the Mine)
+                        const rewardItem = {
+                            id: uuidv4(),
+                            typeId: 'chest_key',
+                            name: { th: 'กุญแจเข้าเหมือง', en: 'Mine Key' },
+                            rarity: 'RARE',
+                            purchasedAt: Date.now(),
+                            tier: 1, // Standard Key
+                            dailyBonus: 0
+                        };
+
+                        referrer.inventory.push(rewardItem);
+                        referrer.referralCount = (referrer.referralCount || 0) + 1;
+                        await referrer.save();
+
+                        // Create Transaction Record for Referrer (Optional but good for tracking)
+                        await Transaction.create({
+                            userId: referrer._id,
+                            type: 'REFERRAL_BONUS',
+                            amount: 0, // Item reward, not cash
+                            status: 'COMPLETED',
+                            description: `Referral Reward for user ${user.username}`
+                        });
+
+                        console.log(`[REFERRAL] Awarded 1 Mine Key to ${referrer.username} for referring ${user.username}`);
+                    }
+
+                    // Mark as paid so we don't double reward
+                    user.isFirstDepositPaid = true;
+                }
+
                 await user.save();
             }
         }

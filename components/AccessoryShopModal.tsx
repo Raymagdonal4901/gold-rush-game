@@ -19,7 +19,7 @@ interface AccessoryShopModalProps {
 }
 
 export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, onClose, walletBalance, onBuy, onRefresh, addNotification, userId }) => {
-    const { t, getLocalized, formatCurrency, language } = useTranslation();
+    const { t, getLocalized, formatCurrency, language, formatBonus } = useTranslation();
     const [activeTab, setActiveTab] = useState<'SHOP' | 'WORKSHOP'>('SHOP');
     const [buyingId, setBuyingId] = useState<string | null>(null);
     const [confirmItem, setConfirmItem] = useState<{ id: string, price: number, quantity: number, name: string } | null>(null);
@@ -377,7 +377,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             </div>
                         ) : (
                             <div className="text-[9px] text-yellow-500 flex items-center gap-1 bg-yellow-950/20 px-2 py-0.5 rounded border border-yellow-900/30">
-                                <Star size={10} /> {t('item_shop.bonus')}: +{item.maxBonus} / {t('time.day')}
+                                <Star size={10} /> {t('item_shop.bonus')}: {formatBonus(item.maxBonus, item.id)} / {t('time.day')}
                             </div>
                         )}
                     </div>
@@ -525,7 +525,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                     {item.lifespanDays && (
                                         <div className="flex items-center gap-1 text-[10px] text-yellow-500 mt-0.5">
                                             <Star size={10} />
-                                            <span>{t('item_shop.bonus')}: +{item.maxBonus} / {t('time.day')}</span>
+                                            <span>{t('item_shop.bonus')}: {formatBonus(item.maxBonus, item.id)} / {t('time.day')}</span>
                                         </div>
                                     )}
                                 </div>
@@ -755,7 +755,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             <div className="bg-stone-950/50 rounded-xl p-4 space-y-3 border border-stone-800 text-sm w-full">
                                 <div className="flex justify-between items-center text-stone-400">
                                     <span>{t('item_shop.bonus_info')}</span>
-                                    <span className="text-yellow-400 font-bold">+{formatCurrency(claimedItem.dailyBonus || 0)}/{t('time.day')}</span>
+                                    <span className="text-yellow-400 font-bold">{formatBonus(claimedItem.dailyBonus || 0, claimedItem.typeId)}/{t('time.day')}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-stone-400">
                                     <span>{t('item_shop.status_label')}</span>

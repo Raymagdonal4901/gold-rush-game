@@ -80,7 +80,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         itemAmount: 1,
         compUser: '',
         compAmount: 0,
-        compReason: 'Server Maintenance'
+        compReason: 'Server Maintenance',
+        compScope: 'SINGLE' as 'SINGLE' | 'ALL'
     });
     const [compCurrency, setCompCurrency] = useState<'THB' | 'USDT'>('THB');
 
@@ -310,7 +311,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     };
 
     const handleGiveCompensation = async () => {
-        if (!economyForm.compUser || economyForm.compAmount <= 0) return;
+        if (economyForm.compScope === 'SINGLE' && !economyForm.compUser) return;
+        if (economyForm.compAmount <= 0) return;
 
         let finalAmount = economyForm.compAmount;
         let currencyLabel = 'บาท';
@@ -320,10 +322,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             currencyLabel = `USDT (~${finalAmount.toLocaleString()} บาท)`;
         }
 
-        if (!confirm(`ยืนยันการชดเชยเงิน ${economyForm.compAmount.toLocaleString()} ${currencyLabel} ให้กับ ${economyForm.compUser}?`)) return;
+        const targetLabel = economyForm.compScope === 'ALL' ? 'ผู้เล่นทุกคนในเซิร์ฟเวอร์ (All Users)' : economyForm.compUser;
+        if (!confirm(`ยืนยันการชดเชยเงิน ${economyForm.compAmount.toLocaleString()} ${currencyLabel} ให้กับ ${targetLabel}?`)) return;
 
         try {
-            await api.admin.giveCompensation(economyForm.compUser, finalAmount, economyForm.compReason);
+            if (economyForm.compScope === 'ALL') {
+                await api.admin.giveCompensationAll(finalAmount, economyForm.compReason);
+            } else {
+                await api.admin.giveCompensation(economyForm.compUser, finalAmount, economyForm.compReason);
+            }
             alert('ส่งเงินชดเชยเรียบร้อยแล้ว! (Compensation sent successfully)');
             setEconomyForm(prev => ({ ...prev, compUser: '', compAmount: 0 }));
             // Refresh data to show updated balance if user is in list, though this is global refresh
@@ -530,17 +537,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
                         <div className="p-6 overflow-y-auto space-y-6">
                             {/* Stats Grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div className="bg-stone-950 p-3 rounded border border-stone-800">
                                     <div className="text-xs text-stone-500 uppercase">ยอดคงเหลือ (Balance)</div>
-                                    <div className="text-lg font-bold text-emerald-400">{selectedUser.balance.toLocaleString()}</div>
+                                    <div className="text-lg font-bold text-white">{selectedUser.balance.toLocaleString()}</div>
                                 </div>
-                                <div className="bg-stone-900 p-3 rounded border border-stone-800">
+                                <div className="bg-stone-900/50 p-3 rounded border border-stone-800">
                                     <div className="text-xs text-stone-500 uppercase">จำนวนเหมือง (Rigs)</div>
                                     <div className="text-lg font-bold text-yellow-500">{getRigsForUser(selectedUser.id).length}</div>
                                 </div>
-                                {/* Energy Removed */}
-                                <div className="text-sm font-bold text-white">{selectedUser.role}</div>
+                                <div className="bg-emerald-900/10 p-3 rounded border border-emerald-900/30">
+                                    <div className="text-xs text-emerald-500 font-bold uppercase">รายได้วันละ (Daily)</div>
+                                    <div className="text-lg font-bold text-emerald-400">+{getDailyProfitForUser(selectedUser.id).toLocaleString()}</div>
+                                </div>
+                                <div className="bg-blue-900/10 p-3 rounded border border-blue-900/30">
+                                    <div className="text-xs text-blue-400 font-bold uppercase">ระดับสิทธิ์ (Role)</div>
+                                    <div className="text-sm font-bold text-blue-200 uppercase">{selectedUser.role}</div>
+                                </div>
+                            </div>
+
+                            {/* Mining Machines List */}
+                            <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
+                                <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-yellow-500 uppercase tracking-wider flex items-center gap-2">
+                                    <Hammer size={14} /> รายการเครื่องขุด (Mining Machines)
+                                </div>
+                                <div className="max-h-60 overflow-y-auto">
+                                    {getRigsForUser(selectedUser.id).length > 0 ? (
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
+                                                <tr>
+                                                    <th className="p-3 font-medium">ชื่อเครื่องขุด (Name)</th>
+                                                    <th className="p-3 font-medium text-right">รายได้วันละ (Daily)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-stone-800">
+                                                {getRigsForUser(selectedUser.id).map(r => (
+                                                    <tr key={r.id} className="hover:bg-stone-900 transition-colors">
+                                                        <td className="p-3">
+                                                            <div className="font-bold text-stone-200">{getLocalized(r.name)}</div>
+                                                            <div className="text-[10px] text-stone-500 font-mono">ID: {r.id}</div>
+                                                        </td>
+                                                        <td className="p-3 text-right">
+                                                            <div className="font-mono font-bold text-emerald-400">+{(r.dailyProfit + (r.bonusProfit || 0)).toLocaleString()}</div>
+                                                            <div className="text-[10px] text-stone-600">THB/Day</div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <div className="p-8 text-center text-stone-600 text-sm italic">
+                                            ไม่พบเครื่องขุดในระบบ (No rigs owned)
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div className="bg-stone-950 p-3 rounded border border-stone-800">
                                 <div className="text-xs text-stone-500 uppercase">ยอดฝากรวม</div>
@@ -756,14 +806,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             {/* Image Preview Overlay */}
             {previewImage && (
                 <div
-                    className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out"
+                    className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out"
                     onClick={() => setPreviewImage(null)}
                 >
                     <div className="relative max-w-full max-h-full animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-                        <img src={previewImage} alt="Preview" className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl border border-stone-700" />
+                        <img src={previewImage} alt="Preview" className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl border border-stone-700 object-contain" />
                         <button
                             onClick={() => setPreviewImage(null)}
-                            className="absolute -top-10 right-0 text-white hover:text-stone-300 flex items-center gap-2 font-bold"
+                            className="absolute -top-12 right-0 text-white hover:text-stone-300 flex items-center gap-2 font-bold bg-black/20 p-2 rounded-full transition-colors"
                         >
                             <X size={32} />
                         </button>
@@ -823,10 +873,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                         </div>
                                         {/* Slip Preview */}
                                         <div
-                                            className={`w-12 h-16 bg-stone-950 border border-stone-700 rounded overflow-hidden shadow-lg ${d.slipImage === 'USDT_DIRECT_TRANSFER' ? 'cursor-default' : 'cursor-pointer hover:scale-125 transition-transform origin-center'}`}
-                                            onClick={() => d.slipImage !== 'USDT_DIRECT_TRANSFER' && setPreviewImage(d.slipImage)}
+                                            className={`w-12 h-16 bg-stone-950 border border-stone-700 rounded overflow-hidden shadow-lg ${!d.slipImage || d.slipImage === 'USDT_DIRECT_TRANSFER' ? 'cursor-default' : 'cursor-pointer hover:scale-125 transition-transform origin-center'}`}
+                                            onClick={() => d.slipImage && d.slipImage !== 'USDT_DIRECT_TRANSFER' && setPreviewImage(d.slipImage)}
                                         >
-                                            {d.slipImage === 'USDT_DIRECT_TRANSFER' ? (
+                                            {d.slipImage === 'USDT_DIRECT_TRANSFER' || !d.slipImage ? (
                                                 <div className="w-full h-full flex flex-col items-center justify-center bg-blue-900/10 text-blue-400 gap-1">
                                                     <Wallet size={16} />
                                                     <span className="text-[8px] font-bold">USDT</span>
@@ -1261,13 +1311,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 <span className="text-xs text-emerald-500 font-mono">{t('admin.server_issues_refunds')}</span>
                             </div>
                             <div className="space-y-3">
-                                <input
-                                    type="text"
-                                    placeholder="User ID / Username"
-                                    className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
-                                    value={economyForm.compUser}
-                                    onChange={e => setEconomyForm({ ...economyForm, compUser: e.target.value })}
-                                />
+                                <div className="flex bg-stone-950 p-1 rounded border border-stone-800">
+                                    <button
+                                        className={`flex-1 py-1 text-xs font-bold rounded transition-all ${economyForm.compScope === 'SINGLE' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:text-stone-300'}`}
+                                        onClick={() => setEconomyForm({ ...economyForm, compScope: 'SINGLE' })}
+                                    >
+                                        ไอดีเดียว (Single)
+                                    </button>
+                                    <button
+                                        className={`flex-1 py-1 text-xs font-bold rounded transition-all ${economyForm.compScope === 'ALL' ? 'bg-red-900/40 text-red-400 border border-red-900/50' : 'text-stone-500 hover:text-stone-300'}`}
+                                        onClick={() => setEconomyForm({ ...economyForm, compScope: 'ALL' })}
+                                    >
+                                        ทั้งหมด (All Users)
+                                    </button>
+                                </div>
+
+                                {economyForm.compScope === 'SINGLE' && (
+                                    <input
+                                        type="text"
+                                        placeholder="User ID / Username"
+                                        className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                        value={economyForm.compUser}
+                                        onChange={e => setEconomyForm({ ...economyForm, compUser: e.target.value })}
+                                    />
+                                )}
                                 <div className="flex flex-col sm:flex-row gap-2">
                                     <div className="sm:w-1/3 bg-emerald-900/20 border border-emerald-900/50 rounded p-3 text-emerald-400 flex items-center justify-center font-bold text-xs">
                                         {t('admin.add_funds')}
@@ -1398,6 +1465,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
             {/* Chat System for Admin */}
             <ChatSystem currentUser={currentUser} />
+
+
         </div >
     );
 };

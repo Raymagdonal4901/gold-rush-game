@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Hammer, LogOut, User as UserIcon, Coins, TrendingUp, Bell, CheckCircle2, AlertCircle, History, PlusCircle, Wallet, ArrowUpRight, Gift, Clock, ShoppingBag, Briefcase, Zap, Settings, Timer, Bug, Key, Menu, X, Home, Package, FlaskConical, TestTube2, Gem, Trophy, Users, BookOpen, Grid, BarChart2, Backpack, CalendarCheck, Target, Crown, Lock, Skull, Languages } from 'lucide-react';
+import { Plus, Hammer, LogOut, User as UserIcon, Coins, TrendingUp, Bell, CheckCircle2, AlertCircle, History, PlusCircle, Wallet, ArrowUpRight, Gift, Clock, ShoppingBag, Briefcase, Zap, Settings, Timer, Bug, Key, Menu, X, Home, Package, FlaskConical, TestTube2, Gem, Trophy, Users, BookOpen, Grid, BarChart2, Backpack, CalendarCheck, Target, Crown, Lock, Skull, Languages, Mail } from 'lucide-react';
 import { RigCard } from './RigCard';
 import { InvestmentModal } from './InvestmentModal';
 import { WithdrawModal } from './WithdrawModal';
@@ -27,6 +27,8 @@ import { AIHelpBot } from './AIHelpBot';
 import { GloveRevealModal } from './GloveRevealModal';
 import { GoldRain } from './GoldRain';
 import { ChatSystem } from './ChatSystem';
+import { MailModal } from './MailModal';
+import { ReferralAnnouncement } from './ReferralAnnouncement';
 import { OilRig, User, Rarity, Notification, AccessoryItem, MarketState } from '../services/types';
 import { CURRENCY, RigPreset, MAX_RIGS_PER_USER, RARITY_SETTINGS, SHOP_ITEMS, MAX_ACCESSORIES, RIG_PRESETS, ENERGY_CONFIG, REPAIR_CONFIG, GLOVE_DETAILS, MATERIAL_CONFIG, DEMO_SPEED_MULTIPLIER, ROBOT_CONFIG, GIFT_CYCLE_DAYS, EXCHANGE_RATE_USD_THB } from '../constants';
 import { MockDB } from '../services/db';
@@ -140,6 +142,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     // TUTORIAL STATE
     const [tutorialStep, setTutorialStep] = useState<number>(0);
 
+    // Mail System
+    const [isMailOpen, setIsMailOpen] = useState(false);
+    const [showReferralAnnouncement, setShowReferralAnnouncement] = useState(false);
+
     // --- TUTORIAL LOGIC ---
     useEffect(() => {
         // Only start tutorial if user has no rigs and haven't finished it
@@ -168,6 +174,25 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             setTutorialStep(0);
             localStorage.setItem(`tutorial_finished_${user.id}`, 'true');
         }
+    };
+
+    // --- REFERRAL ANNOUNCEMENT LOGIC ---
+    useEffect(() => {
+        if (user && user.id) {
+            const hasSeenAnnouncement = localStorage.getItem(`referral_announcement_v1_shown_${user.id}`);
+            if (!hasSeenAnnouncement) {
+                // Delay slightly for dramatic effect
+                const timer = setTimeout(() => {
+                    setShowReferralAnnouncement(true);
+                }, 1500);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [user.id]);
+
+    const handleCloseAnnouncement = () => {
+        setShowReferralAnnouncement(false);
+        localStorage.setItem(`referral_announcement_v1_shown_${user.id}`, 'true');
     };
 
     // ... useEffects and helper functions ...
@@ -934,6 +959,41 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         } catch (e: any) { alert(e.message); }
     };
 
+    const handleClaimReward = async (notificationId: string) => {
+        try {
+            const res = await api.claimNotificationReward(notificationId);
+            if (res.success) {
+                // Update user state with new balance/inventory/notifications
+                setUser(prev => ({
+                    ...prev,
+                    balance: res.user.balance,
+                    inventory: res.user.inventory,
+                    notifications: res.user.notifications
+                }));
+                addNotification({ id: Date.now().toString(), userId: user.id, message: res.message || (language === 'th' ? 'รับรางวัลสำเร็จ!' : 'Reward claimed!'), type: 'SUCCESS', read: false, timestamp: Date.now() });
+            }
+        } catch (e: any) {
+            addNotification({ id: Date.now().toString(), userId: user.id, message: e.response?.data?.message || e.message, type: 'ERROR', read: false, timestamp: Date.now() });
+        }
+    };
+
+    const handleDeleteNotification = async (notificationId: string) => {
+        try {
+            const res = await api.deleteNotification(notificationId);
+            setUser(prev => ({
+                ...prev,
+                notifications: res.user.notifications
+            }));
+        } catch (e: any) {
+            console.error("Failed to delete notification", e);
+            // Optimistically remove
+            setUser(prev => ({
+                ...prev,
+                notifications: prev.notifications.filter(n => n.id !== notificationId)
+            }));
+        }
+    };
+
     const rigDaily = rigs.reduce((acc, rig) => {
         // Exclude rigs currently in an expedition
         if (user.activeExpedition && user.activeExpedition.rigId === rig.id && !user.activeExpedition.isCompleted) {
@@ -1021,6 +1081,14 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
                         <div className="hidden lg:flex gap-2">
                             <button
+                                onClick={() => setIsReferralOpen(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-gradient-to-r from-yellow-900/80 to-stone-900 border border-yellow-700/50 text-yellow-500 hover:text-yellow-400 hover:border-yellow-500 transition-all text-[10px] font-bold uppercase shadow-lg shadow-yellow-900/20 active:scale-95 group"
+                            >
+                                <Users size={14} className="group-hover:scale-110 transition-transform" />
+                                <span className="hidden xl:inline">{t('referral.button') || (language === 'th' ? 'แนะนำเพื่อน' : 'Referral')}</span>
+                                {user.referralCount > 0 && <span className="ml-1 bg-red-500 text-white text-[9px] px-1 rounded-full">{user.referralCount}</span>}
+                            </button>
+                            <button
                                 onClick={() => setLanguage(language === 'th' ? 'en' : 'th')}
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-stone-900 border border-stone-800 text-stone-400 hover:text-yellow-500 hover:border-yellow-500 transition-all text-[10px] font-bold uppercase"
                             >
@@ -1030,6 +1098,18 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             <button onClick={() => setIsHistoryOpen(true)} className="p-2 text-stone-500 hover:text-yellow-500 transition-colors bg-stone-900 border border-stone-800 rounded relative">
                                 <History size={20} />
                                 {hasPendingTx && <span className="absolute -top-1 -right-1 flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>}
+                            </button>
+                            <button
+                                onClick={() => setIsMailOpen(true)}
+                                className="p-2 text-stone-500 hover:text-yellow-500 transition-colors bg-stone-900 border border-stone-800 rounded relative"
+                            >
+                                <Mail size={20} className={user.notifications?.some(n => !n.read) ? "text-yellow-500" : ""} />
+                                {user.notifications?.some(n => !n.read) && (
+                                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                    </span>
+                                )}
                             </button>
                             <button onClick={() => setIsSettingsOpen(true)} className="text-stone-500 hover:text-white transition-colors p-2"><Settings size={20} /></button>
                             <button onClick={onLogout} className="text-stone-500 hover:text-red-400 transition-colors p-2"><LogOut size={20} /></button>
@@ -1605,7 +1685,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} userId={user.id} addNotification={addNotification} />
             <GiftSystemModal isOpen={isGiftSystemOpen} onClose={() => setIsGiftSystemOpen(false)} addNotification={addNotification} />
             <LeaderboardModal isOpen={isLeaderboardOpen} onClose={() => setIsLeaderboardOpen(false)} addNotification={addNotification} />
-            <ReferralModal isOpen={isReferralOpen} onClose={() => setIsReferralOpen(false)} user={user} addNotification={addNotification} />
+            <ReferralModal isOpen={isReferralOpen} onClose={() => setIsReferralOpen(false)} referralCode={user.username} referralCount={user.referralCount || 0} />
             <DevToolsModal isOpen={isDevToolsOpen} onClose={() => setIsDevToolsOpen(false)} user={user} onRefresh={refreshData} addNotification={addNotification} />
             <MarketModal isOpen={isMarketOpen} onClose={() => { setIsMarketOpen(false); setMarketTier(undefined); }} userId={user.id} onSuccess={refreshData} initialTier={marketTier} addNotification={addNotification} />
             <InventoryModal isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} inventory={inventory} userId={user.id} onRefresh={refreshData} addNotification={addNotification} marketState={marketState} materials={user.materials} />
@@ -1750,6 +1830,20 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
             {/* Chat System */}
             <ChatSystem currentUser={user} />
+
+            {/* Mail Modal */}
+            <MailModal
+                isOpen={isMailOpen}
+                onClose={() => setIsMailOpen(false)}
+                user={user}
+                onClaimReward={handleClaimReward}
+                onDeleteNotification={handleDeleteNotification}
+            />
+
+            {/* Referral Announcement */}
+            {showReferralAnnouncement && (
+                <ReferralAnnouncement onClose={handleCloseAnnouncement} />
+            )}
 
             {/* Global Modals */}
 

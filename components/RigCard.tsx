@@ -56,7 +56,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     isDemo = false,
     addNotification
 }) => {
-    const { t, language, getLocalized, formatCurrency } = useTranslation();
+    const { t, language, getLocalized, formatCurrency, formatBonus } = useTranslation();
     const handleDestroyClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isExploring) return;
@@ -726,7 +726,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                         <div className="font-bold text-yellow-500 mb-1">{getLocalized(gloveItem.name)}</div>
                                         <div className="text-[10px] text-yellow-400 flex items-center gap-1">
                                             <Star size={10} />
-                                            {t('shop.bonus')}: +{formatCurrency(gloveItem.dailyBonus)} / {t('time.day')}
+                                            {t('shop.bonus')}: {formatBonus(gloveItem.dailyBonus, gloveItem.typeId)} / {t('time.day')}
                                         </div>
                                     </div>
                                 </div>
@@ -824,7 +824,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                                     <div className="text-[10px] text-yellow-400 flex items-center gap-1">
                                                         <Star size={10} />
                                                         <span className="font-mono">
-                                                            {t('rig.bonus')}: +{formatCurrency(item.dailyBonus)} / {t('time.day')}
+                                                            {t('rig.bonus')}: {formatBonus(item.dailyBonus, item.typeId)} / {t('time.day')}
                                                         </span>
                                                     </div>
                                                 </div>

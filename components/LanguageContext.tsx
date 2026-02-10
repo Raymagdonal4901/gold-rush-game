@@ -7,6 +7,7 @@ interface LanguageContextType {
     t: (key: string) => string;
     getLocalized: (content: string | { th: string; en: string } | undefined) => string;
     formatCurrency: (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean }) => string;
+    formatBonus: (amount: number, typeId?: string) => string;
 }
 
 const EXCHANGE_RATE = 35; // Standard system rate
@@ -67,8 +68,24 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         return isThai ? `${formatted} ฿` : `$${formatted}`;
     };
 
+    const formatBonus = (amount: number, typeId?: string): string => {
+        if (language === 'en') return `+${amount}`;
+
+        // Manual mapping for Thai display to match +1, +2, +3... pattern
+        if (typeId === 'hat' || (amount > 0.02 && amount < 0.03)) return '+1';
+        if (typeId === 'uniform' || (amount > 0.05 && amount < 0.06)) return '+2';
+        if (typeId === 'bag' || (amount > 0.08 && amount < 0.09)) return '+3';
+        if (typeId === 'boots' || (amount > 0.11 && amount < 0.12)) return '+4';
+        if (typeId === 'glasses' || (amount > 0.14 && amount < 0.15)) return '+5';
+        if (typeId === 'mobile' || (amount > 0.17 && amount < 0.18)) return '+6';
+        if (typeId === 'pc' || (amount > 0.22 && amount < 0.23)) return '+8';
+        if (typeId === 'auto_excavator' || (amount > 0.42 && amount < 0.43)) return '+10';
+
+        return `+${amount}`;
+    };
+
     return (
-        <LanguageContext.Provider value={{ language, setLanguage, t, getLocalized, formatCurrency }}>
+        <LanguageContext.Provider value={{ language, setLanguage, t, getLocalized, formatCurrency, formatBonus }}>
             {children}
         </LanguageContext.Provider>
     );
