@@ -12,8 +12,56 @@ interface HistoryModalProps {
 }
 
 export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, userId }) => {
-  const { t, getLocalized } = useTranslation();
+  const { t, getLocalized, formatCurrency } = useTranslation();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  // Legacy translations for old records
+  const LEGACY_TRANSLATIONS: Record<string, string> = {
+    "ฝากเงินผ่านระบบ": "Deposit via System",
+    "ซื้อเครื่องจักร: เครื่องขุดถ่านหิน": "Purchase Rig: Coal Miner",
+    "เร่งพลังการผลิต (Overclock 48 ชม.)": "Overclock (48 Hours)",
+    "เติมพลังงาน": "Energy Refill",
+    "ซ่อมแซมเครื่องขุด": "Repair Rig",
+    "ขายไอเทม": "Sell Item",
+    "อัพเกรดไอเทม": "Upgrade Item",
+    "สร้างไอเทม": "Craft Item",
+    "รางวัลภารกิจ": "Mission Reward",
+    "รางวัลจัดอันดับ": "Rank Reward",
+    "สุ่มกาชา": "Lucky Draw",
+    "เข้าดันเจี้ยน": "Dungeon Entry",
+    "รางวัลจากดันเจี้ยน": "Dungeon Reward",
+    "รับของขวัญ": "Claim Gift",
+    "เก็บแร่": "Collect Material",
+    "ภาษีตลาด": "Market Tax"
+  };
+
+  const getLocalizedDescription = (desc: string) => {
+    try {
+      // 1. Try parsing dictionary JSON (New format)
+      if (desc.trim().startsWith('{') && desc.includes('"th":') && desc.includes('"en":')) {
+        const obj = JSON.parse(desc);
+        return getLocalized(obj);
+      }
+    } catch (e) {
+      // Ignore parse error
+    }
+
+    // 2. Fallback to Legacy Mapping (If English is selected but desc is Thai)
+    if (getLocalized({ th: 'th', en: 'en' }) === 'en') {
+      // Check exact match
+      if (LEGACY_TRANSLATIONS[desc]) return LEGACY_TRANSLATIONS[desc];
+
+      // Check prefix match (e.g. "ซื้อเครื่องจักร: ...")
+      for (const [key, val] of Object.entries(LEGACY_TRANSLATIONS)) {
+        if (desc.includes(key)) {
+          return desc.replace(key, val);
+        }
+      }
+    }
+
+    // 3. Return original
+    return desc;
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -165,7 +213,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
                     </div>
                     <div>
                       <div className="text-stone-200 font-bold text-sm">
-                        {getLocalized(tx.description)}
+                        {getLocalizedDescription(tx.description)}
                         {(tx as any).count > 1 && (
                           <span className="text-yellow-500 ml-2">x{(tx as any).count}</span>
                         )}
@@ -179,7 +227,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
                       {tx.amount !== 0 ? (
                         <>
                           {tx.amount > 0 ? '+' : ''}
-                          {((tx.amount) * ((tx as any).count || 1)).toLocaleString(undefined, { minimumFractionDigits: tx.amount % 1 === 0 ? 0 : 2 })} {CURRENCY}
+                          {formatCurrency((tx.amount) * ((tx as any).count || 1))}
                         </>
                       ) : (
                         <span className="text-stone-500 italic text-[10px]">{t('history.log_activity')}</span>

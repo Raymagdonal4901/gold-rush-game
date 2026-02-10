@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import User from '../models/User';
+import Transaction from '../models/Transaction';
 
 // Copy of Frontend Constants
 const DAILY_CHECKIN_REWARDS = [
@@ -84,8 +85,17 @@ export const checkIn = async (req: Request, res: Response) => {
 
         if (rewardConfig) {
             // Give Reward
+            let txDetail = '';
+            let txAmount = 0;
+
             if (rewardConfig.reward === 'money') {
-                user.balance += (rewardConfig as any).amount;
+                const amount = (rewardConfig as any).amount;
+                user.balance += amount;
+                txAmount = amount;
+                txDetail = JSON.stringify({
+                    th: `รางวัลเช็คชื่อวันที่ ${streak}`,
+                    en: `Daily Check-in Day ${streak}`
+                });
             } else if (rewardConfig.reward === 'material') {
                 // Update materials field directly instead of pushing to inventory as objects.
                 if (!user.materials) user.materials = {};
@@ -98,6 +108,11 @@ export const checkIn = async (req: Request, res: Response) => {
                 if (!user.stats) user.stats = {};
                 user.stats.totalMaterialsMined = (user.stats.totalMaterialsMined || 0) + amount;
                 user.markModified('stats');
+
+                txDetail = JSON.stringify({
+                    th: `รางวัลเช็คชื่อ: ${rewardConfig.label.th}`,
+                    en: `Daily Check-in: ${rewardConfig.label.en}`
+                });
             } else if (rewardConfig.reward === 'item') {
                 const itemConfig = (rewardConfig as any);
                 const newItem = {
@@ -115,6 +130,11 @@ export const checkIn = async (req: Request, res: Response) => {
                 for (let i = 0; i < amount; i++) {
                     user.inventory.push({ ...newItem, id: newItem.id + `_${i}` });
                 }
+
+                txDetail = JSON.stringify({
+                    th: `รางวัลเช็คชื่อ: ${rewardConfig.label.th}`,
+                    en: `Daily Check-in: ${rewardConfig.label.en}`
+                });
             } else if (rewardConfig.reward === 'grand_prize') {
                 // Special Logic for Day 30
                 user.inventory.push({
@@ -129,6 +149,23 @@ export const checkIn = async (req: Request, res: Response) => {
                 if (!user.materials) user.materials = {};
                 user.materials['5'] = (user.materials['5'] || 0) + 1;
                 user.markModified('materials');
+
+                txDetail = JSON.stringify({
+                    th: `รางวัลเช็คชื่อ: ${rewardConfig.label.th}`,
+                    en: `Daily Check-in: ${rewardConfig.label.en}`
+                });
+            }
+
+            // Create Transaction Log
+            if (txDetail) {
+                await Transaction.create({
+                    userId,
+                    type: 'DAILY_BONUS',
+                    amount: txAmount,
+                    description: txDetail,
+                    status: 'COMPLETED',
+                    timestamp: new Date()
+                });
             }
         }
 

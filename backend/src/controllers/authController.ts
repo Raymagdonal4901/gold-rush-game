@@ -44,7 +44,7 @@ export const register = async (req: Request, res: Response) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Define Welcome Pack Item if referred
-        const inventory = [];
+        const inventory: any[] = [];
         const notifications = [];
 
         if (referredBy) {
@@ -79,7 +79,7 @@ export const register = async (req: Request, res: Response) => {
             password: hashedPassword,
             referralCode: username, // Set their own referral code as their username
             referredBy,
-            inventory,
+            inventory: [] as any[],
             notifications,
             balance: 0 // New users always start at 0.00 THB
         });
@@ -103,7 +103,10 @@ export const register = async (req: Request, res: Response) => {
                 notifications: user.notifications || [],
                 role: user.role,
                 unlockedSlots: user.unlockedSlots || 3,
-                referralCode: user.referralCode
+                referralCode: user.referralCode,
+                isOverclockActive: user.isOverclockActive || false,
+                overclockRemainingMs: user.overclockRemainingMs || 0,
+                overclockExpiresAt: user.overclockExpiresAt || null
             }
         });
     } catch (error) {
@@ -164,7 +167,10 @@ export const login = async (req: Request, res: Response) => {
                 bankQrCode: user.bankQrCode,
                 notifications: user.notifications || [],
                 activeExpedition: user.activeExpedition,
-                unlockedSlots: user.unlockedSlots || 3
+                unlockedSlots: user.unlockedSlots || 3,
+                isOverclockActive: user.isOverclockActive || false,
+                overclockRemainingMs: user.overclockRemainingMs || 0,
+                overclockExpiresAt: user.overclockExpiresAt || null
             }
         });
     } catch (error) {
@@ -198,6 +204,8 @@ export const getProfile = async (req: any, res: Response) => {
             notifications: user.notifications || [],
             activeExpedition: user.activeExpedition,
             unlockedSlots: user.unlockedSlots || 3,
+            isOverclockActive: user.isOverclockActive || false,
+            overclockRemainingMs: user.overclockRemainingMs || 0,
             overclockExpiresAt: user.overclockExpiresAt || null
         });
     } catch (error) {
@@ -234,13 +242,17 @@ export const refillEnergy = async (req: any, res: Response) => {
         const needed = Math.max(0, 100 - currentEnergy);
 
         // Flat rate: 0.02 Baht per 1% (matching ENERGY_CONFIG.COST_PER_UNIT in frontend)
-        const COST_PER_UNIT = 0.02;
-        const MIN_REFILL_FEE = 2.0;
+        // Costs are defined in THB but balance is in USD
+        const EXCHANGE_RATE = 35;
+        const COST_PER_UNIT_THB = 0.02;
+        const MIN_REFILL_FEE_THB = 2.0;
 
-        let cost = needed * COST_PER_UNIT;
-        if (cost < MIN_REFILL_FEE) {
-            cost = MIN_REFILL_FEE;
+        let costThb = needed * COST_PER_UNIT_THB;
+        if (costThb < MIN_REFILL_FEE_THB) {
+            costThb = MIN_REFILL_FEE_THB;
         }
+
+        const cost = costThb / EXCHANGE_RATE; // Convert to USD for balance deduction
 
         if (user.balance < cost) {
             return res.status(400).json({ message: 'ยอดเงินในวอลเลทไม่เพียงพอสำหรับเติมพลังงาน' });

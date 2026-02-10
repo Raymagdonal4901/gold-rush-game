@@ -405,11 +405,11 @@ export const api = {
             const res = await client.post('/auth/update-stats', updates);
             return res.data;
         },
-        activateOverclock: async (): Promise<{ success: boolean, overclockExpiresAt: number, newBalance: number }> => {
+        activateOverclock: async (): Promise<{ success: boolean, overclockExpiresAt: number, newBalance: number, isResume?: boolean }> => {
             const res = await client.post('/users/overclock');
             return res.data;
         },
-        deactivateOverclock: async (): Promise<{ success: boolean, overclockExpiresAt: null, newBalance: number }> => {
+        deactivateOverclock: async (): Promise<{ success: boolean, overclockExpiresAt: null, newBalance: number, overclockRemainingMs: number }> => {
             const res = await client.post('/users/overclock/deactivate');
             return res.data;
         },

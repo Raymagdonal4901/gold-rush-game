@@ -36,6 +36,7 @@ export const translations = {
             minutes: 'นาที',
             second: 'วิ.',
             seconds: 'วิ.',
+            months_short: 'เดือน',
         },
         dashboard: {
             title: 'แผงควบคุมผู้ขุด',
@@ -758,6 +759,7 @@ export const translations = {
             minutes: 'm',
             second: 's',
             seconds: 's',
+            months_short: 'mo',
         },
         dashboard: {
             title: 'Miner Dashboard',

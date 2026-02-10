@@ -477,7 +477,16 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
     // Overclock handler
     const [overclockLoading, setOverclockLoading] = useState(false);
-    const isOverclockActive = user.overclockExpiresAt ? new Date(user.overclockExpiresAt).getTime() > Date.now() : false;
+    const isOverclockActive = user.isOverclockActive;
+    const hasRemainingOverclock = (user.overclockRemainingMs || 0) > 0 || (user.overclockExpiresAt ? new Date(user.overclockExpiresAt).getTime() > Date.now() : false);
+
+    const getOverclockMultiplier = (count: number) => {
+        if (count <= 2) return 1.1;
+        if (count <= 4) return 1.25;
+        return 1.4;
+    };
+
+    const currentOverclockMultiplier = isOverclockActive ? getOverclockMultiplier(rigs.length) : 1;
 
     const handleActivateOverclock = async () => {
         if (overclockLoading) return;
@@ -485,10 +494,19 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         try {
             const result = await api.user.activateOverclock();
             if (result.success) {
-                setUser(prev => ({ ...prev, balance: result.newBalance, overclockExpiresAt: result.overclockExpiresAt }));
+                setUser(prev => ({
+                    ...prev,
+                    balance: result.newBalance,
+                    overclockExpiresAt: result.overclockExpiresAt,
+                    isOverclockActive: true,
+                    overclockRemainingMs: 0
+                }));
                 setIsCharging(true);
                 setTimeout(() => setIsCharging(false), 3000);
-                addNotification({ id: Date.now().toString(), userId: user.id, message: `เปิดใช้งาน Overclock x2 Power เรียบร้อย (48 ชม.)`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+                const msg = result.isResume
+                    ? (language === 'th' ? 'เริ่มใช้งาน Overclock ต่อจากเดิมเรียบร้อย' : 'Overclock resumed')
+                    : (language === 'th' ? `เปิดใช้งาน Overclock เรียบร้อย (โบนัสตามจำนวนเครื่อง)` : `Overclock activated (Bonus based on rig count)`);
+                addNotification({ id: Date.now().toString(), userId: user.id, message: msg, type: 'SUCCESS', read: false, timestamp: Date.now() });
                 refreshData();
             }
         } catch (e: any) {
@@ -516,7 +534,13 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         try {
             const result = await api.user.deactivateOverclock();
             if (result.success) {
-                addNotification({ id: Date.now().toString(), userId: user.id, message: `ปิดใช้งาน Overclock เรียบร้อย`, type: 'INFO', read: false, timestamp: Date.now() });
+                setUser(prev => ({
+                    ...prev,
+                    isOverclockActive: false,
+                    overclockExpiresAt: undefined,
+                    overclockRemainingMs: result.overclockRemainingMs
+                }));
+                addNotification({ id: Date.now().toString(), userId: user.id, message: language === 'th' ? 'หยุดใช้งาน Overclock ชั่วคราวเรียบร้อย' : 'Overclock paused', type: 'INFO', read: false, timestamp: Date.now() });
                 // Don't call refreshData() here - optimistic update is already done
             } else {
                 // Revert if API returned success: false
@@ -1006,7 +1030,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             return sum + (item ? item.dailyBonus : 0);
         }, 0);
         return acc + rig.dailyProfit + (rig.bonusProfit || 0) + equippedBonus;
-    }, 0) * globalMultiplier;
+    }, 0) * globalMultiplier * currentOverclockMultiplier;
 
 
 
@@ -1088,13 +1112,6 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                 <span className="hidden xl:inline">{t('referral.button') || (language === 'th' ? 'แนะนำเพื่อน' : 'Referral')}</span>
                                 {user.referralCount > 0 && <span className="ml-1 bg-red-500 text-white text-[9px] px-1 rounded-full">{user.referralCount}</span>}
                             </button>
-                            <button
-                                onClick={() => setLanguage(language === 'th' ? 'en' : 'th')}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-stone-900 border border-stone-800 text-stone-400 hover:text-yellow-500 hover:border-yellow-500 transition-all text-[10px] font-bold uppercase"
-                            >
-                                <Languages size={14} />
-                                {language === 'th' ? 'EN' : 'TH'}
-                            </button>
                             <button onClick={() => setIsHistoryOpen(true)} className="p-2 text-stone-500 hover:text-yellow-500 transition-colors bg-stone-900 border border-stone-800 rounded relative">
                                 <History size={20} />
                                 {hasPendingTx && <span className="absolute -top-1 -right-1 flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>}
@@ -1114,6 +1131,14 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             <button onClick={() => setIsSettingsOpen(true)} className="text-stone-500 hover:text-white transition-colors p-2"><Settings size={20} /></button>
                             <button onClick={onLogout} className="text-stone-500 hover:text-red-400 transition-colors p-2"><LogOut size={20} /></button>
                         </div>
+
+                        <button
+                            onClick={() => setLanguage(language === 'th' ? 'en' : 'th')}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-stone-900 border border-stone-800 text-stone-400 hover:text-yellow-500 hover:border-yellow-500 transition-all text-[10px] font-bold uppercase"
+                        >
+                            <Languages size={14} />
+                            {language === 'th' ? 'EN' : 'TH'}
+                        </button>
 
                         {/* Mobile Menu Button */}
                         <button
@@ -1325,22 +1350,26 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                 >
 
 
-                                    {/* The icon now acts as a Payment Button */}
+                                    {/* The icon now acts as a Payment/Resume Button */}
                                     <div
                                         onClick={() => !isOverclockActive && handleActivateOverclock()}
                                         className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center gap-1 border shadow-inner transition-all duration-300 group/paybtn relative z-10
                                         ${isOverclockActive
                                                 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 animate-[bounce_1s_infinite]'
-                                                : 'bg-stone-800 border-stone-700 text-stone-500 hover:border-emerald-500/50 hover:bg-stone-800/80 cursor-pointer active:scale-95'}`}
+                                                : (user.overclockRemainingMs || 0) > 0
+                                                    ? 'bg-blue-800 border-blue-600 text-blue-200 hover:border-blue-400 cursor-pointer active:scale-95'
+                                                    : 'bg-stone-800 border-stone-700 text-stone-500 hover:border-emerald-500/50 hover:bg-stone-800/80 cursor-pointer active:scale-95'}`}
                                     >
                                         <div className="relative">
                                             {isOverclockActive && <div className="absolute inset-0 bg-yellow-400 blur-md animate-ping opacity-50"></div>}
                                             <Zap size={22} className={isOverclockActive ? 'text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.8)] animate-pulse' : 'group-hover/paybtn:text-emerald-500 transition-colors'} />
                                         </div>
                                         <span className={`text-[10px] font-bold uppercase leading-none ${isOverclockActive ? 'text-emerald-400' : 'text-stone-300'}`}>
-                                            {isOverclockActive ? 'ACTIVE' : '50 ฿'}
+                                            {isOverclockActive ? 'ACTIVE' : (user.overclockRemainingMs || 0) > 0 ? (language === 'th' ? 'ต่อเวลา' : 'RESUME') : '50 ฿'}
                                         </span>
-                                        <span className="text-[7px] opacity-60 font-bold uppercase leading-none tracking-tighter">Energy x2</span>
+                                        <span className="text-[7px] opacity-60 font-bold uppercase leading-none tracking-tighter">
+                                            Speed x{isOverclockActive ? currentOverclockMultiplier : getOverclockMultiplier(rigs.length)}
+                                        </span>
                                     </div>
 
                                     <div className="flex-1 space-y-1 relative z-10 pl-2">
@@ -1352,18 +1381,37 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                         </div>
                                         <div className="flex items-center gap-1.5">
                                             {isOverclockActive ? (
-                                                <div className="flex items-center gap-2 bg-emerald-950/80 px-2 py-1 rounded-md border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] backdrop-blur-sm">
-                                                    <Timer size={14} className="text-emerald-400 animate-spin" />
-                                                    <span className="text-lg font-mono font-bold text-emerald-300 tabular-nums drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
-                                                        {(() => {
-                                                            const expiry = new Date(user.overclockExpiresAt!).getTime();
-                                                            const left = expiry - Date.now();
-                                                            const hours = Math.floor(Math.max(0, left) / (1000 * 60 * 60));
-                                                            const mins = Math.floor((Math.max(0, left) % (1000 * 60 * 60)) / (1000 * 60));
-                                                            const secs = Math.floor((Math.max(0, left) % (1000 * 60)) / 1000);
-                                                            return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                                                        })()}
-                                                    </span>
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2 bg-emerald-950/80 px-2 py-1 rounded-md border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] backdrop-blur-sm w-fit">
+                                                        <Timer size={14} className="text-emerald-400 animate-spin" />
+                                                        <span className="text-lg font-mono font-bold text-emerald-300 tabular-nums drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
+                                                            {(() => {
+                                                                const expiry = new Date(user.overclockExpiresAt!).getTime();
+                                                                const left = expiry - Date.now();
+                                                                const hours = Math.floor(Math.max(0, left) / (1000 * 60 * 60));
+                                                                const mins = Math.floor((Math.max(0, left) % (1000 * 60 * 60)) / (1000 * 60));
+                                                                const secs = Math.floor((Math.max(0, left) % (1000 * 60)) / 1000);
+                                                                return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                                                            })()}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-[10px] text-emerald-400 font-bold">Bonus Production: +{Math.round((currentOverclockMultiplier - 1) * 100)}%</span>
+                                                </div>
+                                            ) : (user.overclockRemainingMs || 0) > 0 ? (
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2 bg-blue-950/80 px-2 py-1 rounded-md border border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.3)] backdrop-blur-sm w-fit">
+                                                        <Clock size={14} className="text-blue-400" />
+                                                        <span className="text-lg font-mono font-bold text-blue-300 tabular-nums">
+                                                            {(() => {
+                                                                const left = user.overclockRemainingMs || 0;
+                                                                const hours = Math.floor(left / (1000 * 60 * 60));
+                                                                const mins = Math.floor((left % (1000 * 60 * 60)) / (1000 * 60));
+                                                                const secs = Math.floor((left % (1000 * 60)) / 1000);
+                                                                return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                                                            })()}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-[10px] text-blue-400 font-bold">{language === 'th' ? 'พักเปร่งพลัง (กดเพื่อต่อ)' : 'Overclock Paused'}</span>
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col">
@@ -1381,7 +1429,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                             onClick={() => !overclockLoading && (isOverclockActive ? handleDeactivateOverclock() : handleActivateOverclock())}
                                             className={`w-14 h-7 rounded-full p-1 transition-all duration-300 relative 
                                                 ${overclockLoading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
-                                                ${isOverclockActive ? 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.8)] border border-yellow-300' : 'bg-stone-700 hover:bg-stone-600'}`}
+                                                ${isOverclockActive ? 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.8)] border border-yellow-300' : (user.overclockRemainingMs || 0) > 0 ? 'bg-blue-600 shadow-[0_0_15px_rgba(59,130,246,0.5)] border border-blue-400' : 'bg-stone-700 hover:bg-stone-600'}`}
                                         >
                                             <div className={`w-5 h-5 bg-white rounded-full transition-all duration-300 transform shadow-md flex items-center justify-center
                                                 ${isOverclockActive ? 'translate-x-7' : 'translate-x-0'}`}
@@ -1474,7 +1522,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                         isPowered={isPowered}
                                         isExploring={isExploring}
                                         isDemo={user.isDemo}
-                                        isOverclockActive={user.overclockExpiresAt ? new Date(user.overclockExpiresAt).getTime() > Date.now() : false}
+                                        isOverclockActive={isOverclockActive}
+                                        overclockMultiplier={currentOverclockMultiplier}
                                         addNotification={addNotification}
                                     />
                                 );

@@ -24,6 +24,8 @@ export interface IUser extends Document {
     unlockedSlots: number;
     lastLuckyDraw?: number;
     overclockExpiresAt?: Date; // Overclock boost expiration
+    overclockRemainingMs: number; // Remaining time for overclock when paused
+    isOverclockActive: boolean; // Whether overclock is currently running
     walletAddress?: string; // BSC Wallet Address for USDT
 
     // Referral System
@@ -59,6 +61,8 @@ const UserSchema = new Schema<IUser>({
     lastCheckIn: { type: Date },
     lastLuckyDraw: { type: Number, default: 0 },
     overclockExpiresAt: { type: Date },
+    overclockRemainingMs: { type: Number, default: 0 },
+    isOverclockActive: { type: Boolean, default: false },
     lastQuestReset: { type: Date, default: Date.now },
     activeExpedition: { type: Object, default: null }, // Added for persistence
     craftingQueue: { type: [], default: [] },

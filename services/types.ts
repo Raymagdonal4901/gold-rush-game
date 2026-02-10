@@ -110,6 +110,7 @@ export interface User {
   lastEnergyUpdate?: number;
   overclockEnergy?: number;
   isOverclockActive?: boolean;
+  overclockRemainingMs?: number;
   lastOverclockUpdate?: number;
   demoStartTime?: number;
   isDemo?: boolean;

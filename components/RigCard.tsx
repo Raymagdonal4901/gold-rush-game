@@ -29,6 +29,7 @@ interface RigCardProps {
     isPowered?: boolean;
     isExploring?: boolean;
     isOverclockActive?: boolean; // Overclock boost active
+    overclockMultiplier?: number; // Dynamic multiplier
     isDemo?: boolean;
     addNotification?: (n: any) => void;
 }
@@ -53,6 +54,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     isPowered = true,
     isExploring = false,
     isOverclockActive = false,
+    overclockMultiplier = 1,
     isDemo = false,
     addNotification
 }) => {
@@ -125,9 +127,9 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     let totalDailyProfit = (baseDailyProfit + effectiveBonusProfit + equippedBonus) * globalMultiplier * reactorMultiplier;
 
-    // OVERCLOCK x2 Boost
+    // OVERCLOCK Dynamic Boost
     if (isOverclockActive) {
-        totalDailyProfit *= ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST;
+        totalDailyProfit *= overclockMultiplier;
     }
 
     const totalRatePerSecond = totalDailyProfit / 86400;
@@ -259,9 +261,9 @@ export const RigCard: React.FC<RigCardProps> = ({
     // BASE Energy Drain: 100% in 24 hours (4.166% per hour)
     let drainRatePerHour = 4.166666666666667;
 
-    // OVERCLOCK: Double the drain rate
+    // OVERCLOCK: Accelerated time means faster drain matching the multiplier
     if (isOverclockActive) {
-        drainRatePerHour *= 2;
+        drainRatePerHour *= overclockMultiplier;
     }
 
     const elapsedHours = (elapsedMs * speedMultiplier) / (1000 * 60 * 60);
@@ -290,7 +292,7 @@ export const RigCard: React.FC<RigCardProps> = ({
         else if (preset.id === 8) matTier = 6; // Vibranium
     }
 
-    const overclockBoost = (isPowered && !isZeroEnergy && isOverclockActive) ? ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST : (isPowered && !isZeroEnergy) ? ENERGY_CONFIG.BOX_DROP_SPEED_BOOST : 1;
+    const overclockBoost = (isPowered && !isZeroEnergy && isOverclockActive) ? overclockMultiplier : (isPowered && !isZeroEnergy) ? ENERGY_CONFIG.BOX_DROP_SPEED_BOOST : 1;
     const giftIntervalMs = (GIFT_CYCLE_DAYS * 24 * 60 * 60 * 1000) / (overclockBoost);
     const lastGiftTime = rig.lastGiftAt || rig.purchasedAt;
     const nextGiftTime = lastGiftTime + giftIntervalMs;
@@ -372,7 +374,7 @@ export const RigCard: React.FC<RigCardProps> = ({
             const elapsedMs = now - lastUpdate;
             // Apply speed multiplier for Demo mode (720x faster drain)
             const elapsedHours = (elapsedMs) / (1000 * 60 * 60);
-            const drainRate = isOverclockActive ? 8.333333333333334 : 4.166666666666667;
+            const drainRate = isOverclockActive ? (drainRatePerHour * overclockMultiplier) : drainRatePerHour;
             const drain = elapsedHours * drainRate;
             const calculatedEnergy = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
             setCurrentEnergyPercent(calculatedEnergy);

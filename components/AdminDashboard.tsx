@@ -71,6 +71,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             total: number;
         };
         withdrawalHistory?: WithdrawalRequest[];
+        depositHistory?: DepositRequest[];
     } | null>(null);
 
     // Economy Control State
@@ -516,7 +517,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             {/* User Detail Modal */}
             {selectedUser && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur p-4 animate-in fade-in duration-200">
-                    <div className="bg-stone-900 border border-stone-700 w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                    <div className="bg-stone-900 border border-stone-700 w-full max-w-4xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                         <div className="p-6 border-b border-stone-800 flex justify-between items-center bg-stone-950">
                             <div className="flex items-center gap-4">
                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${selectedUser.role.includes('ADMIN') ? 'bg-red-900/40 text-red-500' : 'bg-stone-800 text-stone-400'}`}>
@@ -610,15 +611,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-stone-400 uppercase tracking-wider flex items-center gap-2">
                                     <FileText size={14} /> ประวัติการถอนเงิน (Withdrawal History)
                                 </div>
-                                <div className="max-h-48 overflow-y-auto">
-                                    <table className="w-full text-left text-sm">
+                                <div className="max-h-60 overflow-y-auto overflow-x-auto custom-scrollbar">
+                                    <table className="w-full text-left text-sm min-w-[600px]">
                                         <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
                                             <tr>
-                                                <th className="p-3 font-medium">วันที่ (Date)</th>
-                                                <th className="p-3 font-medium text-right">จำนวนเงิน (Amount)</th>
-                                                <th className="p-3 font-medium text-center">ช่องทาง/ข้อมูล</th>
-                                                <th className="p-3 font-medium text-center">สถานะ (Status)</th>
-                                                <th className="p-3 font-medium text-right">จัดการ (Action)</th>
+                                                <th className="p-3 font-medium whitespace-nowrap">วันที่ (Date)</th>
+                                                <th className="p-3 font-medium text-right whitespace-nowrap">จำนวนเงิน (Amount)</th>
+                                                <th className="p-3 font-medium text-center whitespace-nowrap">ช่องทาง/ข้อมูล</th>
+                                                <th className="p-3 font-medium text-center whitespace-nowrap">สถานะ (Status)</th>
+                                                <th className="p-3 font-medium text-right whitespace-nowrap">จัดการ (Action)</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-stone-800">
@@ -705,15 +706,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-emerald-500 uppercase tracking-wider flex items-center gap-2">
                                     <FileText size={14} /> ประวัติการฝากเงิน (Deposit History)
                                 </div>
-                                <div className="max-h-48 overflow-y-auto">
-                                    <table className="w-full text-left text-sm">
+                                <div className="max-h-60 overflow-y-auto overflow-x-auto custom-scrollbar">
+                                    <table className="w-full text-left text-sm min-w-[600px]">
                                         <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
                                             <tr>
-                                                <th className="p-3 font-medium">วันที่ (Date)</th>
-                                                <th className="p-3 font-medium text-right">จำนวนเงิน (Amount)</th>
-                                                <th className="p-3 font-medium text-center">สลิป (Slip)</th>
-                                                <th className="p-3 font-medium text-center">สถานะ (Status)</th>
-                                                <th className="p-3 font-medium text-right">จัดการ (Action)</th>
+                                                <th className="p-3 font-medium whitespace-nowrap">วันที่ (Date)</th>
+                                                <th className="p-3 font-medium text-right whitespace-nowrap">จำนวนเงิน (Amount)</th>
+                                                <th className="p-3 font-medium text-center whitespace-nowrap">สลิป (Slip)</th>
+                                                <th className="p-3 font-medium text-center whitespace-nowrap">สถานะ (Status)</th>
+                                                <th className="p-3 font-medium text-right whitespace-nowrap">จัดการ (Action)</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-stone-800">
@@ -771,34 +772,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             </div>
                         )}
 
-                        {/* Action Buttons */}
-                        <div className="flex gap-4 pt-4 border-t border-stone-800">
-                            {selectedUser.isBanned ? (
-                                <button
-                                    onClick={() => handleUnbanUser(selectedUser.id)}
-                                    className="flex-1 bg-emerald-900/40 hover:bg-emerald-800 text-emerald-400 border border-emerald-900 py-3 rounded font-bold transition-colors"
-                                >
-                                    ปลดแบน (UNBAN)
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => handleBanUser(selectedUser.id)}
-                                    className="flex-1 bg-red-900/40 hover:bg-red-800 text-red-500 border border-red-900 py-3 rounded font-bold transition-colors"
-                                >
-                                    ระงับการใช้งาน (BAN)
-                                </button>
-                            )}
+                    </div>
+
+                    {/* Action Buttons - Fixed at bottom */}
+                    <div className="p-6 bg-stone-950 border-t border-stone-800 flex gap-4">
+                        {selectedUser.isBanned ? (
                             <button
-                                onClick={() => handleDeleteUser(selectedUser.id)}
-                                className="px-4 bg-stone-950 hover:bg-red-950 text-stone-600 hover:text-red-600 border border-stone-800 hover:border-red-900 py-3 rounded font-bold transition-colors"
-                                title="Delete User Permanently"
+                                onClick={() => handleUnbanUser(selectedUser.id)}
+                                className="flex-1 bg-emerald-900/40 hover:bg-emerald-800 text-emerald-400 border border-emerald-900 py-3 rounded font-bold transition-colors"
                             >
-                                <Trash2 size={24} />
+                                ปลดแบน (UNBAN)
                             </button>
-                            <button className="flex-1 bg-stone-800 hover:bg-stone-700 text-stone-300 py-3 rounded font-bold transition-colors">
-                                รีเซ็ตรหัสผ่าน
+                        ) : (
+                            <button
+                                onClick={() => handleBanUser(selectedUser.id)}
+                                className="flex-1 bg-red-900/40 hover:bg-red-800 text-red-500 border border-red-900 py-3 rounded font-bold transition-colors"
+                            >
+                                ระงับการใช้งาน (BAN)
                             </button>
-                        </div>
+                        )}
+                        <button
+                            onClick={() => handleDeleteUser(selectedUser.id)}
+                            className="px-4 bg-stone-950 hover:bg-red-950 text-stone-600 hover:text-red-600 border border-stone-800 hover:border-red-900 py-3 rounded font-bold transition-colors"
+                            title="Delete User Permanently"
+                        >
+                            <Trash2 size={24} />
+                        </button>
+                        <button className="flex-1 bg-stone-800 hover:bg-stone-700 text-stone-300 py-3 rounded font-bold transition-colors">
+                            รีเซ็ตรหัสผ่าน
+                        </button>
                     </div>
                 </div>
             )}
