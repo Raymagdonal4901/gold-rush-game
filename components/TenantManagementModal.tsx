@@ -6,7 +6,7 @@ import { InfinityGlove } from './InfinityGlove';
 import { CURRENCY, RARITY_SETTINGS, UPGRADE_REQUIREMENTS, MATERIAL_CONFIG } from '../constants';
 import { api } from '../services/api';
 import { MaterialIcon } from './MaterialIcon';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface GloveManagementModalProps {
     isOpen: boolean;

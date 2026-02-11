@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Trophy, Medal, Crown, TrendingUp, Gift, Truck, FileText, Monitor, Key, Smartphone, Diamond, Glasses, Cpu, Footprints, Wrench, Hourglass } from 'lucide-react';
 import { CURRENCY } from '../constants';
 import { api } from '../services/api';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface LeaderboardModalProps {
     isOpen: boolean;

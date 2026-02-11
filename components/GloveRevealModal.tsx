@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Sparkles, Gift } from 'lucide-react';
 import { InfinityGlove } from './InfinityGlove';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { CURRENCY } from '../constants';
 
 interface GloveRevealModalProps {

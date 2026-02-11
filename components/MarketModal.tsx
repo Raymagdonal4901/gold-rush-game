@@ -4,7 +4,7 @@ import { X, TrendingUp, TrendingDown, Minus, RefreshCw, BarChart2, DollarSign, S
 import { MarketState, Transaction, MarketItemData, AccessoryItem } from '../services/types';
 import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, ROBOT_CONFIG, EXCHANGE_RATE_USD_THB } from '../constants';
 import { MaterialIcon } from './MaterialIcon';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { api } from '../services/api';
 
 interface MarketModalProps {

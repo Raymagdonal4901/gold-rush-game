@@ -6,7 +6,7 @@ import { DUNGEON_CONFIG, CURRENCY, MATERIAL_CONFIG, SHOP_ITEMS } from '../consta
 import { MockDB } from '../services/db';
 import { User, Expedition, OilRig, AccessoryItem } from '../services/types';
 import { api } from '../services/api';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface DungeonModalProps {
     isOpen: boolean;

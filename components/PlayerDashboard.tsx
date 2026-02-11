@@ -33,7 +33,7 @@ import { OilRig, User, Rarity, Notification, AccessoryItem, MarketState } from '
 import { CURRENCY, RigPreset, MAX_RIGS_PER_USER, RARITY_SETTINGS, SHOP_ITEMS, MAX_ACCESSORIES, RIG_PRESETS, ENERGY_CONFIG, REPAIR_CONFIG, GLOVE_DETAILS, MATERIAL_CONFIG, DEMO_SPEED_MULTIPLIER, ROBOT_CONFIG, GIFT_CYCLE_DAYS, EXCHANGE_RATE_USD_THB } from '../constants';
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 const getItemIconPath = (typeId: string) => {
     switch (typeId) {

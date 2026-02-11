@@ -5,7 +5,7 @@ import { QUESTS, ACHIEVEMENTS, CURRENCY, MATERIAL_CONFIG, SHOP_ITEMS, MINING_RAN
 import { User } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface MissionModalProps {
     isOpen: boolean;

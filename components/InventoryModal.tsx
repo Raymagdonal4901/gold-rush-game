@@ -6,7 +6,7 @@ import { AccessoryItem } from '../services/types';
 import { CURRENCY, RARITY_SETTINGS, UPGRADE_REQUIREMENTS, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { api } from '../services/api';
 
 interface InventoryModalProps {

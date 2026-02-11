@@ -4,7 +4,7 @@ import { translations, Language } from '../services/translations';
 interface LanguageContextType {
     language: Language;
     setLanguage: (lang: Language) => void;
-    t: (key: string, params?: Record<string, any>) => string;
+    t: (key: string, params?: Record<string, any>) => any;
     getLocalized: (content: string | { th: string; en: string } | undefined) => string;
     formatCurrency: (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean; showDecimals?: boolean }) => string;
     formatBonus: (amount: number, typeId?: string) => string;
@@ -15,26 +15,22 @@ const EXCHANGE_RATE = 35; // Standard system rate
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [language, setLanguageState] = useState<Language>('th');
-
-    useEffect(() => {
-        const savedLang = localStorage.getItem('game_language') as Language;
-        if (savedLang && (savedLang === 'th' || savedLang === 'en')) {
-            setLanguageState(savedLang);
-        }
-    }, []);
+    const [language, setLanguageState] = useState<Language>(() => {
+        const saved = localStorage.getItem('game_language');
+        return (saved as Language) || 'th';
+    });
 
     const setLanguage = (lang: Language) => {
         setLanguageState(lang);
         localStorage.setItem('game_language', lang);
     };
 
-    const t = (path: string, params?: Record<string, any>): string => {
+    const t = (path: string, params?: Record<string, any>): any => {
         const keys = path.split('.');
         let result: any = translations[language];
 
         for (const key of keys) {
-            if (result && result[key]) {
+            if (result && result[key] !== undefined) {
                 result = result[key];
             } else {
                 return path; // Return key if not found
@@ -48,7 +44,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
             });
         }
 
-        return typeof result === 'string' ? result : path;
+        return result;
     };
 
     const getLocalized = (content: string | { th: string; en: string } | undefined): string => {
@@ -61,7 +57,6 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         const isThai = options?.forceUSD ? false : (language === 'th' || options?.forceTHB);
         let val = isThai ? (options?.showDecimals ? amount * EXCHANGE_RATE : Math.round(amount * EXCHANGE_RATE)) : amount;
 
-        // Epsilon rounding to fix floating point issues (e.g., 299.999999 -> 300)
         if (Math.abs(val - Math.round(val)) < 0.001) {
             val = Math.round(val);
         }
@@ -78,8 +73,6 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     const formatBonus = (amount: number, typeId?: string): string => {
         if (language === 'en') return `+${amount}`;
-
-        // Manual mapping for Thai display to match +1, +2, +3... pattern
         if (typeId === 'hat' || (amount > 0.02 && amount < 0.03)) return '+1';
         if (typeId === 'uniform' || (amount > 0.05 && amount < 0.06)) return '+2';
         if (typeId === 'bag' || (amount > 0.08 && amount < 0.09)) return '+3';
@@ -88,7 +81,6 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         if (typeId === 'mobile' || (amount > 0.17 && amount < 0.18)) return '+6';
         if (typeId === 'pc' || (amount > 0.22 && amount < 0.23)) return '+8';
         if (typeId === 'auto_excavator' || (amount > 0.42 && amount < 0.43)) return '+10';
-
         return `+${amount}`;
     };
 
@@ -99,10 +91,12 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     );
 };
 
-export const useTranslation = () => {
+export const useLanguage = () => {
     const context = useContext(LanguageContext);
     if (context === undefined) {
-        throw new Error('useTranslation must be used within a LanguageProvider');
+        throw new Error('useLanguage must be used within a LanguageProvider');
     }
     return context;
 };
+
+export const useTranslation = () => useLanguage();

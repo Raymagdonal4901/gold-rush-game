@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Gift, Users, ArrowRight, Star, Key } from 'lucide-react';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface ReferralAnnouncementProps {
     onClose: () => void;

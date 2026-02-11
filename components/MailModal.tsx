@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Mail, Gift, CheckCircle2, MessageSquare, Trash2 } from 'lucide-react';
 import { User, Notification } from '../services/types';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface MailModalProps {
     isOpen: boolean;
@@ -54,9 +54,9 @@ export const MailModal: React.FC<MailModalProps> = ({ isOpen, onClose, user, onC
                             >
                                 <div className="flex gap-3">
                                     <div className={`p-2 rounded-full border shrink-0 h-fit ${notif.type === 'REWARD' ? 'bg-yellow-900/20 border-yellow-700/50 text-yellow-500' :
-                                            notif.type === 'SUCCESS' ? 'bg-emerald-900/20 border-emerald-700/50 text-emerald-500' :
-                                                notif.type === 'ERROR' ? 'bg-red-900/20 border-red-700/50 text-red-500' :
-                                                    'bg-blue-900/20 border-blue-700/50 text-blue-500'
+                                        notif.type === 'SUCCESS' ? 'bg-emerald-900/20 border-emerald-700/50 text-emerald-500' :
+                                            notif.type === 'ERROR' ? 'bg-red-900/20 border-red-700/50 text-red-500' :
+                                                'bg-blue-900/20 border-blue-700/50 text-blue-500'
                                         }`}>
                                         {notif.type === 'REWARD' ? <Gift size={18} /> :
                                             notif.type === 'SUCCESS' ? <CheckCircle2 size={18} /> :

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bot, X, ArrowRight, MessageCircle, ChevronRight, Zap, Map, Hammer, BarChart2, ShoppingBag } from 'lucide-react';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface AIHelpBotProps {
     tutorialStep: number;

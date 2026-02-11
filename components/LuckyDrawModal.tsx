@@ -4,7 +4,7 @@ import { X, Dices, RefreshCw, Zap, Wallet, Box, Sparkles, Star } from 'lucide-re
 import { LUCKY_DRAW_CONFIG, CURRENCY, EXCHANGE_RATE_USD_THB } from '../constants';
 import { api } from '../services/api';
 import { User } from '../services/types';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface LuckyDrawModalProps {
     isOpen: boolean;

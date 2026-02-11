@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Copy, Share2, Users, Gift, Crown, Key } from 'lucide-react';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface ReferralModalProps {
     isOpen: boolean;

@@ -5,7 +5,7 @@ import { api } from '../services/api';
 import { User, OilRig, ClaimRequest, WithdrawalRequest, DepositRequest, Notification } from '../services/types';
 import { CURRENCY, SHOP_ITEMS, MATERIAL_CONFIG, EXCHANGE_RATE_USD_THB } from '../constants';
 import { ChatSystem } from './ChatSystem';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface AdminDashboardProps {
     currentUser: User;

@@ -4,7 +4,7 @@ import { X, Crown, Star, Check } from 'lucide-react';
 import { VIP_TIERS, CURRENCY } from '../constants';
 import { User } from '../services/types';
 
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface VIPModalProps {
     isOpen: boolean;

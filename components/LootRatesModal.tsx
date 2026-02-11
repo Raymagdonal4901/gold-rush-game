@@ -3,7 +3,7 @@ import React from 'react';
 import { X, PackageOpen } from 'lucide-react';
 import { RARITY_SETTINGS, CURRENCY } from '../constants';
 import { InfinityGlove } from './InfinityGlove';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface LootRatesModalProps {
     isOpen: boolean;

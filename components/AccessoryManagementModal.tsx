@@ -5,7 +5,7 @@ import { InfinityGlove } from './InfinityGlove';
 import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS } from '../constants';
 import { api } from '../services/api';
 import { MaterialIcon } from './MaterialIcon';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface AccessoryManagementModalProps {
     isOpen: boolean;

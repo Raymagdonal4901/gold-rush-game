@@ -7,7 +7,7 @@ interface UserGuideModalProps {
     onClose: () => void;
 }
 
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose }) => {
     const { t } = useTranslation();

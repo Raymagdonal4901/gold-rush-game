@@ -3,7 +3,7 @@ import { X, AlertCircle, CheckCircle2, Pickaxe, Sparkles, Gem, Hammer, HelpCircl
 import { CURRENCY, RIG_PRESETS, RigPreset, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
 import { AccessoryItem, OilRig } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface InvestmentModalProps {
   isOpen: boolean;

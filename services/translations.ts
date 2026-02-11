@@ -1,6 +1,192 @@
+const landingEn = {
+    nav: {
+        home: "Home",
+        systems: "Systems",
+        market: "Market",
+        roadmap: "Roadmap",
+        playNow: "PLAY NOW"
+    },
+    hero: {
+        season: "Season 1: The Beginning",
+        title: "BUILD YOUR",
+        titleAccent: "MINING EMPIRE",
+        subtitle: "From a Rusty Shovel to a Nuclear Reactor. Experience the most serious economic simulation game. Trade resources, upgrade rigs, and dominate the global market.",
+        startMining: "START MINING",
+        whitepaper: "VIEW WHITEPAPER"
+    },
+    stats: {
+        totalPlayers: "Total Players",
+        totalInvestment: "Total Investment",
+        activeRigs: "Active Rigs",
+        avgRoi: "Avg ROI"
+    },
+    marketTicker: {
+        title: "Live Market:"
+    },
+    systems: {
+        title: "Core Systems",
+        mining: {
+            title: "Advanced Mining Rigs",
+            desc: "Start with a basic shovel and scale up to Quantum Mining Arrays. Manage heat, power consumption, and overclocking stability to maximize your hash rate.",
+            features: ["8 Mining Tiers", "Overclock System", "Maintenance Mechanics"]
+        },
+        crafting: {
+            title: "Industrial Crafting",
+            desc: "Process raw materials into refined goods. Convert Dirt to Coal, smelt Gold bars, and craft advanced mining equipment with a chance for 'Great Success' bonuses.",
+            features: ["Material Processing", "Equipment Crafting", "10% Jackpot Chance"]
+        },
+        market: {
+            title: "Real-time Economy",
+            desc: "A fully player-driven economy. Prices fluctuate based on supply and demand. Trade intelligently to profit from market volatility.",
+            features: ["Live Order Books", "Dynamic Pricing", "15% Market Tax Policy"]
+        },
+        exploration: {
+            title: "Dungeon Exploration",
+            desc: "Send expeditions into deep mines. Choose your risk level (2h, 6h, 12h) to find rare artifacts, keys, and massive resource deposits.",
+            features: ["Timed Expeditions", "Rare Loot Tables", "Mystery Keys"]
+        }
+    },
+    roadmap: {
+        title: "Roadmap 2026",
+        phase1: {
+            title: "Launch",
+            items: ["Web Game Launch", "Market System", "Basic Mining"]
+        },
+        phase2: {
+            title: "Expansion",
+            items: ["Guild System", "Mobile App Beta", "Advanced Crafting"]
+        },
+        phase3: {
+            title: "Metaverse",
+            items: ["Global Wars", "Land Ownership", "3D World Integration"]
+        }
+    },
+    rigShowcase: {
+        title: "PREMIUM MINING MACHINERY",
+        subtitle: "From basic tools to quantum reactors. Every rig is an asset.",
+        freeLabel: "STARTER RIG",
+        freeTag: "FREE TO START",
+        t1: { name: "Rusty Shovel", desc: "The honest beginning of every legend." },
+        t2: { name: "Portable Drill", desc: "Faster, more efficient, more profitable." },
+        t3: { name: "Coal Excavator", desc: "Industrial power for consistent yield." },
+        t4: { name: "Copper Excavator", desc: "Tapping into industrial demand." },
+        t5: { name: "Iron Excavator", desc: "The backbone of any mining empire." },
+        t6: { name: "Gold Excavator", desc: "Pure luxury, high-value extraction." },
+        t7: { name: "Diamond Excavator", desc: "Unmatched precision and wealth." },
+        t8: { name: "Vibranium Reactor", desc: "The pinnacle of human engineering." },
+        cta: "Claim Your Starter Rig"
+    },
+    cta: {
+        title: "READY TO START",
+        titleAccent: "YOUR LEGACY?",
+        button: "JOIN GOLD RUSH NOW"
+    },
+    footer: {
+        desc: "The premier mining simulation experience. Built for players who demand depth, strategy, and real economic mechanics.",
+        community: "Community",
+        legal: "Legal",
+        rights: "All rights reserved.",
+        secure: "Secure & Verified"
+    }
+};
+
+const landingTh = {
+    nav: {
+        home: "หน้าแรก",
+        systems: "ระบบเหมือง",
+        market: "ตลาดกลาง",
+        roadmap: "แผนพัฒนา",
+        playNow: "เริ่มเล่นตอนนี้"
+    },
+    hero: {
+        season: "ซีซั่น 1: จุดเริ่มต้น",
+        title: "สร้างอาณาจักร",
+        titleAccent: "เหมืองขุดอัจฉริยะ",
+        subtitle: "จากพลั่วสนิมเขรอะสู่โรงไฟฟ้าปฏิกรณ์นิวเคลียร์ สัมผัสประสบการณ์เกมจำลองเศรษฐกิจที่สมจริงที่สุด ซื้อขายทรัพยากร อัปเกรดเครื่องขุด และครองตลาดโลก",
+        startMining: "เริ่มขุดแร่เดี๋ยวนี้",
+        whitepaper: "ดูสมุดปกขาว"
+    },
+    stats: {
+        totalPlayers: "ผู้เล่นทั้งหมด",
+        totalInvestment: "ยอดเงินลงทุนรวม",
+        activeRigs: "เครื่องขุดที่ทำงาน",
+        avgRoi: "ผลตอบแทนเฉลี่ย"
+    },
+    marketTicker: {
+        title: "ตลาดสด:"
+    },
+    systems: {
+        title: "ระบบหลักของเกม",
+        mining: {
+            title: "เครื่องขุดแร่ระดับสูง",
+            desc: "เริ่มจากอุปกรณ์พื้นฐานและไต่ระดับสู่เทคโนโลยีขั้นสูง จัดการความร้อน อัตรากำไร และความเสถียรของการโอเวอร์คล็อกเพื่อเพิ่มกำลังการผลิต",
+            features: ["เครื่องขุด 8 ระดับ", "ระบบโอเวอร์คล็อก", "การซ่อมบำรุงเครื่อง"]
+        },
+        crafting: {
+            title: "โรงงานอุตสาหกรรม",
+            desc: "แปรรูปวัตถุดิบเป็นสินค้าที่มีมูลค่า เปลี่ยนดินเป็นถ่านหิน หลอมทองแท่ง และสร้างอุปกรณ์ขุดแร่พร้อมโอกาสลุ้นรับโบนัส 'ความสำเร็จระดับสูง'",
+            features: ["การแปรรูปวัตถุดิบ", "การสร้างอุปกรณ์", "โอกาสแจ็คพอต 10%"]
+        },
+        market: {
+            title: "ระบบเศรษฐกิจเรียลไทม์",
+            desc: "ขับเคลื่อนโดยผู้เล่น 100% ราคาผันผวนตามอุปสงค์และอุปทาน ซื้อขายอย่างมีกลยุทธ์เพื่อกำไรจากความผันผวนของตลาด",
+            features: ["กระดานเทรดสด", "ราคาที่ยืดหยุ่น", "ภาษีการค้า 15%"]
+        },
+        exploration: {
+            title: "การออกสำรวจถ้ำ",
+            desc: "ส่งทีมสำรวจไปยังเหมืองลึก เลือกความเสี่ยงที่ต้องการ (2ชม, 6ชม, 12ชม) เพื่อค้นหาโบราณวัตถุหายาก กุญแจ และแหล่งแร่ขนาดใหญ่",
+            features: ["การสำรวจแบบจับเวลา", "ลูทไอเทมหายาก", "กุญแจปริศนา"]
+        }
+    },
+    roadmap: {
+        title: "แผนพัฒนาปี 2026",
+        phase1: {
+            title: "การเปิดตัว",
+            items: ["เปิดตัวเว็บไซต์เกม", "ระบบตลาดกลาง", "พื้นฐานการขุด"]
+        },
+        phase2: {
+            title: "การขยายตัว",
+            items: ["ระบบกิลด์", "แอปพลิเคชันมือถือ (Beta)", "ระบบการสร้างระดับสูง"]
+        },
+        phase3: {
+            title: "เมตาเวิร์ส",
+            items: ["สงครามระดับโลก", "กรรมสิทธิ์ที่ดิน", "การผสานโลก 3 มิติ"]
+        }
+    },
+    rigShowcase: {
+        title: "เทคโนโลยีเครื่องจักรขุดเจาะระดับพรีเมียม",
+        subtitle: "จากอุปกรณ์พื้นฐานสู่เครื่องปฏิกรณ์ควอนตัม ทุกเครื่องจักรคือสินทรัพย์สร้างรายได้",
+        freeLabel: "เครื่องขุดสำหรับผู้เริ่มต้น",
+        freeTag: "ขุดฟรีวันนี้",
+        t1: { name: "พลั่วสนิมเขรอะ", desc: "จุดเริ่มต้นที่เรียบง่ายของตำนานนักขุดทุกคน" },
+        t2: { name: "สว่านพกพา", desc: "เร็วขึ้น แม่นยำขึ้น และทำกำไรได้มากกว่า" },
+        t3: { name: "เครื่องขุดถ่านหิน", desc: "กำลังการผลิตระดับอุตสาหกรรมเพื่อรายได้ที่มั่นคง" },
+        t4: { name: "เครื่องขุดทองแดง", desc: "ตอบสนองความต้องการแร่พื้นฐานของตลาดโลก" },
+        t5: { name: "เครื่องขุดเหล็ก", desc: "กระดูกสันหลังของอาณาจักรเหมืองแร่ที่มั่นคง" },
+        t6: { name: "เครื่องขุดทองคำ", desc: "ความหรูหราที่มาพร้อมกับการสกัดแร่ที่ทรงคุณค่า" },
+        t7: { name: "เครื่องขุดเพชร", desc: "ความแม่นยำระดับนาโนและความร่ำรวยที่ไร้ขีดจำกัด" },
+        t8: { name: "เครื่องขุดปฏิกรณ์ไวเบรเนียม", desc: "สุดยอดวิศวกรรมที่มนุษย์จะจินตนาการได้" },
+        cta: "รับเครื่องจักรฟรีของคุณ"
+    },
+    cta: {
+        title: "พร้อมที่จะสร้าง",
+        titleAccent: "ตำนานของคุณหรือยัง?",
+        button: "เข้าร่วม GOLD RUSH ตอนนี้"
+    },
+    footer: {
+        desc: "ประสบการณ์การจำลองการทำเหมืองระดับพรีเมียม สร้างขึ้นสำหรับผู้เล่นที่ต้องการความลึก กลยุทธ์ และระบบเศรษฐกิจที่แท้จริง",
+        community: "ชุมชน",
+        legal: "กฎหมาย",
+        rights: "สงวนลิขสิทธิ์",
+        secure: "ปลอดภัยและได้รับการรับรอง"
+    }
+};
+
+export type Language = 'th' | 'en';
 
 export const translations = {
     th: {
+        landing: landingTh,
         common: {
             balance: 'ยอดคงเหลือ',
             power: 'พลังงาน',
@@ -452,7 +638,7 @@ export const translations = {
         referral: {
             title: 'ชวนเพื่อน',
             subtitle: 'ระบบแนะนำเพื่อน',
-            total_earnings: 'รายได้สะสม',
+            total_earnings: 'รวมรายได้แนะนำ',
             referral_code: 'รหัสแนะนำ',
             your_link: 'ลิงก์/รหัสแนะนำของคุณ',
             copied: 'คัดลอกแล้ว',
@@ -671,6 +857,7 @@ export const translations = {
         }
     },
     en: {
+        landing: landingEn,
         common: {
             balance: 'Balance',
             power: 'Power',
@@ -1338,5 +1525,4 @@ export const translations = {
     }
 };
 
-export type Language = 'th' | 'en';
 export type TranslationKey = keyof typeof translations.th;

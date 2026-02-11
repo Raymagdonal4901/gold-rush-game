@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Wallet, Send, QrCode, Upload, Image as ImageIcon, AlertTriangle, CheckCircle, ArrowRight, Percent, Clock } from 'lucide-react';
 import { CURRENCY, TRANSACTION_LIMITS, WITHDRAWAL_FEE_PERCENT, EXCHANGE_RATE_USD_THB, USDT_WITHDRAW_LIMITS } from '../constants';
 import { PinModal } from './PinModal';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface WithdrawModalProps {
     isOpen: boolean;

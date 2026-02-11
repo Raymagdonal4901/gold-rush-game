@@ -6,7 +6,7 @@ import { CraftingQueueItem } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface AccessoryShopModalProps {
     isOpen: boolean;

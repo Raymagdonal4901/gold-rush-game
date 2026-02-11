@@ -5,7 +5,7 @@ import { MATERIAL_CONFIG, SLOT_EXPANSION_CONFIG, CURRENCY } from '../constants';
 import { User } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface SlotUnlockModalProps {
     isOpen: boolean;

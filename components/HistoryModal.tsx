@@ -3,7 +3,7 @@ import { X, History, ArrowUpRight, ArrowDownLeft, ShoppingCart, RefreshCw, Alert
 import { Transaction } from '../services/types';
 import { api } from '../services/api';
 import { CURRENCY } from '../constants';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface HistoryModalProps {
   isOpen: boolean;

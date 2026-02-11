@@ -5,6 +5,8 @@ import { getMarketStatus } from '../controllers/materialController';
 import { getSystemConfig } from '../controllers/adminController';
 
 const router = express.Router();
+router.get('/market', getMarketStatus);
+router.get('/stats', getGlobalStats);
 
 router.use(authenticate);
 
@@ -13,8 +15,6 @@ router.get('/deposit/history', getMyDeposits);
 router.post('/withdraw', createWithdrawalRequest);
 router.post('/claim', claimReward);
 router.get('/history', getMyHistory);
-router.get('/stats', getGlobalStats);
-router.get('/market', getMarketStatus);
 router.get('/config', getSystemConfig);
 
 export default router;

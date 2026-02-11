@@ -5,7 +5,7 @@ import { Rarity } from '../services/types';
 import { RARITY_SETTINGS, CURRENCY } from '../constants';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface LootBoxModalProps {
     isOpen: boolean;

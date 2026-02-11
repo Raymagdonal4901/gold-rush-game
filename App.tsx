@@ -5,11 +5,15 @@ import { PlayerDashboard } from './components/PlayerDashboard';
 import { User } from './services/types';
 import { api } from './services/api';
 import { AlertTriangle } from 'lucide-react';
+import { LandingPage } from './components/LandingPage';
+import { LanguageProvider } from './contexts/LanguageContext';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSystemMaintenance, setIsSystemMaintenance] = useState(false);
+  const [showLanding, setShowLanding] = useState(true);
+  // ... existing useEffect and component logic ...
 
   useEffect(() => {
     const checkSession = async () => {
@@ -29,6 +33,7 @@ const App: React.FC = () => {
           try {
             const userData = await api.getMe();
             setUser(userData);
+            setShowLanding(false); // Skip landing if logged in
           } catch (authError) {
             console.error('[SYSTEM] Token invalid', authError);
             localStorage.removeItem('token');
@@ -45,11 +50,15 @@ const App: React.FC = () => {
 
   const handleLogin = (u: User) => {
     setUser(u);
+    setShowLanding(false);
   };
 
   const handleLogout = () => {
     api.logout();
     setUser(null);
+    setShowLanding(false); // Or true if we want to go back to landing? Let's stay on Auth for now as per consistent UX, or true? User requested "PLAY NOW" button from Landing.
+    // Actually, traditionally logout goes to Landing or Auth. Let's go to AuthPage for now to allow quick re-login, but maybe Landing is better for "Exit".
+    // I'll set it to false (AuthPage) to match current behavior for now.
   };
 
   if (isLoading) {
@@ -71,6 +80,14 @@ const App: React.FC = () => {
   if (isSystemMaintenance && !isAdmin) {
     // If not logged in, we must show AuthPage so they can attempt Admin login
     if (!user) {
+      // If on landing page, stick to landing page? No, probably show maintenance if they try to login.
+      // But if site is down, maybe show maintenance immediately?
+      // For now, let's let LandingPage show, but clicking "PLAY NOW" goes to Auth which shows Maintenance?
+      // Actually, existing logic for `!user` returns AuthPage immediately.
+      // If maintenance is ON, we should probably intercept.
+      if (showLanding) {
+        return <LandingPage onPlayNow={() => setShowLanding(false)} />;
+      }
       return <AuthPage onLogin={handleLogin} />;
     }
 
@@ -118,8 +135,11 @@ const App: React.FC = () => {
     );
   }
 
-  // 2. Not logged in -> Auth Page
+  // 2. Not logged in
   if (!user) {
+    if (showLanding) {
+      return <LandingPage onPlayNow={() => setShowLanding(false)} />;
+    }
     return <AuthPage onLogin={handleLogin} />;
   }
 
@@ -130,6 +150,12 @@ const App: React.FC = () => {
 
   // 4. Regular user (No maintenance) -> Player Dashboard
   return <PlayerDashboard initialUser={user} onLogout={handleLogout} />;
+};
+
+const App: React.FC = () => {
+  return (
+    <AppContent />
+  );
 };
 
 export default App;

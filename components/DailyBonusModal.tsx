@@ -4,7 +4,7 @@ import { X, CalendarCheck, CheckCircle2, Gift, Sparkles, Key, Cpu, Factory, Rota
 import { api } from '../services/api';
 import { User } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { DAILY_CHECKIN_REWARDS } from '../constants';
 
 interface DailyBonusModalProps {

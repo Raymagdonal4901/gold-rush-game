@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, QrCode, ArrowRight, CheckCircle, Upload, AlertCircle, ScanLine, Clock, FileText } from 'lucide-react';
 import { CURRENCY, TRANSACTION_LIMITS, EXCHANGE_RATE_USD_THB } from '../constants';
 import { api } from '../services/api';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { User } from '../services/types';
 
 interface DepositModalProps {

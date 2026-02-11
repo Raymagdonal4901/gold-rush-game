@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Lock, KeyRound, Save, Shield } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../services/types';
-import { useTranslation } from './LanguageContext';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface SettingsModalProps {
     isOpen: boolean;

@@ -1,0 +1,84 @@
+@startsalt
+skinparam backgroundColor #1a1a1a
+skinparam defaultFontColor #FFD700
+skinparam buttonBackgroundColor #FFD700
+skinparam buttonFontColor #1a1a1a
+skinparam buttonBorderColor #FFD700
+
+title GOLD RUSH - Luxury Mining Tycoon
+
+{+
+  !define GOLD #FFD700
+  !define NEON_GREEN #39FF14
+  !define TEXT_WHITE #FFFFFF
+  
+  {/ <b><color:GOLD>GOLD RUSH</color></b> | . | [Home] | [Systems] | [Market] | [Roadmap] | [<b><color:#1a1a1a> PLAY NOW (LOGIN) </color></b>] }
+  
+  {
+    .
+    <size:24><b>Build Your Mining Empire</b></size>
+    <size:14><color:TEXT_WHITE>From a Rusty Shovel to a Nuclear Reactor.</color></size>
+    .
+    <color:TEXT_WHITE>Real Economy</color> | <color:TEXT_WHITE>Real-time Market</color> | <color:TEXT_WHITE>Play-to-Earn</color>
+    .
+  }
+  
+  {
+     <b>Live Market:</b> | Coal: $45 <color:NEON_GREEN>▲</color> | Gold: $1,250 <color:NEON_GREEN>▲</color> | Diamond: $5,400 <color:red>▼</color> | Crude Oil: $98 <color:NEON_GREEN>▲</color>
+  }
+  
+  {+
+    {
+      <b>Mining Rigs</b>
+      ----
+      Tier 1 (Shovel) ->
+      Tier 8 (Nuclear Reactor)
+      --
+      Contracts
+      Maintenance
+      Overclock Mode
+    } |
+    {
+      <b>Crafting & Factory</b>
+      ----
+      Convert: <color:TEXT_WHITE>Dirt -> Coal</color>
+      --
+      Craft Equipment:
+      * Helmet
+      * Suit
+      <color:NEON_GREEN>(10% Great Success)</color>
+    }
+    
+    {
+      <b>Global Market</b>
+      ----
+      .
+      .       [ ^ GRAPH ^ ]
+      .
+      --
+      Real-time Trading
+      Buy/Sell Orders
+      <color:red>15% Market Tax</color>
+    } |
+    {
+      <b>Exploration (Dungeon)</b>
+      ----
+      Mining Expo:
+      [ 2h ] | [ 6h ] | [ 12h ] 
+      --
+      <b>Jackpot Rewards</b>
+      (Items / Keys)
+    }
+  }
+  
+  {
+    <b>Roadmap</b>
+    Phase 1: Web Launch & Market | Phase 2: Guilds & Mobile App | Phase 3: Metaverse & Global Wars
+  }
+  
+  {
+    [Discord] | [Facebook] | [Whitepaper]
+    <color:TEXT_WHITE>Copyright 2026</color>
+  }
+}
+@endsalt
