@@ -486,88 +486,83 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
                         <p className="text-stone-300 max-w-2xl mx-auto">{t('landing.rigShowcase.subtitle')}</p>
                     </div>
 
-                    <div className="relative min-h-[600px] flex flex-col items-center py-10">
-                        {/* The Stack Container */}
-                        <div className="relative w-full max-w-4xl h-[450px] md:h-[500px] perspective-1000">
+                    {/* Fanned Cards - Poker Hand Layout */}
+                    <div className="relative flex flex-col items-center">
+                        {/* Desktop: Fan Layout */}
+                        <div className="hidden md:block relative w-full max-w-5xl h-[520px]" style={{ perspective: '1200px' }}>
                             {RIGS.map((rig, idx) => {
                                 const isActive = activeIndex === idx;
-                                const offset = idx - activeIndex;
-                                const isBehind = offset < 0;
-                                const isAhead = offset > 0;
+                                const total = RIGS.length;
+                                const mid = (total - 1) / 2;
+                                const offset = idx - mid;
 
-                                // Card positioning logic
-                                let translateX = offset * 40;
-                                let rotateY = offset * -5;
-                                let scale = 1 - Math.abs(offset) * 0.05;
-                                let opacity = 1 - Math.abs(offset) * 0.2;
-                                let zIndex = 10 - Math.abs(offset);
-
-                                if (isActive) {
-                                    translateX = 0;
-                                    rotateY = 0;
-                                    scale = 1.05;
-                                    opacity = 1;
-                                    zIndex = 20;
-                                }
+                                // Fan spread: rotation and position from bottom pivot
+                                const rotateAngle = offset * 7; // degrees between cards
+                                const translateY = Math.abs(offset) * Math.abs(offset) * 6; // parabolic rise at edges
+                                const translateX = offset * 75; // horizontal spread
 
                                 return (
                                     <div
                                         key={rig.id}
                                         onClick={() => setActiveIndex(idx)}
-                                        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] md:w-[350px] 
-                                            transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] cursor-pointer
-                                            ${isActive ? 'z-30' : 'z-10 hover:scale-105'}
-                                        `}
+                                        className="absolute cursor-pointer transition-all duration-500 ease-out"
                                         style={{
-                                            transform: `translateX(calc(-50% + ${translateX}px)) translateY(-50%) scale(${scale}) rotateY(${rotateY}deg)`,
-                                            opacity: opacity > 0 ? opacity : 0,
-                                            zIndex: zIndex,
-                                            pointerEvents: Math.abs(offset) > 3 ? 'none' : 'auto'
+                                            width: '200px',
+                                            left: '50%',
+                                            bottom: '20px',
+                                            transformOrigin: 'center bottom',
+                                            transform: `
+                                                translateX(calc(-50% + ${translateX}px)) 
+                                                translateY(${isActive ? -40 - translateY : -translateY}px)
+                                                rotate(${isActive ? 0 : rotateAngle}deg) 
+                                                ${isActive ? 'scale(1.15)' : 'scale(1)'}
+                                            `,
+                                            zIndex: isActive ? 50 : 10 + idx,
+                                            filter: isActive ? 'none' : 'brightness(0.7)',
                                         }}
                                     >
                                         <div className={`
-                                            relative bg-stone-900 border-2 rounded-3xl p-6 shadow-2xl h-[400px] flex flex-col justify-between overflow-hidden
-                                            ${isActive ? `border-${rig.theme}-500 shadow-${rig.theme}-500/20` : 'border-stone-800'}
+                                            relative bg-stone-900 border-2 rounded-2xl p-4 shadow-2xl h-[380px] flex flex-col justify-between overflow-hidden
+                                            transition-all duration-500
+                                            ${isActive ? `border-${rig.theme}-500 shadow-[0_0_30px_rgba(234,179,8,0.3)]` : 'border-stone-800 hover:border-stone-600'}
                                             ${rig.special ? 'bg-gradient-to-br from-stone-900 to-black' : ''}
                                         `}>
-                                            {/* Glow Effect for Active Card */}
+                                            {/* Glow */}
                                             {isActive && (
-                                                <div className={`absolute inset-0 bg-gradient-to-t from-${rig.theme}-500/10 to-transparent opacity-50`}></div>
+                                                <div className={`absolute inset-0 bg-gradient-to-t from-${rig.theme}-500/15 to-transparent`}></div>
                                             )}
 
                                             {/* Top Label */}
                                             <div className="flex justify-between items-start relative z-10">
-                                                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border
+                                                <div className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border
                                                     ${isActive ? `bg-${rig.theme}-500/10 border-${rig.theme}-500/30 text-${rig.theme}-400` : 'bg-stone-800 border-stone-700 text-stone-400'}
                                                 `}>
                                                     Tier {rig.tier}
                                                 </div>
                                                 {rig.tier === 1 && (
-                                                    <div className="bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded uppercase">Free</div>
+                                                    <div className="bg-yellow-500 text-black text-[9px] font-bold px-2 py-0.5 rounded uppercase">Free</div>
                                                 )}
                                             </div>
 
-                                            {/* Animation Content */}
-                                            <div className="flex-1 flex items-center justify-center py-4 relative">
-                                                <div className={`absolute w-48 h-48 blur-3xl rounded-full bg-${rig.theme}-500/10`}></div>
-                                                <div className="transform scale-110 md:scale-125 relative z-10">
+                                            {/* Rig Image */}
+                                            <div className="flex-1 flex items-center justify-center py-2 relative">
+                                                <div className={`absolute w-32 h-32 blur-3xl rounded-full bg-${rig.theme}-500/10`}></div>
+                                                <div className="transform scale-90 relative z-10">
                                                     <OilRigAnimation rigName={rig.name} isActive={true} tier={rig.tier} />
                                                 </div>
                                             </div>
 
-                                            {/* Name and Basic Label */}
+                                            {/* Name */}
                                             <div className="text-center relative z-10">
-                                                <h4 className={`text-xl font-black mb-1 ${rig.special ? `text-transparent bg-clip-text bg-gradient-to-r from-${rig.theme}-400 to-pink-500` : 'text-white'}`}>
+                                                <h4 className={`text-sm font-black mb-1 ${rig.special ? `text-transparent bg-clip-text bg-gradient-to-r from-${rig.theme}-400 to-pink-500` : 'text-white'}`}>
                                                     {t(`landing.rigShowcase.${rig.key}.name`)}
                                                 </h4>
-                                                <div className={`w-8 h-1 mx-auto rounded-full mb-2 bg-${rig.theme}-500`}></div>
-                                            </div>
-
-                                            {/* Expanded Content (Only for Active) */}
-                                            <div className={`transition-all duration-500 overflow-hidden ${isActive ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                                <p className="text-stone-400 text-xs text-center leading-relaxed">
-                                                    {t(`landing.rigShowcase.${rig.key}.desc`)}
-                                                </p>
+                                                <div className={`w-6 h-0.5 mx-auto rounded-full bg-${rig.theme}-500`}></div>
+                                                {isActive && (
+                                                    <p className="text-stone-400 text-[10px] mt-2 leading-snug animate-in fade-in duration-300">
+                                                        {t(`landing.rigShowcase.${rig.key}.desc`)}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -575,19 +570,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
                             })}
                         </div>
 
-                        {/* Navigation Dots */}
-                        <div className="mt-12 flex gap-3 z-20">
-                            {RIGS.map((rig, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => setActiveIndex(i)}
-                                    className={`w-3 h-3 rounded-full transition-all duration-300 ${activeIndex === i ? `bg-${rig.theme}-500 w-8 shadow-[0_0_10px_rgba(var(--tw-shadow-color),0.5)]` : 'bg-stone-700 hover:bg-stone-500'}`}
-                                />
-                            ))}
+                        {/* Mobile: Horizontal Scroll */}
+                        <div className="md:hidden w-full overflow-x-auto pb-4 -mx-4 px-4">
+                            <div className="flex gap-4" style={{ width: `${RIGS.length * 200}px` }}>
+                                {RIGS.map((rig, idx) => {
+                                    const isActive = activeIndex === idx;
+                                    return (
+                                        <div
+                                            key={rig.id}
+                                            onClick={() => setActiveIndex(idx)}
+                                            className={`
+                                                flex-shrink-0 w-[180px] bg-stone-900 border-2 rounded-2xl p-4 shadow-xl cursor-pointer
+                                                transition-all duration-300
+                                                ${isActive ? `border-${rig.theme}-500 shadow-${rig.theme}-500/20 scale-105` : 'border-stone-800'}
+                                            `}
+                                        >
+                                            <div className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border w-fit
+                                                ${isActive ? `bg-${rig.theme}-500/10 border-${rig.theme}-500/30 text-${rig.theme}-400` : 'bg-stone-800 border-stone-700 text-stone-400'}
+                                            `}>
+                                                Tier {rig.tier}
+                                            </div>
+                                            <div className="flex items-center justify-center py-4">
+                                                <div className="transform scale-75">
+                                                    <OilRigAnimation rigName={rig.name} isActive={true} tier={rig.tier} />
+                                                </div>
+                                            </div>
+                                            <h4 className="text-xs font-black text-white text-center">
+                                                {t(`landing.rigShowcase.${rig.key}.name`)}
+                                            </h4>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
 
-                        {/* Active Rig Actions */}
-                        <div className={`mt-8 transition-all duration-500 text-center ${activeIndex !== -1 ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
+                        {/* CTA Button */}
+                        <div className="mt-8 text-center">
                             <button
                                 onClick={onPlayNow}
                                 className={`group bg-${RIGS[activeIndex].theme}-500 hover:brightness-110 text-black font-black px-12 py-4 rounded-xl shadow-xl transition-all flex items-center gap-2 mx-auto`}
@@ -596,6 +614,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
                                 <Zap size={18} className="fill-black group-hover:animate-pulse" />
                             </button>
                         </div>
+
                     </div>
                 </div>
             </section>
