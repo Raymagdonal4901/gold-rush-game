@@ -12,7 +12,8 @@ import {
     Zap,
     Cpu,
     Gem,
-    Languages
+    Languages,
+    Rocket
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { api } from '../services/api';
@@ -21,11 +22,24 @@ import { OilRigAnimation } from './OilRigAnimation';
 
 interface LandingPageProps {
     onPlayNow: () => void;
+    onWhitepaper: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepaper }) => {
     const { language, setLanguage, t, formatCurrency } = useLanguage();
     const [marketItems, setMarketItems] = React.useState<any[]>([]);
+    const [activeIndex, setActiveIndex] = React.useState(0);
+
+    const RIGS = [
+        { id: 1, key: 't1', name: 'Rusty Shovel', theme: 'amber', tier: 1 },
+        { id: 2, key: 't2', name: 'Portable Drill', theme: 'cyan', tier: 2 },
+        { id: 3, key: 't3', name: 'Coal Excavator', theme: 'slate', tier: 3 },
+        { id: 4, key: 't4', name: 'Copper Excavator', theme: 'orange', tier: 4 },
+        { id: 5, key: 't5', name: 'Iron Excavator', theme: 'zinc', tier: 5 },
+        { id: 6, key: 't6', name: 'Gold Excavator', theme: 'yellow', tier: 6 },
+        { id: 7, key: 't7', name: 'Diamond Excavator', theme: 'blue', tier: 7 },
+        { id: 8, key: 't8', name: 'Vibranium Reactor', theme: 'purple', tier: 8, special: true },
+    ];
 
     React.useEffect(() => {
         const fetchMarket = async () => {
@@ -109,11 +123,74 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow }) => {
                 </div>
             </nav>
 
+            {/* --- Background Texture & SVG Filters --- */}
+            <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
+                {/* SVG Noise for Rocky Texture */}
+                <svg className="absolute inset-0 w-full h-full opacity-[0.03] mix-blend-overlay">
+                    <filter id="noiseFilter">
+                        <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+                    </filter>
+                    <rect width="100%" height="100%" filter="url(#noiseFilter)" />
+                </svg>
+
+                {/* Cave Shadow Overlay - Lighter version */}
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-black/80"></div>
+
+                {/* Large Background Watermarks (Mining Icons) */}
+                <div className="absolute top-[20%] -left-20 opacity-[0.02] -rotate-12">
+                    <Pickaxe size={600} className="text-white" />
+                </div>
+                <div className="absolute bottom-[10%] -right-20 opacity-[0.02] rotate-12">
+                    <Factory size={600} className="text-white" />
+                </div>
+            </div>
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @keyframes float-dust {
+                    0% { transform: translateY(0) translateX(0) rotate(0); opacity: 0; }
+                    20% { opacity: 0.4; }
+                    80% { opacity: 0.4; }
+                    100% { transform: translateY(-100px) translateX(20px) rotate(360deg); opacity: 0; }
+                }
+                .gold-dust {
+                    position: absolute;
+                    width: 4px;
+                    height: 4px;
+                    background: #eab308;
+                    border-radius: 50%;
+                    filter: blur(1px);
+                    pointer-events: none;
+                    animation: float-dust linear infinite;
+                }
+            `}} />
+
             {/* --- Hero Section --- */}
             <section id="home" className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-                {/* Background Elements */}
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-yellow-900/20 via-[#1a1a1a] to-[#1a1a1a]"></div>
-                <div className="absolute top-0 left-0 w-full h-full bg-[url('https://images.unsplash.com/photo-1623228723236-40742d44933a?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-10 mix-blend-overlay"></div>
+                {/* Immersive Cave Background - Slightly lighter base */}
+                <div className="absolute inset-0 bg-[#0f0f0f]">
+                    {/* Glowing Ore Deposits (Gradients) - Increased intensity */}
+                    <div className="absolute top-0 right-0 w-[80%] h-[80%] bg-[radial-gradient(circle_at_70%_20%,_rgba(234,179,8,0.3)_0%,_transparent_60%)]"></div>
+                    <div className="absolute bottom-0 left-0 w-[60%] h-[60%] bg-[radial-gradient(circle_at_20%_80%,_rgba(168,85,247,0.2)_0%,_transparent_60%)]"></div>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(ellipse_at_center,_rgba(30,30,30,0)_0%,_#0f0f0f_85%)]"></div>
+                </div>
+
+                {/* Floating Gold Dust */}
+                <div className="absolute inset-0 pointer-events-none">
+                    {[...Array(20)].map((_, i) => (
+                        <div
+                            key={i}
+                            className="gold-dust"
+                            style={{
+                                left: `${Math.random() * 100}%`,
+                                top: `${Math.random() * 100}%`,
+                                animationDuration: `${5 + Math.random() * 10}s`,
+                                animationDelay: `${-Math.random() * 10}s`,
+                                scale: 0.5 + Math.random()
+                            }}
+                        />
+                    ))}
+                </div>
 
                 <div className="max-w-7xl mx-auto px-4 relative z-10 text-center">
                     <div className="inline-block mb-4 px-4 py-1.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 text-xs font-bold uppercase tracking-[0.2em] backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -127,7 +204,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow }) => {
                         </span>
                     </h1>
 
-                    <p className="text-stone-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
+                    <p className="text-stone-300 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
                         {t('landing.hero.subtitle')}
                     </p>
 
@@ -138,7 +215,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow }) => {
                         >
                             {t('landing.hero.startMining')}
                         </button>
-                        <button className="w-full sm:w-auto bg-[#2a2a2a] hover:bg-[#333] border border-stone-700 text-white text-lg font-bold py-4 px-10 rounded-lg transition-all flex items-center justify-center gap-2 group">
+                        <button onClick={onWhitepaper} className="w-full sm:w-auto bg-[#2a2a2a] hover:bg-[#333] border border-stone-700 text-white text-lg font-bold py-4 px-10 rounded-lg transition-all flex items-center justify-center gap-2 group">
                             <span className="group-hover:text-yellow-400 transition-colors uppercase">{t('landing.hero.whitepaper')}</span>
                             <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
                         </button>
@@ -147,7 +224,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow }) => {
                     <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto border-t border-stone-800 pt-8 animate-in fade-in zoom-in duration-1000 delay-500">
                         {[
                             { label: t('landing.stats.totalPlayers'), value: '28' },
-                            { label: t('landing.stats.totalInvestment'), value: '฿582,857' },
+                            { label: t('landing.stats.totalInvestment'), value: '฿34,658' },
                             { label: t('landing.stats.activeRigs'), value: '52' },
                             { label: t('landing.stats.avgRoi'), value: '18-25%' },
                         ].map((stat, i) => (
@@ -180,19 +257,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow }) => {
             </div>
 
             {/* --- Core Systems --- */}
-            <section id="systems" className="py-24 bg-[#1a1a1a] relative">
-                <div className="max-w-7xl mx-auto px-4">
+            <section id="systems" className="py-24 relative overflow-hidden backdrop-blur-xl bg-stone-950/40">
+                <div className="max-w-7xl mx-auto px-4 relative z-10">
                     <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-4xl font-black text-white mb-4 uppercase">{t('landing.systems.title')}</h2>
-                        <div className="w-24 h-1 bg-yellow-500 mx-auto"></div>
+                        <h2 className="text-4xl md:text-5xl font-black text-white mb-4 uppercase tracking-tight">{t('landing.systems.title')}</h2>
+                        <p className="text-stone-400 max-w-2xl mx-auto">{t('landing.systems.subtitle')}</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {/* Mining Rigs */}
-                        <div className="group relative bg-stone-900 border border-stone-800 p-8 rounded-2xl hover:border-yellow-500/50 transition-all hover:-translate-y-1">
+                        <div className="group relative bg-stone-900/80 border border-stone-800 p-8 rounded-2xl hover:border-yellow-500/50 transition-all hover:-translate-y-1 backdrop-blur-md">
                             <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
                             <div className="w-full h-48 mb-6 relative">
-                                <OilRigAnimation rigName="Vibranium Reactor" isActive={true} tier={6} />
+                                <OilRigAnimation rigName="Vibranium Reactor" isActive={true} tier={8} />
                             </div>
                             <h3 className="text-2xl font-bold mb-4 text-white">{t('landing.systems.mining.title')}</h3>
                             <p className="text-stone-400 mb-6 leading-relaxed">
@@ -206,10 +283,61 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow }) => {
                         </div>
 
                         {/* Crafting */}
-                        <div className="group relative bg-stone-900 border border-stone-800 p-8 rounded-2xl hover:border-blue-500/50 transition-all hover:-translate-y-1">
+                        <div className="group relative bg-stone-900/80 border border-stone-800 p-8 rounded-2xl hover:border-blue-500/50 transition-all hover:-translate-y-1 backdrop-blur-md">
                             <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
-                            <Factory className="text-blue-500 mb-6" size={48} />
-                            <h3 className="text-2xl font-bold mb-4 text-white">{t('landing.systems.crafting.title')}</h3>
+
+                            {/* High-Fidelity Extraction UI Visual */}
+                            <div className="w-full h-56 mb-6 bg-[#0c0c0c] rounded-xl relative overflow-hidden border border-white/10 flex flex-col items-center justify-center p-4">
+                                {/* Form Title */}
+                                <div className="text-center mb-4 relative z-10 scale-[0.8]">
+                                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                                        <Gem size={14} className="text-yellow-500 fill-yellow-500/20" />
+                                        <span className="text-[10px] font-black text-white whitespace-nowrap">ยืนยันการสกัด (EXTRACTION FORM)</span>
+                                    </div>
+                                    <div className="text-[7px] text-yellow-600 font-bold uppercase tracking-widest">กระบวนการสกัดและแปรรูปทรัพยากร (TIER 4)</div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 relative z-10 scale-[0.85] lg:scale-100">
+                                    {/* Ingredients Grid */}
+                                    <div className="flex items-start gap-1">
+                                        {[
+                                            { color: 'bg-orange-600', label: 'ทองแดง', qty: 'x1' },
+                                            { color: 'bg-zinc-400', label: 'เหล็ก', qty: 'x1' },
+                                            { color: 'bg-yellow-500', label: 'ทองคำ', qty: 'x1' },
+                                            { color: 'bg-green-600', label: 'บาท', qty: 'x8.75' },
+                                        ].map((item, i) => (
+                                            <div key={i} className="flex flex-col items-center gap-1">
+                                                <div className="w-10 h-10 bg-black/60 border border-stone-800 rounded-lg flex items-center justify-center relative shadow-inner">
+                                                    <div className={`w-5 h-4 ${item.color} rounded-sm shadow-lg`}></div>
+                                                    <div className="absolute -top-1.5 -right-1.5 bg-red-600 text-[6px] font-bold text-white px-1 rounded-sm border border-red-400 shadow-md">{item.qty}</div>
+                                                </div>
+                                                <span className="text-[6px] text-stone-500 truncate w-10 text-center">{item.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="text-stone-700 mx-0.5">
+                                        <ArrowRight size={14} className="group-hover:text-blue-500 transition-colors" />
+                                    </div>
+
+                                    {/* Result */}
+                                    <div className="flex flex-col items-center gap-1">
+                                        <div className="relative">
+                                            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full animate-pulse"></div>
+                                            <div className="w-14 h-14 bg-black/80 border-2 border-yellow-500/50 rounded-xl flex items-center justify-center relative z-10 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+                                                <Gem size={24} className="text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]" />
+                                                <div className="absolute -bottom-1.5 -right-1.5 bg-yellow-600 text-[6px] font-bold text-white px-1 rounded-sm border border-yellow-400 shadow-md">x1</div>
+                                            </div>
+                                        </div>
+                                        <span className="text-[6px] font-bold text-yellow-500">เพชร</span>
+                                    </div>
+                                </div>
+
+                                {/* Background Glow */}
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(37,99,235,0.05)_0%,_transparent_70%)]"></div>
+                            </div>
+
+                            <h3 className="text-2xl font-bold mb-4 text-white uppercase tracking-tight">{t('landing.systems.crafting.title')}</h3>
                             <p className="text-stone-400 mb-6 leading-relaxed">
                                 {t('landing.systems.crafting.desc')}
                             </p>
@@ -221,10 +349,60 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow }) => {
                         </div>
 
                         {/* Global Market */}
-                        <div className="group relative bg-stone-900 border border-stone-800 p-8 rounded-2xl hover:border-green-500/50 transition-all hover:-translate-y-1">
+                        <div className="group relative bg-stone-900/80 border border-stone-800 p-8 rounded-2xl hover:border-green-500/50 transition-all hover:-translate-y-1 backdrop-blur-md">
                             <div className="absolute inset-0 bg-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
-                            <Globe className="text-green-500 mb-6" size={48} />
-                            <h3 className="text-2xl font-bold mb-4 text-white">{t('landing.systems.market.title')}</h3>
+
+                            {/* Mini Market Dashboard Visual */}
+                            <div className="w-full h-48 mb-6 bg-black/40 rounded-xl relative overflow-hidden border border-white/5 flex flex-col p-4">
+                                <div className="flex justify-between items-center mb-4 relative z-10">
+                                    <div className="flex items-center gap-2">
+                                        <TrendingUp size={16} className="text-green-500" />
+                                        <span className="text-[10px] font-bold text-white uppercase tracking-tighter">Live Market</span>
+                                    </div>
+                                    <div className="flex gap-1">
+                                        <div className="w-8 h-3 bg-red-500/20 border border-red-500/30 rounded-sm text-[8px] flex items-center justify-center text-red-500">Sell</div>
+                                        <div className="w-8 h-3 bg-green-500/20 border border-green-500/30 rounded-sm text-[8px] flex items-center justify-center text-green-500">Buy</div>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-1 gap-4 relative z-10">
+                                    {/* Ticker List */}
+                                    <div className="flex-1 space-y-2">
+                                        {[
+                                            { name: 'Diamond', price: '106฿', up: true },
+                                            { name: 'Gold', price: '51฿', up: false },
+                                            { name: 'Iron', price: '34฿', up: true },
+                                        ].map((m, i) => (
+                                            <div key={i} className="flex justify-between items-center bg-white/5 p-1 rounded-sm border border-white/5">
+                                                <span className="text-[8px] text-stone-400">{m.name}</span>
+                                                <span className={`text-[8px] font-mono ${m.up ? 'text-green-500' : 'text-red-500'}`}>{m.price}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Price Chart */}
+                                    <div className="flex-1 relative">
+                                        <svg className="w-full h-full" viewBox="0 0 100 50">
+                                            <path
+                                                d="M0,45 C10,40 20,40 30,30 S50,45 60,20 S80,10 100,5"
+                                                fill="none"
+                                                stroke="url(#chartGradient)"
+                                                strokeWidth="2"
+                                                className="animate-[shimmer_2s_infinite]"
+                                            />
+                                            <defs>
+                                                <linearGradient id="chartGradient" x1="0" y1="0" x2="1" y2="0">
+                                                    <stop offset="0%" stopColor="#22c55e" stopOpacity="0.2" />
+                                                    <stop offset="100%" stopColor="#22c55e" stopOpacity="1" />
+                                                </linearGradient>
+                                            </defs>
+                                            <circle cx="100" cy="5" r="3" fill="#22c55e" className="animate-pulse shadow-[0_0_10px_#22c55e]" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h3 className="text-2xl font-bold mb-4 text-white uppercase tracking-tight">{t('landing.systems.market.title')}</h3>
                             <p className="text-stone-400 mb-6 leading-relaxed">
                                 {t('landing.systems.market.desc')}
                             </p>
@@ -236,10 +414,54 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow }) => {
                         </div>
 
                         {/* Exploration */}
-                        <div className="group relative bg-stone-900 border border-stone-800 p-8 rounded-2xl hover:border-purple-500/50 transition-all hover:-translate-y-1">
+                        <div className="group relative bg-stone-900/80 border border-stone-800 p-8 rounded-2xl hover:border-purple-500/50 transition-all hover:-translate-y-1 backdrop-blur-md">
                             <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
-                            <Map className="text-purple-500 mb-6" size={48} />
-                            <h3 className="text-2xl font-bold mb-4 text-white">{t('landing.systems.exploration.title')}</h3>
+
+                            {/* Mini Mission Dashboard Visual */}
+                            <div className="w-full h-48 mb-6 bg-black/40 rounded-xl relative overflow-hidden border border-white/5 flex flex-col p-4">
+                                <div className="flex items-center gap-3 mb-3 relative z-10">
+                                    <div className="w-10 h-10 bg-purple-500/20 border border-purple-500/30 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                        <Rocket size={20} className="text-purple-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-black text-white uppercase tracking-tight">Crystal Caverns</div>
+                                        <div className="flex gap-2">
+                                            <span className="text-[8px] text-stone-500">12 Hours</span>
+                                            <span className="text-[8px] text-green-500 font-bold">Lvl 1+</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3 relative z-10">
+                                    {/* Stats bars */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex justify-between text-[8px] text-stone-400 mb-0.5">
+                                            <span>Common Rewards</span>
+                                            <span className="text-green-500">80%</span>
+                                        </div>
+                                        <div className="h-1 bg-stone-800 rounded-full overflow-hidden">
+                                            <div className="h-full bg-green-500 w-[80%]"></div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <div className="flex justify-between text-[8px] text-stone-400 mb-0.5">
+                                            <span>Jackpot Prize</span>
+                                            <span className="text-yellow-500">20%</span>
+                                        </div>
+                                        <div className="h-1 bg-stone-800 rounded-full overflow-hidden">
+                                            <div className="h-full bg-yellow-500 w-[20%] animate-pulse"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-auto flex justify-center relative z-10">
+                                    <div className="w-full py-1 bg-purple-500/20 border border-purple-500/40 rounded text-[8px] font-bold text-purple-300 flex items-center justify-center gap-1 group-hover:bg-purple-500/40 transition-colors">
+                                        Select Mission <ArrowRight size={8} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h3 className="text-2xl font-bold mb-4 text-white uppercase tracking-tight">{t('landing.systems.exploration.title')}</h3>
                             <p className="text-stone-400 mb-6 leading-relaxed">
                                 {t('landing.systems.exploration.desc')}
                             </p>
@@ -261,84 +483,118 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow }) => {
                 <div className="max-w-7xl mx-auto px-4 relative z-10">
                     <div className="text-center mb-16">
                         <h2 className="text-4xl md:text-5xl font-black text-white mb-4 uppercase tracking-tight">{t('landing.rigShowcase.title')}</h2>
-                        <p className="text-stone-400 max-w-2xl mx-auto">{t('landing.rigShowcase.subtitle')}</p>
+                        <p className="text-stone-300 max-w-2xl mx-auto">{t('landing.rigShowcase.subtitle')}</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {/* Highlighted Free Rig (T1) */}
-                        <div className="lg:col-span-2 lg:row-span-2 group relative bg-gradient-to-br from-stone-900 to-black border-2 border-yellow-500/50 p-8 rounded-3xl shadow-[0_0_50px_rgba(234,179,8,0.15)] overflow-hidden flex flex-col justify-between h-full">
-                            <div className="absolute top-0 right-0 bg-yellow-500 text-black text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-widest animate-pulse">
-                                {t('landing.rigShowcase.freeTag')}
-                            </div>
+                    <div className="relative min-h-[600px] flex flex-col items-center py-10">
+                        {/* The Stack Container */}
+                        <div className="relative w-full max-w-4xl h-[450px] md:h-[500px] perspective-1000">
+                            {RIGS.map((rig, idx) => {
+                                const isActive = activeIndex === idx;
+                                const offset = idx - activeIndex;
+                                const isBehind = offset < 0;
+                                const isAhead = offset > 0;
 
-                            <div>
-                                <div className="mb-6 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-xs font-bold uppercase">
-                                    <Zap size={14} className="fill-yellow-500" />
-                                    {t('landing.rigShowcase.freeLabel')}
-                                </div>
-                                <h3 className="text-4xl font-black text-white mb-4 group-hover:text-yellow-400 transition-colors uppercase">
-                                    {t('landing.rigShowcase.t1.name')}
-                                </h3>
-                                <p className="text-stone-400 text-lg mb-8 max-w-md">
-                                    {t('landing.rigShowcase.t1.desc')}
-                                </p>
-                            </div>
+                                // Card positioning logic
+                                let translateX = offset * 40;
+                                let rotateY = offset * -5;
+                                let scale = 1 - Math.abs(offset) * 0.05;
+                                let opacity = 1 - Math.abs(offset) * 0.2;
+                                let zIndex = 10 - Math.abs(offset);
 
-                            <div className="relative h-64 w-full flex items-center justify-center">
-                                <div className="absolute inset-0 bg-gradient-to-t from-yellow-500/20 to-transparent blur-3xl rounded-full"></div>
-                                <Pickaxe className="text-yellow-500 relative z-10 w-48 h-48 drop-shadow-[0_0_30px_rgba(234,179,8,0.5)] transform -rotate-12 group-hover:rotate-0 transition-transform duration-500" />
-                            </div>
+                                if (isActive) {
+                                    translateX = 0;
+                                    rotateY = 0;
+                                    scale = 1.05;
+                                    opacity = 1;
+                                    zIndex = 20;
+                                }
 
-                            <button
-                                onClick={onPlayNow}
-                                className="mt-8 w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 group/btn"
-                            >
-                                {t('landing.rigShowcase.cta')}
-                                <ArrowRight size={20} className="group-hover/btn:translate-x-2 transition-transform" />
-                            </button>
+                                return (
+                                    <div
+                                        key={rig.id}
+                                        onClick={() => setActiveIndex(idx)}
+                                        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] md:w-[350px] 
+                                            transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] cursor-pointer
+                                            ${isActive ? 'z-30' : 'z-10 hover:scale-105'}
+                                        `}
+                                        style={{
+                                            transform: `translateX(calc(-50% + ${translateX}px)) translateY(-50%) scale(${scale}) rotateY(${rotateY}deg)`,
+                                            opacity: opacity > 0 ? opacity : 0,
+                                            zIndex: zIndex,
+                                            pointerEvents: Math.abs(offset) > 3 ? 'none' : 'auto'
+                                        }}
+                                    >
+                                        <div className={`
+                                            relative bg-stone-900 border-2 rounded-3xl p-6 shadow-2xl h-[400px] flex flex-col justify-between overflow-hidden
+                                            ${isActive ? `border-${rig.theme}-500 shadow-${rig.theme}-500/20` : 'border-stone-800'}
+                                            ${rig.special ? 'bg-gradient-to-br from-stone-900 to-black' : ''}
+                                        `}>
+                                            {/* Glow Effect for Active Card */}
+                                            {isActive && (
+                                                <div className={`absolute inset-0 bg-gradient-to-t from-${rig.theme}-500/10 to-transparent opacity-50`}></div>
+                                            )}
+
+                                            {/* Top Label */}
+                                            <div className="flex justify-between items-start relative z-10">
+                                                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border
+                                                    ${isActive ? `bg-${rig.theme}-500/10 border-${rig.theme}-500/30 text-${rig.theme}-400` : 'bg-stone-800 border-stone-700 text-stone-400'}
+                                                `}>
+                                                    Tier {rig.tier}
+                                                </div>
+                                                {rig.tier === 1 && (
+                                                    <div className="bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded uppercase">Free</div>
+                                                )}
+                                            </div>
+
+                                            {/* Animation Content */}
+                                            <div className="flex-1 flex items-center justify-center py-4 relative">
+                                                <div className={`absolute w-48 h-48 blur-3xl rounded-full bg-${rig.theme}-500/10`}></div>
+                                                <div className="transform scale-110 md:scale-125 relative z-10">
+                                                    <OilRigAnimation rigName={rig.name} isActive={true} tier={rig.tier} />
+                                                </div>
+                                            </div>
+
+                                            {/* Name and Basic Label */}
+                                            <div className="text-center relative z-10">
+                                                <h4 className={`text-xl font-black mb-1 ${rig.special ? `text-transparent bg-clip-text bg-gradient-to-r from-${rig.theme}-400 to-pink-500` : 'text-white'}`}>
+                                                    {t(`landing.rigShowcase.${rig.key}.name`)}
+                                                </h4>
+                                                <div className={`w-8 h-1 mx-auto rounded-full mb-2 bg-${rig.theme}-500`}></div>
+                                            </div>
+
+                                            {/* Expanded Content (Only for Active) */}
+                                            <div className={`transition-all duration-500 overflow-hidden ${isActive ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                <p className="text-stone-400 text-xs text-center leading-relaxed">
+                                                    {t(`landing.rigShowcase.${rig.key}.desc`)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
 
-                        {/* Other Rigs Grid */}
-                        {[
-                            { id: 2, key: 't2', color: 'blue', icon: Zap },
-                            { id: 3, key: 't3', color: 'stone', icon: Factory },
-                            { id: 4, key: 't4', color: 'orange', icon: Cpu },
-                            { id: 5, key: 't5', color: 'stone', icon: Shield },
-                            { id: 6, key: 't6', color: 'yellow', icon: Zap },
-                            { id: 7, key: 't7', color: 'cyan', icon: Gem },
-                        ].map((rig) => (
-                            <div key={rig.id} className="group bg-stone-900 border border-stone-800 p-6 rounded-2xl hover:border-white/20 transition-all flex flex-col justify-between">
-                                <div>
-                                    <div className={`mb-4 w-12 h-12 rounded-xl bg-stone-800 border border-stone-700 flex items-center justify-center group-hover:border-yellow-500/50 transition-colors`}>
-                                        <rig.icon className="text-stone-400 group-hover:text-yellow-500 transition-colors" size={24} />
-                                    </div>
-                                    <h4 className="text-lg font-bold text-white mb-2 group-hover:text-yellow-400 transition-colors">
-                                        {t(`landing.rigShowcase.${rig.key}.name`)}
-                                    </h4>
-                                    <p className="text-stone-500 text-xs leading-relaxed">
-                                        {t(`landing.rigShowcase.${rig.key}.desc`)}
-                                    </p>
-                                </div>
-                                <div className="mt-4 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-stone-600">
-                                    <span>Asset TIER {rig.id}</span>
-                                </div>
-                            </div>
-                        ))}
+                        {/* Navigation Dots */}
+                        <div className="mt-12 flex gap-3 z-20">
+                            {RIGS.map((rig, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => setActiveIndex(i)}
+                                    className={`w-3 h-3 rounded-full transition-all duration-300 ${activeIndex === i ? `bg-${rig.theme}-500 w-8 shadow-[0_0_10px_rgba(var(--tw-shadow-color),0.5)]` : 'bg-stone-700 hover:bg-stone-500'}`}
+                                />
+                            ))}
+                        </div>
 
-                        {/* T8 Special Reactor */}
-                        <div className="group bg-[#0a0a0a] border border-purple-500/30 p-6 rounded-2xl hover:border-purple-500 transition-all shadow-[0_0_30px_rgba(168,85,247,0.1)]">
-                            <div className="mb-4 w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center animate-pulse">
-                                <Zap className="text-purple-500 fill-purple-500/30" size={24} />
-                            </div>
-                            <h4 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-2">
-                                {t('landing.rigShowcase.t8.name')}
-                            </h4>
-                            <p className="text-stone-500 text-xs leading-relaxed">
-                                {t('landing.rigShowcase.t8.desc')}
-                            </p>
-                            <div className="mt-4 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-purple-900">
-                                <span>Legendary Asset</span>
-                            </div>
+                        {/* Active Rig Actions */}
+                        <div className={`mt-8 transition-all duration-500 text-center ${activeIndex !== -1 ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
+                            <button
+                                onClick={onPlayNow}
+                                className={`group bg-${RIGS[activeIndex].theme}-500 hover:brightness-110 text-black font-black px-12 py-4 rounded-xl shadow-xl transition-all flex items-center gap-2 mx-auto`}
+                            >
+                                {t('landing.rigShowcase.cta')}
+                                <Zap size={18} className="fill-black group-hover:animate-pulse" />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -346,33 +602,66 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow }) => {
 
             {/* --- Roadmap --- */}
 
-            <section id="roadmap" className="py-24 bg-stone-950 border-t border-stone-900">
-                <div className="max-w-7xl mx-auto px-4">
+            <section id="roadmap" className="py-24 bg-stone-950 border-t border-stone-900 relative overflow-hidden">
+                {/* Background Mining Glow */}
+                <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-yellow-500/5 blur-[100px] rounded-full -translate-y-1/2"></div>
+                <div className="absolute top-1/2 right-1/4 w-64 h-64 bg-purple-500/5 blur-[100px] rounded-full -translate-y-1/2"></div>
+
+                <div className="max-w-7xl mx-auto px-4 relative z-10">
                     <div className="text-center mb-16">
                         <h2 className="text-3xl md:text-4xl font-black text-white mb-4 uppercase">{t('landing.roadmap.title')}</h2>
-                        <div className="w-24 h-1 bg-yellow-500 mx-auto"></div>
+                        <div className="w-24 h-1 bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 mx-auto rounded-full"></div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left relative">
-                        {/* Connecting Line (Desktop) */}
-                        <div className="hidden md:block absolute top-8 left-0 w-full h-0.5 bg-stone-800 z-0"></div>
+                        {/* Seismic Vibration Line (Desktop) */}
+                        <div className="hidden md:block absolute top-8 left-0 w-full z-0">
+                            <svg className="w-full h-4" viewBox="0 0 1200 16" preserveAspectRatio="none">
+                                <path
+                                    d="M0,8 L50,8 L55,2 L60,14 L65,4 L70,12 L75,6 L80,10 L85,8 L200,8 L205,3 L210,13 L215,5 L220,11 L225,7 L230,9 L235,8 L400,8 L405,2 L410,14 L415,4 L420,12 L425,6 L430,10 L435,8 L600,8 L605,3 L610,13 L615,5 L620,11 L625,7 L630,9 L635,8 L800,8 L805,2 L810,14 L815,4 L820,12 L825,6 L830,10 L835,8 L1000,8 L1005,3 L1010,13 L1015,5 L1020,11 L1025,7 L1030,9 L1035,8 L1200,8"
+                                    fill="none"
+                                    stroke="url(#seismicGrad)"
+                                    strokeWidth="1.5"
+                                    className="animate-pulse"
+                                />
+                                <defs>
+                                    <linearGradient id="seismicGrad" x1="0" y1="0" x2="1" y2="0">
+                                        <stop offset="0%" stopColor="#eab308" stopOpacity="0.8" />
+                                        <stop offset="50%" stopColor="#a855f7" stopOpacity="0.6" />
+                                        <stop offset="100%" stopColor="#6b7280" stopOpacity="0.3" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
 
                         {[
-                            { phase: 'Phase 1', status: 'completed', data: t('landing.roadmap.phase1') },
-                            { phase: 'Phase 2', status: 'current', data: t('landing.roadmap.phase2') },
-                            { phase: 'Phase 3', status: 'future', data: t('landing.roadmap.phase3') },
+                            { phase: 'Phase 1', status: 'completed', data: t('landing.roadmap.phase1'), icon: '⛏️', accent: 'yellow' },
+                            { phase: 'Phase 2', status: 'current', data: t('landing.roadmap.phase2'), icon: '💎', accent: 'purple' },
+                            { phase: 'Phase 3', status: 'future', data: t('landing.roadmap.phase3'), icon: '🏔️', accent: 'stone' },
                         ].map((p, i) => (
                             <div key={i} className="relative z-10">
-                                <div className={`w-16 h-16 mx-auto md:mx-0 rounded-full flex items-center justify-center text-xl font-bold mb-6 border-4 ${p.status === 'completed' ? 'bg-yellow-500 border-yellow-500 text-black' :
-                                    p.status === 'current' ? 'bg-stone-900 border-yellow-500 text-yellow-500 animate-pulse' :
-                                        'bg-stone-900 border-stone-700 text-stone-700'
+                                {/* Mining Icon Node */}
+                                <div className={`w-16 h-16 mx-auto md:mx-0 rounded-xl flex items-center justify-center text-2xl font-bold mb-6 border-2 transform rotate-45 shadow-lg ${p.status === 'completed' ? 'bg-gradient-to-br from-yellow-500 to-yellow-700 border-yellow-400 shadow-yellow-500/30' :
+                                    p.status === 'current' ? 'bg-gradient-to-br from-purple-900 to-purple-700 border-purple-500 shadow-purple-500/30 animate-pulse' :
+                                        'bg-stone-900 border-stone-700 shadow-none'
                                     }`}>
-                                    {i + 1}
+                                    <span className="transform -rotate-45">{p.icon}</span>
                                 </div>
-                                <h3 className={`text-xl font-bold mb-2 uppercase ${p.status === 'future' ? 'text-stone-500' : 'text-white'}`}>{p.phase}: {p.data.title}</h3>
+                                <h3 className={`text-xl font-bold mb-3 uppercase ${p.status === 'completed' ? 'text-yellow-500' :
+                                    p.status === 'current' ? 'text-purple-400' :
+                                        'text-stone-500'
+                                    }`}>{p.phase}: {p.data.title}</h3>
+                                {p.data.tagline && (
+                                    <p className={`text-xs mb-3 italic ${p.status === 'future' ? 'text-stone-600' : 'text-stone-400'}`}>"{p.data.tagline}"</p>
+                                )}
                                 <ul className="space-y-2">
                                     {p.data.items.map((item: string, j: number) => (
-                                        <li key={j} className={`flex items-center text-sm ${p.status === 'future' ? 'text-stone-600' : 'text-stone-400'}`}>• {item}</li>
+                                        <li key={j} className={`flex items-center text-sm gap-2 ${p.status === 'future' ? 'text-stone-600' : 'text-stone-400'}`}>
+                                            <span className={`text-[8px] ${p.status === 'completed' ? 'text-yellow-500' :
+                                                p.status === 'current' ? 'text-purple-500' :
+                                                    'text-stone-700'
+                                                }`}>◆</span> {item}
+                                        </li>
                                     ))}
                                 </ul>
                             </div>
@@ -421,7 +710,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow }) => {
                         <ul className="space-y-2">
                             <li><a href="#" className="hover:text-yellow-500 transition-colors">Terms of Service</a></li>
                             <li><a href="#" className="hover:text-yellow-500 transition-colors">Privacy Policy</a></li>
-                            <li><a href="#" className="hover:text-yellow-500 transition-colors">Whitepaper</a></li>
+                            <li><button onClick={onWhitepaper} className="hover:text-yellow-500 transition-colors">Whitepaper</button></li>
                         </ul>
                     </div>
                 </div>

@@ -50,14 +50,17 @@ export const en = {
         title: "Roadmap 2026",
         phase1: {
             title: "Launch",
+            tagline: "The dawn of a mining empire.",
             items: ["Web Game Launch", "Market System", "Basic Mining"]
         },
         phase2: {
-            title: "Expansion",
-            items: ["Guild System", "Mobile App Beta", "Advanced Crafting"]
+            title: "Global Logistics",
+            tagline: "Open new trade routes! Build vehicles to transport resources worldwide.",
+            items: ["Vehicle Assembly & Blueprints", "Gold Rush Motors", "Global Trade Routes"]
         },
         phase3: {
             title: "Metaverse",
+            tagline: "A boundless mining universe awaits.",
             items: ["Global Wars", "Land Ownership", "3D World Integration"]
         }
     },

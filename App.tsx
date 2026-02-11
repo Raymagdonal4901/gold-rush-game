@@ -6,6 +6,7 @@ import { User } from './services/types';
 import { api } from './services/api';
 import { AlertTriangle } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
+import { WhitepaperPage } from './components/WhitepaperPage';
 import { LanguageProvider } from './contexts/LanguageContext';
 
 const AppContent: React.FC = () => {
@@ -13,6 +14,7 @@ const AppContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSystemMaintenance, setIsSystemMaintenance] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
+  const [showWhitepaper, setShowWhitepaper] = useState(false);
   // ... existing useEffect and component logic ...
 
   useEffect(() => {
@@ -86,7 +88,7 @@ const AppContent: React.FC = () => {
       // Actually, existing logic for `!user` returns AuthPage immediately.
       // If maintenance is ON, we should probably intercept.
       if (showLanding) {
-        return <LandingPage onPlayNow={() => setShowLanding(false)} />;
+        return <LandingPage onPlayNow={() => setShowLanding(false)} onWhitepaper={() => { setShowLanding(false); setShowWhitepaper(true); }} />;
       }
       return <AuthPage onLogin={handleLogin} />;
     }
@@ -137,8 +139,11 @@ const AppContent: React.FC = () => {
 
   // 2. Not logged in
   if (!user) {
+    if (showWhitepaper) {
+      return <WhitepaperPage onBack={() => { setShowWhitepaper(false); setShowLanding(true); }} onPlayNow={() => { setShowWhitepaper(false); setShowLanding(false); }} />;
+    }
     if (showLanding) {
-      return <LandingPage onPlayNow={() => setShowLanding(false)} />;
+      return <LandingPage onPlayNow={() => setShowLanding(false)} onWhitepaper={() => { setShowLanding(false); setShowWhitepaper(true); }} />;
     }
     return <AuthPage onLogin={handleLogin} />;
   }

@@ -86,7 +86,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
-      {showAnnouncement && <ReferralAnnouncement onClose={() => setShowAnnouncement(false)} />}
+
       <div className="absolute inset-0 bg-stone-950/95 backdrop-blur-md z-[10]"></div>
 
       <div className="relative z-[100] bg-stone-900/90 border border-yellow-600/30 w-full max-w-md p-10 shadow-[0_0_60px_rgba(0,0,0,0.9)] backdrop-blur-2xl">

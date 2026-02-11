@@ -50,14 +50,17 @@ const landingEn = {
         title: "Roadmap 2026",
         phase1: {
             title: "Launch",
+            tagline: "The dawn of a mining empire.",
             items: ["Web Game Launch", "Market System", "Basic Mining"]
         },
         phase2: {
-            title: "Expansion",
-            items: ["Guild System", "Mobile App Beta", "Advanced Crafting"]
+            title: "Global Logistics",
+            tagline: "Open new trade routes! Build vehicles to transport resources worldwide.",
+            items: ["Vehicle Assembly & Blueprints", "Gold Rush Motors", "Global Trade Routes"]
         },
         phase3: {
             title: "Metaverse",
+            tagline: "A boundless mining universe awaits.",
             items: ["Global Wars", "Land Ownership", "3D World Integration"]
         }
     },
@@ -142,14 +145,17 @@ const landingTh = {
         title: "แผนพัฒนาปี 2026",
         phase1: {
             title: "การเปิดตัว",
+            tagline: "จุดเริ่มต้นของอาณาจักรเหมืองแร่",
             items: ["เปิดตัวเว็บไซต์เกม", "ระบบตลาดกลาง", "พื้นฐานการขุด"]
         },
         phase2: {
-            title: "การขยายตัว",
-            items: ["ระบบกิลด์", "แอปพลิเคชันมือถือ (Beta)", "ระบบการสร้างระดับสูง"]
+            title: "ระบบยานพาหนะ (Logistics)",
+            tagline: "เปิดเส้นทางการค้าใหม่! สร้างยานพาหนะเพื่อขนถ่ายทรัพยากรสู่ตลาดโลก",
+            items: ["อู่ต่อยานยนต์ & พิมพ์เขียว (Vehicle Assembly)", "มหกรรมยานยนต์ (Gold Rush Motors)", "เส้นทางขนส่งสินค้าระดับโลก"]
         },
         phase3: {
             title: "เมตาเวิร์ส",
+            tagline: "จักรวาลเหมืองแร่ไร้ขีดจำกัด",
             items: ["สงครามระดับโลก", "กรรมสิทธิ์ที่ดิน", "การผสานโลก 3 มิติ"]
         }
     },
