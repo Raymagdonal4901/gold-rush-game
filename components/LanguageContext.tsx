@@ -4,7 +4,7 @@ import { translations, Language } from '../services/translations';
 interface LanguageContextType {
     language: Language;
     setLanguage: (lang: Language) => void;
-    t: (key: string) => string;
+    t: (key: string, params?: Record<string, any>) => string;
     getLocalized: (content: string | { th: string; en: string } | undefined) => string;
     formatCurrency: (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean }) => string;
     formatBonus: (amount: number, typeId?: string) => string;
@@ -29,7 +29,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         localStorage.setItem('game_language', lang);
     };
 
-    const t = (path: string): string => {
+    const t = (path: string, params?: Record<string, any>): string => {
         const keys = path.split('.');
         let result: any = translations[language];
 
@@ -39,6 +39,13 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
             } else {
                 return path; // Return key if not found
             }
+        }
+
+        if (typeof result === 'string' && params) {
+            Object.keys(params).forEach(key => {
+                const regex = new RegExp(`\\{${key}\\}`, 'gi');
+                result = (result as string).replace(regex, params[key]);
+            });
         }
 
         return typeof result === 'string' ? result : path;
@@ -52,7 +59,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     const formatCurrency = (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean }): string => {
         const isThai = options?.forceUSD ? false : (language === 'th' || options?.forceTHB);
-        let val = isThai ? amount * EXCHANGE_RATE : amount;
+        let val = isThai ? Math.round(amount * EXCHANGE_RATE) : amount;
 
         // Epsilon rounding to fix floating point issues (e.g., 299.999999 -> 300)
         if (Math.abs(val - Math.round(val)) < 0.001) {

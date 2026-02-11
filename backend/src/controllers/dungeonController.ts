@@ -6,24 +6,24 @@ import { AuthRequest } from '../middleware/auth';
 import SystemConfig from '../models/SystemConfig';
 
 const SHOP_ITEMS = [
-    { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 5, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mining Key' }, price: 5, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
-    { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 5, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
-    { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 5, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
-    { id: 'robot', name: { th: 'หุ่นยนต์ AI', en: 'AI Robot' }, price: 100, lifespanDays: 30, minBonus: 0, maxBonus: 0 },
-    { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 300, lifespanDays: 0, minBonus: 0, maxBonus: 0 },
-    { id: 'ancient_blueprint', name: { th: 'แผนที่ขุดทองโบราณ', en: 'Ancient Mining Map' }, price: 9999, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'hourglass_small', name: { th: 'นาฬิกาทราย (เล็ก)', en: 'Small Hourglass' }, price: 5, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Medium Hourglass' }, price: 20, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'hourglass_large', name: { th: 'นาฬิกาทราย (ใหญ่)', en: 'Large Hourglass' }, price: 60, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'repair_kit', name: { th: 'ชุดบำรุงรักษาพิเศษ', en: 'Special Maintenance Kit' }, price: 50, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
+    { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 0.142857, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
+    { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mining Key' }, price: 0.142857, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
+    { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 0.142857, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
+    { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 0.142857, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
+    { id: 'robot', name: { th: 'หุ่นยนต์ AI', en: 'AI Robot' }, price: 2.857142, lifespanDays: 30, minBonus: 0, maxBonus: 0 },
+    { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 8.571428, lifespanDays: 0, minBonus: 0, maxBonus: 0 },
+    { id: 'ancient_blueprint', name: { th: 'แผนที่ขุดทองโบราณ', en: 'Ancient Mining Map' }, price: 285.714285, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
+    { id: 'hourglass_small', name: { th: 'นาฬิกาทราย (เล็ก)', en: 'Small Hourglass' }, price: 0.142857, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
+    { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Medium Hourglass' }, price: 0.571428, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
+    { id: 'hourglass_large', name: { th: 'นาฬิกาทราย (ใหญ่)', en: 'Large Hourglass' }, price: 1.714285, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
+    { id: 'repair_kit', name: { th: 'ชุดบำรุงรักษาพิเศษ', en: 'Special Maintenance Kit' }, price: 1.428571, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
 ];
 
 const DUNGEON_CONFIG = [
     {
         id: 1,
-        name: { th: 'สำรวจแหล่งแร่พื้นฐาน (Online)', en: 'Basic Mineral Exploration (Online)' },
-        cost: 100,
+        name: { th: 'หุบเขาเหมืองร้าง (The Abandoned Canyon)', en: 'The Abandoned Canyon' },
+        cost: 2.857142,
         durationHours: 2,
         keyCost: 2,
         rewards: {
@@ -38,8 +38,8 @@ const DUNGEON_CONFIG = [
     },
     {
         id: 2,
-        name: { th: 'ทีมสำรวจมืออาชีพ (Expedition)', en: 'Professional Expedition' },
-        cost: 300,
+        name: { th: 'นครทองคำที่สาบสูญ (Lost City of Gold)', en: 'Lost City of Gold' },
+        cost: 8.571428,
         durationHours: 6,
         keyCost: 10,
         rewards: {
@@ -55,8 +55,8 @@ const DUNGEON_CONFIG = [
     },
     {
         id: 3,
-        name: { th: 'มหกรรมขุดเหมืองโลก (Mining Expo)', en: 'Global Mining Expo' },
-        cost: 1000,
+        name: { th: 'เหมืองผลึกคริสตัล (Crystal Caverns)', en: 'Crystal Caverns' },
+        cost: 28.571428,
         durationHours: 12,
         keyCost: 0,
         rewards: {

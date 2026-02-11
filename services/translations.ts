@@ -221,7 +221,7 @@ export const translations = {
             rig_warning_message: 'เครื่องขุดที่ถูกส่งไปสำรวจจะหยุดผลิตเงินรายวันชั่วคราว ยิ่งเครื่องขุดระดับสูง ยิ่งมีโอกาสพบไอเทมหายากมากขึ้น',
             no_rigs: 'คุณไม่มีเครื่องขุดที่พร้อมใช้งาน',
             use_key: 'ใช้กุญแจเข้าเหมือง {count} ดอก',
-            pay_limit: 'จ่าย {amount} บาท',
+            pay_limit: 'จ่าย {amount}',
             select_rig_first: 'กรุณาเลือกเครื่องขุด',
             start_exploration: 'เริ่มสำรวจ',
             reward_random: 'รางวัล (สุ่มได้รับ)',

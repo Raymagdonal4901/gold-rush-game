@@ -261,7 +261,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     };
 
     const handleConvertCurrency = async () => {
-        if (!confirm('⚠️ คำเตือน: ยืนยันการแปลงฐานข้อมูลทั้งหมดเป็น USD ($)? \n\nการดำเนินการนี้จะหารยอดเงินคงเหลือและราคาทั้งหมดด้วย 35 และไม่สามารถย้อนกลับได้!')) return;
+        if (!confirm('⚠️ คำเตือน: ยืนยันการแปลงฐานข้อมูลทั้งหมดเป็น THB (฿)? \n\nการดำเนินการนี้จะหารยอดเงินคงเหลือและราคาทั้งหมดด้วย 35 และไม่สามารถย้อนกลับได้!')) return;
 
         try {
             await api.admin.convertCurrencyToUSD();
@@ -320,7 +320,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
         if (compCurrency === 'USDT') {
             finalAmount = economyForm.compAmount * EXCHANGE_RATE_USD_THB;
-            currencyLabel = `USDT (~${finalAmount.toLocaleString()} บาท)`;
+            currencyLabel = `USDT (~${finalAmount.toLocaleString()} ${CURRENCY})`;
         }
 
         const targetLabel = economyForm.compScope === 'ALL' ? 'ผู้เล่นทุกคนในเซิร์ฟเวอร์ (All Users)' : economyForm.compUser;
@@ -541,7 +541,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div className="bg-stone-950 p-3 rounded border border-stone-800">
                                     <div className="text-xs text-stone-500 uppercase">ยอดคงเหลือ (Balance)</div>
-                                    <div className="text-lg font-bold text-white">{selectedUser.balance.toLocaleString()}</div>
+                                    <div className="text-lg font-bold text-white">{selectedUser.balance.toLocaleString()} {CURRENCY}</div>
                                 </div>
                                 <div className="bg-stone-900/50 p-3 rounded border border-stone-800">
                                     <div className="text-xs text-stone-500 uppercase">จำนวนเหมือง (Rigs)</div>
@@ -549,7 +549,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 </div>
                                 <div className="bg-emerald-900/10 p-3 rounded border border-emerald-900/30">
                                     <div className="text-xs text-emerald-500 font-bold uppercase">รายได้วันละ (Daily)</div>
-                                    <div className="text-lg font-bold text-emerald-400">+{getDailyProfitForUser(selectedUser.id).toLocaleString()}</div>
+                                    <div className="text-lg font-bold text-emerald-400">+{getDailyProfitForUser(selectedUser.id).toLocaleString()} {CURRENCY}</div>
                                 </div>
                                 <div className="bg-blue-900/10 p-3 rounded border border-blue-900/30">
                                     <div className="text-xs text-blue-400 font-bold uppercase">ระดับสิทธิ์ (Role)</div>
@@ -580,7 +580,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                         </td>
                                                         <td className="p-3 text-right">
                                                             <div className="font-mono font-bold text-emerald-400">+{(r.dailyProfit + (r.bonusProfit || 0)).toLocaleString()}</div>
-                                                            <div className="text-[10px] text-stone-600">THB/Day</div>
+                                                            <div className="text-[10px] text-stone-600">{CURRENCY}/Day</div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -595,11 +595,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             </div>
                             <div className="bg-stone-950 p-3 rounded border border-stone-800">
                                 <div className="text-xs text-stone-500 uppercase">ยอดฝากรวม</div>
-                                <div className="text-lg font-bold text-emerald-400">+{userStats?.totalDeposits.toLocaleString()}</div>
+                                <div className="text-lg font-bold text-emerald-400">+{userStats?.totalDeposits.toLocaleString()} {CURRENCY}</div>
                             </div>
                             <div className="bg-stone-900 p-3 rounded border border-stone-800">
                                 <div className="text-xs text-stone-500 uppercase">ยอดถอนรวม</div>
-                                <div className="text-lg font-bold text-red-500">-{userStats?.totalWithdrawals.toLocaleString()}</div>
+                                <div className="text-lg font-bold text-red-500">-{userStats?.totalWithdrawals.toLocaleString()} {CURRENCY}</div>
                             </div>
                         </div>
 
@@ -1109,7 +1109,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             </div>
                             <div className="bg-yellow-900/10 p-4 rounded border border-yellow-500/30 hover:bg-yellow-900/20 transition-colors">
                                 <div className="text-xs text-yellow-500 uppercase font-bold mb-1">รายได้รวมทั้งหมด</div>
-                                <div className="text-2xl font-mono font-bold text-yellow-400">+{globalRevenue.total.toLocaleString()}</div>
+                                <div className="text-2xl font-mono font-bold text-yellow-400">+{globalRevenue.total.toLocaleString()} {CURRENCY}</div>
                             </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-stone-800/50">
@@ -1209,7 +1209,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             ) : (
                                                 <>
                                                     <div className="font-mono font-bold text-emerald-400 text-sm">{u.balance.toLocaleString()}</div>
-                                                    <div className="text-[10px] text-stone-600">THB</div>
+                                                    <div className="text-[10px] text-stone-600">{CURRENCY}</div>
                                                 </>
                                             )}
                                         </td>
@@ -1221,7 +1221,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                         </td>
                                         <td className="p-4 text-right">
                                             <div className="font-mono font-bold text-emerald-400 text-sm">+{getDailyProfitForUser(u.id).toLocaleString()}</div>
-                                            <div className="text-[10px] text-stone-600">THB/Day</div>
+                                            <div className="text-[10px] text-stone-600">{CURRENCY}/Day</div>
                                         </td>
                                         <td className="p-4 text-center">
                                             <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${u.isBanned ? 'bg-red-900/20 text-red-500 border-red-900/30' : 'bg-emerald-900/20 text-emerald-500 border-emerald-900/30'}`}>
@@ -1346,7 +1346,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             className={`px-3 py-1 text-xs font-bold transition-colors ${compCurrency === 'THB' ? 'bg-emerald-600 text-white' : 'bg-stone-900 text-stone-500 hover:text-stone-300'}`}
                                             onClick={() => setCompCurrency('THB')}
                                         >
-                                            THB
+                                            {CURRENCY}
                                         </button>
                                         <button
                                             className={`px-3 py-1 text-xs font-bold transition-colors ${compCurrency === 'USDT' ? 'bg-blue-600 text-white' : 'bg-stone-900 text-stone-500 hover:text-stone-300'}`}

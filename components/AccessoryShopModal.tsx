@@ -356,16 +356,32 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                 <div className="p-4 flex-1 flex flex-col items-center text-center border-t border-stone-800">
                     <h3 className={`font-display font-bold text-lg mb-1 text-white`}>{getItemDisplayName(item)}</h3>
 
-                    <div className="text-xs text-stone-400 mb-1 flex items-center justify-center gap-1">
+                    <div className="text-xs text-stone-400 mb-1 flex flex-col items-center gap-1">
                         {item.id === 'robot' ? (
-                            <span className="text-emerald-400 font-bold uppercase tracking-wider italic">Automation Active</span>
-                        ) : (
                             <>
-                                <CalendarDays size={12} className="text-stone-500" />
-                                {item.lifespanDays > 0 ?
-                                    (language === 'th' ? `อายุการใช้งาน ${item.lifespanDays} วัน` : `Lifespan: ${item.lifespanDays} Days`)
-                                    : (language === 'th' ? 'ถาวร' : 'Permanent')}
+                                <span className="text-emerald-400 font-bold uppercase tracking-wider italic mb-1 flex items-center gap-1">
+                                    <Bot size={14} /> Automation Active
+                                </span>
+                                <ul className="text-[10px] text-stone-500 text-left space-y-0.5 list-disc list-inside bg-stone-900/50 p-2 rounded-lg border border-stone-800/50">
+                                    <li>เก็บของขวัญอัตโนมัติ (Auto-collect)</li>
+                                    <li>เติมพลังงานอัตโนมัติ (Auto-refill)</li>
+                                    <li>ซ่อมแซมอัตโนมัติ (Auto-repair)</li>
+                                    <li>แจ้งเตือนราคาตลาด (Market alerts)</li>
+                                </ul>
                             </>
+                        ) : (
+                            <div className="flex items-center justify-center gap-1">
+                                {(item.id === 'insurance_card' || item.id.includes('hourglass') || item.id === 'upgrade_chip' || item.id === 'chest_key' || item.id === 'mixer' || item.id === 'magnifying_glass' || item.id === 'repair_kit') ? (
+                                    <span className="text-stone-500 font-medium">{t('item_shop.consumable')}</span>
+                                ) : (
+                                    <>
+                                        <CalendarDays size={12} className="text-stone-500" />
+                                        {item.lifespanDays > 0 ?
+                                            (language === 'th' ? `อายุการใช้งาน ${item.lifespanDays} วัน` : `Lifespan: ${item.lifespanDays} Days`)
+                                            : (language === 'th' ? 'ถาวร' : 'Permanent')}
+                                    </>
+                                )}
+                            </div>
                         )}
                     </div>
 

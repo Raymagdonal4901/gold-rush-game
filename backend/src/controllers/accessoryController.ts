@@ -17,18 +17,18 @@ const MATERIAL_CONFIG = {
 
 const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, any>> = {
     'glove': {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 1.428571, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 2.857142, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 8.571428, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 28.571428, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     }
 };
 
 const UPGRADE_REQUIREMENTS: Record<number, any> = {
-    1: { matTier: 1, matAmount: 10, chipAmount: 1, chance: 1.0, label: '+2', cost: 50, targetBonus: 0.5, risk: 'NONE' },
-    2: { matTier: 1, matAmount: 20, chipAmount: 5, chance: 0.8, label: '+3', cost: 100, targetBonus: 1.5, risk: 'DROP' },
-    3: { matTier: 2, matAmount: 20, chipAmount: 10, chance: 0.5, label: '+4', cost: 300, targetBonus: 3.0, risk: 'DROP' },
-    4: { matTier: 2, matAmount: 40, chipAmount: 20, chance: 0.25, label: '+5', cost: 1000, targetBonus: 6.0, risk: 'BREAK' },
+    1: { matTier: 1, matAmount: 10, chipAmount: 1, chance: 1.0, label: '+2', cost: 1.428571, targetBonus: 0.5, risk: 'NONE' },
+    2: { matTier: 1, matAmount: 20, chipAmount: 5, chance: 0.8, label: '+3', cost: 2.857142, targetBonus: 1.5, risk: 'DROP' },
+    3: { matTier: 2, matAmount: 20, chipAmount: 10, chance: 0.5, label: '+4', cost: 8.571428, targetBonus: 3.0, risk: 'DROP' },
+    4: { matTier: 2, matAmount: 40, chipAmount: 20, chance: 0.25, label: '+5', cost: 28.571428, targetBonus: 6.0, risk: 'BREAK' },
 };
 
 // Assuming SHOP_ITEMS is defined elsewhere or will be imported.

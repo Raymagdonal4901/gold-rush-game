@@ -1,4 +1,4 @@
-export const CURRENCY = '$';
+export const CURRENCY = '฿';
 export const EXCHANGE_RATE_USD_THB = 35;
 export const BASE_CLAIM_AMOUNT = 0;
 export const DEMO_SPEED_MULTIPLIER = 10; // 10x Speed for simulation
@@ -389,17 +389,18 @@ export interface ShopItemConfig {
 }
 
 export const SHOP_ITEMS: ShopItemConfig[] = [
-    { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 0.15, icon: 'Cpu', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้สำหรับอัปเกรดเครื่องจักรเพื่อเพิ่มกำลังการขุด', en: 'Used for upgrading rigs to increase mining power' } },
-    { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mine Key' }, price: 0.15, icon: 'Key', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้เปิดถ้ำสำรวจเพื่อลุ้นรับไอเทมหายาก', en: 'Used to open exploration caves for rare items' }, buyable: false },
-    { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 0.15, icon: 'Factory', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้สำหรับสกัดแร่ระดับต่ำให้เป็นแร่ระดับสูง', en: 'Used for refining low tier materials' } },
-    { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 0.15, icon: 'Search', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้ตรวจสอบหาแร่หายากโดยอัตโนมัติ', en: 'Automatically detects rare minerals' } },
-    { id: 'robot', name: { th: 'หุ่นยนต์ AI', en: 'AI Robot' }, price: 2.8, icon: 'Bot', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 30, description: { th: 'หุ่นยนต์อัจฉริยะ: เก็บของขวัญอัตโนมัติ, เติมพลังงาน/ซ่อมแซมอัตโนมัติ, แจ้งเตือนราคาตลาด', en: 'Smart Robot: Auto-collect gifts, Auto-repair/refill, Market alerts' } },
-    { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 8.5, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ป้องกันระดับเครื่องจักรลดระดับเมื่ออัปเกรดล้มเหลว', en: 'Prevents rig downgrade upon upgrade failure' }, buyable: true },
-    { id: 'ancient_blueprint', name: { th: 'แผนที่ขุดทองโบราณ', en: 'Ancient Blueprint' }, price: 285.0, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้แทนวัสดุหายากในการสร้างแท่นขุดระดับสูง', en: 'Substitute for rare materials in crafting high-tier rigs' }, buyable: false },
+    { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 0.142857, icon: 'Cpu', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้สำหรับอัปเกรดเครื่องจักรเพื่อเพิ่มกำลังการขุด', en: 'Used for upgrading rigs to increase mining power' } },
+    { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mine Key' }, price: 0.142857, icon: 'Key', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้เปิดถ้ำสำรวจเพื่อลุ้นรับไอเทมหายาก', en: 'Used to open exploration caves for rare items' }, buyable: false },
+    { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 0.142857, icon: 'Factory', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้สำหรับสกัดแร่ระดับต่ำให้เป็นแร่ระดับสูง', en: 'Used for refining low tier materials' } },
+    { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 0.142857, icon: 'Search', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้ตรวจสอบหาแร่หายากโดยอัตโนมัติ', en: 'Automatically detects rare minerals' } },
+    { id: 'robot', name: { th: 'หุ่นยนต์ AI', en: 'AI Robot' }, price: 2.857142, icon: 'Bot', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 30, description: { th: 'หุ่นยนต์อัจฉริยะ: เก็บของขวัญอัตโนมัติ, เติมพลังงาน/ซ่อมแซมอัตโนมัติ, แจ้งเตือนราคาตลาด', en: 'Smart Robot: Auto-collect gifts, Auto-repair/refill, Market alerts' } },
+    { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 8.571428, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ป้องกันระดับเครื่องจักรลดระดับเมื่ออัปเกรดล้มเหลว', en: 'Prevents rig downgrade upon upgrade failure' }, buyable: true },
+    { id: 'ancient_blueprint', name: { th: 'แผนที่ขุดทองโบราณ', en: 'Ancient Blueprint' }, price: 285.714285, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้แทนวัสดุหายากในการสร้างแท่นขุดระดับสูง', en: 'Substitute for rare materials in crafting high-tier rigs' }, buyable: false },
 
-    { id: 'hourglass_small', name: { th: 'นาฬิกาทราย (เล็ก)', en: 'Hourglass (Small)' }, price: 0.15, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 30 นาที', en: 'Speed up exploration by 30 mins' } },
-    { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Hourglass (Medium)' }, price: 0.6, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 2 ชั่วโมง', en: 'Speed up exploration by 2 hours' } },
-    { id: 'hourglass_large', name: { th: 'นาฬิกาทราย (ใหญ่)', en: 'Hourglass (Large)' }, price: 1.7, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 6 ชั่วโมง', en: 'Speed up exploration by 6 hours' } },
+    { id: 'hourglass_small', name: { th: 'นาฬิกาทราย (เล็ก)', en: 'Hourglass (Small)' }, price: 0.142857, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 30 นาที', en: 'Speed up exploration by 30 mins' } },
+    { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Hourglass (Medium)' }, price: 0.571428, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 2 ชั่วโมง', en: 'Speed up exploration by 2 hours' } },
+    { id: 'hourglass_large', name: { th: 'นาฬิกาทราย (ใหญ่)', en: 'Hourglass (Large)' }, price: 1.714285, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 6 ชั่วโมง', en: 'Speed up exploration by 6 hours' } },
+
 
     { id: 'repair_kit', name: { th: 'ชุดบำรุงรักษาพิเศษ', en: 'Repair Kit' }, price: 1.4, icon: 'Tool', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ซ่อมแซมเครื่องจักรจนเต็ม 100%', en: 'Fully repairs a rig to 100%' }, buyable: false },
 
@@ -530,9 +531,9 @@ export interface DungeonLevel {
 export const DUNGEON_CONFIG: DungeonLevel[] = [
     {
         id: 1,
-        name: { th: 'สำรวจแหล่งแร่พื้นฐาน (Online)', en: 'Basic Exploration (Online)' },
-        description: { th: 'ค้นหาแหล่งแร่ออนไลน์ระดับเริ่มต้น', en: 'Search for basic materials online' },
-        cost: 2.8,
+        name: { th: 'หุบเขาเหมืองร้าง (The Abandoned Canyon)', en: 'The Abandoned Canyon' },
+        description: { th: 'ค้นหาเศษแร่ที่หลงเหลือในเหมืองร้าง', en: 'Search for leftover ore fragments in the abandoned mine.' },
+        cost: 2.857142,
         keyCost: 2,
         durationHours: 2,
         rewards: {
@@ -552,9 +553,9 @@ export const DUNGEON_CONFIG: DungeonLevel[] = [
     },
     {
         id: 2,
-        name: { th: 'ทีมสำรวจมืออาชีพ (Expedition)', en: 'Pro Expedition' },
-        description: { th: 'ว่าจ้างทีมงานสำรวจหาแร่หายาก', en: 'Hire a professional team for rare minerals' },
-        cost: 8.5,
+        name: { th: 'นครทองคำที่สาบสูญ (Lost City of Gold)', en: 'Lost City of Gold' },
+        description: { th: 'ปฏิบัติการเจาะทะลุชั้นหินแข็ง เพื่อค้นหาทรัพยากรล้ำค่าที่ซ่อนอยู่', en: 'Drilling through hard rock layers to find hidden precious resources.' },
+        cost: 8.571428,
         keyCost: 10,
         durationHours: 6,
         rewards: {
@@ -576,9 +577,9 @@ export const DUNGEON_CONFIG: DungeonLevel[] = [
     },
     {
         id: 3,
-        name: { th: 'มหกรรมขุดเหมืองโลก (Mining Expo)', en: 'World Mining Expo' },
-        description: { th: 'เข้าร่วมงานประมูลเหมืองระดับนานาชาติ', en: 'Join international mining auctions' },
-        cost: 28.5,
+        name: { th: 'เหมืองผลึกคริสตัล (Crystal Caverns)', en: 'Crystal Caverns' },
+        description: { th: 'เดินทางสู่ดินแดนต้องห้าม ที่เล่าขานว่ามีขุมทรัพย์ระดับตำนานหลับใหลอยู่', en: 'Journey to forbidden lands where legendary treasures are said to lie.' },
+        cost: 28.571428,
         durationHours: 12,
         rewards: {
             common: [

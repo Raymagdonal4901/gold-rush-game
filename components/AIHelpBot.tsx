@@ -29,11 +29,23 @@ export const AIHelpBot: React.FC<AIHelpBotProps> = ({
     const [isOpen, setIsOpen] = useState(false);
     const [mode, setMode] = useState<'TUTORIAL' | 'HELP_MENU' | 'HELP_CONTENT'>('TUTORIAL');
     const [selectedCategory, setSelectedCategory] = useState<HelpCategory | null>(null);
+    const [isBotHidden, setIsBotHidden] = useState(() => {
+        const saved = localStorage.getItem('ai_bot_hidden');
+        return saved === 'true';
+    });
+
+    const toggleHide = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newState = !isBotHidden;
+        setIsBotHidden(newState);
+        localStorage.setItem('ai_bot_hidden', String(newState));
+    };
 
     // Auto-open if tutorial is active
     useEffect(() => {
         if (tutorialStep > 0) {
             setIsOpen(true);
+            setIsBotHidden(false); // Force show during tutorial
             setMode('TUTORIAL');
         }
     }, [tutorialStep]);
@@ -223,8 +235,21 @@ export const AIHelpBot: React.FC<AIHelpBotProps> = ({
 
     const tutorialContent = getTutorialContent();
 
+    // If completely hidden, show a very small restore button
+    if (isBotHidden && tutorialStep === 0) {
+        return (
+            <button
+                onClick={toggleHide}
+                className="fixed bottom-48 right-0 z-[190] bg-stone-800/80 hover:bg-stone-700 text-stone-400 hover:text-white p-2 pl-3 rounded-l-full shadow-lg border border-stone-700/50 backdrop-blur-sm transition-all hover:translate-x-0 translate-x-1 pointer-events-auto group"
+                title="เรียกผู้ช่วย AI"
+            >
+                <Bot size={16} className="group-hover:scale-110 transition-transform" />
+            </button>
+        );
+    }
+
     return (
-        <div className="fixed bottom-24 right-6 z-[200] flex flex-col items-end pointer-events-none">
+        <div className="fixed bottom-48 right-6 z-[200] flex flex-col items-end pointer-events-none">
             {/* Main Robot Icon (Always Visible if not open) */}
             {!isOpen && (
                 <div
@@ -241,6 +266,14 @@ export const AIHelpBot: React.FC<AIHelpBotProps> = ({
                                 <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_4px_#22d3ee]"></div>
                             </div>
                         </div>
+                        {/* Hide Button (X) */}
+                        <button
+                            onClick={toggleHide}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-stone-950 border border-stone-700 rounded-full flex items-center justify-center text-stone-500 hover:text-white hover:bg-red-900/40 transition-all opacity-0 group-hover:opacity-100 shadow-lg z-30 pointer-events-auto"
+                            title="ซ่อนผู้ช่วย"
+                        >
+                            <X size={12} />
+                        </button>
                         <div className="mt-2 w-12 h-1.5 bg-yellow-600/40 blur-sm rounded-full mx-auto animate-pulse"></div>
                     </div>
                     {/* Tooltip */}
@@ -340,16 +373,7 @@ export const AIHelpBot: React.FC<AIHelpBotProps> = ({
                 </div>
             )}
 
-            {isOpen && !tutorialStep && (
-                <div
-                    className="relative pointer-events-auto cursor-pointer group mt-2"
-                    onClick={() => setIsOpen(false)}
-                >
-                    <div className="w-12 h-12 bg-stone-900 border border-yellow-600/30 rounded-xl flex items-center justify-center shadow-lg animate-bounce-slow">
-                        <Bot size={24} className="text-yellow-600/80" />
-                    </div>
-                </div>
-            )}
+
 
             <style>{`
                 @keyframes bounce-slow {

@@ -199,6 +199,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     // Ref to block refresh during sensitive operations
     const skipRefreshRef = useRef(false);
     const lastMarketPrices = useRef<Record<number, number>>({});
+    const lastMarketAlertAt = useRef<Record<number, number>>({}); // Throttling for market alerts
     const lastAutoRefillRef = useRef<Record<string, number>>({});  // Cooldown tracker for AI Robot refills
 
     // --- AI ROBOT AUTOMATION LOOP ---
@@ -305,7 +306,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 for (const [tier, data] of Object.entries(trends)) {
                     const price = (data as any).currentPrice;
                     const prevPrice = lastMarketPrices.current[parseInt(tier)];
-                    if (prevPrice && price > prevPrice) {
+                    const lastAlert = lastMarketAlertAt.current[parseInt(tier)] || 0;
+
+                    if (prevPrice && price > prevPrice && (Date.now() - lastAlert > 60000)) {
+                        lastMarketAlertAt.current[parseInt(tier)] = Date.now();
                         addNotification({
                             id: `market-alert-${tier}-${Date.now()}`,
                             userId: user.id,
@@ -356,9 +360,12 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             if (hasAIRobot && marketState?.trends) {
                 Object.entries(marketState.trends).forEach(([tier, data]) => {
                     const priceChange = ((data as any).currentPrice - (data as any).basePrice) / (data as any).basePrice;
-                    if (priceChange >= ROBOT_CONFIG.NOTIFY_PRICE_THRESHOLD) {
+                    const lastAlert = lastMarketAlertAt.current[parseInt(tier)] || 0;
+
+                    if (priceChange >= ROBOT_CONFIG.NOTIFY_PRICE_THRESHOLD && (Date.now() - lastAlert > 60000)) {
                         const myCount = (user.materials || {})[parseInt(tier)] || 0;
-                        if (myCount > 0 && Math.random() < 0.02) {
+                        if (myCount > 0 && Math.random() < 0.1) { // Increased random slightly but throttled by time
+                            lastMarketAlertAt.current[parseInt(tier)] = Date.now();
                             addNotification({
                                 id: `surge_${tier}_${Date.now()}`,
                                 userId: user.id,
@@ -1795,17 +1802,31 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             <div><h2 className="text-2xl font-bold text-white font-display">{t('dashboard.main_menu')}</h2><p className="text-stone-500 text-xs">{t('dashboard.main_menu_desc')}</p></div>
                             <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-stone-900 rounded-full text-stone-400 hover:text-white"><X size={24} /></button>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <button onClick={() => { setIsShopOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><ShoppingBag className="text-orange-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.shop')}</span></button>
-                            <button onClick={() => { setIsWarehouseOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Package className="text-blue-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.warehouse')}</span></button>
-                            <button onClick={() => { setIsLeaderboardOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Trophy className="text-yellow-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.rank')}</span></button>
-                            <button onClick={() => { setIsDailyBonusOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><CalendarCheck className="text-emerald-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.check_in')}</span></button>
-                            <button onClick={() => { setIsDungeonOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Skull className="text-purple-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.secret_mine')}</span></button>
-                            <button onClick={() => { setIsMissionOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Target className="text-blue-400" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.missions')}</span></button>
-                            <button onClick={() => { setIsVIPOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Crown className="text-yellow-400" size={32} /><span className="text-sm font-bold text-stone-300">VIP</span></button>
-                            <button onClick={() => { setIsMarketOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><BarChart2 className="text-emerald-500" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.market')}</span></button>
-                            <button onClick={() => { setIsHistoryOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><History className="text-stone-400" size={32} /><span className="text-sm font-bold text-stone-300">{t('common.history')}</span></button>
-                            <button onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-4 rounded-xl border border-stone-800 flex flex-col items-center gap-2 hover:bg-stone-800 active:scale-95 transition-all"><Settings className="text-stone-400" size={32} /><span className="text-sm font-bold text-stone-300">{t('dashboard.settings')}</span></button>
+                        <div className="grid grid-cols-3 gap-2">
+                            <button onClick={() => { setIsShopOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all"><ShoppingBag className="text-orange-500" size={24} /><span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{t('dashboard.shop')}</span></button>
+                            <button onClick={() => { setIsWarehouseOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all"><Package className="text-blue-500" size={24} /><span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{t('dashboard.warehouse')}</span></button>
+                            <button onClick={() => { setIsLeaderboardOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all"><Trophy className="text-yellow-500" size={24} /><span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{t('dashboard.rank')}</span></button>
+                            <button onClick={() => { setIsDailyBonusOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all"><CalendarCheck className="text-emerald-500" size={24} /><span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{t('dashboard.check_in')}</span></button>
+                            <button onClick={() => { setIsDungeonOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all"><Skull className="text-purple-500" size={24} /><span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{t('dashboard.secret_mine')}</span></button>
+                            <button onClick={() => { setIsMissionOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all"><Target className="text-blue-400" size={24} /><span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{t('dashboard.missions')}</span></button>
+                            <button onClick={() => { setIsVIPOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all"><Crown className="text-yellow-400" size={24} /><span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">VIP</span></button>
+                            <button onClick={() => { setIsMarketOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all"><BarChart2 className="text-emerald-500" size={24} /><span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{t('dashboard.market')}</span></button>
+                            <button onClick={() => { setIsMailOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all relative">
+                                <Mail className="text-cyan-400" size={24} />
+                                <span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{language === 'th' ? 'จดหมาย' : 'Inbox'}</span>
+                                {user.notifications?.some(n => !n.read) && (
+                                    <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full border border-stone-900 animate-pulse"></span>
+                                )}
+                            </button>
+                            <button onClick={() => { setIsReferralOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all relative">
+                                <Users className="text-emerald-400" size={24} />
+                                <span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{language === 'th' ? 'แนะนำเพื่อน' : 'Referral'}</span>
+                                {showReferralAnnouncement && (
+                                    <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full border border-stone-900"></span>
+                                )}
+                            </button>
+                            <button onClick={() => { setIsHistoryOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all"><History className="text-stone-400" size={24} /><span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{t('common.history')}</span></button>
+                            <button onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all"><Settings className="text-stone-400" size={24} /><span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{t('dashboard.settings')}</span></button>
                         </div>
                         <div className="mt-auto">
                             <button onClick={onLogout} className="w-full py-4 bg-red-900/20 text-red-400 border border-red-900/50 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-900/30 transition-colors"><LogOut size={20} /> {t('common.logout')}</button>
@@ -1869,10 +1890,13 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                     </button>
                     <button
                         onClick={() => setIsMobileMenuOpen(true)}
-                        className="flex flex-col items-center justify-center py-2 px-1 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800/50 transition-all active:scale-95"
+                        className="flex flex-col items-center justify-center py-2 px-1 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800/50 transition-all active:scale-95 relative"
                     >
                         <Grid size={20} className="mb-1" />
                         <span className="text-[10px] font-medium">{t('dashboard.menu')}</span>
+                        {user.notifications?.some(n => !n.read) && (
+                            <span className="absolute top-2 right-4 w-2 h-2 bg-red-500 rounded-full border border-stone-950 animate-pulse"></span>
+                        )}
                     </button>
                 </div>
             </nav>
