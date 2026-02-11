@@ -626,22 +626,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             {userStats.withdrawalHistory.map(w => (
                                                 <tr key={w.id} className="hover:bg-stone-900 transition-colors">
                                                     <td className="p-3 text-stone-400 text-xs font-mono">{new Date(w.timestamp).toLocaleString()}</td>
-                                                    <td className="p-3 text-right font-mono text-white">{w.amount.toLocaleString()}</td>
+                                                    <td className="p-3 text-right font-mono text-white">
+                                                        {w.method === 'BANK'
+                                                            ? `${(w.amount * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿`
+                                                            : `$${w.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
+                                                        }
+                                                    </td>
                                                     <td className="p-3 text-center">
                                                         <div className="flex flex-col items-center gap-1">
-                                                            {w.method === 'USDT' ? (
+                                                            {(w.method === 'USDT' || (w.walletAddress && !w.bankQrCode)) ? (
                                                                 <div className="flex flex-col items-center">
                                                                     <span className="text-[10px] font-bold text-blue-400">USDT</span>
-                                                                    {w.walletAddress ? (
+                                                                    {(w.walletAddress || selectedUser.walletAddress) ? (
                                                                         <button
                                                                             onClick={() => {
-                                                                                navigator.clipboard.writeText(w.walletAddress!);
+                                                                                const addr = w.walletAddress || selectedUser.walletAddress;
+                                                                                navigator.clipboard.writeText(addr!);
                                                                                 alert('Copied Wallet Address');
                                                                             }}
-                                                                            className="text-[10px] text-stone-400 font-mono hover:text-white truncate max-w-[80px]"
-                                                                            title={w.walletAddress}
+                                                                            className="text-[10px] text-stone-400 font-mono hover:text-blue-400 transition-colors break-all max-w-[120px]"
+                                                                            title={w.walletAddress || selectedUser.walletAddress}
                                                                         >
-                                                                            {w.walletAddress.substring(0, 6)}...{w.walletAddress.substring(w.walletAddress.length - 4)}
+                                                                            {w.walletAddress || selectedUser.walletAddress}
                                                                         </button>
                                                                     ) : (
                                                                         <span className="text-[10px] text-red-500 italic">No Address</span>
@@ -659,7 +665,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                                     ) : (
                                                                         <span className="text-stone-600 text-[10px] italic">No QR</span>
                                                                     )}
-                                                                    <span className="text-[10px] font-bold text-stone-500">BANK</span>
+                                                                    <span className="text-[10px] font-bold text-stone-500 uppercase">BANK</span>
+                                                                    {selectedUser.walletAddress && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                navigator.clipboard.writeText(selectedUser.walletAddress!);
+                                                                                alert('Copied Wallet Address');
+                                                                            }}
+                                                                            className="text-[9px] text-blue-400/50 hover:text-blue-400 font-mono transition-colors"
+                                                                            title="USDT Wallet (BSC)"
+                                                                        >
+                                                                            {selectedUser.walletAddress.substring(0, 6)}...
+                                                                        </button>
+                                                                    )}
                                                                 </>
                                                             )}
                                                         </div>
@@ -910,37 +928,65 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
                             {/* Withdrawals */}
                             {pendingWithdrawals.map(w => (
-                                <div key={w.id} className="p-4 border-b border-stone-800 flex items-center justify-between hover:bg-red-950/10 transition-colors bg-red-950/5">
-                                    <div className="flex items-center gap-4">
+                                <div key={w.id} className="p-4 border-b border-stone-800 flex flex-col sm:flex-row items-center justify-between hover:bg-red-950/10 transition-colors bg-red-950/5 gap-4">
+                                    <div className="flex items-center gap-4 w-full sm:w-auto">
                                         <div className="p-2 bg-red-900/20 rounded border border-red-900/50 text-red-500">
                                             <ArrowUpRight size={16} />
                                         </div>
-                                        <div>
+                                        <div className="flex-1">
                                             <div className="font-bold text-white text-sm flex items-center gap-2">
                                                 <span className="text-yellow-500">{w.username}</span>
-                                                <span className={`text-xs px-1.5 rounded ${w.method === 'USDT' ? 'bg-blue-900/40 text-blue-300' : 'bg-red-900/40 text-red-300'}`}>
-                                                    {t('admin.withdraw_label')} {w.method === 'USDT' ? 'USDT' : 'BANK'}
+                                                <span className={`text-xs px-1.5 rounded ${(w.method === 'USDT' || (w.walletAddress && !w.bankQrCode)) ? 'bg-blue-900/40 text-blue-300' : 'bg-red-900/40 text-red-300'}`}>
+                                                    {t('admin.withdraw_label')} {(w.method === 'USDT' || (w.walletAddress && !w.bankQrCode)) ? 'USDT' : 'BANK'}
                                                 </span>
                                             </div>
                                             <div className="text-xs text-stone-500 font-mono mt-0.5 flex flex-col gap-1">
                                                 <span>{new Date(w.timestamp).toLocaleString()}</span>
-                                                {w.method === 'USDT' && w.walletAddress && (
-                                                    <button
-                                                        onClick={() => {
-                                                            navigator.clipboard.writeText(w.walletAddress!);
-                                                            alert('Copied USDT Address');
-                                                        }}
-                                                        className="text-stone-400 hover:text-white flex items-center gap-1 bg-stone-950 px-2 py-0.5 rounded border border-stone-800 w-fit"
-                                                    >
-                                                        <span className="text-[10px] truncate max-w-[150px]">{w.walletAddress}</span>
-                                                        <FileText size={10} />
-                                                    </button>
+                                                {(w.walletAddress || users.find(u => u.id === w.userId)?.walletAddress) && (
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                const addr = w.walletAddress || users.find(u => u.id === w.userId)?.walletAddress;
+                                                                if (addr) {
+                                                                    navigator.clipboard.writeText(addr);
+                                                                    alert('Copied Wallet Address');
+                                                                }
+                                                            }}
+                                                            className="text-blue-400/80 hover:text-blue-300 flex items-center gap-1.5 bg-blue-900/10 px-2 py-1 rounded border border-blue-900/30 w-fit transition-colors hover:bg-blue-900/20"
+                                                            title="BSC Wallet Address"
+                                                        >
+                                                            <Wallet size={12} />
+                                                            <span className="text-[10px] font-mono break-all max-w-[180px]">
+                                                                {w.walletAddress || users.find(u => u.id === w.userId)?.walletAddress}
+                                                            </span>
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
+                                        {/* Method Specific Display (QR or Wallet Address Icon) */}
+                                        {(w.method === 'BANK' || (w.bankQrCode && !w.walletAddress)) && w.bankQrCode && (
+                                            <div
+                                                className="w-12 h-16 bg-white border border-stone-700 rounded overflow-hidden shadow-lg cursor-pointer hover:scale-125 transition-transform origin-center shrink-0"
+                                                onClick={() => setPreviewImage(w.bankQrCode!)}
+                                            >
+                                                <img src={w.bankQrCode} className="w-full h-full object-cover" alt="Bank QR" />
+                                            </div>
+                                        )}
+                                        {(w.method === 'USDT' || (w.walletAddress && !w.bankQrCode)) && (
+                                            <div className="w-12 h-16 flex flex-col items-center justify-center bg-blue-900/10 text-blue-400 border border-blue-900/20 rounded shrink-0">
+                                                <Wallet size={16} />
+                                                <span className="text-[8px] font-bold">USDT</span>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="flex items-center gap-6">
-                                        <span className="font-mono font-bold text-lg text-white">{w.amount.toLocaleString()} <span className="text-stone-500 text-xs">{CURRENCY}</span></span>
+                                    <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
+                                        <span className="font-mono font-bold text-lg text-white">
+                                            {(w.method === 'BANK' || (w.bankQrCode && !w.walletAddress))
+                                                ? `${(w.amount * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿`
+                                                : `$${w.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
+                                            }
+                                        </span>
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => initiateProcessWithdrawal(w, 'REJECTED')}

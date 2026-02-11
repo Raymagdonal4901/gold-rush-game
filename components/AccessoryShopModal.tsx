@@ -246,6 +246,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         if (iconName === 'Cpu' || itemId === 'upgrade_chip') return <Cpu className={className} />;
         if (iconName === 'Hourglass' || (itemId && itemId.startsWith('hourglass'))) return <Hourglass className={className} />;
         if (iconName === 'Shield' || iconName === 'FileText' || itemId === 'insurance_card') return <FileText className={className} />;
+        if (iconName === 'CreditCard' || itemId === 'vip_withdrawal_card') return <Coins className={className} />;
 
         return <InfinityGlove className={className} />;
     };
@@ -263,8 +264,13 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         );
     };
 
-    const specialIds = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'dungeon_ticket_magma', 'ancient_blueprint', 'insurance_card'];
-    const specialItems = SHOP_ITEMS.filter(i => specialIds.includes(i.id) && i.buyable !== false);
+    const specialIds = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'dungeon_ticket_magma', 'ancient_blueprint', 'insurance_card', 'vip_withdrawal_card'];
+    const specialItems = SHOP_ITEMS.filter(i => {
+        if (!specialIds.includes(i.id) || i.buyable === false) return false;
+        // Hide VIP card if already owned
+        if (i.id === 'vip_withdrawal_card' && userInventory.some(inv => inv.typeId === 'vip_withdrawal_card')) return false;
+        return true;
+    });
     const shopEquipment = SHOP_ITEMS.filter(i => !specialIds.includes(i.id) && i.buyable !== false);
     const craftableItems = SHOP_ITEMS.filter(i => i.craftingRecipe);
 
@@ -339,8 +345,10 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
 
         const isBulkItem = ['upgrade_chip', 'mixer', 'insurance_card', 'hourglass_small', 'hourglass_medium', 'hourglass_large'].includes(item.id);
 
+        const isVipCard = item.id === 'vip_withdrawal_card';
+
         return (
-            <div key={item.id} className={`group relative bg-stone-900/80 border ${rarityStyle.border} rounded-xl overflow-visible shadow-lg transition-all duration-300 sm:hover:-translate-y-2 hover:shadow-[0_0_25px_rgba(0,0,0,0.5)] flex flex-col ${isSpecial ? 'h-full' : ''}`}>
+            <div key={item.id} className={`group relative bg-stone-900/80 border ${isVipCard ? 'rainbow-border' : rarityStyle.border} rounded-xl overflow-visible shadow-lg transition-all duration-300 sm:hover:-translate-y-2 hover:shadow-[0_0_25px_rgba(0,0,0,0.5)] flex flex-col ${isSpecial ? 'h-full' : ''}`}>
 
                 <div className={`h-1 w-full bg-gradient-to-r ${rarityStyle.bgGradient} rounded-t-xl`}></div>
 
@@ -386,10 +394,10 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                     </div>
 
                     <div className="flex flex-wrap gap-2 justify-center mb-2 mt-2">
-                        {['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'insurance_card', 'robot'].includes(item.id) ? (
+                        {['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'insurance_card', 'robot', 'vip_withdrawal_card'].includes(item.id) ? (
                             <div className="text-[9px] text-stone-400 flex items-center gap-1 bg-stone-800 px-2 py-0.5 rounded border border-stone-700">
-                                {item.id === 'robot' ? <Zap size={10} className="text-emerald-400" /> : <Zap size={10} className="text-yellow-500" />}
-                                {item.id === 'robot' ? t('item_shop.automation_system') : t('item_shop.consumable')}
+                                {['robot', 'vip_withdrawal_card'].includes(item.id) ? <Zap size={10} className="text-emerald-400" /> : <Zap size={10} className="text-yellow-500" />}
+                                {item.id === 'robot' ? t('item_shop.automation_system') : isVipCard ? (language === 'th' ? 'ปลดล็อกถาวร' : 'Permanent Unlock') : t('item_shop.consumable')}
                             </div>
                         ) : (
                             <div className="text-[9px] text-yellow-500 flex items-center gap-1 bg-yellow-950/20 px-2 py-0.5 rounded border border-yellow-900/30">

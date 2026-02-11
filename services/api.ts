@@ -515,6 +515,8 @@ const mapBackendWithdrawalToFrontend = (w: any): WithdrawalRequest => ({
     amount: w.amount,
     timestamp: new Date(w.createdAt || w.timestamp).getTime(),
     status: w.status,
+    method: w.method,
+    walletAddress: w.walletAddress,
     bankQrCode: w.bankQrCode,
     transactionId: w.transactionId
 });

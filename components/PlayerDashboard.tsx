@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Hammer, LogOut, User as UserIcon, Coins, TrendingUp, Bell, CheckCircle2, AlertCircle, History, PlusCircle, Wallet, ArrowUpRight, Gift, Clock, ShoppingBag, Briefcase, Zap, Settings, Timer, Bug, Key, Menu, X, Home, Package, FlaskConical, TestTube2, Gem, Trophy, Users, BookOpen, Grid, BarChart2, Backpack, CalendarCheck, Target, Crown, Lock, Skull, Languages, Mail } from 'lucide-react';
+import { Plus, Hammer, LogOut, User as UserIcon, Coins, TrendingUp, Bell, CheckCircle2, AlertCircle, History, PlusCircle, Wallet, ArrowUpRight, Gift, Clock, ShoppingBag, Briefcase, Zap, Settings, Timer, Bug, Key, Menu, X, Home, Package, FlaskConical, TestTube2, Gem, Trophy, Users, BookOpen, Grid, BarChart2, Backpack, CalendarCheck, Target, Crown, CreditCard, Lock, Skull, Languages, Mail } from 'lucide-react';
 import { RigCard } from './RigCard';
 import { InvestmentModal } from './InvestmentModal';
 import { WithdrawModal } from './WithdrawModal';
@@ -1104,7 +1104,23 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                 <button onClick={() => setIsDepositModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white p-1.5 sm:px-3 sm:py-1.5 rounded text-xs font-bold uppercase flex items-center gap-1 transition-colors shadow-lg shadow-emerald-900/20">
                                     <PlusCircle size={14} /> <span className="hidden sm:inline">{t('common.deposit')}</span>
                                 </button>
-                                <button onClick={() => setIsWithdrawModalOpen(true)} className="bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-600 p-1.5 sm:px-3 sm:py-1.5 rounded text-xs font-bold uppercase flex items-center gap-1 transition-colors hover:text-white hover:border-stone-500">
+                                <button
+                                    onClick={() => {
+                                        if (!inventory?.some(i => i.typeId === 'vip_withdrawal_card')) {
+                                            addNotification({
+                                                id: Date.now().toString(),
+                                                userId: user.id,
+                                                message: language === 'th' ? 'ต้องมี "บัตร VIP ปลดล็อกถอนเงิน" ก่อนถอนเงิน' : 'Must have "VIP Withdrawal Card" first',
+                                                type: 'ERROR',
+                                                read: false,
+                                                timestamp: Date.now()
+                                            });
+                                            return;
+                                        }
+                                        setIsWithdrawModalOpen(true);
+                                    }}
+                                    className="bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-600 p-1.5 sm:px-3 sm:py-1.5 rounded text-xs font-bold uppercase flex items-center gap-1 transition-colors hover:text-white hover:border-stone-500"
+                                >
                                     <Wallet size={14} /> <span className="hidden sm:inline">{t('common.withdraw')}</span>
                                 </button>
                             </div>
@@ -1221,11 +1237,22 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                 <span className="text-[10px] text-stone-500 font-bold uppercase tracking-widest bg-black/40 px-2 py-0.5 rounded border border-stone-800">
                                     {t('dashboard.energy_status')}
                                 </span>
-                                <div className={`w-2 h-2 rounded-full ${isCharging ? 'bg-yellow-400 animate-ping' : 'bg-red-900'}`}></div>
+                                <div className="flex items-center gap-2">
+                                    {/* VIP Card Indicator - Permanent Slot */}
+                                    <div title={inventory?.some(i => i.typeId === 'vip_withdrawal_card') ? 'VIP Withdrawal Active' : 'VIP Withdrawal Locked'} className={`rounded-full p-1 shadow-md border transition-all duration-500 cursor-help
+                                        ${inventory?.some(i => i.typeId === 'vip_withdrawal_card')
+                                            ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)] border-yellow-200 animate-bounce'
+                                            : 'bg-stone-800 border-stone-700 opacity-60'}
+                                    `}>
+                                        <CreditCard size={12} className={inventory?.some(i => i.typeId === 'vip_withdrawal_card') ? 'text-stone-900' : 'text-stone-400'} />
+                                    </div>
+                                    <div className={`w-2 h-2 rounded-full ${isCharging ? 'bg-yellow-400 animate-ping' : 'bg-red-900'}`}></div>
+                                </div>
                             </div>
 
                             {/* THE CORE (Furnace Window) */}
                             <div className="relative w-24 h-24 my-2 flex items-center justify-center">
+
                                 {/* Outer Ring */}
                                 <div className="absolute inset-0 rounded-full border-4 border-stone-600 bg-stone-950 shadow-[inset_0_0_15px_black]"></div>
 
@@ -1249,11 +1276,14 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                         }}
                                     ></div>
 
+                                    {/* Success Flash Effect */}
+                                    {isCharging && <div className="absolute inset-2 rounded-full bg-white/40 animate-ping pointer-events-none"></div>}
+
                                     {/* Zap Icon - Intense Breathing Animation */}
                                     <Zap
                                         size={32}
                                         className={`relative z-10 transition-all duration-300
-                                            ${energyLevel > 20 ? 'text-white' : 'text-red-900'} 
+                                            ${energyLevel > 20 ? 'text-white' : 'text-red-900'}
                                             ${isCharging ? 'scale-150 animate-bounce' : 'animate-breathing'}
                                         `}
                                     />
@@ -1735,6 +1765,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 onSaveQr={handleSaveQr}
                 currentWalletAddress={user.walletAddress}
                 addNotification={addNotification}
+                inventory={inventory}
             />
             <DepositModal isOpen={isDepositModalOpen} onClose={() => setIsDepositModalOpen(false)} user={user} onDepositSuccess={handleDepositSuccess} addNotification={addNotification} />
             <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} user={user} onSuccess={refreshData} addNotification={addNotification} />

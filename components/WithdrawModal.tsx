@@ -12,6 +12,7 @@ interface WithdrawModalProps {
     savedQrCode?: string; // Add saved QR Code prop
     onSaveQr: (base64: string) => void; // Handler to save QR
     currentWalletAddress?: string; // Add current wallet address prop
+    inventory?: any[];
 }
 
 export const WithdrawModal: React.FC<WithdrawModalProps> = ({
@@ -21,7 +22,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     onWithdraw,
     savedQrCode,
     onSaveQr,
-    currentWalletAddress
+    currentWalletAddress,
+    inventory
 }) => {
     const { t, language, formatCurrency } = useTranslation();
     const [amount, setAmount] = useState<string>('');
@@ -70,24 +72,23 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     // --- Mode 2: Withdraw Form ---
     const handleWithdrawClick = () => {
         const val = parseFloat(amount);
-        // val is in USDT if method is USDT, else it's in Baht
         const isUSDT = method === 'USDT';
+        // Normalize value to USD for limit checks
+        const systemAmount = isUSDT ? val : Number((val / EXCHANGE_RATE_USD_THB).toFixed(8));
         const currentLimits = isUSDT ? USDT_WITHDRAW_LIMITS : TRANSACTION_LIMITS.WITHDRAW;
-        const bahts = isUSDT ? val * EXCHANGE_RATE_USD_THB : val;
 
-        if (!isNaN(val) && val >= currentLimits.MIN && val <= currentLimits.MAX && bahts <= walletBalance) {
+        if (!isNaN(val) && systemAmount >= currentLimits.MIN && systemAmount <= currentLimits.MAX && systemAmount <= walletBalance) {
             setIsConfirming(true);
         }
     };
 
     const handleConfirmWithdraw = () => {
-        // Direct call, bypass PIN
         const val = parseFloat(amount);
         const isUSDT = method === 'USDT';
-        const bahts = isUSDT ? val * EXCHANGE_RATE_USD_THB : val;
+        const systemAmount = isUSDT ? val : Number((val / EXCHANGE_RATE_USD_THB).toFixed(8));
 
-        if (!isNaN(bahts) && bahts > 0 && bahts <= walletBalance) {
-            onWithdraw(bahts, "", method, isUSDT ? walletAddressInput : undefined);
+        if (!isNaN(systemAmount) && systemAmount > 0 && systemAmount <= walletBalance) {
+            onWithdraw(systemAmount, "", method, isUSDT ? walletAddressInput : undefined);
             setAmount('');
             setIsConfirming(false);
             onClose();
@@ -97,10 +98,10 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     const handlePinSuccess = (pin: string) => {
         const val = parseFloat(amount);
         const isUSDT = method === 'USDT';
-        const bahts = isUSDT ? val * EXCHANGE_RATE_USD_THB : val;
+        const systemAmount = isUSDT ? val : Number((val / EXCHANGE_RATE_USD_THB).toFixed(8));
 
-        if (!isNaN(bahts) && bahts > 0 && bahts <= walletBalance) {
-            onWithdraw(bahts, pin, method, isUSDT ? walletAddressInput : undefined);
+        if (!isNaN(systemAmount) && systemAmount > 0 && systemAmount <= walletBalance) {
+            onWithdraw(systemAmount, pin, method, isUSDT ? walletAddressInput : undefined);
             setAmount('');
             setIsConfirming(false);
             setShowPinModal(false);
@@ -111,19 +112,27 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     const setMaxAmount = () => {
         const isUSDT = method === 'USDT';
         const currentLimits = isUSDT ? USDT_WITHDRAW_LIMITS : TRANSACTION_LIMITS.WITHDRAW;
-        const maxPossibleBaht = Math.min(walletBalance, isUSDT ? currentLimits.MAX * EXCHANGE_RATE_USD_THB : currentLimits.MAX);
-        const maxDisplay = isUSDT ? maxPossibleBaht / EXCHANGE_RATE_USD_THB : maxPossibleBaht;
+        const maxLimitUSD = currentLimits.MAX;
+        const maxWithdrawalUSD = Math.min(walletBalance, maxLimitUSD);
+        let maxDisplay = isUSDT ? maxWithdrawalUSD : maxWithdrawalUSD * EXCHANGE_RATE_USD_THB;
+
+        // Fix floating point errors for display (e.g., 999.99999995 -> 1000)
+        if (!isUSDT && Math.abs(maxDisplay - Math.round(maxDisplay)) < 0.001) {
+            maxDisplay = Math.round(maxDisplay);
+        }
+
         setAmount(maxDisplay.toFixed(isUSDT ? 4 : 2));
     };
 
-    // Calculations (in Display Currency)
+    // Calculations (in system USD units for formatCurrency)
     const isUSDT = method === 'USDT';
     const exchangeRate = isUSDT ? EXCHANGE_RATE_USD_THB : 1;
-    const displayBalance = isUSDT ? walletBalance / EXCHANGE_RATE_USD_THB : walletBalance;
+    const displayBalance = walletBalance;
     const rawVal = parseFloat(amount) || 0;
+    const systemAmount = isUSDT ? rawVal : Number((rawVal / EXCHANGE_RATE_USD_THB).toFixed(8));
     const feePercent = WITHDRAWAL_FEE_PERCENT;
-    const fee = rawVal * feePercent;
-    const netReceived = rawVal - fee;
+    const systemFee = systemAmount * feePercent;
+    const systemNetReceived = systemAmount - systemFee;
     const currentLimits = isUSDT ? USDT_WITHDRAW_LIMITS : TRANSACTION_LIMITS.WITHDRAW;
     const maxWithdrawDisplay = isUSDT ? USDT_WITHDRAW_LIMITS.MAX : TRANSACTION_LIMITS.WITHDRAW.MAX;
     const minWithdrawDisplay = isUSDT ? USDT_WITHDRAW_LIMITS.MIN : TRANSACTION_LIMITS.WITHDRAW.MIN;
@@ -131,6 +140,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     // --- RENDER ---
 
     const isSetupMode = !savedQrCode;
+
+    const hasVipCard = inventory?.some(i => i.typeId === 'vip_withdrawal_card');
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
@@ -148,6 +159,20 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                 </div>
 
                 <div className="p-6 space-y-6">
+
+                    {!hasVipCard && !isSetupMode && !isConfirming && (
+                        <div className="bg-red-900/20 border border-red-900/50 p-4 rounded-xl space-y-3 animate-in fade-in zoom-in duration-300">
+                            <div className="flex items-center gap-3 text-red-400">
+                                <AlertTriangle size={24} />
+                                <div className="font-bold text-sm uppercase tracking-wider">{language === 'th' ? 'ต้องใช้บัตร VIP' : 'VIP Card Required'}</div>
+                            </div>
+                            <p className="text-xs text-red-200/70 leading-relaxed">
+                                {language === 'th'
+                                    ? 'คุณต้องมี "บัตร VIP ปลดล็อกถอนเงิน" เพื่อถอนเงินออกจากระบบ โปรดซื้อบัตรที่ร้านค้าก่อนดำเนินการต่อ'
+                                    : 'You need a "VIP Withdrawal Card" to withdraw money. Please purchase it from the shop before proceeding.'}
+                            </p>
+                        </div>
+                    )}
 
                     {isSetupMode ? (
                         // --- VIEW 1: Upload QR ---
@@ -207,9 +232,9 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
                             <h3 className="text-stone-300 font-medium mb-1">{t('withdraw.actual_receive')}</h3>
                             <div className="text-4xl font-mono font-bold text-white mb-2">
-                                {isUSDT ? `${netReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT` : formatCurrency(netReceived)}
+                                {isUSDT ? `${systemNetReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT` : formatCurrency(systemNetReceived)}
                                 <div className="text-sm text-emerald-500 font-mono mt-1">
-                                    ≈ {isUSDT ? formatCurrency(netReceived * EXCHANGE_RATE_USD_THB) : formatCurrency(netReceived, { forceUSD: true })}
+                                    ≈ {isUSDT ? formatCurrency(systemNetReceived * EXCHANGE_RATE_USD_THB) : formatCurrency(systemNetReceived, { forceUSD: true })}
                                 </div>
                             </div>
 
@@ -217,16 +242,16 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                             <div className="bg-slate-900 rounded-lg p-4 border border-slate-700 mb-4 text-xs space-y-2">
                                 <div className="flex justify-between text-stone-400">
                                     <span>{t('withdraw.withdraw_amount')}</span>
-                                    <span>{isUSDT ? `${rawVal.toLocaleString()} USDT` : formatCurrency(rawVal)}</span>
+                                    <span>{isUSDT ? `${systemAmount.toLocaleString()} USDT` : formatCurrency(systemAmount)}</span>
                                 </div>
                                 <div className="flex justify-between text-red-400">
                                     <span>{t('withdraw.fee')} ({WITHDRAWAL_FEE_PERCENT * 100}%)</span>
-                                    <span>-{isUSDT ? `${fee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT` : formatCurrency(fee)}</span>
+                                    <span>-{isUSDT ? `${systemFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT` : formatCurrency(systemFee)}</span>
                                 </div>
                                 <div className="h-px bg-slate-700 my-1"></div>
                                 <div className="flex justify-between text-emerald-400 font-bold">
                                     <span>{t('withdraw.net_received')}</span>
-                                    <span>{isUSDT ? `${netReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT` : formatCurrency(netReceived)}</span>
+                                    <span>{isUSDT ? `${systemNetReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT` : formatCurrency(systemNetReceived)}</span>
                                 </div>
                             </div>
 
@@ -279,6 +304,11 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                                 <span className="text-sm text-slate-400">{t('withdraw.withdrawable_balance')}</span>
                                 <div className="text-3xl font-bold text-white font-mono">
                                     {isUSDT ? `${displayBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT` : formatCurrency(walletBalance)}
+                                    {isUSDT && (
+                                        <div className="text-[10px] text-slate-500 font-sans font-normal mt-1">
+                                            ≈ {formatCurrency(displayBalance)}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -348,9 +378,9 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                                         </div>
                                     </div>
 
-                                    {rawVal > 0 && (
+                                    {systemAmount > 0 && (
                                         <div className="text-xs text-right mt-1 font-bold text-emerald-500">
-                                            {t('withdraw.net_received')}: {isUSDT ? `${netReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT` : formatCurrency(Math.max(0, netReceived))}
+                                            {t('withdraw.net_received')}: {isUSDT ? `${systemNetReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT` : formatCurrency(Math.max(0, systemNetReceived))}
                                         </div>
                                     )}
                                 </div>
@@ -362,7 +392,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
                             <button
                                 onClick={handleWithdrawClick}
-                                disabled={!amount || rawVal < currentLimits.MIN || rawVal > currentLimits.MAX || (isUSDT ? (rawVal * EXCHANGE_RATE_USD_THB) : rawVal) > walletBalance || (isUSDT && !walletAddressInput)}
+                                disabled={!hasVipCard || !amount || systemAmount < currentLimits.MIN || systemAmount > currentLimits.MAX || systemAmount > walletBalance || (isUSDT && !walletAddressInput)}
                                 className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-800 disabled:text-stone-600 text-white font-bold py-3 rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all mt-6"
                             >
                                 {t('withdraw.title')} <Send size={18} />

@@ -89,9 +89,10 @@ export const checkIn = async (req: Request, res: Response) => {
             let txAmount = 0;
 
             if (rewardConfig.reward === 'money') {
-                const amount = (rewardConfig as any).amount;
-                user.balance += amount;
-                txAmount = amount;
+                const amountTHB = (rewardConfig as any).amount;
+                const amountUSD = amountTHB / 35; // Convert THB to USD
+                user.balance += amountUSD;
+                txAmount = amountUSD;
                 txDetail = JSON.stringify({
                     th: `รางวัลเช็คชื่อวันที่ ${streak}`,
                     en: `Daily Check-in Day ${streak}`

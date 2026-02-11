@@ -25,8 +25,15 @@ export const createWithdrawalRequest = async (req: AuthRequest, res: Response) =
         }
 
         // Check Limits
-        if (amount < 100 || amount > 1000) {
-            return res.status(400).json({ message: 'ถอนเงินขั้นต่ำ 100 บาท และสูงสุด 1,000 บาท' });
+        if (method === 'USDT') {
+            if (amount < 5 || amount > 50) {
+                return res.status(400).json({ message: 'ถอนเงินขั้นต่ำ 5 USDT และสูงสุด 50 USDT' });
+            }
+        } else {
+            // Default BANK (Use slight tolerance for floating point)
+            if (amount < 2.857 || amount > 28.572) {
+                return res.status(400).json({ message: 'ถอนเงินขั้นต่ำ 100 บาท และสูงสุด 1,000 บาท' });
+            }
         }
 
         const user = await User.findById(userId);
@@ -44,6 +51,14 @@ export const createWithdrawalRequest = async (req: AuthRequest, res: Response) =
             if (!user.bankQrCode) {
                 return res.status(400).json({ message: 'โปรดตั้งค่าบัญชีรับเงิน (QR Code) ก่อนถอนเงิน' });
             }
+        }
+
+        // Check for VIP Withdrawal Card
+        const hasVipCard = user.inventory?.some((i: any) => i.typeId === 'vip_withdrawal_card');
+        if (!hasVipCard) {
+            return res.status(403).json({
+                message: 'คุณต้องมี "บัตร VIP ปลดล็อกถอนเงิน" เพื่อถอนเงิน โปรดซื้อที่ร้านค้าไอเทม'
+            });
         }
 
         // Verify PIN (Optional if bypassed by frontend)
