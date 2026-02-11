@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Hourglass, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown, FileText } from 'lucide-react';
+import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Hourglass, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown, FileText, CreditCard } from 'lucide-react';
 import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, RARITY_SETTINGS, SHOP_ITEMS, MATERIAL_RECIPES, EXCHANGE_RATE_USD_THB } from '../constants';
 import { MarketState, MarketItemData, AccessoryItem } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
@@ -48,8 +48,8 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         }
     }, [isOpen]);
 
-    // Fix: Define displayTiers to list available material tiers (Coal through Legendary)
-    const displayTiers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    // Fix: Define displayTiers to list available material tiers (Stone Shards through Legendary)
+    const displayTiers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
     // Unified grouping logic for the warehouse
     const groupInventoryItems = (items: AccessoryItem[], groupByTypeIdOnly: boolean = false) => {
@@ -255,6 +255,22 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         else if (nameStr.includes('รองเท้า') || nameStr.includes('Boots')) typeId = 'boots';
         else if (nameStr.includes('มือถือ') || nameStr.includes('Mobile') || nameStr.includes('Phone')) typeId = 'mobile';
         else if (nameStr.includes('คอม') || nameStr.includes('PC') || nameStr.includes('Computer')) typeId = 'pc';
+
+        if (typeId === 'vip_withdrawal_card' || nameStr.includes('บัตร VIP')) {
+            return (
+                <div className={`relative ${className.includes('w-') ? className : 'w-full h-full'} aspect-[1.58/1] bg-gradient-to-br from-yellow-100 via-yellow-500 to-yellow-800 rounded-[4px] border border-yellow-200/50 shadow-[0_0_15px_rgba(234,179,8,0.4)] flex items-center justify-center overflow-hidden group/card`}>
+                    {/* Glossy Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-60"></div>
+                    {/* Magnetic Stripe Detail */}
+                    <div className="absolute top-[20%] left-0 w-full h-[15%] bg-stone-900/40"></div>
+                    {/* Chip Detail */}
+                    <div className="absolute top-[45%] left-[10%] w-[15%] h-[20%] bg-gradient-to-br from-yellow-200 to-yellow-600 rounded-sm border border-yellow-100/30"></div>
+                    {/* VIP Text */}
+                    <div className="absolute bottom-[10%] right-[10%] text-[8px] font-black italic text-black/40 tracking-tighter">VIP</div>
+                    <CreditCard className="text-yellow-950 w-1/2 h-1/2 relative z-10 drop-shadow-sm opacity-60" />
+                </div>
+            );
+        }
 
         if (!typeId) return <InfinityGlove rarity={rarity} className={className} />;
         if (typeId.includes('glove')) return <InfinityGlove rarity={rarity} className={className} />;
@@ -503,7 +519,9 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                         {t('warehouse.title')}
                                     </h2>
                                     {marketState?.trends && (() => {
-                                        const trends = marketState?.trends ? Object.values(marketState.trends) as MarketItemData[] : [];
+                                        const allTrends = marketState.trends ? Object.entries(marketState.trends) : [];
+                                        // Exclude Stone Shards (tier 0) from market trend calculation
+                                        const trends = allTrends.filter(([tierStr]) => parseInt(tierStr) !== 0).map(([, data]) => data as MarketItemData);
                                         const ups = trends.filter(t => t.trend === 'UP').length;
                                         const downs = trends.filter(t => t.trend === 'DOWN').length;
 
@@ -550,7 +568,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                     const name = getLocalized(MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES]);
                                     const recipe = MATERIAL_RECIPES[tier];
                                     const canCraft = checkRecipeAvailability(recipe);
-                                    const currentPrice = marketState?.trends?.[tier]?.currentPrice || MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES];
+                                    const currentPrice = (marketState?.trends?.[tier]?.currentPrice || MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES]) || 0;
 
                                     return (
                                         <div key={tier} className={`bg-stone-900/80 border border-stone-800 rounded-2xl p-5 flex flex-col gap-4 relative transition-all hover:border-stone-700`}>
@@ -561,12 +579,12 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                 </div>
                                                 <div className="flex-1">
                                                     <h3 className={`font-bold text-lg leading-tight ${getTierColor(tier)}`}>{name}</h3>
-                                                    {tier < 8 && (
+                                                    {tier > 0 && tier < 8 && (
                                                         <div className="space-y-1 mt-1">
                                                             <div className="flex items-center justify-between text-[10px] text-stone-500 font-bold uppercase tracking-wider">
                                                                 <span>{t('warehouse.base_price')}</span>
                                                                 <span>{
-                                                                    (MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES] * (language === 'th' ? EXCHANGE_RATE_USD_THB : 1)).toFixed(2)
+                                                                    ((MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES] || 0) * (language === 'th' ? EXCHANGE_RATE_USD_THB : 1)).toFixed(2)
                                                                 } {language === 'th' ? t('common.thb') : CURRENCY}</span>
                                                             </div>
                                                             <div
@@ -574,47 +592,57 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                                 onClick={() => onOpenMarket?.(tier)}
                                                                 title={t('warehouse.click_stats')}
                                                             >
-                                                                <div className="flex flex-col">
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <Tag size={10} className="text-stone-500 group-hover/price:text-emerald-400" />
-                                                                        {language === 'th' ? (
-                                                                            <span className="text-[11px] text-emerald-400 font-mono font-bold">
-                                                                                {(currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} {t('common.thb')}
-                                                                                <span className="text-[9px] text-stone-500 font-normal ml-1">({CURRENCY}{currentPrice.toFixed(2)})</span>
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span className="text-[11px] text-emerald-400 font-mono font-bold">
-                                                                                {CURRENCY}{currentPrice.toFixed(2)}
-                                                                                <span className="text-[9px] text-stone-500 font-normal ml-1">({(currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} {t('common.thb')})</span>
-                                                                            </span>
-                                                                        )}
+                                                                {tier === 7 ? (
+                                                                    <div className="w-full flex items-center justify-center py-1 bg-red-900/30 border border-red-500/30 rounded-lg">
+                                                                        <span className="text-[10px] text-red-400 font-black uppercase tracking-widest animate-pulse">
+                                                                            {language === 'th' ? 'ปิดการซื้อขายชั่วคราว' : 'Market Closed'}
+                                                                        </span>
                                                                     </div>
-                                                                    {marketState?.trends?.[tier]?.history && renderSparkline(marketState.trends[tier].history)}
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    {(() => {
-                                                                        const base = MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES] || 0;
-                                                                        const diffFromBase = currentPrice - base;
-                                                                        const percent = (base > 0) ? (diffFromBase / base) * 100 : 0;
+                                                                ) : (
+                                                                    <>
+                                                                        <div className="flex flex-col">
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <Tag size={10} className="text-stone-500 group-hover/price:text-emerald-400" />
+                                                                                {language === 'th' ? (
+                                                                                    <span className="text-[11px] text-emerald-400 font-mono font-bold">
+                                                                                        {(currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} {t('common.thb')}
+                                                                                        <span className="text-[9px] text-stone-500 font-normal ml-1">({CURRENCY}{currentPrice.toFixed(2)})</span>
+                                                                                    </span>
+                                                                                ) : (
+                                                                                    <span className="text-[11px] text-emerald-400 font-mono font-bold">
+                                                                                        {CURRENCY}{currentPrice.toFixed(2)}
+                                                                                        <span className="text-[9px] text-stone-500 font-normal ml-1">({(currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} {t('common.thb')})</span>
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            {marketState?.trends?.[tier]?.history && renderSparkline(marketState.trends[tier].history)}
+                                                                        </div>
+                                                                        <div className="text-right">
+                                                                            {(() => {
+                                                                                const base = MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES] || 0;
+                                                                                const diffFromBase = currentPrice - base;
+                                                                                const percent = (base > 0) ? (diffFromBase / base) * 100 : 0;
 
-                                                                        if (percent >= 0) return (
-                                                                            <div className="flex flex-col items-end">
-                                                                                <div className="flex items-center text-[10px] text-emerald-500 font-bold animate-pulse">
-                                                                                    <TrendingUp size={10} className="mr-0.5" /> {t('warehouse.market_up')}
-                                                                                </div>
-                                                                                <div className="text-[9px] text-emerald-400 font-bold">+{percent.toFixed(1)}%</div>
-                                                                            </div>
-                                                                        );
-                                                                        return (
-                                                                            <div className="flex flex-col items-end">
-                                                                                <div className="flex items-center text-[10px] text-red-500 font-bold animate-pulse">
-                                                                                    <TrendingDown size={10} className="mr-0.5" /> {t('warehouse.market_down')}
-                                                                                </div>
-                                                                                <div className="text-[9px] text-red-400 font-bold">{percent.toFixed(1)}%</div>
-                                                                            </div>
-                                                                        );
-                                                                    })()}
-                                                                </div>
+                                                                                if (percent >= 0) return (
+                                                                                    <div className="flex flex-col items-end">
+                                                                                        <div className="flex items-center text-[10px] text-emerald-500 font-bold animate-pulse">
+                                                                                            <TrendingUp size={10} className="mr-0.5" /> {t('warehouse.market_up')}
+                                                                                        </div>
+                                                                                        <div className="text-[9px] text-emerald-400 font-bold">+{percent.toFixed(1)}%</div>
+                                                                                    </div>
+                                                                                );
+                                                                                return (
+                                                                                    <div className="flex flex-col items-end">
+                                                                                        <div className="flex items-center text-[10px] text-red-500 font-bold animate-pulse">
+                                                                                            <TrendingDown size={10} className="mr-0.5" /> {t('warehouse.market_down')}
+                                                                                        </div>
+                                                                                        <div className="text-[9px] text-red-400 font-bold">{percent.toFixed(1)}%</div>
+                                                                                    </div>
+                                                                                );
+                                                                            })()}
+                                                                        </div>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     )}

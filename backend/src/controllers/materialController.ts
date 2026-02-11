@@ -6,7 +6,7 @@ import { AuthRequest } from '../middleware/auth';
 // --- CONSTANTS (Mirrored from frontend for now) ---
 const MATERIAL_CONFIG = {
     NAMES: {
-        0: { th: 'วัสดุปริศนา', en: 'Mysterious Material' },
+        0: { th: 'เศษหิน', en: 'Stone Shards' },
         1: { th: 'ถ่านหิน', en: 'Coal' },
         2: { th: 'ทองแดง', en: 'Copper' },
         3: { th: 'เหล็ก', en: 'Iron' },
@@ -20,6 +20,7 @@ const MATERIAL_CONFIG = {
 };
 
 const MATERIAL_RECIPES: Record<number, { ingredients: Record<number, number>; fee: number; requiredItem?: string }> = {
+    0: { ingredients: { 0: 5 }, fee: 0, requiredItem: 'mixer' }, // Stone Shards x5 + 0 Baht -> Coal
     1: { ingredients: { 1: 2 }, fee: 0.0286, requiredItem: 'mixer' }, // Coal x2 + ~1 Baht -> Copper
     2: { ingredients: { 1: 1, 2: 1 }, fee: 0.0571, requiredItem: 'mixer' }, // Coal x1 + Copper x1 + ~2 Baht -> Iron
     3: { ingredients: { 2: 1, 3: 1 }, fee: 0.0857, requiredItem: 'mixer' }, // Copper x1 + Iron x1 + ~3 Baht -> Gold
@@ -223,6 +224,14 @@ export const sellMaterial = async (req: AuthRequest, res: Response) => {
         if (!user.materials) user.materials = {};
         const userAmount = (user.materials[tier.toString()] || 0);
 
+        if (parseInt(tier) === 0) {
+            return res.status(400).json({ message: 'เศษหินไม่สามารถขายได้' });
+        }
+
+        if (parseInt(tier) === 7) {
+            return res.status(400).json({ message: 'การขายแร่วาเบรเนียมถูกระงับชั่วคราว' });
+        }
+
         if (userAmount < amount) {
             return res.status(400).json({ message: 'จำนวนวัตถุดิบไม่เพียงพอสำหรับการขาย' });
         }
@@ -290,6 +299,10 @@ export const buyMaterial = async (req: AuthRequest, res: Response) => {
         const market = getMarketPrices();
         const item = market[tier];
         if (!item) return res.status(400).json({ message: 'Invalid material tier' });
+
+        if (parseInt(tier) === 7) {
+            return res.status(400).json({ message: 'การซื้อแร่วาเบรเนียมถูกระงับชั่วคราว' });
+        }
 
         const unitPrice = item.currentPrice;
         const subTotal = unitPrice * amount;

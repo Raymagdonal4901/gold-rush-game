@@ -48,6 +48,7 @@ const SHOP_ITEMS = [
 
 // ... existing buyAccessory ...
 export const buyAccessory = async (req: AuthRequest, res: Response) => {
+    const start = Date.now();
     try {
         const { itemId, typeId, price, name, dailyBonus, rarity, lifespanDays } = req.body;
         const actualItemId = itemId || typeId; // Handle mismatch
@@ -142,6 +143,7 @@ export const buyAccessory = async (req: AuthRequest, res: Response) => {
             balance: user.balance,
             item: newItem
         });
+        console.log(`[PERF] buyAccessory took ${Date.now() - start}ms`);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

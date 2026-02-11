@@ -106,7 +106,7 @@ export const GLOVE_DETAILS: Record<string, { name: { th: string; en: string } }>
     LEGENDARY: { name: { th: 'ตำนานนักขุด (LEGEND)', en: 'Legendary Miner (LEGEND)' } },
 };
 
-export const GIFT_CYCLE_DAYS = 30;
+export const GIFT_CYCLE_DAYS = 1;
 
 export const RENEWAL_CONFIG = {
     WINDOW_DAYS: 3,
@@ -129,9 +129,9 @@ export const UPGRADE_CONFIG = {
 export const MATERIAL_CONFIG = {
     MAX_CAPACITY: 1,
     DROP_CHANCE: 1.0, // Guaranteed drop when interval hits
-    DROP_INTERVAL_MS: 72000000, // 20 Hours (20 * 60 * 60 * 1000)
+    DROP_INTERVAL_MS: 86400000, // 24 Hours (24 * 60 * 60 * 1000)
     NAMES: {
-        0: { th: 'วัสดุปริศนา', en: 'Mysterious Material' },
+        0: { th: 'เศษหิน', en: 'Stone Shards' },
         1: { th: 'ถ่านหิน', en: 'Coal' },
         2: { th: 'ทองแดง', en: 'Copper' },
         3: { th: 'เหล็ก', en: 'Iron' },
@@ -143,6 +143,7 @@ export const MATERIAL_CONFIG = {
         9: { th: 'แร่ในตำนาน', en: 'Legendary Ore' },
     },
     PRICES: {
+        0: 0,
         1: 0.2857, // (~10 THB)
         2: 0.5714, // (~20 THB)
         3: 1.0000, // (~35 THB)
@@ -230,6 +231,7 @@ export const UPGRADE_REQUIREMENTS: Record<number, { matTier: number; matAmount: 
 
 // สูตรการแปรรูปวัตถุดิบ (Tier ทรัพยากรหลักที่กด -> สูตรและผลลัพธ์)
 export const MATERIAL_RECIPES: Record<number, { ingredients: Record<number, number>; fee: number; requiredItem?: string }> = {
+    0: { ingredients: { 0: 5 }, fee: 0, requiredItem: 'mixer' }, // เศษหิน x5 + 0 Baht -> ถ่านหิน
     1: { ingredients: { 1: 2 }, fee: 0.05, requiredItem: 'mixer' }, // ถ่านหิน x2 + 1 Baht -> ทองแดง
     2: { ingredients: { 1: 1, 2: 1 }, fee: 0.1, requiredItem: 'mixer' }, // ถ่านหิน x1 + ทองแดง x1 + 2 Baht -> เหล็ก
     3: { ingredients: { 2: 1, 3: 1 }, fee: 0.15, requiredItem: 'mixer' }, // ทองแดง x1 + เหล็ก x1 + 3 Baht -> ทองคำ
@@ -264,9 +266,9 @@ export interface RigPreset {
 
 export const RIG_PRESETS: RigPreset[] = [
     { id: 1, name: { th: 'พลั่วสนิมเขรอะ', en: 'Rusty Shovel' }, price: 8.5714285714, dailyProfit: 1.4, bonusProfit: 0.8, durationDays: 7, repairCost: 0, energyCostPerDay: 0.03, specialProperties: { infiniteDurability: false, noGift: true } },
-    { id: 2, name: { th: 'สว่านพกพา', en: 'Portable Drill' }, price: 14.2857142857, dailyProfit: 1.1, bonusProfit: 2.0, durationDays: 15, repairCost: 0, energyCostPerDay: 0.05, image: '/images/rooms/fan_room.png', description: { th: 'พลั่วขุดมาตรฐานเพื่อเริ่มกิจการ', en: 'Standard drill to start your business' }, type: 'UNCOMMON', materialChance: 0.1, specialProperties: { infiniteDurability: false, noGift: true } },
-    { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Coal Excavator' }, price: 28.5714285714, dailyProfit: 1.3, durationMonths: 1, repairCost: 1.8, energyCostPerDay: 0.09 },
-    { id: 4, name: { th: 'เครื่องขุดทองแดง', en: 'Copper Excavator' }, price: 42.8571428571, dailyProfit: 1.6, durationMonths: 2, repairCost: 3.5, energyCostPerDay: 0.18, image: '/images/rooms/aircon_deluxe.png', description: { th: 'สว่านแรงดันสูงเพื่อเจาะชั้นดินลึก', en: 'High pressure drill for deep soil' }, type: 'SUPER_RARE', materialChance: 0.2 },
+    { id: 2, name: { th: 'สว่านพกพา', en: 'Portable Drill' }, price: 14.2857142857, dailyProfit: 1.1, bonusProfit: 2.0, durationDays: 15, repairCost: 0, energyCostPerDay: 0.05, image: '/images/rooms/fan_room.png', description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'UNCOMMON', specialProperties: { infiniteDurability: false } },
+    { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Coal Excavator' }, price: 28.5714285714, dailyProfit: 1.3, durationMonths: 1, repairCost: 1.8, energyCostPerDay: 0.09, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' } },
+    { id: 4, name: { th: 'เครื่องขุดทองแดง', en: 'Copper Excavator' }, price: 42.8571428571, dailyProfit: 1.6, durationMonths: 2, repairCost: 3.5, energyCostPerDay: 0.18, image: '/images/rooms/aircon_deluxe.png', description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'SUPER_RARE' },
     { id: 5, name: { th: 'เครื่องขุดเหล็ก', en: 'Iron Excavator' }, price: 57.1428571429, dailyProfit: 1.9, durationMonths: 3, repairCost: 5.2, energyCostPerDay: 0.28, type: 'EPIC' },
     { id: 6, name: { th: 'เครื่องขุดทองคำ', en: 'Gold Excavator' }, price: 71.4285714286, dailyProfit: 2.1, durationMonths: 4, repairCost: 7.2, energyCostPerDay: 0.42, type: 'MYTHIC' },
     { id: 7, name: { th: 'เครื่องขุดเพชร', en: 'Diamond Excavator' }, price: 85.7142857143, dailyProfit: 2.5, durationMonths: 5, repairCost: 8.5, energyCostPerDay: 0.62, type: 'LEGENDARY' },
@@ -282,6 +284,7 @@ export const RIG_PRESETS: RigPreset[] = [
         craftingRecipe: {
             materials: { 7: 1, 8: 2, 9: 3 }
         },
+        description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม. (แร่วาเบรเนียมได้จากการสกัดเท่านั้น)', en: 'Get Mining Key every 24h (Vibranium from refining only)' },
         specialProperties: { infiniteDurability: false, zeroEnergy: false, maxAllowed: 1 },
         type: 'ULTRA_LEGENDARY'
     },

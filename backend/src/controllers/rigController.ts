@@ -6,11 +6,12 @@ import { AuthRequest } from '../middleware/auth';
 
 // Get all rigs for a user
 export const getMyRigs = async (req: AuthRequest, res: Response) => {
+    const start = Date.now();
     try {
         const rigs = await Rig.find({ ownerId: req.userId });
 
         // Calculate currentMaterials dynamically based on time
-        const DROP_INTERVAL_MS = 20 * 60 * 60 * 1000; // 20 Hours
+        const DROP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 Hours
         const MAX_CAPACITY = 1;
 
         const rigsWithMaterials = rigs.map(rig => {
@@ -31,6 +32,7 @@ export const getMyRigs = async (req: AuthRequest, res: Response) => {
         });
 
         res.json(rigsWithMaterials);
+        console.log(`[PERF] getMyRigs took ${Date.now() - start}ms`);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
     }
@@ -393,113 +395,40 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
         const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
         if (!rig) return res.status(404).json({ message: 'Rig not found' });
 
-        if (tier === 0) {
-            // Handle special collection (e.g. Chest Keys)
-            const newKey = {
-                id: Math.random().toString(36).substr(2, 9),
-                typeId: 'chest_key',
-                name: 'กุญแจเข้าเหมือง',
-                price: 0,
-                dailyBonus: 0,
-                durationBonus: 0,
-                rarity: 'COMMON',
-                purchasedAt: Date.now(),
-                lifespanDays: 999,
-                expireAt: Date.now() + (999 * 24 * 60 * 60 * 1000),
-                level: 1
-            };
+        // ALL Rigs now exclusively drop Chest Keys
+        const newKey = {
+            id: Math.random().toString(36).substr(2, 9),
+            typeId: 'chest_key',
+            name: { th: 'กุญแจเข้าเหมือง', en: 'Mining Key' },
+            price: 0,
+            dailyBonus: 0,
+            durationBonus: 0,
+            rarity: 'COMMON',
+            purchasedAt: Date.now(),
+            lifespanDays: 999,
+            expireAt: Date.now() + (999 * 24 * 60 * 60 * 1000),
+            level: 1
+        };
 
-            if (!user.inventory) user.inventory = [];
-            user.inventory.push(newKey);
-            rig.lastCollectionAt = new Date();
-
-            await user.save();
-            await rig.save();
-            // Log Transaction (Key is essentially 0-value currency but valuable)
-            const keyTx = new Transaction({
-                userId,
-                type: 'GIFT_CLAIM',
-                amount: 0,
-                status: 'COMPLETED',
-                description: `ได้รับไอเทมจากเครื่องขุด: กุญแจเข้าเหมือง`
-            });
-            await keyTx.save();
-
-            return res.json({ success: true, item: newKey });
-        }
-
-        // Derive Tier strictly from Rig Name to prevent frontend spoofing/bugs
-        let derivedTier = tier;
-        if (rig.name.includes('ถ่านหิน')) derivedTier = 1;
-        else if (rig.name.includes('ทองแดง')) derivedTier = 2;
-        else if (rig.name.includes('เหล็ก')) derivedTier = 3;
-        else if (rig.name.includes('ทองคำ')) derivedTier = 4;
-        else if (rig.name.includes('เพชร')) derivedTier = 5;
-        // else if (rig.name.includes('น้ำมัน')) derivedTier = 6;
-        else if (rig.name.includes('ไวเบรเนียม')) derivedTier = 7;
-
-        console.log(`[COLLECT] Resolved Tier: ${tier} -> ${derivedTier} based on Rig: ${rig.name}`);
-
-        if (!user.materials) user.materials = {};
-        const currentAmount = user.materials[derivedTier.toString()] || 0;
-        user.materials[derivedTier.toString()] = currentAmount + (amount || 0);
-
-
-        // --- 10% Chance for Chest Key Drop ---
-        let bonusItem = null;
-        if (Math.random() < 0.10) {
-            bonusItem = {
-                id: Math.random().toString(36).substr(2, 9),
-                typeId: 'chest_key',
-                name: { th: 'กุญแจเข้าเหมือง', en: 'Mining Key' },
-                price: 0,
-                dailyBonus: 0,
-                durationBonus: 0,
-                rarity: 'COMMON',
-                purchasedAt: Date.now(),
-                lifespanDays: 365,
-                expireAt: Date.now() + (365 * 24 * 60 * 60 * 1000),
-                level: 1
-            };
-
-            if (!user.inventory) user.inventory = [];
-            user.inventory.push(bonusItem);
-
-            // Log Transaction for Bonus
-            const bonusTx = new Transaction({
-                userId,
-                type: 'GIFT_CLAIM',
-                amount: 0,
-                status: 'COMPLETED',
-                description: `ได้รับโบนัสจากการขุด: กุญแจเข้าเหมือง`
-            });
-            await bonusTx.save();
-        }
-
-        user.markModified('materials');
-        user.markModified('inventory'); // Ensure inventory is marked modified if key is added
+        if (!user.inventory) user.inventory = [];
+        user.inventory.push(newKey);
         rig.lastCollectionAt = new Date();
 
         await user.save();
         await rig.save();
 
         // Log Transaction
-        const collectTx = new Transaction({
+        const keyTx = new Transaction({
             userId,
-            type: 'MATERIAL_MINED',
+            type: 'GIFT_CLAIM',
             amount: 0,
             status: 'COMPLETED',
-            description: `เก็บแร่จากเครื่องขุด: ${typeof rig.name === 'object' ? rig.name.th : rig.name} (${amount} ชิ้น)`
+            description: `ได้รับไอเทมจากเครื่องขุด: กุญแจเข้าเหมือง`
         });
-        await collectTx.save();
+        await keyTx.save();
 
-        res.json({
-            success: true,
-            materials: user.materials,
-            lastCollectionAt: rig.lastCollectionAt,
-            bonusItem // Return the bonus item to frontend
-        });
-        console.log(`[DEBUG_COLLECT] Success. User Materials:`, JSON.stringify(user.materials));
+        console.log(`[DEBUG_COLLECT] Success. User: ${userId}, Rig: ${rigId}, Item: Mining Key`);
+        return res.json({ success: true, item: newKey });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -517,82 +446,28 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
         const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
         if (!rig) return res.status(404).json({ message: 'Rig not found' });
 
-        // Implementation matching MockDB logic
-        // We'll need RIG_PRESETS and SHOP_ITEMS (or simple local copy/lookup)
-        // For brevity and to ensure it works, I'll use the tier logic from previous plan.
+        // ALL Rig Gifts now exclusively drop Chest Keys
+        const newKey = {
+            id: Math.random().toString(36).substr(2, 9),
+            typeId: 'chest_key',
+            name: { th: 'กุญแจเข้าเหมือง', en: 'Mining Key' },
+            price: 0,
+            dailyBonus: 0,
+            durationBonus: 0,
+            rarity: 'COMMON',
+            purchasedAt: Date.now(),
+            lifespanDays: 365,
+            expireAt: Date.now() + (365 * 24 * 60 * 60 * 1000),
+            level: 1
+        };
 
-        const tierNames = [
-            { th: 'ถ่านหิน', en: 'Coal' },
-            { th: 'ทองแดง', en: 'Copper' },
-            { th: 'เหล็ก', en: 'Iron' },
-            { th: 'ทองคำ', en: 'Gold' },
-            { th: 'เพชร', en: 'Diamond' },
-            { th: 'น้ำมัน', en: 'Oil' },
-            { th: 'ไวเบรเนียม', en: 'Vibranium' }
-        ];
-        let matTier = -1;
-        let minAmount = 0;
-        let maxAmount = 0;
+        if (!user.inventory) user.inventory = [];
+        user.inventory.push(newKey);
+        user.markModified('inventory');
 
-        if (rig.name.includes('ถ่านหิน')) { matTier = 1; minAmount = 5; maxAmount = 10; }
-        else if (rig.name.includes('ทองแดง')) { matTier = 2; minAmount = 5; maxAmount = 10; }
-        else if (rig.name.includes('เหล็ก')) { matTier = 3; minAmount = 3; maxAmount = 6; }
-        else if (rig.name.includes('ทองคำ')) { matTier = 4; minAmount = 3; maxAmount = 6; }
-        else if (rig.name.includes('เพชร')) { matTier = 5; minAmount = 1; maxAmount = 3; }
-        else if (rig.name.includes('น้ำมัน')) { matTier = 6; minAmount = 1; maxAmount = 2; }
-        else if (rig.name.includes('ไวเบรเนียม')) { matTier = 7; minAmount = 3; maxAmount = 5; }
-
-        if (matTier === -1) {
-            // Drop random item
-            const potentialRewards = [
-                { id: 'hat', name: { th: 'หมวกนิรภัย', en: 'Safety Hat' }, bonus: 15 },
-                { id: 'uniform', name: { th: 'ชุดยูนิฟอร์ม', en: 'Uniform' }, bonus: 20 },
-                { id: 'bag', name: { th: 'กระเป๋าเก็บของ', en: 'Storage Bag' }, bonus: 25 },
-                { id: 'boots', name: { th: 'รองเท้าเซฟตี้', en: 'Safety Boots' }, bonus: 10 }
-            ];
-            const reward = potentialRewards[Math.floor(Math.random() * potentialRewards.length)];
-
-            const rand = Math.random() * 100;
-            let rarity = 'COMMON';
-            if (rand > 90) rarity = 'RARE';
-
-            const newItem = {
-                id: Math.random().toString(36).substr(2, 9),
-                typeId: reward.id,
-                name: reward.name,
-                price: 0,
-                dailyBonus: reward.bonus + (rarity === 'RARE' ? 10 : 0),
-                durationBonus: 0,
-                rarity,
-                purchasedAt: Date.now(),
-                lifespanDays: 7,
-                expireAt: Date.now() + (7 * 24 * 60 * 60 * 1000),
-                level: 1
-            };
-
-            if (!user.inventory) user.inventory = [];
-            user.inventory.push(newItem);
-            rig.lastCollectionAt = new Date(); // Using this for gift cooldown too for simplicity or use specific field
-
-            await user.save();
-            await rig.save();
-            return res.json({ type: 'ITEM', item: newItem });
-        }
-
-        const amount = Math.floor(Math.random() * (maxAmount - minAmount + 1)) + minAmount;
-        if (!user.materials) user.materials = {};
-        user.materials[matTier.toString()] = (user.materials[matTier.toString()] || 0) + amount;
-
-        user.markModified('materials');
-        rig.lastCollectionAt = new Date();
-
-        // Update stats
-        if (!user.stats) user.stats = {};
-        user.stats.totalMaterialsMined = (user.stats.totalMaterialsMined || 0) + amount;
-        user.markModified('stats');
-
-        await user.save();
+        rig.lastCollectionAt = new Date(); // Reset cooldown
         await rig.save();
+        await user.save();
 
         // Log Transaction
         const giftTx = new Transaction({
@@ -600,17 +475,16 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
             type: 'GIFT_CLAIM',
             amount: 0,
             status: 'COMPLETED',
-            description: `ได้รับรางวัลจากเครื่องขุด: ${typeof tierNames[matTier - 1] === 'object' ? tierNames[matTier - 1].th : tierNames[matTier - 1]} x${amount} ชิ้น`
+            description: `ได้รับของขวัญจากเครื่องขุด: กุญแจเข้าเหมือง`
         });
         await giftTx.save();
 
         res.json({
-            type: 'MATERIAL',
-            tier: matTier,
-            amount: amount,
-            name: tierNames[matTier - 1], // Passing the whole object is fine if frontend uses getLocalized
-            materials: user.materials
+            type: 'ITEM',
+            item: newKey,
+            materials: user.materials // Return current state for sync
         });
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
+import mongoose from 'mongoose';
 
 // Copy of Frontend Constants
 const DAILY_CHECKIN_REWARDS = [
@@ -38,7 +39,8 @@ const DAILY_CHECKIN_REWARDS = [
 
 const getResetDayIdentifier = (timestamp: number) => {
     if (timestamp === 0) return 'never';
-    const date = new Date(timestamp);
+    // Shift time by -7 hours so that 07:00 AM becomes 00:00 AM for date calculation
+    const date = new Date(timestamp - (7 * 60 * 60 * 1000));
     return `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
 };
 
@@ -62,119 +64,86 @@ export const checkIn = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'วันนี้คุณรับรางวัลไปแล้ว (รีเซ็ตทุกๆ 07:00 น.)' });
         }
 
-        // Check streak continuity (allow gap until the end of the day after the expected next day)
-        // Expected next day is nowResetDay - 1 day
-        const dayInMillis = 24 * 60 * 60 * 1000;
-        const timeDiff = now - lastCheckInTime;
+        // Determine streak
+        let streak = (user.checkInStreak || 0) + 1;
 
-        let streak = user.checkInStreak || 0;
-
-        // If last check in was more than 48 hours ago, reset streak
-        // Or more precisely, if we missed more than one full reset cycle
-        if (lastCheckInTime !== 0 && timeDiff > dayInMillis * 2) {
-            streak = 1; // Reset streak
-        } else {
-            streak += 1;
+        // Reset streak if missed more than 48 hours (relative to reset time)
+        // Or simply if > 48h from last check in
+        if (lastCheckInTime !== 0 && (now - lastCheckInTime) > (48 * 60 * 60 * 1000)) {
+            streak = 1;
         }
 
-        // Cap streak at 30 days loop
-        if (streak > 30) streak = 1;
+        if (streak > 30) {
+            streak = 1; // Cycle back after 30 days
+        }
 
-        // Get reward for current streak day
-        const rewardConfig = DAILY_CHECKIN_REWARDS.find(r => r.day === streak);
+        const reward = DAILY_CHECKIN_REWARDS.find(r => r.day === streak);
+        if (!reward) {
+            return res.status(500).json({ message: 'Reward configuration error' });
+        }
 
-        if (rewardConfig) {
-            // Give Reward
-            let txDetail = '';
-            let txAmount = 0;
+        // Give Reward
+        if (reward.reward === 'money') {
+            user.balance += reward.amount!;
+        } else if (reward.reward === 'material') {
+            if (!user.materials) user.materials = {};
+            const matTier = reward.tier!.toString();
+            user.materials[matTier] = (user.materials[matTier] || 0) + reward.amount!;
+            user.markModified('materials');
+        } else if (reward.reward === 'item' || reward.reward === 'grand_prize') {
+            if (!user.inventory) user.inventory = [];
 
-            if (rewardConfig.reward === 'money') {
-                const amountTHB = (rewardConfig as any).amount;
-                const amountUSD = amountTHB / 35; // Convert THB to USD
-                user.balance += amountUSD;
-                txAmount = amountUSD;
-                txDetail = JSON.stringify({
-                    th: `รางวัลเช็คชื่อวันที่ ${streak}`,
-                    en: `Daily Check-in Day ${streak}`
-                });
-            } else if (rewardConfig.reward === 'material') {
-                // Update materials field directly instead of pushing to inventory as objects.
-                if (!user.materials) user.materials = {};
-                const tier = (rewardConfig as any).tier;
-                const amount = (rewardConfig as any).amount;
-                user.materials[tier.toString()] = (user.materials[tier.toString()] || 0) + amount;
-                user.markModified('materials');
-
-                // Track stats
-                if (!user.stats) user.stats = {};
-                user.stats.totalMaterialsMined = (user.stats.totalMaterialsMined || 0) + amount;
-                user.markModified('stats');
-
-                txDetail = JSON.stringify({
-                    th: `รางวัลเช็คชื่อ: ${rewardConfig.label.th}`,
-                    en: `Daily Check-in: ${rewardConfig.label.en}`
-                });
-            } else if (rewardConfig.reward === 'item') {
-                const itemConfig = (rewardConfig as any);
-                const newItem = {
-                    id: (itemConfig.id || 'item') + '_' + Date.now(),
-                    typeId: itemConfig.id,
-                    name: itemConfig.label,
-                    price: 0,
-                    rarity: 'RARE',
-                    purchasedAt: Date.now(),
-                    expireAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
-                    level: 1
-                };
-                // If amount > 1
-                const amount = itemConfig.amount || 1;
-                for (let i = 0; i < amount; i++) {
-                    user.inventory.push({ ...newItem, id: newItem.id + `_${i}` });
-                }
-
-                txDetail = JSON.stringify({
-                    th: `รางวัลเช็คชื่อ: ${rewardConfig.label.th}`,
-                    en: `Daily Check-in: ${rewardConfig.label.en}`
-                });
-            } else if (rewardConfig.reward === 'grand_prize') {
-                // Special Logic for Day 30
+            if (reward.reward === 'grand_prize') {
+                // Insurance Card (id: insurance_card) + Master Wing (Slot 6)
+                // Let's just give insurance card and maybe some money/mats for now as Master Wing is a slot expansion
+                // Actually, let's just follow the label: Insurance Card + Diamond
                 user.inventory.push({
-                    id: 'insurance_card_' + Date.now(),
-                    typeId: 'insurance_card',
-                    name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' },
-                    price: 300,
-                    purchasedAt: Date.now(),
-                    expireAt: Date.now() + 30 * 24 * 60 * 60 * 1000
+                    id: 'insurance_card',
+                    name: 'Insurance Card',
+                    type: 'CONSUMABLE',
+                    purchasedAt: new Date(),
+                    lifespanDays: 0
                 });
-                // And Diamond (Material Tier 5)
+                // Diamond x1
                 if (!user.materials) user.materials = {};
                 user.materials['5'] = (user.materials['5'] || 0) + 1;
                 user.markModified('materials');
-
-                txDetail = JSON.stringify({
-                    th: `รางวัลเช็คชื่อ: ${rewardConfig.label.th}`,
-                    en: `Daily Check-in: ${rewardConfig.label.en}`
+            } else {
+                user.inventory.push({
+                    id: reward.id!,
+                    name: reward.id!.replace('_', ' '),
+                    type: 'CONSUMABLE',
+                    purchasedAt: new Date(),
+                    lifespanDays: 0 // Consumables have 0 lifespan (unlimited or 1-time)
                 });
             }
-
-            // Create Transaction Log
-            if (txDetail) {
-                await Transaction.create({
-                    userId,
-                    type: 'DAILY_BONUS',
-                    amount: txAmount,
-                    description: txDetail,
-                    status: 'COMPLETED',
-                    timestamp: new Date()
-                });
-            }
+            user.markModified('inventory');
         }
+
+        const txDetail = JSON.stringify({
+            th: `เช็คอินวันที่ ${streak}: ${reward.label.th}`,
+            en: `Day ${streak} check-in: ${reward.label.en}`
+        });
+
+        // Create Transaction Log
+        await Transaction.create({
+            userId,
+            type: 'DAILY_BONUS',
+            amount: 0,
+            description: txDetail,
+            status: 'COMPLETED',
+            timestamp: new Date()
+        });
 
         user.lastCheckIn = new Date(now);
         user.checkInStreak = streak;
         await user.save();
 
-        res.json({ success: true, streak, reward: rewardConfig });
+        res.json({
+            success: true,
+            reward,
+            streak
+        });
 
     } catch (error) {
         console.error('Check-in error:', error);

@@ -382,8 +382,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         return () => clearInterval(interval);
     }, [user.id, user.materials, marketState, hasAIRobot]); // Dependencies ensure AI Robot logic uses latest data. Interval restarts on change, which throttles polling during active use.
 
+    const isRefreshing = useRef(false);
     const refreshData = async () => {
-        if (skipRefreshRef.current) return;
+        if (skipRefreshRef.current || isRefreshing.current) return;
+        isRefreshing.current = true;
         try {
             // Parallel Fetch: Execute all requests at once to solve 5s delay
             const fetchPromises: Promise<any>[] = [
@@ -395,7 +397,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
             const [remoteUser, remoteRigs, remoteMarket, remoteGlobal] = await Promise.all(fetchPromises);
 
-            if (skipRefreshRef.current) return;
+            if (skipRefreshRef.current) {
+                isRefreshing.current = false;
+                return;
+            }
 
             // Bridge logic for MockDB sessions (non-persisted fields)
             const mergedUser = {
@@ -420,6 +425,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
         } catch (error) {
             console.error("Dashboard refresh failed:", error);
+        } finally {
+            isRefreshing.current = false;
         }
     };
 
@@ -761,11 +768,12 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             const res = await api.claimRigGift(rigId);
             refreshData();
 
-            if (res.type === 'ITEM') {
+            if (res.type === 'ITEM' || res.item) {
                 const newItem = res.item;
                 setLootResult({ rarity: newItem.rarity, bonus: newItem.dailyBonus, itemTypeId: newItem.typeId, itemName: getLocalized(newItem.name) });
                 addNotification({ id: Date.now().toString(), userId: user.id, message: `${language === 'th' ? 'ได้รับของขวัญ' : 'Received gift'}: ${getLocalized(newItem.name)}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
             } else {
+                // Fallback for legacy material responses if any
                 setLootResult({ rarity: 'SUPER_RARE', bonus: 0, itemName: `${getLocalized(res.name)} x${res.amount}`, materialId: res.tier });
                 addNotification({ id: Date.now().toString(), userId: user.id, message: `${language === 'th' ? 'ได้รับของขวัญ' : 'Received gift'}: ${getLocalized(res.name)} x${res.amount}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
             }
@@ -817,12 +825,13 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             if (user.isDemo) {
                 MockDB.collectRigMaterials(user.id, rigId);
             } else {
-                const res = await api.collectMaterials(rigId, count, tier);
-                if (res.bonusItem) {
+                // Tier is now ignored by backend as it always grants keys
+                const res = await api.collectMaterials(rigId, count, 0);
+                if (res.item) {
                     addNotification({
                         id: Date.now().toString(),
                         userId: user.id,
-                        message: language === 'th' ? `ยินดีด้วย! คุณพบ "กุญแจเข้าเหมือง"` : `Congratulations! You found a "Mining Key"`,
+                        message: language === 'th' ? `ยินดีด้วย! คุณพบ "กุญแจเข้าเหมือง" x${count}` : `Congratulations! You found "Mining Key" x${count}`,
                         type: 'SUCCESS',
                         read: false,
                         timestamp: Date.now()
@@ -831,8 +840,6 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             }
 
             refreshData();
-            const matName = (tier as any) === 0 ? (language === 'th' ? 'ไอเทมพิเศษ' : 'Special Item') : getLocalized(MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES]) || (language === 'th' ? 'วัสดุ' : 'Material');
-            addNotification({ id: Date.now().toString(), userId: user.id, message: language === 'th' ? `เก็บ ${matName} x${count} เข้าคลังแล้ว` : `Collected ${matName} x${count} to warehouse`, type: 'SUCCESS', read: false, timestamp: Date.now() });
         } catch (e: any) {
             console.error('[CollectMaterials] Error:', e);
             // Don't show alert for robot auto-collection failures
@@ -931,12 +938,13 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
             // Optimistic Update: Add to inventory immediately
             setInventory(prev => [...prev, newItem]);
-
-            refreshData();
+            setUser(prev => ({ ...prev, balance: res.balance }));
 
             addNotification({ id: Date.now().toString(), userId: user.id, message: `ได้รับ ${newItem.name} เรียบร้อย!`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            return res;
         } catch (e: any) {
             addNotification({ id: Date.now().toString(), userId: user.id, message: e.response?.data?.message || e.message, type: 'ERROR', read: false, timestamp: Date.now() });
+            throw e;
         }
     };
 
@@ -1048,21 +1056,21 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             {/* ... Navbar (omitted for brevity, assume same structure) ... */}
             <nav className="sticky top-0 z-40 bg-stone-950/90 backdrop-blur-md border-b border-yellow-900/30 shadow-2xl">
                 <div className="w-full px-4 sm:px-6 py-3 landscape:py-2 sm:py-4 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 p-1.5 sm:p-2 rounded-sm shadow-[0_0_15px_rgba(234,179,8,0.5)]">
-                            <Hammer size={20} className="text-stone-900 sm:w-6 sm:h-6" />
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 p-1.5 rounded-sm shadow-[0_0_15px_rgba(234,179,8,0.5)]">
+                            <Hammer size={18} className="text-stone-900 sm:w-6 sm:h-6" />
                         </div>
                         <div>
-                            <h1 className="text-xl sm:text-2xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-600 tracking-tight">GOLD RUSH</h1>
+                            <h1 className="text-lg sm:text-2xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-600 tracking-tight">GOLD RUSH</h1>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-4">
                         <div className="hidden lg:flex items-center gap-2">
-                            <button onClick={() => setIsWarehouseOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-800/50 bg-blue-900/20 text-blue-500 hover:bg-blue-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
+                            <button id="guide-warehouse-btn" onClick={() => setIsWarehouseOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-800/50 bg-blue-900/20 text-blue-500 hover:bg-blue-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
                                 <Package size={14} /> {t('dashboard.warehouse')}
                             </button>
-                            <button onClick={() => setIsMarketOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-800/50 bg-emerald-900/20 text-emerald-500 hover:bg-emerald-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
+                            <button id="guide-market-btn" onClick={() => setIsMarketOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-800/50 bg-emerald-900/20 text-emerald-500 hover:bg-emerald-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
                                 <BarChart2 size={14} /> {t('dashboard.market')}
                             </button>
                             <button onClick={() => setIsDailyBonusOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-800/50 bg-emerald-900/20 text-emerald-500 hover:bg-emerald-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
@@ -1071,7 +1079,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             <button onClick={() => setIsMissionOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-800/50 bg-blue-900/20 text-blue-500 hover:bg-blue-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
                                 <Target size={14} /> {t('dashboard.missions')}
                             </button>
-                            <button onClick={() => setIsDungeonOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-purple-900/50 bg-purple-900/20 text-purple-400 hover:bg-purple-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
+                            <button id="guide-dungeon-btn" onClick={() => setIsDungeonOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-purple-900/50 bg-purple-900/20 text-purple-400 hover:bg-purple-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
                                 <Skull size={14} /> {t('dashboard.secret_mine')}
                             </button>
                             <button onClick={() => setIsVIPOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-yellow-800/50 bg-yellow-900/20 text-yellow-500 hover:bg-yellow-900/40 text-xs font-bold uppercase tracking-wider transition-colors">
@@ -1083,6 +1091,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                         </div>
 
                         <button
+                            id="guide-shop-btn"
                             onClick={() => setIsShopOpen(true)}
                             className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full border border-yellow-600/50 bg-yellow-900/10 text-yellow-400 hover:bg-yellow-900/30 transition-colors text-xs font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(234,179,8,0.1)] hover:shadow-[0_0_15px_rgba(234,179,8,0.3)]"
                         >
@@ -1241,7 +1250,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                     {/* VIP Card Indicator - Permanent Slot */}
                                     <div title={inventory?.some(i => i.typeId === 'vip_withdrawal_card') ? 'VIP Withdrawal Active' : 'VIP Withdrawal Locked'} className={`rounded-full p-1 shadow-md border transition-all duration-500 cursor-help
                                         ${inventory?.some(i => i.typeId === 'vip_withdrawal_card')
-                                            ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)] border-yellow-200 animate-bounce'
+                                            ? 'bg-gradient-to-br from-yellow-300 to-yellow-600 shadow-[0_0_15px_rgba(234,179,8,0.6)] border-yellow-200 animate-bounce ring-1 ring-yellow-400/50'
                                             : 'bg-stone-800 border-stone-700 opacity-60'}
                                     `}>
                                         <CreditCard size={12} className={inventory?.some(i => i.typeId === 'vip_withdrawal_card') ? 'text-stone-900' : 'text-stone-400'} />
@@ -1251,7 +1260,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             </div>
 
                             {/* THE CORE (Furnace Window) */}
-                            <div className="relative w-24 h-24 my-2 flex items-center justify-center">
+                            <div className="relative w-20 h-20 sm:w-24 sm:h-24 my-1 sm:my-2 flex items-center justify-center">
 
                                 {/* Outer Ring */}
                                 <div className="absolute inset-0 rounded-full border-4 border-stone-600 bg-stone-950 shadow-[inset_0_0_15px_black]"></div>
@@ -1281,8 +1290,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
                                     {/* Zap Icon - Intense Breathing Animation */}
                                     <Zap
-                                        size={32}
-                                        className={`relative z-10 transition-all duration-300
+                                        size={24}
+                                        className={`relative z-10 transition-all duration-300 sm:scale-125
                                             ${energyLevel > 20 ? 'text-white' : 'text-red-900'}
                                             ${isCharging ? 'scale-150 animate-bounce' : 'animate-breathing'}
                                         `}
@@ -1569,13 +1578,13 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                     <div
                                         key={`empty-${slotNumber}`}
                                         onClick={() => setIsBuyModalOpen(true)}
-                                        className="border-2 border-dashed border-stone-800 bg-stone-900/30 rounded-xl flex flex-col items-center justify-center p-8 cursor-pointer hover:bg-stone-900/60 hover:border-yellow-600/50 transition-all group min-h-[400px]"
+                                        className="border-2 border-dashed border-stone-800 bg-stone-900/30 rounded-xl flex flex-col items-center justify-center p-4 sm:p-8 cursor-pointer hover:bg-stone-900/60 hover:border-yellow-600/50 transition-all group min-h-[220px] sm:min-h-[400px]"
                                     >
-                                        <div className="w-20 h-20 rounded-full bg-stone-800 flex items-center justify-center mb-4 shadow-inner group-hover:scale-110 transition-transform">
-                                            <Plus size={40} className="text-stone-600 group-hover:text-yellow-500" />
+                                        <div className="w-12 h-12 sm:w-20 sm:h-20 rounded-full bg-stone-800 flex items-center justify-center mb-3 sm:mb-4 shadow-inner group-hover:scale-110 transition-transform">
+                                            <Plus size={24} className="text-stone-600 sm:w-10 sm:h-10 group-hover:text-yellow-500" />
                                         </div>
-                                        <h4 className="text-lg font-bold text-stone-500 group-hover:text-yellow-500 uppercase tracking-widest">{t('dashboard.empty_slot')}</h4>
-                                        <p className="text-xs text-stone-600 mt-2">{t('dashboard.click_to_buy')}</p>
+                                        <h4 className="text-sm sm:text-lg font-bold text-stone-500 group-hover:text-yellow-500 uppercase tracking-widest">{t('dashboard.empty_slot')}</h4>
+                                        <p className="text-[10px] sm:text-xs text-stone-600 mt-1 sm:mt-2">{t('dashboard.click_to_buy')}</p>
                                     </div>
                                 );
                             } else {
@@ -1583,14 +1592,14 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                     <div
                                         key={`locked-${slotNumber}`}
                                         onClick={() => setUnlockTargetSlot(slotNumber)}
-                                        className="border-2 border-stone-800 bg-black/40 rounded-xl flex flex-col items-center justify-center p-8 cursor-pointer relative overflow-hidden group min-h-[400px]"
+                                        className="border-2 border-stone-800 bg-black/40 rounded-xl flex flex-col items-center justify-center p-4 sm:p-8 cursor-pointer relative overflow-hidden group min-h-[220px] sm:min-h-[400px]"
                                     >
                                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagonal-stripes.png')] opacity-10"></div>
-                                        <div className="w-20 h-20 rounded-full bg-stone-950 border border-stone-800 flex items-center justify-center mb-4 z-10 group-hover:border-red-500/50 transition-colors">
-                                            <Lock size={32} className="text-stone-600 group-hover:text-red-500" />
+                                        <div className="w-12 h-12 sm:w-20 sm:h-20 rounded-full bg-stone-950 border border-stone-800 flex items-center justify-center mb-3 sm:mb-4 z-10 group-hover:border-red-500/50 transition-colors">
+                                            <Lock size={20} className="text-stone-600 sm:w-8 sm:h-8 group-hover:text-red-500" />
                                         </div>
-                                        <h4 className="text-lg font-bold text-stone-500 uppercase tracking-widest z-10 group-hover:text-stone-300">{t('dashboard.locked_slot')}</h4>
-                                        <p className="text-xs text-stone-600 mt-2 z-10 bg-stone-950 px-3 py-1 rounded-full border border-stone-800">Slot #{slotNumber}</p>
+                                        <h4 className="text-sm sm:text-lg font-bold text-stone-500 uppercase tracking-widest z-10 group-hover:text-stone-300">{t('dashboard.locked_slot')}</h4>
+                                        <p className="text-[10px] sm:text-xs text-stone-600 mt-1 sm:mt-2 z-10 bg-stone-950 px-2 py-0.5 rounded-full border border-stone-800">Slot #{slotNumber}</p>
                                         <div className="mt-6 px-6 py-2 bg-stone-900/80 rounded border border-stone-700 text-xs font-bold text-stone-400 uppercase tracking-wide group-hover:bg-red-900/20 group-hover:text-red-400 group-hover:border-red-900/50 transition-all z-10">
                                             {t('dashboard.unlock_slot')}
                                         </div>
@@ -1754,6 +1763,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 }}
                 language={language as any}
                 user={user}
+                onOpenShop={() => setIsShopOpen(true)}
+                onOpenWarehouse={() => setIsWarehouseOpen(true)}
+                onOpenMarket={() => setIsMarketOpen(true)}
+                onOpenDungeon={() => setIsDungeonOpen(true)}
             />
 
             <WithdrawModal

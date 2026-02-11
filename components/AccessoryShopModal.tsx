@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase } from 'lucide-react';
+import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase, CreditCard } from 'lucide-react';
 import { SHOP_ITEMS, CURRENCY, RARITY_SETTINGS, MATERIAL_CONFIG, EQUIPMENT_SERIES } from '../constants';
 import { CraftingQueueItem } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
@@ -88,8 +88,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         setBuyingId(id);
         const processBuy = async () => {
             for (let i = 0; i < quantity; i++) {
-                onBuy(id);
-                await new Promise(r => setTimeout(r, 50));
+                await onBuy(id); // Wait for each purchase to finish
             }
             setBuyingId(null);
             setBuyQuantities(prev => ({ ...prev, [id]: 1 }));
@@ -246,7 +245,17 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         if (iconName === 'Cpu' || itemId === 'upgrade_chip') return <Cpu className={className} />;
         if (iconName === 'Hourglass' || (itemId && itemId.startsWith('hourglass'))) return <Hourglass className={className} />;
         if (iconName === 'Shield' || iconName === 'FileText' || itemId === 'insurance_card') return <FileText className={className} />;
-        if (iconName === 'CreditCard' || itemId === 'vip_withdrawal_card') return <Coins className={className} />;
+        if (iconName === 'CreditCard' || itemId === 'vip_withdrawal_card') {
+            return (
+                <div className={`relative ${className.includes('w-') ? className : 'w-full h-full'} aspect-[1.58/1] bg-gradient-to-br from-yellow-100 via-yellow-500 to-yellow-800 rounded-[4px] border border-yellow-200/50 shadow-[0_0_15px_rgba(234,179,8,0.4)] flex items-center justify-center overflow-hidden group/card`}>
+                    <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-60"></div>
+                    <div className="absolute top-[20%] left-0 w-full h-[15%] bg-stone-900/40"></div>
+                    <div className="absolute top-[45%] left-[10%] w-[15%] h-[20%] bg-gradient-to-br from-yellow-200 to-yellow-600 rounded-sm border border-yellow-100/30"></div>
+                    <div className="absolute bottom-[10%] right-[10%] text-[8px] font-black italic text-black/40 tracking-tighter">VIP</div>
+                    <CreditCard className="text-yellow-950 w-1/2 h-1/2 relative z-10 drop-shadow-sm opacity-60" />
+                </div>
+            );
+        }
 
         return <InfinityGlove className={className} />;
     };

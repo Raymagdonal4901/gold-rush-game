@@ -898,7 +898,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                 <button
                                     onClick={handleRepairClick}
                                     disabled={isExploring}
-                                    className={`w-11 h-11 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center hover:bg-stone-800 transition-all group/repair relative shadow-lg backdrop-blur-sm ${isBroken ? 'animate-bounce border-red-500' : ''}`}
+                                    className={`guide-repair-btn w-11 h-11 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center hover:bg-stone-800 transition-all group/repair relative shadow-lg backdrop-blur-sm ${isBroken ? 'animate-bounce border-red-500' : ''}`}
                                     title={`${t('rig.repair_now')}: ${formatCurrency(repairCost)}`}
                                 >
                                     <Wrench size={18} className={`${styles.wrench} transition-transform group-hover/repair:rotate-45`} />
@@ -941,22 +941,14 @@ export const RigCard: React.FC<RigCardProps> = ({
                                         <div className="relative animate-[bounce_1s_infinite]">
                                             <div className="absolute inset-0 bg-yellow-400/50 rounded-full blur-lg animate-pulse"></div>
                                             <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-1 rounded-lg border border-white shadow-lg relative h-9 w-9 flex items-center justify-center">
-                                                {matTier !== -1 ? (
-                                                    <MaterialIcon id={matTier} size="w-7 h-7" iconSize={24} />
-                                                ) : (
-                                                    <Package className="text-white drop-shadow-md" size={18} />
-                                                )}
+                                                <div className="text-white font-extrabold text-xl drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">?</div>
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="group/gift relative">
                                         <div className="bg-stone-800 p-1 rounded-lg border border-stone-600 shadow-inner relative flex flex-col items-center justify-center w-9 h-9 opacity-80 hover:opacity-100 transition-opacity">
-                                            {matTier !== -1 ? (
-                                                <MaterialIcon id={matTier} size="w-5 h-5" iconSize={16} />
-                                            ) : (
-                                                <Package size={12} className="text-stone-600 mb-0.5" />
-                                            )}
+                                            <span className="text-stone-500 font-bold mb-0.5 text-sm">?</span>
                                             <span className="text-[7px] font-mono text-stone-400 font-bold absolute bottom-1 leading-none tracking-tighter">{formatGiftCooldown(timeUntilGift)}</span>
                                         </div>
                                         <svg className="absolute -inset-1 w-[44px] h-[44px] -rotate-90 pointer-events-none">

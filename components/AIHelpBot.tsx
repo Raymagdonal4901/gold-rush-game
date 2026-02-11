@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-    Bot, X, ArrowRight, ShoppingBag, CheckCircle2, ChevronLeft,
-    Home, Coins, Wrench, Hammer, Map, Zap, RefreshCw, Skull,
-    Hand, Trophy, BookOpen, Crown, Target, Users, HelpCircle,
-    AlertTriangle, FileText, Search, Cpu, Factory
-} from 'lucide-react';
+import { Bot, X, ArrowRight, MessageCircle, ChevronRight, Zap, Map, Hammer, BarChart2, ShoppingBag } from 'lucide-react';
 import { useTranslation } from './LanguageContext';
-import { VIP_TIERS, DUNGEON_CONFIG } from '../constants';
 
 interface AIHelpBotProps {
     tutorialStep: number;
@@ -14,25 +8,75 @@ interface AIHelpBotProps {
     onTutorialClose: () => void;
     language: 'th' | 'en';
     user: any;
+    onOpenShop?: () => void;
+    onOpenWarehouse?: () => void;
+    onOpenMarket?: () => void;
+    onOpenDungeon?: () => void;
 }
 
-type HelpCategory = 'overview' | 'mining' | 'equipment' | 'dungeon' | 'crafting' | 'economy' | 'systems';
+type GuideTopic = {
+    id: string;
+    question: { th: string; en: string };
+    answer: { th: string; en: string };
+    action: { type: 'FOCUS' | 'SHOW_IMAGE'; target: string };
+    icon: React.ReactNode;
+};
+
+const GUIDE_TOPICS: GuideTopic[] = [
+    {
+        id: 'buy_rigs',
+        question: { th: 'ซื้อเครื่องขุดยังไง / เริ่มตรงไหน', en: 'How to buy rigs / Start where?' },
+        answer: { th: 'อยากรวยต้องลงทุน! 🏗️ ไปที่ ร้านค้า (Shop) แล้วเลือกเครื่องขุดเครื่องแรกของคุณเลย', en: 'To get rich, you must invest! 🏗️ Go to Shop and pick your first rig!' },
+        action: { type: 'FOCUS', target: 'guide-shop-btn' },
+        icon: <ShoppingBag size={16} className="text-yellow-400" />
+    },
+    {
+        id: 'maintenance',
+        question: { th: 'เครื่องเสีย / ทำไมเงินไม่เดิน', en: 'Rig broken / Why no money?' },
+        answer: { th: 'เครื่องจักรก็เหนื่อยเป็น! 🔧 ถ้าหลอดสุขภาพลดเหลือ 0% เงินจะหยุดเดินทันที รีบกด ซ่อมบำรุง ด่วน!', en: 'Machines get tired too! 🔧 If health hits 0%, income stops. Fix it ASAP!' },
+        action: { type: 'FOCUS', target: '.guide-repair-btn' }, // Targets class
+        icon: <Zap size={16} className="text-red-400" />
+    },
+    {
+        id: 'crafting',
+        question: { th: 'ได้แร่มาทำอะไร / อยากได้บัฟ', en: 'Got ore, now what / Want buffs?' },
+        answer: { th: 'แร่ดิบมีค่ามากกว่าที่คิด! 💎 นำมาประกอบที่ โกดัง (Warehouse) เพื่อสร้างไอเทมเทพๆ กันเถอะ', en: 'Raw ore is precious! 💎 Craft god-tier items at the Warehouse!' },
+        action: { type: 'FOCUS', target: 'guide-warehouse-btn' },
+        icon: <Hammer size={16} className="text-blue-400" />
+    },
+    {
+        id: 'exploration',
+        question: { th: 'หาของฟรี / ลุ้นโชค', en: 'Free items / Lucky draw?' },
+        answer: { th: 'ชอบวัดดวงไหม? 🎲 กดส่งเครื่องขุดออกไป สำรวจ (Secret Mine) ยิ่งรอนาน ยิ่งมีสิทธิ์ลุ้น Jackpot แตก!', en: 'Feeling lucky? 🎲 Send rigs to Secret Mine. Longer waits = Bigger Jackpots!' },
+        action: { type: 'FOCUS', target: 'guide-dungeon-btn' },
+        icon: <Map size={16} className="text-purple-400" />
+    },
+    {
+        id: 'market',
+        question: { th: 'ขายของที่ไหน / ดูกราฟยังไง', en: 'Where to sell / How to see graph?' },
+        answer: { th: 'ซื้อถูก-ขายแพง คือคติพจน์ของเรา! 📉 จับตาดู กราฟ (Market) ให้ดี สีเขียวเมื่อไหร่เทขายให้หมดหน้าตัก!', en: 'Buy low, sell high! 📉 Watch the Market graph. Green means SELL ALL!' },
+        action: { type: 'FOCUS', target: 'guide-market-btn' },
+        icon: <BarChart2 size={16} className="text-emerald-400" />
+    }
+];
 
 export const AIHelpBot: React.FC<AIHelpBotProps> = ({
     tutorialStep,
     onTutorialNext,
     onTutorialClose,
     language,
-    user
+    user,
+    onOpenShop,
+    onOpenWarehouse,
+    onOpenMarket,
+    onOpenDungeon
 }) => {
-    const { t, getLocalized, formatCurrency } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
-    const [mode, setMode] = useState<'TUTORIAL' | 'HELP_MENU' | 'HELP_CONTENT'>('TUTORIAL');
-    const [selectedCategory, setSelectedCategory] = useState<HelpCategory | null>(null);
-    const [isBotHidden, setIsBotHidden] = useState(() => {
-        const saved = localStorage.getItem('ai_bot_hidden');
-        return saved === 'true';
-    });
+    const [history, setHistory] = useState<{ type: 'USER' | 'BOT'; text: string; image?: string }[]>([
+        { type: 'BOT', text: language === 'th' ? 'สวัสดี! ผมคือ "Gold Rush Guide" มีอะไรให้ช่วยไหม? 👋' : 'Hello! I am "Gold Rush Guide". Need help? 👋' }
+    ]);
+    const [isBotHidden, setIsBotHidden] = useState(() => localStorage.getItem('ai_bot_hidden') === 'true');
+    const [highlightEl, setHighlightEl] = useState<Element | null>(null);
 
     const toggleHide = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -45,335 +89,151 @@ export const AIHelpBot: React.FC<AIHelpBotProps> = ({
     useEffect(() => {
         if (tutorialStep > 0) {
             setIsOpen(true);
-            setIsBotHidden(false); // Force show during tutorial
-            setMode('TUTORIAL');
+            setIsBotHidden(false);
         }
     }, [tutorialStep]);
 
-    const categories = [
-        { id: 'overview', label: language === 'th' ? 'ภาพรวม (Overview)' : 'Overview', icon: <RefreshCw size={18} />, color: 'text-blue-400' },
-        { id: 'mining', label: language === 'th' ? 'แท่นขุด & การดูแล' : 'Mining & Care', icon: <Home size={18} />, color: 'text-yellow-400' },
-        { id: 'equipment', label: language === 'th' ? 'อุปกรณ์ & หุ่นยนต์' : 'Equipment & Bot', icon: <Hand size={18} />, color: 'text-emerald-400' },
-        { id: 'dungeon', label: language === 'th' ? 'สำรวจเหมือง' : 'Exploration', icon: <Skull size={18} />, color: 'text-red-400' },
-        { id: 'crafting', label: language === 'th' ? 'โรงงาน & สกัดแร่' : 'Workshop & Crafting', icon: <Hammer size={18} />, color: 'text-purple-400' },
-        { id: 'economy', label: language === 'th' ? 'ตลาด & การเงิน' : 'Market & Economy', icon: <Coins size={18} />, color: 'text-amber-400' },
-        { id: 'systems', label: language === 'th' ? 'VIP & ภารกิจ' : 'VIP & Missions', icon: <Crown size={18} />, color: 'text-pink-400' },
-    ];
+    const handleTopicClick = (topic: GuideTopic) => {
+        // Add User Question
+        const questionText = language === 'th' ? topic.question.th : topic.question.en;
+        const answerText = language === 'th' ? topic.answer.th : topic.answer.en;
 
-    const getTutorialContent = () => {
-        switch (tutorialStep) {
-            case 1:
-                return {
-                    title: language === 'th' ? "สวัสดีครับกัปตัน!" : "Hello Captain!",
-                    desc: language === 'th'
-                        ? "ผมคือหุ่นยนต์ผู้ช่วยของคุณ เริ่มต้นเส้นทางเศรษฐีด้วยการกดปุ่ม 'เปิดร้านค้า' เพื่อรับถุงมือขุดฟรีใบแรกกันเลยครับ!"
-                        : "I am your AI assistant. Start your journey by clicking 'Open Shop' to get your first free digging glove!",
-                    icon: <Bot className="text-yellow-400" size={32} />,
-                    action: language === 'th' ? "ตกลง!" : "Got it!"
-                };
-            case 2:
-                return {
-                    title: language === 'th' ? "เลือกถุงมือฟรี" : "Pick Your Free Glove",
-                    desc: language === 'th'
-                        ? "เลื่อนลงไปที่การ์ดใบสุดท้าย คุณจะพบ 'ถุงมือเน่า' ราคา 0 บาท กดซื้อเพื่อเริ่มขุดได้ทันทีครับ!"
-                        : "Scroll down to the last card. You'll find the 'Rotten Glove' for 0 Baht. Click buy to start mining!",
-                    icon: <ShoppingBag className="text-emerald-400" size={32} />,
-                    action: language === 'th' ? "เข้าใจแล้ว" : "Understood"
-                };
-            case 3:
-                return {
-                    title: language === 'th' ? "ยอดเยี่ยมมาก!" : "Great Job!",
-                    desc: language === 'th'
-                        ? "ตอนนี้คุณมีเครื่องมือพร้อมแล้ว! อย่าลืมกลับมาเก็บผลผลิตบ่อยๆ นะครับ ขอให้สนุกกับการขุดทองครับ!"
-                        : "You're all set! Don't forget to collect your harvest regularly. Have fun gold rushing!",
-                    icon: <CheckCircle2 className="text-yellow-500" size={32} />,
-                    action: language === 'th' ? "สิ้นสุดการแนะนำ" : "End Tutorial"
-                };
-            default: return null;
+        setHistory(prev => [
+            ...prev,
+            { type: 'USER', text: questionText },
+            { type: 'BOT', text: answerText, image: topic.action.type === 'SHOW_IMAGE' ? topic.action.target : undefined }
+        ]);
+
+        // Execute Action
+        if (topic.action.type === 'FOCUS') {
+            const el = document.getElementById(topic.action.target) || document.querySelector(topic.action.target);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('ring-4', 'ring-yellow-500', 'ring-offset-2', 'ring-offset-black', 'animate-pulse');
+                setHighlightEl(el);
+
+                // --- NEW: Trigger Modal Opening based on target ---
+                if (topic.action.target === 'guide-shop-btn' && onOpenShop) onOpenShop();
+                if (topic.action.target === 'guide-warehouse-btn' && onOpenWarehouse) onOpenWarehouse();
+                if (topic.action.target === 'guide-market-btn' && onOpenMarket) onOpenMarket();
+                if (topic.action.target === 'guide-dungeon-btn' && onOpenDungeon) onOpenDungeon();
+                // --------------------------------------------------
+
+                // Remove highlight after 3 seconds
+                setTimeout(() => {
+                    el.classList.remove('ring-4', 'ring-yellow-500', 'ring-offset-2', 'ring-offset-black', 'animate-pulse');
+                    setHighlightEl(null);
+                }, 3000);
+            }
         }
+
+        // Auto scroll to bottom
+        setTimeout(() => {
+            const chatContainer = document.getElementById('guide-chat-container');
+            if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+        }, 100);
     };
 
-    const toggleHelp = () => {
-        if (tutorialStep > 0) return; // Can't toggle help during mandatory tutorial
-        setIsOpen(!isOpen);
-        setMode('HELP_MENU');
-    };
-
-    const renderCategoryContent = () => {
-        if (!selectedCategory) return null;
-
-        const content = {
-            overview: (
-                <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-3">
-                        {[
-                            { step: 1, title: language === 'th' ? "ขุดแร่ (Mine)" : "Mine", desc: language === 'th' ? "จัดการแท่นขุดเพื่อผลิตเงินและแร่" : "Manage rigs to produce gold and minerals." },
-                            { step: 2, title: language === 'th' ? "ค้าขาย (Trade)" : "Trade", desc: language === 'th' ? "ขายวัสดุในตลาด หรือเก็บไว้สร้างของ" : "Sell materials or keep for crafting." },
-                            { step: 3, title: language === 'th' ? "ติดตั้ง (Equip)" : "Equip", desc: language === 'th' ? "ติดตั้งอุปกรณ์เสริมเพื่อเพิ่มกำไร" : "Equip accessories to boost profit." },
-                        ].map(s => (
-                            <div key={s.step} className="bg-stone-800/50 p-3 rounded-xl border border-stone-700">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <span className="w-5 h-5 bg-yellow-600 rounded-full flex items-center justify-center text-[10px] font-bold text-black">{s.step}</span>
-                                    <span className="font-bold text-white text-sm">{s.title}</span>
-                                </div>
-                                <p className="text-[11px] text-stone-400 leading-relaxed">{s.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            ),
-            mining: (
-                <div className="space-y-4">
-                    <div className="bg-orange-900/20 p-3 rounded-lg border border-orange-500/30">
-                        <h5 className="text-orange-300 font-bold text-xs mb-2 flex items-center gap-1"><Zap size={14} /> {language === 'th' ? 'สภาพเครื่อง (Condition)' : 'Rig Condition'}</h5>
-                        <p className="text-[11px] text-stone-400 leading-relaxed">
-                            {language === 'th'
-                                ? 'หากสภาพแย่ (0%) เครื่องจะหยุดทำงาน! ค่าซ่อม 0.05฿ / 1% กดปุ่ม ⚡ ซ่อมบำรุง บน Rig Card เพื่อซ่อมครับ'
-                                : 'If condition is 0%, the rig stops! Repair cost is 0.05฿ per 1%. Click ⚡ Repair on the Rig Card to fix it.'}
-                        </p>
-                    </div>
-                    <div className="bg-purple-900/20 p-3 rounded-lg border border-purple-500/30">
-                        <h5 className="text-purple-300 font-bold text-xs mb-2 flex items-center gap-1"><GiftIcon size={14} /> {language === 'th' ? 'รายได้ & ของแถม' : 'Income & Gifts'}</h5>
-                        <p className="text-[11px] text-stone-400 leading-relaxed">
-                            {language === 'th'
-                                ? 'ทุกๆ 20 ชม. เครื่องมีโอกาสขุดพบ "กุญแจ" หรือวัสดุมีค่า รายได้จะสะสมแผ่นดิสก์ให้คุณกดเก็บเกี่ยวได้ตลอด'
-                                : 'Every 20 hours, rigs may find "Keys" or rare materials. Income accumulates as discs for you to harvest anytime.'}
-                        </p>
-                    </div>
-                </div>
-            ),
-            equipment: (
-                <div className="space-y-4">
-                    <p className="text-[11px] text-stone-400 leading-relaxed px-1">
-                        {language === 'th'
-                            ? 'ใช้วัสดุและ Upgrade Chip เพื่ออัปเกรดหุ่นยนต์ ยิ่งเลเวลสูง ยิ่งช่วยขุดเก่ง!'
-                            : 'Use materials and Upgrade Chips to enhance robots. Higher levels mean better stats!'}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-stone-800 p-2 rounded-xl border border-stone-700 text-center">
-                            <Bot size={20} className="mx-auto text-emerald-400 mb-1" />
-                            <div className="text-[10px] text-white font-bold">Luck Chance</div>
-                            <div className="text-[9px] text-stone-500">พบไอเทมหายาก</div>
-                        </div>
-                        <div className="bg-stone-800 p-2 rounded-xl border border-stone-700 text-center">
-                            <Target size={20} className="mx-auto text-blue-400 mb-1" />
-                            <div className="text-[10px] text-white font-bold">Drop Rate</div>
-                            <div className="text-[9px] text-stone-500">แร่ระดับสูง</div>
-                        </div>
-                    </div>
-                </div>
-            ),
-            dungeon: (
-                <div className="space-y-4">
-                    <div className="bg-red-950/20 p-3 rounded-xl border border-red-500/20">
-                        <h5 className="text-red-400 font-bold text-xs mb-1 flex items-center gap-1"><AlertTriangle size={14} /> {language === 'th' ? 'ข้อควรระวัง' : 'Warning'}</h5>
-                        <p className="text-[11px] text-stone-400 leading-relaxed">
-                            {language === 'th'
-                                ? 'ขณะสำรวจ การผลิตเงินจะหยุดลงชั่วคราว แต่จะได้รับแร่หายากเป็นการตอบแทนครับ'
-                                : 'While exploring, gold production stops temporarily, but you will receive rare minerals instead.'}
-                        </p>
-                    </div>
-                    <ul className="space-y-2">
-                        {DUNGEON_CONFIG.slice(0, 3).map(d => (
-                            <li key={d.id} className="text-[11px] flex justify-between items-center bg-stone-900 px-3 py-2 rounded-lg border border-stone-800">
-                                <span className="text-stone-300 font-bold">{getLocalized(d.name)}</span>
-                                <span className="text-yellow-500 font-mono">{d.durationHours}h</span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            ),
-            crafting: (
-                <div className="space-y-3">
-                    <div className="bg-stone-800 p-3 rounded-xl border border-stone-700 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-400"><RefreshCw size={24} /></div>
-                        <div className="flex-1">
-                            <h6 className="text-xs font-bold text-white mb-1">{language === 'th' ? 'การสกัดแร่' : 'Extraction'}</h6>
-                            <p className="text-[10px] text-stone-500 leading-tight">รวมวัสดุระดับต่ำ 2 ชิ้น เป็นระดับสูง 1 ชิ้น</p>
-                        </div>
-                    </div>
-                    <div className="bg-stone-800 p-3 rounded-xl border border-stone-700 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-400"><Hammer size={24} /></div>
-                        <div className="flex-1">
-                            <h6 className="text-xs font-bold text-white mb-1">{language === 'th' ? 'คราฟต์เครื่องจักร' : 'Rig Crafting'}</h6>
-                            <p className="text-[10px] text-stone-500 leading-tight">ใช้แร่ผลิตเครื่องขุดระดับสูงโดยไม่เสียเงิน</p>
-                        </div>
-                    </div>
-                </div>
-            ),
-            economy: (
-                <div className="space-y-4">
-                    <div className="bg-stone-800 p-3 rounded-xl border border-stone-700">
-                        <h6 className="text-xs font-bold text-amber-400 mb-2 flex items-center gap-1"><Coins size={14} /> {language === 'th' ? 'ตลาดและภาษี' : 'Market & Tax'}</h6>
-                        <ul className="text-[11px] text-stone-400 space-y-1">
-                            <li>• {language === 'th' ? 'ภาษีขายพื้นฐาน: 5%' : 'Sales Tax: 5%'}</li>
-                            <li>• {language === 'th' ? 'สามารถลดภาษีได้ด้วยระดับ VIP' : 'Tax can be reduced with VIP rank'}</li>
-                            <li>• {language === 'th' ? 'เงินบาทถอนออกได้ แอดมินอนุมัติ 24 ชม.' : 'Withdraw THB, 24h Admin Approval'}</li>
-                        </ul>
-                    </div>
-                </div>
-            ),
-            systems: (
-                <div className="space-y-4">
-                    <div className="bg-pink-900/20 p-3 rounded-xl border border-pink-500/30">
-                        <h6 className="text-xs font-bold text-pink-400 mb-2 flex items-center gap-1"><Crown size={14} /> VIP Privileges</h6>
-                        <div className="text-[10px] text-stone-500">
-                            {VIP_TIERS.slice(1, 4).map(v => (
-                                <div key={v.level} className="flex justify-between border-b border-stone-800 py-1 last:border-0">
-                                    <span className="text-yellow-500 font-bold">VIP {v.level}</span>
-                                    <span className="text-stone-300">{getLocalized(v.perk).slice(0, 20)}...</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            ),
-        };
-
-        return content[selectedCategory];
-    };
-
-    const tutorialContent = getTutorialContent();
-
-    // If completely hidden, show a very small restore button
     if (isBotHidden && tutorialStep === 0) {
         return (
             <button
                 onClick={toggleHide}
-                className="fixed bottom-48 right-0 z-[190] bg-stone-800/80 hover:bg-stone-700 text-stone-400 hover:text-white p-2 pl-3 rounded-l-full shadow-lg border border-stone-700/50 backdrop-blur-sm transition-all hover:translate-x-0 translate-x-1 pointer-events-auto group"
-                title="เรียกผู้ช่วย AI"
+                className="fixed bottom-24 lg:bottom-4 right-0 z-[190] bg-yellow-600 hover:bg-yellow-500 text-stone-900 font-bold p-2 pl-3 rounded-l-full shadow-lg border border-yellow-400 transition-all hover:translate-x-0 translate-x-1 pointer-events-auto group"
+                title="Gold Rush Guide"
             >
-                <Bot size={16} className="group-hover:scale-110 transition-transform" />
+                <Bot size={20} className="group-hover:scale-110 transition-transform" />
             </button>
         );
     }
 
     return (
-        <div className="fixed bottom-48 right-6 z-[200] flex flex-col items-end pointer-events-none">
-            {/* Main Robot Icon (Always Visible if not open) */}
+        <div className="fixed bottom-24 lg:bottom-4 right-6 z-[200] flex flex-col items-end pointer-events-none">
+            {/* Main Robot Icon */}
             {!isOpen && (
                 <div
                     className="relative pointer-events-auto cursor-pointer group"
-                    onClick={toggleHelp}
+                    onClick={() => setIsOpen(true)}
                 >
-                    <div className="absolute inset-0 bg-yellow-500/20 blur-2xl rounded-full scale-150 animate-pulse"></div>
+                    <div className="absolute inset-0 bg-yellow-500/30 blur-xl rounded-full scale-150 animate-pulse"></div>
                     <div className="relative animate-bounce-slow">
-                        <div className="w-16 h-16 bg-stone-800 border-2 border-yellow-600 rounded-2xl flex items-center justify-center shadow-2xl overflow-hidden hover:scale-110 active:scale-95 transition-all">
-                            <div className="absolute inset-0 bg-stone-900/40"></div>
-                            <Bot size={40} className="text-yellow-500 relative z-10 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]" />
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-3 z-20">
-                                <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_4px_#22d3ee]"></div>
-                                <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_4px_#22d3ee]"></div>
-                            </div>
+                        <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.5)] overflow-hidden hover:scale-110 active:scale-95 transition-all border-2 border-white/20">
+                            <Bot size={40} className="text-stone-900 relative z-10" />
                         </div>
-                        {/* Hide Button (X) */}
                         <button
                             onClick={toggleHide}
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-stone-950 border border-stone-700 rounded-full flex items-center justify-center text-stone-500 hover:text-white hover:bg-red-900/40 transition-all opacity-0 group-hover:opacity-100 shadow-lg z-30 pointer-events-auto"
-                            title="ซ่อนผู้ช่วย"
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-stone-900 border border-stone-700 rounded-full flex items-center justify-center text-stone-500 hover:text-white hover:bg-red-500 transition-all opacity-0 group-hover:opacity-100 shadow-lg z-30 pointer-events-auto"
                         >
                             <X size={12} />
                         </button>
-                        <div className="mt-2 w-12 h-1.5 bg-yellow-600/40 blur-sm rounded-full mx-auto animate-pulse"></div>
-                    </div>
-                    {/* Tooltip */}
-                    <div className="absolute top-0 right-20 bg-stone-900 border border-stone-700 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl">
-                        {language === 'th' ? 'ถามผู้ช่วย AI' : 'Ask AI Assistant'}
                     </div>
                 </div>
             )}
 
-            {/* Speech Bubble / Window */}
+            {/* Chat Window */}
             {isOpen && (
-                <div className="mb-4 w-72 bg-stone-950/95 border-2 border-yellow-600/50 rounded-2xl shadow-2xl backdrop-blur-xl pointer-events-auto animate-in slide-in-from-bottom-4 zoom-in-95 duration-300 overflow-hidden flex flex-col max-h-[70vh]">
-
+                <div className="mb-4 w-80 sm:w-96 bg-stone-950/95 border-2 border-yellow-500 rounded-2xl shadow-2xl backdrop-blur-xl pointer-events-auto animate-in slide-in-from-bottom-4 zoom-in-95 duration-300 overflow-hidden flex flex-col max-h-[60vh] sm:max-h-[70vh]">
                     {/* Header */}
-                    <div className="p-3 bg-stone-900 border-b border-stone-800 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <Bot size={18} className="text-yellow-500" />
-                            <span className="text-[10px] font-black uppercase tracking-tighter text-stone-400">AI Assistant</span>
+                    <div className="p-3 bg-gradient-to-r from-yellow-600 to-yellow-700 flex justify-between items-center shadow-md">
+                        <div className="flex items-center gap-2 text-stone-900">
+                            <Bot size={20} className="fill-stone-900" />
+                            <span className="text-sm font-black uppercase tracking-tight">Gold Rush Guide</span>
                         </div>
                         <button
                             onClick={() => {
-                                if (tutorialStep > 0) onTutorialClose();
-                                else setIsOpen(false);
+                                setIsOpen(false);
+                                if (tutorialStep > 0 && onTutorialClose) onTutorialClose();
                             }}
-                            className="p-1 hover:bg-stone-800 rounded-lg text-stone-500 hover:text-white transition-colors"
+                            className="p-1 hover:bg-black/20 rounded text-stone-900 transition-colors"
                         >
-                            <X size={16} />
+                            <X size={18} />
                         </button>
                     </div>
 
-                    {/* Body */}
-                    <div className="overflow-y-auto custom-scrollbar flex-1 p-4">
-                        {mode === 'TUTORIAL' && tutorialContent && (
-                            <div className="animate-in fade-in duration-500">
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className="p-2 bg-yellow-900/20 rounded-xl border border-yellow-500/30">
-                                        {tutorialContent.icon}
-                                    </div>
-                                    <h4 className="font-bold text-yellow-500 text-sm uppercase tracking-wide">{tutorialContent.title}</h4>
+                    {/* Chat Area */}
+                    <div id="guide-chat-container" className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-stone-900/50">
+                        {history.map((msg, idx) => (
+                            <div key={idx} className={`flex items-start gap-2 ${msg.type === 'USER' ? 'flex-row-reverse' : ''}`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.type === 'BOT' ? 'bg-yellow-600 text-stone-900' : 'bg-stone-700 text-stone-300'}`}>
+                                    {msg.type === 'BOT' ? <Bot size={16} /> : <div className="text-[10px] font-bold">YOU</div>}
                                 </div>
-                                <p className="text-[12px] text-stone-300 leading-relaxed mb-6">
-                                    {tutorialContent.desc}
-                                </p>
-                                <button
-                                    onClick={onTutorialNext}
-                                    className="w-full flex items-center justify-center gap-2 py-3 bg-yellow-600 hover:bg-yellow-500 text-stone-950 text-xs font-black rounded-xl transition-all active:scale-95 shadow-lg shadow-yellow-900/20"
-                                >
-                                    {tutorialContent.action} <ArrowRight size={14} />
-                                </button>
-                            </div>
-                        )}
-
-                        {mode === 'HELP_MENU' && (
-                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <p className="text-[10px] text-stone-500 uppercase tracking-widest font-bold mb-3 px-1">{language === 'th' ? 'เลือกหัวข้อที่สงสัยครับ' : 'Choose a category'}</p>
-                                {categories.map(cat => (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => {
-                                            setSelectedCategory(cat.id as HelpCategory);
-                                            setMode('HELP_CONTENT');
-                                        }}
-                                        className="w-full p-3 bg-stone-900 hover:bg-stone-800 border border-stone-800 hover:border-stone-700 rounded-xl flex items-center gap-3 transition-all group"
-                                    >
-                                        <div className={`${cat.color} group-hover:scale-110 transition-transform`}>{cat.icon}</div>
-                                        <span className="text-xs font-bold text-stone-300 group-hover:text-white">{cat.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-
-                        {mode === 'HELP_CONTENT' && selectedCategory && (
-                            <div className="animate-in fade-in slide-in-from-right-2 duration-300">
-                                <button
-                                    onClick={() => setMode('HELP_MENU')}
-                                    className="flex items-center gap-1 text-[10px] text-stone-500 hover:text-stone-300 mb-3 group"
-                                >
-                                    <ChevronLeft size={12} className="group-hover:-translate-x-0.5 transition-transform" /> {language === 'th' ? 'กลับไปที่เมนู' : 'Back to Menu'}
-                                </button>
-                                <div className="flex items-center gap-2 mb-4">
-                                    <div className={categories.find(c => c.id === selectedCategory)?.color}>
-                                        {categories.find(c => c.id === selectedCategory)?.icon}
-                                    </div>
-                                    <h4 className="text-sm font-bold text-white">{categories.find(c => c.id === selectedCategory)?.label}</h4>
+                                <div className={`max-w-[80%] p-3 rounded-2xl text-xs leading-relaxed shadow-sm ${msg.type === 'BOT'
+                                    ? 'bg-stone-800 text-stone-200 rounded-tl-none border border-stone-700'
+                                    : 'bg-yellow-600/20 text-yellow-100 rounded-tr-none border border-yellow-600/30'
+                                    }`}>
+                                    {msg.text}
+                                    {msg.image && (
+                                        <div className="mt-2 rounded-lg overflow-hidden border border-stone-600 bg-black">
+                                            {/* Placeholder for image if we had one, for now text description is mostly enough unless we use generic assets */}
+                                            <div className="p-4 text-center text-stone-500 italic text-[10px]">[Displaying: {msg.image}]</div>
+                                        </div>
+                                    )}
                                 </div>
-                                {renderCategoryContent()}
                             </div>
-                        )}
+                        ))}
                     </div>
 
-                    {/* Info Bar */}
-                    <div className="p-2.5 bg-stone-900/50 text-center border-t border-stone-800/40">
-                        <span className="text-[9px] text-stone-600 flex items-center justify-center gap-1">
-                            {language === 'th' ? 'มีคำถามอื่น? ถาม Admin ได้ตลอด 24 ชม.' : 'Other questions? Ask Admin 24h.'}
-                        </span>
+                    {/* Quick Actions (Input Area) */}
+                    <div className="p-3 bg-stone-900 border-t border-stone-800 relative">
+                        <div className="flex items-center gap-2 mb-2">
+                            <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">{language === 'th' ? 'เลือกหัวข้อที่สงสัย:' : 'Quick Questions:'}</p>
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                            {GUIDE_TOPICS.map(topic => (
+                                <button
+                                    key={topic.id}
+                                    onClick={() => handleTopicClick(topic)}
+                                    className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-800 hover:bg-yellow-600/20 hover:border-yellow-500 border border-stone-700 transition-all active:scale-95 group"
+                                >
+                                    <div className="group-hover:scale-110 transition-transform">{topic.icon}</div>
+                                    <span className="text-[10px] font-bold text-stone-300 group-hover:text-yellow-400 whitespace-nowrap">
+                                        {language === 'th' ? topic.question.th.split('/')[0] : topic.question.en.split('/')[0]}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
-
-
 
             <style>{`
                 @keyframes bounce-slow {
@@ -383,30 +243,7 @@ export const AIHelpBot: React.FC<AIHelpBotProps> = ({
                 .animate-bounce-slow {
                     animation: bounce-slow 4s ease-in-out infinite;
                 }
-                .custom-scrollbar::-webkit-scrollbar { width: 3px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
             `}</style>
         </div>
     );
 };
-
-const GiftIcon = ({ size, className }: { size?: number, className?: string }) => (
-    <svg
-        width={size || 24}
-        height={size || 24}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={className}
-    >
-        <polyline points="20 12 20 22 4 22 4 12" />
-        <rect x="2" y="7" width="20" height="5" />
-        <line x1="12" y1="22" x2="12" y2="7" />
-        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-    </svg>
-);

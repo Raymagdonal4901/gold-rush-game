@@ -234,51 +234,55 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
 
                 <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
                     <div className="w-full md:w-80 border-r border-stone-800 bg-stone-900/50 overflow-y-auto custom-scrollbar shrink-0 max-h-[35vh] md:max-h-full">
-                        {Object.entries(market.trends).map(([key, rawData]) => {
-                            const tier = Number(key);
-                            const data = rawData as MarketItemData;
-                            const isSelected = selectedTier === tier;
-                            const name = getLocalized(MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES]);
-                            const count = userMats[tier] || 0;
-                            const itemDev = ((data.currentPrice - data.basePrice) / data.basePrice);
-                            const itemBot = Math.abs(itemDev) > MARKET_CONFIG.BOT_INTERVENTION_THRESHOLD;
+                        {Object.entries(market.trends)
+                            .filter(([key]) => parseInt(key) !== 0)
+                            .map(([key, rawData]) => {
+                                const tier = Number(key);
+                                const data = rawData as MarketItemData;
+                                const isSelected = selectedTier === tier;
+                                const isClosed = tier === 7;
+                                const name = getLocalized(MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES]);
+                                const count = userMats[tier] || 0;
+                                const itemDev = ((data.currentPrice - data.basePrice) / data.basePrice);
+                                const itemBot = Math.abs(itemDev) > MARKET_CONFIG.BOT_INTERVENTION_THRESHOLD;
 
-                            return (
-                                <button
-                                    key={tier}
-                                    onClick={() => { setSelectedTier(tier); setAmount(0); setShowConfirm(false); }}
-                                    className={`w-full p-4 border-b border-stone-800 flex justify-between items-center transition-all ${isSelected ? 'bg-stone-800 border-l-4 border-l-blue-500 pl-3' : 'hover:bg-stone-900 border-l-4 border-l-transparent'}`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <MaterialIcon id={tier} size="w-8 h-8" iconSize={16} />
-                                        <div className="text-left">
-                                            <div className={`font-bold text-sm flex items-center gap-1 ${isSelected ? 'text-white' : 'text-stone-400'}`}>
-                                                {name[language as keyof typeof name]}
-                                                {itemBot && <Bot size={12} className="text-emerald-400 animate-pulse" title={t('market.bot_active')} />}
+                                return (
+                                    <button
+                                        key={tier}
+                                        onClick={() => { setSelectedTier(tier); setAmount(0); setShowConfirm(false); }}
+                                        className={`w-full p-4 border-b border-stone-800 flex justify-between items-center transition-all ${isSelected ? 'bg-stone-800 border-l-4 border-l-blue-500 pl-3' : 'hover:bg-stone-900 border-l-4 border-l-transparent'} ${isClosed ? 'opacity-60 grayscale-[0.2]' : ''}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <MaterialIcon id={tier} size="w-8 h-8" iconSize={16} />
+                                            <div className="text-left">
+                                                <div className={`font-bold text-sm flex items-center gap-1 ${isSelected ? 'text-white' : 'text-stone-400'}`}>
+                                                    {name[language as keyof typeof name]}
+                                                    {isClosed && <span className="text-[10px] bg-red-600/20 text-red-500 border border-red-500/30 px-1 rounded font-black ml-1 animate-pulse uppercase">{language === 'th' ? 'ปิด' : 'CLOSED'}</span>}
+                                                    {itemBot && <Bot size={12} className="text-emerald-400 animate-pulse" title={t('market.bot_active')} />}
+                                                </div>
+                                                <div className="text-[10px] text-stone-500">
+                                                    {t('market.available')}: <span className={count > 0 ? "text-white font-bold" : "text-stone-600"}>{count}</span>
+                                                </div>
                                             </div>
-                                            <div className="text-[10px] text-stone-500">
-                                                {t('market.available')}: <span className={count > 0 ? "text-white font-bold" : "text-stone-600"}>{count}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="font-mono font-bold text-white text-sm">
+                                                {formatCurrency(data.currentPrice)}
+                                            </div>
+                                            <div className="text-[10px] text-stone-500 font-mono">
+                                                {language === 'th' ?
+                                                    `(${formatCurrency(data.currentPrice, { forceUSD: true })})` :
+                                                    `(${formatCurrency(data.currentPrice, { forceTHB: true })})`
+                                                }
+                                            </div>
+                                            <div className={`text-[10px] flex items-center justify-end gap-1 ${data.trend === 'UP' ? 'text-emerald-400' : data.trend === 'DOWN' ? 'text-red-400' : 'text-stone-500'}`}>
+                                                {data.trend === 'UP' ? <TrendingUp size={10} /> : data.trend === 'DOWN' ? <TrendingDown size={10} /> : <Minus size={10} />}
+                                                {Math.abs((data.multiplier - 1) * 100).toFixed(1)}%
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="font-mono font-bold text-white text-sm">
-                                            {formatCurrency(data.currentPrice)}
-                                        </div>
-                                        <div className="text-[10px] text-stone-500 font-mono">
-                                            {language === 'th' ?
-                                                `(${formatCurrency(data.currentPrice, { forceUSD: true })})` :
-                                                `(${formatCurrency(data.currentPrice, { forceTHB: true })})`
-                                            }
-                                        </div>
-                                        <div className={`text-[10px] flex items-center justify-end gap-1 ${data.trend === 'UP' ? 'text-emerald-400' : data.trend === 'DOWN' ? 'text-red-400' : 'text-stone-500'}`}>
-                                            {data.trend === 'UP' ? <TrendingUp size={10} /> : data.trend === 'DOWN' ? <TrendingDown size={10} /> : <Minus size={10} />}
-                                            {Math.abs((data.multiplier - 1) * 100).toFixed(1)}%
-                                        </div>
-                                    </div>
-                                </button>
-                            );
-                        })}
+                                    </button>
+                                );
+                            })}
                     </div>
 
                     <div className="flex-1 flex flex-col bg-stone-950 relative">
@@ -384,15 +388,26 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
 
                                 <div className="flex-1 p-4 flex flex-col justify-between overflow-y-auto custom-scrollbar">
                                     <div className="grid grid-cols-2 gap-3 mb-4 bg-stone-900 p-1 rounded-xl border border-stone-800">
-                                        <button onClick={() => setAction('BUY')} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="rotate-45" /> {t('market.buy_action')}</button>
-                                        <button onClick={() => setAction('SELL')} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'SELL' ? 'bg-red-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'}`}><ArrowRight size={16} className="-rotate-[135deg]" /> {t('market.sell_action')}</button>
+                                        <button onClick={() => setAction('BUY')} disabled={selectedTier === 7} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'} disabled:opacity-30 disabled:grayscale`}>
+                                            <ArrowRight size={16} className="rotate-45" /> {t('market.buy_action')}
+                                        </button>
+                                        <button onClick={() => setAction('SELL')} disabled={selectedTier === 7} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'SELL' ? 'bg-red-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'} disabled:opacity-30 disabled:grayscale`}>
+                                            <ArrowRight size={16} className="-rotate-[135deg]" /> {t('market.sell_action')}
+                                        </button>
                                     </div>
                                     <div className="space-y-4">
                                         <div className="flex justify-between text-xs text-stone-400 bg-stone-900/50 p-2.5 rounded-lg border border-stone-800"><span>{t('common.your_balance')}:</span><span className="font-bold text-white">{action === 'SELL' ? `${maxSell} Units` : `${userBalance.toLocaleString()} ${CURRENCY}`}</span></div>
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center"><label className="text-xs text-stone-500 uppercase font-bold">{t('market.amount_label')}</label><span className="text-xs text-blue-400 cursor-pointer hover:underline" onClick={() => setAmount(action === 'SELL' ? maxSell : maxBuy)}>{t('market.max_available')}</span></div>
                                             <div className="relative">
-                                                <input type="number" value={amount === 0 ? '' : amount} onChange={(e) => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setAmount(isNaN(val) ? 0 : val); }} className="w-full bg-stone-900 border border-stone-700 rounded-xl p-3 text-white font-mono text-base focus:border-blue-500 outline-none transition-colors" placeholder={t('market.enter_amount')} />
+                                                <input
+                                                    type="number"
+                                                    value={amount === 0 ? '' : amount}
+                                                    onChange={(e) => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setAmount(isNaN(val) ? 0 : val); }}
+                                                    disabled={selectedTier === 7}
+                                                    className="w-full bg-stone-900 border border-stone-700 rounded-xl p-3 text-white font-mono text-base focus:border-blue-500 outline-none transition-colors disabled:opacity-50"
+                                                    placeholder={selectedTier === 7 ? (language === 'th' ? 'ระงับการซื้อขาย' : 'Trading Suspended') : t('market.enter_amount')}
+                                                />
                                                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 text-[10px] font-bold">UNITS</span>
                                             </div>
                                         </div>
@@ -424,15 +439,16 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                         </div>
                                         <button
                                             onClick={() => setShowConfirm(true)}
-                                            disabled={loading || amount <= 0 || (action === 'SELL' && amount > maxSell) || (action === 'BUY' && totalPrice > userBalance)}
+                                            disabled={loading || selectedTier === 7 || amount <= 0 || (action === 'SELL' && amount > maxSell) || (action === 'BUY' && totalPrice > userBalance)}
                                             className={`w-full py-3 rounded-xl font-bold text-base shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-stone-800`}
                                         >
                                             {loading ? <RefreshCw className="animate-spin" size={20} /> : (
                                                 <>
-                                                    {action === 'BUY' && totalPrice > userBalance ? t('market.insufficient_funds') :
-                                                        action === 'SELL' && amount > maxSell ? t('market.insufficient_mats') :
-                                                            amount <= 0 ? t('market.enter_amount') :
-                                                                action === 'BUY' ? t('market.review_purchase') : t('market.review_sale')}
+                                                    {selectedTier === 7 ? (language === 'th' ? 'ระงับการซื้อขายชั่วคราว' : 'Trading Suspended') :
+                                                        action === 'BUY' && totalPrice > userBalance ? t('market.insufficient_funds') :
+                                                            action === 'SELL' && amount > maxSell ? t('market.insufficient_mats') :
+                                                                amount <= 0 ? t('market.enter_amount') :
+                                                                    action === 'BUY' ? t('market.review_purchase') : t('market.review_sale')}
                                                 </>
                                             )}
                                         </button>

@@ -11,7 +11,7 @@ export const MaterialIcon: React.FC<MaterialIconProps> = ({ id, size = "w-10 h-1
     // Map ID to filename in /assets/materials/
     const getMaterialImage = () => {
         switch (id) {
-            case 0: return 'mystery_ore.png';  // Mystery Ore (Tier 0)
+            case 0: return 'stone_shards.png'; // Try specifically for the new image
             case 1: return 'coal.png';          // Coal
             case 2: return 'copper.png';
             case 3: return 'iron.png';
@@ -29,10 +29,17 @@ export const MaterialIcon: React.FC<MaterialIconProps> = ({ id, size = "w-10 h-1
 
     return (
         <div className={`${size} flex items-center justify-center`}>
+            {/* The new stone_shards.png is already a cluster pile from the user upload */}
             <img
                 src={`/assets/materials/${imageFile}`}
                 alt={`Material ${id}`}
                 className="w-full h-full object-contain drop-shadow-md"
+                onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    if (!target.src.includes('mystery_ore.png')) {
+                        target.src = '/assets/materials/mystery_ore.png';
+                    }
+                }}
             />
         </div>
     );
