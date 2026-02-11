@@ -6,7 +6,7 @@ interface LanguageContextType {
     setLanguage: (lang: Language) => void;
     t: (key: string, params?: Record<string, any>) => string;
     getLocalized: (content: string | { th: string; en: string } | undefined) => string;
-    formatCurrency: (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean }) => string;
+    formatCurrency: (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean; showDecimals?: boolean }) => string;
     formatBonus: (amount: number, typeId?: string) => string;
 }
 
@@ -57,17 +57,18 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         return content[language] || content['en'];
     };
 
-    const formatCurrency = (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean }): string => {
+    const formatCurrency = (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean; showDecimals?: boolean }): string => {
         const isThai = options?.forceUSD ? false : (language === 'th' || options?.forceTHB);
-        let val = isThai ? Math.round(amount * EXCHANGE_RATE) : amount;
+        let val = isThai ? (options?.showDecimals ? amount * EXCHANGE_RATE : Math.round(amount * EXCHANGE_RATE)) : amount;
 
         // Epsilon rounding to fix floating point issues (e.g., 299.999999 -> 300)
         if (Math.abs(val - Math.round(val)) < 0.001) {
             val = Math.round(val);
         }
 
+        const minDecimals = options?.showDecimals ? 2 : (val % 1 === 0 ? 0 : 2);
         const formatted = val.toLocaleString(undefined, {
-            minimumFractionDigits: val % 1 === 0 ? 0 : 2,
+            minimumFractionDigits: minDecimals,
             maximumFractionDigits: 4
         });
 

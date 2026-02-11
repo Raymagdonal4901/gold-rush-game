@@ -569,7 +569,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                         <Coins className="text-yellow-500 animate-pulse" size={24} />
                     </div>
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_claim')}</h4>
-                    <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">{formatCurrency(currentAmount)}</div>
+                    <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">{formatCurrency(currentAmount, { showDecimals: true })}</div>
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
                         <button onClick={(e) => { e.stopPropagation(); setIsConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">{t('common.cancel')}</button>
                         <button onClick={confirmClaim} className="py-2.5 rounded bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> {t('common.confirm')}</button>
@@ -677,7 +677,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <div className="flex flex-col items-end gap-1">
                         <div className={`px-1.5 py-0.5 rounded border text-[9px] flex items-center gap-1 shadow-sm ${isOverclockActive ? 'bg-emerald-900/50 border-emerald-500 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : (globalMultiplier > 1 || reactorMultiplier > 1) ? 'bg-purple-900/30 border-purple-500 text-purple-300' : 'bg-emerald-950/30 border-emerald-900/50 text-emerald-400'}`}>
                             <Clock size={10} />
-                            <span className={isOverclockActive ? 'text-emerald-300 font-bold' : ''}>+{formatCurrency(totalDailyProfit)}/{t('time.day')}</span>
+                            <span className={isOverclockActive ? 'text-emerald-300 font-bold' : ''}>+{formatCurrency(totalDailyProfit, { showDecimals: true })}/{t('time.day')}</span>
                             {isOverclockActive && <Zap size={10} className="text-yellow-400 animate-pulse" />}
                         </div>
                         {isOverclockActive && (
@@ -690,13 +690,13 @@ export const RigCard: React.FC<RigCardProps> = ({
                             {rig.bonusProfit > 0 && !['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr) && (
                                 <div className={`text-[9px] ${rarityConfig.color} flex items-center gap-1 font-bold`}>
                                     <Zap size={8} />
-                                    {t('shop.bonus')} +{formatCurrency(rig.bonusProfit)}
+                                    {t('shop.bonus')} +{formatCurrency(rig.bonusProfit, { showDecimals: true })}
                                 </div>
                             )}
                             {equippedBonus > 0 && (
                                 <div className="text-[9px] text-blue-400 flex items-center gap-1 font-bold">
                                     <Briefcase size={8} />
-                                    {t('rig.equipment_bonus')} +{formatCurrency(equippedBonus)}
+                                    {t('rig.equipment_bonus')} +{formatCurrency(equippedBonus, { showDecimals: true })}
                                 </div>
                             )}
                         </div>
@@ -1023,7 +1023,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                         <div className="text-right w-full">
                             <div className={`text-xl font-mono font-bold tabular-nums flex items-center justify-end gap-1 text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.1)]`}>
                                 {isOverclockActive && <span className="text-emerald-400 text-xs mr-0.5 animate-pulse">x2</span>}
-                                {formatCurrency(currentAmount)} <Sparkles size={12} className={!isExpired && !isBroken && isPowered && !isExploring ? "text-yellow-500" : "hidden"} />
+                                {formatCurrency(currentAmount, { showDecimals: true })} <Sparkles size={12} className={!isExpired && !isBroken && isPowered && !isExploring ? "text-yellow-500" : "hidden"} />
                             </div>
                         </div>
                     </div>
