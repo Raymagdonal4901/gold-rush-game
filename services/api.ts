@@ -394,6 +394,10 @@ export const api = {
         convertCurrencyToUSD: async (): Promise<any> => {
             const res = await client.post('/admin/convert-currency');
             return res.data;
+        },
+        adjustGlobalRevenue: async (amount: number, reason: string): Promise<any> => {
+            const res = await client.post('/admin/revenue/adjust', { amount, reason });
+            return res.data;
         }
     },
     // Chat

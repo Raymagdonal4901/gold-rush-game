@@ -505,8 +505,11 @@ export const getGlobalRevenueStats = async (req: AuthRequest, res: Response) => 
         // 3.4 Repair Fee
         const rev_repair_fees = revenueMap['REPAIR'] || 0;
 
+        // 3.4.1 System Adjustments (Can be negative/deduction)
+        const rev_adjustments = revenueMap['SYSTEM_ADJUSTMENT'] || 0;
+
         // 3.5 Total Revenue
-        const total_revenue = rev_energy_items + rev_market_fees + rev_withdrawal_fees + rev_repair_fees;
+        const total_revenue = rev_energy_items + rev_market_fees + rev_withdrawal_fees + rev_repair_fees + rev_adjustments;
 
         res.json({
             energy_items: rev_energy_items,
@@ -515,6 +518,7 @@ export const getGlobalRevenueStats = async (req: AuthRequest, res: Response) => 
             withdrawal_fees_bank: withdrawal_fees_bank,
             withdrawal_fees_usdt: withdrawal_fees_usdt,
             repair_fees: rev_repair_fees,
+            adjustments: rev_adjustments,
             total: total_revenue,
             usdt_deposits: depMap['USDT'] || 0,
             bank_deposits: depMap['BANK'] || 0,
@@ -563,7 +567,7 @@ export const clearRevenueStats = async (req: AuthRequest, res: Response) => {
         console.log('[ADMIN] Clearing developer revenue stats...');
 
         // Define transaction types that count as revenue
-        const revenueTypes = ['ENERGY_REFILL', 'ACCESSORY_PURCHASE', 'MARKET_TAX', 'REPAIR'];
+        const revenueTypes = ['ENERGY_REFILL', 'ACCESSORY_PURCHASE', 'MARKET_TAX', 'REPAIR', 'SYSTEM_ADJUSTMENT'];
 
         // Delete or mark these transactions as processed/cleared
         // For now we delete them to reset the sum to 0
@@ -636,6 +640,33 @@ export const deleteRig = async (req: AuthRequest, res: Response) => {
         res.json({ message: 'Rig deleted successfully' });
     } catch (error) {
         console.error('[ADMIN ERROR] deleteRig failed:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+// Adjust Global Revenue (System Adjustment)
+export const adminAdjustRevenue = async (req: AuthRequest, res: Response) => {
+    try {
+        const { amount, reason } = req.body;
+        const amountNum = Number(amount);
+
+        if (isNaN(amountNum)) {
+            return res.status(400).json({ message: 'Invalid amount' });
+        }
+
+        const adjustment = new Transaction({
+            userId: 'SYSTEM', // Special tag for system adjustments
+            type: 'SYSTEM_ADJUSTMENT',
+            amount: amountNum,
+            status: 'COMPLETED',
+            description: reason || 'Revenue Adjustment'
+        });
+
+        await adjustment.save();
+
+        res.json({ message: 'Revenue adjustment successful', amount: amountNum });
+    } catch (error) {
+        console.error('[ADMIN ERROR] adminAdjustRevenue failed:', error);
         res.status(500).json({ message: 'Server error', error });
     }
 };

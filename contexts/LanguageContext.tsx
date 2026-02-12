@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { translations, Language } from '../services/translations';
+import { EXCHANGE_RATE_USDT_THB } from '../constants';
 
 interface LanguageContextType {
     language: Language;
@@ -10,7 +11,7 @@ interface LanguageContextType {
     formatBonus: (amount: number, typeId?: string) => string;
 }
 
-const THB_TO_USD_RATE = 31; // 1 USD = 31 THB (USDT real rate)
+const THB_TO_USD_RATE = EXCHANGE_RATE_USDT_THB; // 1 USD = 31 THB (USDT real rate)
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 

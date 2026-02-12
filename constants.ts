@@ -1,5 +1,6 @@
 export const CURRENCY = '฿';
 export const EXCHANGE_RATE_USD_THB = 1;
+export const EXCHANGE_RATE_USDT_THB = 31;
 export const BASE_CLAIM_AMOUNT = 0;
 export const DEMO_SPEED_MULTIPLIER = 10; // 10x Speed for simulation
 
@@ -311,8 +312,12 @@ export const SLOT_EXPANSION_CONFIG: Record<number, { title: { th: string; en: st
 
 export const TRANSACTION_LIMITS = {
     DEPOSIT: {
-        MIN: 3,
-        MAX: 1000,
+        MIN: 200,
+        MAX: 5000,
+    },
+    DEPOSIT_USD: {
+        MIN: 10,
+        MAX: 200,
     },
     WITHDRAW: {
         MIN: 100,

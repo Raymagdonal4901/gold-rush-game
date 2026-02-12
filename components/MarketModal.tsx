@@ -205,8 +205,8 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
     const isBotActive = Math.abs(deviationFromBase) > MARKET_CONFIG.BOT_INTERVENTION_THRESHOLD;
 
     return (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md p-4">
-            <div className="bg-stone-950 border border-stone-800 w-full max-w-5xl rounded-xl shadow-2xl flex flex-col h-[90vh] md:h-[85vh] overflow-hidden">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 overflow-y-auto">
+            <div className="bg-stone-950 border border-stone-800 w-[95%] sm:w-full sm:max-w-5xl rounded-xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
                 <div className="flex justify-between items-center p-4 bg-stone-900 border-b border-stone-800 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="bg-blue-900/20 p-2 rounded text-blue-400">

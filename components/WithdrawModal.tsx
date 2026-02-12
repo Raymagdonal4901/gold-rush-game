@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Wallet, Send, QrCode, Upload, Image as ImageIcon, AlertTriangle, CheckCircle, ArrowRight, Percent, Clock } from 'lucide-react';
-import { CURRENCY, TRANSACTION_LIMITS, WITHDRAWAL_FEE_PERCENT, EXCHANGE_RATE_USD_THB, USDT_WITHDRAW_LIMITS } from '../constants';
+import { CURRENCY, TRANSACTION_LIMITS, WITHDRAWAL_FEE_PERCENT, EXCHANGE_RATE_USD_THB, EXCHANGE_RATE_USDT_THB, USDT_WITHDRAW_LIMITS } from '../constants';
 import { PinModal } from './PinModal';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -73,11 +73,14 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     const handleWithdrawClick = () => {
         const val = parseFloat(amount);
         const isUSDT = method === 'USDT';
-        // Normalize value to USD for limit checks
-        const systemAmount = isUSDT ? val : Number((val / EXCHANGE_RATE_USD_THB).toFixed(8));
         const currentLimits = isUSDT ? USDT_WITHDRAW_LIMITS : TRANSACTION_LIMITS.WITHDRAW;
+        const walletDisplay = isUSDT ? walletBalance / EXCHANGE_RATE_USDT_THB : walletBalance; // walletBalance is in USD, convert to USDT for comparison
 
-        if (!isNaN(val) && systemAmount >= currentLimits.MIN && systemAmount <= currentLimits.MAX && systemAmount <= walletBalance) {
+        // For BANK method, val is in THB, walletDisplay is in USD, currentLimits are in USD.
+        // For USDT method, val is in USDT, walletDisplay is in USDT, currentLimits are in USDT.
+        const valInSystemUnits = isUSDT ? val : val / EXCHANGE_RATE_USD_THB;
+
+        if (!isNaN(val) && valInSystemUnits >= currentLimits.MIN && valInSystemUnits <= currentLimits.MAX && valInSystemUnits <= walletDisplay) {
             setIsConfirming(true);
         }
     };
@@ -85,10 +88,12 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     const handleConfirmWithdraw = () => {
         const val = parseFloat(amount);
         const isUSDT = method === 'USDT';
-        const systemAmount = isUSDT ? val : Number((val / EXCHANGE_RATE_USD_THB).toFixed(8));
+        const walletDisplay = isUSDT ? walletBalance / EXCHANGE_RATE_USDT_THB : walletBalance; // walletBalance is in USD, convert to USDT for comparison
 
-        if (!isNaN(systemAmount) && systemAmount > 0 && systemAmount <= walletBalance) {
-            onWithdraw(systemAmount, "", method, isUSDT ? walletAddressInput : undefined);
+        const valInSystemUnits = isUSDT ? val : val / EXCHANGE_RATE_USD_THB;
+
+        if (!isNaN(val) && valInSystemUnits > 0 && valInSystemUnits <= walletDisplay) {
+            onWithdraw(val, "", method, isUSDT ? walletAddressInput : undefined); // Pass val directly, onWithdraw expects the user-entered amount
             setAmount('');
             setIsConfirming(false);
             onClose();
@@ -98,10 +103,12 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     const handlePinSuccess = (pin: string) => {
         const val = parseFloat(amount);
         const isUSDT = method === 'USDT';
-        const systemAmount = isUSDT ? val : Number((val / EXCHANGE_RATE_USD_THB).toFixed(8));
+        const walletDisplay = isUSDT ? walletBalance / EXCHANGE_RATE_USDT_THB : walletBalance; // walletBalance is in USD, convert to USDT for comparison
 
-        if (!isNaN(systemAmount) && systemAmount > 0 && systemAmount <= walletBalance) {
-            onWithdraw(systemAmount, pin, method, isUSDT ? walletAddressInput : undefined);
+        const valInSystemUnits = isUSDT ? val : val / EXCHANGE_RATE_USD_THB;
+
+        if (!isNaN(val) && valInSystemUnits > 0 && valInSystemUnits <= walletDisplay) {
+            onWithdraw(val, pin, method, isUSDT ? walletAddressInput : undefined); // Pass val directly, onWithdraw expects the user-entered amount
             setAmount('');
             setIsConfirming(false);
             setShowPinModal(false);
@@ -112,24 +119,30 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     const setMaxAmount = () => {
         const isUSDT = method === 'USDT';
         const currentLimits = isUSDT ? USDT_WITHDRAW_LIMITS : TRANSACTION_LIMITS.WITHDRAW;
-        const maxLimitUSD = currentLimits.MAX;
-        const maxWithdrawalUSD = Math.min(walletBalance, maxLimitUSD);
-        let maxDisplay = isUSDT ? maxWithdrawalUSD : maxWithdrawalUSD * EXCHANGE_RATE_USD_THB;
+        const maxLimitSystemUnits = currentLimits.MAX; // Max limit in USDT or USD
+        const walletDisplaySystemUnits = isUSDT ? walletBalance / EXCHANGE_RATE_USDT_THB : walletBalance; // Wallet balance in USDT or USD
+
+        let maxWithdrawalSystemUnits = Math.min(walletDisplaySystemUnits, maxLimitSystemUnits);
+
+        // Convert back to display units (THB or USDT)
+        let maxDisplay = isUSDT ? maxWithdrawalSystemUnits : maxWithdrawalSystemUnits * EXCHANGE_RATE_USD_THB;
 
         // Fix floating point errors for display (e.g., 999.99999995 -> 1000)
-        if (!isUSDT && Math.abs(maxDisplay - Math.round(maxDisplay)) < 0.001) {
+        if (Math.abs(maxDisplay - Math.round(maxDisplay)) < 0.001) {
             maxDisplay = Math.round(maxDisplay);
         }
 
         setAmount(maxDisplay.toFixed(isUSDT ? 4 : 2));
     };
 
-    // Calculations (in system USD units for formatCurrency)
+    // Calculations (in system units for display)
     const isUSDT = method === 'USDT';
-    const exchangeRate = isUSDT ? EXCHANGE_RATE_USD_THB : 1;
-    const displayBalance = walletBalance;
-    const rawVal = parseFloat(amount) || 0;
-    const systemAmount = isUSDT ? rawVal : Number((rawVal / EXCHANGE_RATE_USD_THB).toFixed(8));
+    const displayBalance = isUSDT ? walletBalance / EXCHANGE_RATE_USDT_THB : walletBalance; // walletBalance is in USD, convert to USDT for display
+    const rawVal = parseFloat(amount) || 0; // User entered amount (THB or USDT)
+
+    // systemAmount is the amount in the *system's base currency for that method* (USDT for USDT, USD for BANK)
+    const systemAmount = isUSDT ? rawVal : rawVal / EXCHANGE_RATE_USD_THB; // Convert THB to USD for BANK method
+
     const feePercent = WITHDRAWAL_FEE_PERCENT;
     const systemFee = systemAmount * feePercent;
     const systemNetReceived = systemAmount - systemFee;
@@ -144,8 +157,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     const hasVipCard = inventory?.some(i => i.typeId === 'vip_withdrawal_card');
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-            <div className="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 overflow-y-auto">
+            <div className="bg-slate-800 border border-slate-700 w-[95%] sm:w-full sm:max-w-sm rounded-2xl shadow-2xl overflow-hidden relative flex flex-col max-h-[85vh]">
 
                 {/* Header */}
                 <div className="bg-slate-900 p-4 border-b border-slate-700 flex justify-between items-center">
@@ -344,8 +357,13 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                                                 value={walletAddressInput}
                                                 onChange={(e) => setWalletAddressInput(e.target.value)}
                                                 placeholder="0x..."
-                                                className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 px-3 text-xs font-mono text-blue-400 focus:border-blue-500 outline-none"
+                                                className={`w-full bg-slate-950 border ${!walletAddressInput && systemAmount > 0 ? 'border-red-500/50' : 'border-slate-700'} rounded-lg py-2 px-3 text-xs font-mono text-blue-400 focus:border-blue-500 outline-none transition-colors`}
                                             />
+                                            {!walletAddressInput && systemAmount > 0 && (
+                                                <div className="text-[10px] text-red-500 mt-1 flex items-center gap-1">
+                                                    <AlertTriangle size={10} /> {language === 'th' ? 'โปรดระบุที่อยู่กระเป๋า' : 'Please enter wallet address'}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -358,7 +376,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                                             value={amount}
                                             onChange={(e) => setAmount(e.target.value)}
                                             placeholder="0.00"
-                                            className="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 px-4 text-white focus:border-emerald-500 outline-none transition-colors"
+                                            className={`w-full bg-slate-900 border ${systemAmount > displayBalance ? 'border-red-500' : 'border-slate-600'} rounded-lg py-3 px-4 text-white focus:border-emerald-500 outline-none transition-colors`}
                                         />
                                         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                                             <span className="text-[10px] text-slate-500 font-bold">{isUSDT ? 'USDT' : '฿'}</span>
@@ -370,6 +388,11 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                                             </button>
                                         </div>
                                     </div>
+                                    {systemAmount > displayBalance && (
+                                        <div className="text-[10px] text-red-500 font-bold animate-pulse">
+                                            {language === 'th' ? 'ยอดเงินไม่เพียงพอ' : 'Insufficient balance'}
+                                        </div>
+                                    )}
                                     <div className="flex justify-between items-start text-[10px] text-slate-500">
                                         <span>{t('withdraw.fee')} {WITHDRAWAL_FEE_PERCENT * 100}%</span>
                                         <div className="text-right">
@@ -378,7 +401,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                                         </div>
                                     </div>
 
-                                    {systemAmount > 0 && (
+                                    {systemAmount > 0 && systemAmount <= displayBalance && (
                                         <div className="text-xs text-right mt-1 font-bold text-emerald-500">
                                             {t('withdraw.net_received')}: {isUSDT ? `${systemNetReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT` : formatCurrency(Math.max(0, systemNetReceived))}
                                         </div>
@@ -392,7 +415,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
                             <button
                                 onClick={handleWithdrawClick}
-                                disabled={!hasVipCard || !amount || systemAmount < currentLimits.MIN || systemAmount > currentLimits.MAX || systemAmount > walletBalance || (isUSDT && !walletAddressInput)}
+                                disabled={!hasVipCard || !amount || systemAmount < currentLimits.MIN || systemAmount > currentLimits.MAX || systemAmount > displayBalance || (isUSDT && !walletAddressInput)}
                                 className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-800 disabled:text-stone-600 text-white font-bold py-3 rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all mt-6"
                             >
                                 {t('withdraw.title')} <Send size={18} />

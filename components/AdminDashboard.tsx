@@ -85,6 +85,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         compScope: 'SINGLE' as 'SINGLE' | 'ALL'
     });
     const [compCurrency, setCompCurrency] = useState<'THB' | 'USDT'>('THB');
+    const [adjustForm, setAdjustForm] = useState({
+        amount: 0,
+        reason: 'Manual Adjustment'
+    });
 
     // Confirmation Modal State
     const [confirmAction, setConfirmAction] = useState<{
@@ -280,6 +284,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         }
     };
 
+    const handleAdjustRevenue = async () => {
+        if (!adjustForm.amount) return;
+        try {
+            await api.admin.adjustGlobalRevenue(adjustForm.amount, adjustForm.reason);
+            alert(t('admin.adjust_success'));
+            setAdjustForm({ amount: 0, reason: t('admin.adjust_reason_default') || 'Manual Adjustment' });
+            refreshData();
+        } catch (error) {
+            console.error("Failed to adjust revenue", error);
+            alert(t('admin.process_error'));
+        }
+    };
+
     const handleConvertCurrency = async () => {
         if (!confirm('⚠️ คำเตือน: ยืนยันการแปลงฐานข้อมูลทั้งหมดเป็น THB (฿)? \n\nการดำเนินการนี้จะหารยอดเงินคงเหลือและราคาทั้งหมดด้วย 35 และไม่สามารถย้อนกลับได้!')) return;
 
@@ -431,15 +448,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     };
 
     const totalInvestment = rigs.reduce((acc, r) => acc + r.investment, 0);
-    const totalDailyProduction = rigs.reduce((acc, r) => acc + r.dailyProfit + (r.bonusProfit || 0), 0);
+
+    const getRigsForUser = (userId: string) => rigs.filter(r => r.ownerId === userId);
+    const getDailyProfitForUser = (userId: string) => {
+        const user = users.find(u => u.id === userId);
+        if (!user) return 0;
+
+        const userRigs = getRigsForUser(userId);
+        const userInventory = user.inventory || [];
+
+        // Multipliers (Synced with PlayerDashboard)
+        const hasVibranium = userInventory.some((i: any) => i.typeId === 'vibranium' && (!i.expireAt || i.expireAt > Date.now()));
+        const globalMultiplier = hasVibranium ? 2 : 1;
+
+        const isOverclockActive = user.overclockExpiresAt ? new Date(user.overclockExpiresAt).getTime() > Date.now() : false;
+        const overclockMultiplier = isOverclockActive ? (userRigs.length <= 2 ? 1.1 : userRigs.length <= 4 ? 1.25 : 1.4) : 1;
+
+        const dailyProfitSum = userRigs.reduce((acc, r) => {
+            const nameStr = typeof r.name === 'string' ? r.name : (r.name?.en || r.name?.th || '');
+            const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
+
+            // Legacy Scale Fallback: If profit is tiny (< 5), it's likely old USD scale
+            const baseDailyProfit = (r.dailyProfit < 5 && r.dailyProfit > 0) ? r.dailyProfit * 35 : r.dailyProfit;
+            const effectiveBonusProfit = isNoBonusRig ? 0 : (r.bonusProfit || 0);
+
+            let equippedBonus = 0;
+            if (r.slots) {
+                r.slots.forEach(slotItemId => {
+                    if (slotItemId) {
+                        const item = userInventory.find((i: any) => i.id === slotItemId);
+                        if (item) {
+                            const effectiveItemBonus = (item.dailyBonus < 0.5 && item.dailyBonus > 0) ? item.dailyBonus * 35 : item.dailyBonus;
+                            equippedBonus += effectiveItemBonus;
+                        }
+                    }
+                });
+            }
+
+            return acc + (baseDailyProfit + effectiveBonusProfit + equippedBonus);
+        }, 0);
+
+        return Math.floor(dailyProfitSum * globalMultiplier * overclockMultiplier);
+    };
+
+    const totalDailyProduction = users.reduce((sum, u) => sum + getDailyProfitForUser(u.id), 0);
+    const totalUserBalance = users.reduce((sum, u) => sum + (u.balance || 0), 0);
 
     const filteredUsers = users.filter(u =>
         u.username.toLowerCase().includes(search.toLowerCase())
     );
-
-    const getRigsForUser = (userId: string) => rigs.filter(r => r.ownerId === userId);
-    const getDailyProfitForUser = (userId: string) =>
-        getRigsForUser(userId).reduce((acc, r) => acc + r.dailyProfit + (r.bonusProfit || 0), 0);
 
     if (isLoading && users.length === 0) {
         return (
@@ -561,7 +618,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div className="bg-stone-950 p-3 rounded border border-stone-800">
                                     <div className="text-xs text-stone-500 uppercase">ยอดคงเหลือ (Balance)</div>
-                                    <div className="text-lg font-bold text-white">{selectedUser.balance.toLocaleString()} {CURRENCY}</div>
+                                    <div className="text-lg font-bold text-white">{Math.floor(selectedUser.balance).toLocaleString()} {CURRENCY}</div>
                                 </div>
                                 <div className="bg-stone-900/50 p-3 rounded border border-stone-800">
                                     <div className="text-xs text-stone-500 uppercase">จำนวนเหมือง (Rigs)</div>
@@ -569,7 +626,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 </div>
                                 <div className="bg-emerald-900/10 p-3 rounded border border-emerald-900/30">
                                     <div className="text-xs text-emerald-500 font-bold uppercase">รายได้วันละ (Daily)</div>
-                                    <div className="text-lg font-bold text-emerald-400">+{getDailyProfitForUser(selectedUser.id).toLocaleString()} {CURRENCY}</div>
+                                    <div className="text-lg font-bold text-emerald-400">+{Math.floor(getDailyProfitForUser(selectedUser.id)).toLocaleString()} {CURRENCY}</div>
                                 </div>
                                 <div className="bg-blue-900/10 p-3 rounded border border-blue-900/30">
                                     <div className="text-xs text-blue-400 font-bold uppercase">ระดับสิทธิ์ (Role)</div>
@@ -601,7 +658,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                         <td className="p-3 text-right">
                                                             <div className="flex items-center justify-end gap-3">
                                                                 <div>
-                                                                    <div className="font-mono font-bold text-emerald-400">+{(r.dailyProfit + (r.bonusProfit || 0)).toLocaleString()}</div>
+                                                                    <div className="font-mono font-bold text-emerald-400">+{Math.floor(r.dailyProfit + (r.bonusProfit || 0)).toLocaleString()}</div>
                                                                     <div className="text-[10px] text-stone-600">{CURRENCY}/Day</div>
                                                                 </div>
                                                                 <button
@@ -626,11 +683,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             </div>
                             <div className="bg-stone-950 p-3 rounded border border-stone-800">
                                 <div className="text-xs text-stone-500 uppercase">ยอดฝากรวม</div>
-                                <div className="text-lg font-bold text-emerald-400">+{userStats?.totalDeposits.toLocaleString()} {CURRENCY}</div>
+                                <div className="text-lg font-bold text-emerald-400">+{Math.floor(userStats?.totalDeposits || 0).toLocaleString()} {CURRENCY}</div>
                             </div>
                             <div className="bg-stone-900 p-3 rounded border border-stone-800">
                                 <div className="text-xs text-stone-500 uppercase">ยอดถอนรวม</div>
-                                <div className="text-lg font-bold text-red-500">-{userStats?.totalWithdrawals.toLocaleString()} {CURRENCY}</div>
+                                <div className="text-lg font-bold text-red-500">-{Math.floor(userStats?.totalWithdrawals || 0).toLocaleString()} {CURRENCY}</div>
                             </div>
                         </div>
 
@@ -659,8 +716,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                     <td className="p-3 text-stone-400 text-xs font-mono">{new Date(w.timestamp).toLocaleString()}</td>
                                                     <td className="p-3 text-right font-mono text-white">
                                                         {w.method === 'BANK'
-                                                            ? `${(w.amount * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿`
-                                                            : `$${w.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
+                                                            ? `${Math.floor(w.amount * EXCHANGE_RATE_USD_THB).toLocaleString()} ฿`
+                                                            : `$${Math.floor(w.amount).toLocaleString()}`
                                                         }
                                                     </td>
                                                     <td className="p-3 text-center">
@@ -770,7 +827,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             {userStats.depositHistory.map(d => (
                                                 <tr key={d.id} className="hover:bg-stone-900 transition-colors">
                                                     <td className="p-3 text-stone-400 text-xs font-mono">{new Date(d.timestamp).toLocaleString()}</td>
-                                                    <td className="p-3 text-right font-mono text-emerald-400">+{d.amount.toLocaleString()}</td>
+                                                    <td className="p-3 text-right font-mono text-emerald-400">+{Math.floor(d.amount).toLocaleString()}</td>
                                                     <td className="p-3 text-center">
                                                         <div
                                                             className="w-8 h-8 bg-stone-800 p-0.5 rounded cursor-zoom-in mx-auto overflow-hidden border border-stone-700"
@@ -938,7 +995,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
-                                        <span className="font-mono font-bold text-lg text-emerald-400">+{d.amount.toLocaleString()} <span className="text-stone-500 text-xs">{CURRENCY}</span></span>
+                                        <span className="font-mono font-bold text-lg text-emerald-400">+{Math.floor(d.amount).toLocaleString()} <span className="text-stone-500 text-xs">{CURRENCY}</span></span>
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => initiateProcessDeposit(d, 'REJECTED')}
@@ -1014,8 +1071,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
                                         <span className="font-mono font-bold text-lg text-white">
                                             {(w.method === 'BANK' || (w.bankQrCode && !w.walletAddress))
-                                                ? `${(w.amount * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿`
-                                                : `$${w.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
+                                                ? `${Math.floor(w.amount * EXCHANGE_RATE_USD_THB).toLocaleString()} ฿`
+                                                : `$${Math.floor(w.amount).toLocaleString()}`
                                             }
                                         </span>
                                         <div className="flex items-center gap-2">
@@ -1124,7 +1181,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-emerald-500 transition-colors">{t('admin.total_investment')}</span>
                             <Coins size={16} className="text-emerald-500" />
                         </div>
-                        <div className="text-3xl font-display font-bold text-white tracking-tight group-hover:text-emerald-200">{totalInvestment.toLocaleString()} <span className="text-sm font-sans font-normal text-stone-600">{CURRENCY}</span></div>
+                        <div className="text-3xl font-display font-bold text-white tracking-tight group-hover:text-emerald-200">{Math.floor(totalInvestment).toLocaleString()} <span className="text-sm font-sans font-normal text-stone-600">{CURRENCY}</span></div>
                     </div>
 
                     <div
@@ -1132,10 +1189,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         className="bg-stone-900 p-5 border border-stone-800 shadow-lg cursor-pointer hover:bg-stone-800 transition-all transform hover:scale-[1.02] active:scale-95 group"
                     >
                         <div className="flex justify-between items-start mb-2">
-                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-purple-400 transition-colors">{t('admin.total_daily_profit')}</span>
-                            <LayoutDashboard size={16} className="text-purple-400" />
+                            <span className="text-stone-500 text-xs uppercase tracking-widest group-hover:text-purple-400 transition-colors">{t('admin.total_user_balance')}</span>
+                            <Wallet size={16} className="text-purple-400" />
                         </div>
-                        <div className="text-3xl font-display font-bold text-white group-hover:text-purple-200">+{totalDailyProduction.toFixed(1)}</div>
+                        <div className="text-3xl font-display font-bold text-white group-hover:text-purple-200">{Math.floor(totalUserBalance).toLocaleString()} <span className="text-sm font-sans font-normal text-stone-600">{CURRENCY}</span></div>
                     </div>
                 </div>
 
@@ -1166,28 +1223,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                             <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
                                 <div className="text-xs text-stone-500 uppercase font-bold mb-1">พลังงาน/ไอเทม/OC</div>
-                                <div className="text-2xl font-mono font-bold text-emerald-400">+{globalRevenue.energy_items.toLocaleString()}</div>
+                                <div className="text-2xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.energy_items).toLocaleString()}</div>
                             </div>
                             <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
                                 <div className="text-xs text-stone-500 uppercase font-bold mb-1">ค่าธรรมเนียมตลาด</div>
-                                <div className="text-2xl font-mono font-bold text-emerald-400">+{globalRevenue.market_fees.toLocaleString()}</div>
+                                <div className="text-2xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.market_fees).toLocaleString()}</div>
                             </div>
                             <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors group relative">
                                 <div className="text-xs text-stone-500 uppercase font-bold mb-1">ค่าธรรมเนียมถอน</div>
-                                <div className="text-2xl font-mono font-bold text-emerald-400">+{globalRevenue.withdrawal_fees.toLocaleString()}</div>
+                                <div className="text-2xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.withdrawal_fees).toLocaleString()}</div>
                                 <div className="absolute top-2 right-2 flex flex-col items-end opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <span className="text-[10px] text-stone-400">BANK: {globalRevenue.withdrawal_fees_bank.toLocaleString()}</span>
-                                    <span className="text-[10px] text-blue-400">USDT: {globalRevenue.withdrawal_fees_usdt.toLocaleString()}</span>
+                                    <span className="text-[10px] text-stone-400">BANK: {Math.floor(globalRevenue.withdrawal_fees_bank).toLocaleString()}</span>
+                                    <span className="text-[10px] text-blue-400">USDT: {Math.floor(globalRevenue.withdrawal_fees_usdt).toLocaleString()}</span>
                                 </div>
                             </div>
                             <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
                                 <div className="text-xs text-stone-500 uppercase font-bold mb-1">ค่าบริการซ่อม</div>
-                                <div className="text-2xl font-mono font-bold text-emerald-400">+{globalRevenue.repair_fees.toLocaleString()}</div>
+                                <div className="text-2xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.repair_fees).toLocaleString()}</div>
                             </div>
                             <div className="bg-yellow-900/10 p-4 rounded border border-yellow-500/30 hover:bg-yellow-900/20 transition-colors">
                                 <div className="text-xs text-yellow-500 uppercase font-bold mb-1">รายได้รวมทั้งหมด</div>
-                                <div className="text-2xl font-mono font-bold text-yellow-400">+{globalRevenue.total.toLocaleString()} {CURRENCY}</div>
+                                <div className="text-2xl font-mono font-bold text-yellow-400">+{Math.floor(globalRevenue.total).toLocaleString()} {CURRENCY}</div>
                             </div>
+                        </div>
+
+                        {/* Revenue Adjustment Form */}
+                        <div className="flex flex-col md:flex-row items-end gap-3 mt-4 pt-4 border-t border-stone-800/50">
+                            <div className="flex-1 w-full">
+                                <label className="block text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.adjust_reason')}</label>
+                                <input
+                                    type="text"
+                                    placeholder={t('admin.adjust_reason')}
+                                    className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-sm text-white focus:border-yellow-600 outline-none transition-colors"
+                                    value={adjustForm.reason}
+                                    onChange={(e) => setAdjustForm(prev => ({ ...prev, reason: e.target.value }))}
+                                />
+                            </div>
+                            <div className="w-full md:w-48">
+                                <label className="block text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.adjust_amount')}</label>
+                                <input
+                                    type="number"
+                                    placeholder="0"
+                                    className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-sm text-emerald-400 font-mono focus:border-yellow-600 outline-none transition-colors"
+                                    value={adjustForm.amount === 0 ? '' : adjustForm.amount}
+                                    onChange={(e) => setAdjustForm(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                                />
+                            </div>
+                            <button
+                                onClick={handleAdjustRevenue}
+                                disabled={!adjustForm.amount}
+                                className="w-full md:w-auto px-6 py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-stone-800 disabled:text-stone-600 text-stone-900 font-bold rounded text-sm transition-all shadow-lg flex items-center justify-center gap-2"
+                            >
+                                <CheckCircle2 size={16} />
+                                {t('admin.adjust_revenue')}
+                            </button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-stone-800/50">
                             <div className="bg-stone-950/50 p-4 rounded border border-stone-800 flex items-center justify-between">
@@ -1196,12 +1285,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     <div className="flex gap-4">
                                         <div>
                                             <span className="text-xs text-stone-400 block">Bank</span>
-                                            <span className="text-lg font-mono font-bold text-white">{globalRevenue.bank_deposits.toLocaleString()}</span>
+                                            <span className="text-lg font-mono font-bold text-white">{Math.floor(globalRevenue.bank_deposits).toLocaleString()}</span>
                                         </div>
                                         <div className="w-px h-8 bg-stone-800 self-center"></div>
                                         <div>
                                             <span className="text-xs text-blue-400 block">USDT</span>
-                                            <span className="text-lg font-mono font-bold text-blue-400">{globalRevenue.usdt_deposits.toLocaleString()}</span>
+                                            <span className="text-lg font-mono font-bold text-blue-400">{Math.floor(globalRevenue.usdt_deposits).toLocaleString()}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1215,12 +1304,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     <div className="flex gap-4">
                                         <div>
                                             <span className="text-xs text-stone-400 block">Bank</span>
-                                            <span className="text-lg font-mono font-bold text-white">{globalRevenue.bank_withdrawals.toLocaleString()}</span>
+                                            <span className="text-lg font-mono font-bold text-white">{Math.floor(globalRevenue.bank_withdrawals).toLocaleString()}</span>
                                         </div>
                                         <div className="w-px h-8 bg-stone-800 self-center"></div>
                                         <div>
                                             <span className="text-xs text-blue-400 block">USDT</span>
-                                            <span className="text-lg font-mono font-bold text-blue-400">{globalRevenue.usdt_withdrawals.toLocaleString()}</span>
+                                            <span className="text-lg font-mono font-bold text-blue-400">{Math.floor(globalRevenue.usdt_withdrawals).toLocaleString()}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1285,7 +1374,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                 <span className="text-stone-600 font-bold">-</span>
                                             ) : (
                                                 <>
-                                                    <div className="font-mono font-bold text-emerald-400 text-sm">{u.balance.toLocaleString()}</div>
+                                                    <div className="font-mono font-bold text-emerald-400 text-sm">{Math.floor(u.balance).toLocaleString()}</div>
                                                     <div className="text-[10px] text-stone-600">{CURRENCY}</div>
                                                 </>
                                             )}
@@ -1297,7 +1386,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             </div>
                                         </td>
                                         <td className="p-4 text-right">
-                                            <div className="font-mono font-bold text-emerald-400 text-sm">+{getDailyProfitForUser(u.id).toLocaleString()}</div>
+                                            <div className="font-mono font-bold text-emerald-400 text-sm">+{Math.floor(getDailyProfitForUser(u.id)).toLocaleString()}</div>
                                             <div className="text-[10px] text-stone-600">{CURRENCY}/Day</div>
                                         </td>
                                         <td className="p-4 text-center">

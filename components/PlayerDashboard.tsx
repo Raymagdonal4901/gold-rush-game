@@ -461,7 +461,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             setTimeout(() => {
                 refreshData();
             }, 500);
-            addNotification({ id: Date.now().toString(), userId: user.id, message: `ชำระค่าไฟเรียบร้อย -${formatCurrency(cost)}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            addNotification({ id: Date.now().toString(), userId: user.id, message: language === 'th' ? `ชำระค่าไฟเรียบร้อย -${formatCurrency(cost)}` : `Energy refilled -${formatCurrency(cost)}`, type: 'SUCCESS', read: false, timestamp: Date.now() });
         } catch (e: any) {
             addNotification({
                 id: Date.now().toString(),
@@ -1024,7 +1024,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         }
     };
 
-    const rigDaily = rigs.reduce((acc, rig) => {
+    const { totalBaseDaily, totalEquipmentDaily } = rigs.reduce((acc, rig) => {
         // Exclude rigs currently in an expedition
         if (user.activeExpedition && user.activeExpedition.rigId === rig.id && !user.activeExpedition.isCompleted) {
             return acc;
@@ -1047,8 +1047,16 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             }
             return sum;
         }, 0);
-        return acc + baseDailyProfit + effectiveBonusProfit + equippedBonus;
-    }, 0) * globalMultiplier * currentOverclockMultiplier;
+
+        acc.totalBaseDaily += baseDailyProfit + effectiveBonusProfit;
+        acc.totalEquipmentDaily += equippedBonus;
+        return acc;
+    }, { totalBaseDaily: 0, totalEquipmentDaily: 0 });
+
+    const totalMultiplier = globalMultiplier * currentOverclockMultiplier;
+    const rigDaily = (totalBaseDaily + totalEquipmentDaily) * totalMultiplier;
+    const finalBaseDaily = totalBaseDaily * totalMultiplier;
+    const finalEquipmentDaily = totalEquipmentDaily * totalMultiplier;
 
 
 
@@ -1221,6 +1229,22 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                 {hasVibranium && isPowered && <span className="text-[10px] sm:text-xs bg-purple-900/50 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500 animate-pulse font-mono">x2 Boost</span>}
                                 {!isPowered && <span className="text-[10px] sm:text-xs bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded border border-red-500 font-bold animate-pulse">{language === 'th' ? 'หยุดทำงาน' : 'SHUTDOWN'}</span>}
                             </div>
+                            {isPowered && (
+                                <div className="flex flex-col gap-0.5 mt-1 ml-1 overflow-hidden">
+                                    <div className="flex items-center gap-1.5 opacity-70">
+                                        <Clock size={10} className="text-stone-400" />
+                                        <span className="text-[10px] text-stone-500 font-bold">
+                                            {t('rig.daily_profit')} +{formatCurrency(finalBaseDaily, { precision: 2 })}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 opacity-70">
+                                        <Briefcase size={10} className="text-stone-400" />
+                                        <span className="text-[10px] text-stone-500 font-bold">
+                                            {t('rig.equipment_bonus')} +{formatCurrency(finalEquipmentDaily, { precision: 2 })}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -1379,7 +1403,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                     `}
                                 >
                                     <Zap size={12} className="fill-white animate-pulse" />
-                                    {energyLevel >= 100 ? `${t('dashboard.refill_energy')} (${t('dashboard.refill_full')})` : `${t('dashboard.refill_energy')} (2 ฿)`}
+                                    {energyLevel >= 100 ? `${t('dashboard.refill_energy')} (${t('dashboard.refill_full')})` : `${t('dashboard.refill_energy')} (${formatCurrency(ENERGY_CONFIG.MIN_REFILL_FEE)})`}
                                 </button>
 
                                 {/* 2. Overclock Toggle (Mobile Style) */}
@@ -1406,7 +1430,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                             <Zap size={22} className={isOverclockActive ? 'text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.8)] animate-pulse' : 'group-hover/paybtn:text-emerald-500 transition-colors'} />
                                         </div>
                                         <span className={`text-[10px] font-bold uppercase leading-none ${isOverclockActive ? 'text-emerald-400' : 'text-stone-300'}`}>
-                                            {isOverclockActive ? 'ACTIVE' : (user.overclockRemainingMs || 0) > 0 ? (language === 'th' ? 'ต่อเวลา' : 'RESUME') : '50 ฿'}
+                                            {isOverclockActive ? 'ACTIVE' : (user.overclockRemainingMs || 0) > 0 ? (language === 'th' ? 'ต่อเวลา' : 'RESUME') : formatCurrency(ENERGY_CONFIG.OVERCLOCK_REFILL_COST)}
                                         </span>
                                         <span className="text-[7px] opacity-60 font-bold uppercase leading-none tracking-tighter">
                                             Speed x{isOverclockActive ? currentOverclockMultiplier : getOverclockMultiplier(rigs.length)}
@@ -1456,7 +1480,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col">
-                                                    <span className="text-[11px] font-bold text-emerald-500 tracking-tight">{t('dashboard.overclock_desc')}</span>
+                                                    <span className="text-[11px] font-bold text-emerald-500 tracking-tight">{t('dashboard.overclock_desc', { amount: formatCurrency(ENERGY_CONFIG.OVERCLOCK_REFILL_COST) })}</span>
                                                     <span className="text-[9px] text-stone-500 font-mono italic">{t('dashboard.overclock_timer')}</span>
                                                 </div>
                                             )}

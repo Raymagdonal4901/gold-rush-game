@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, QrCode, ArrowRight, CheckCircle, Upload, AlertCircle, ScanLine, Clock, FileText } from 'lucide-react';
-import { CURRENCY, TRANSACTION_LIMITS, EXCHANGE_RATE_USD_THB } from '../constants';
+import { CURRENCY, TRANSACTION_LIMITS, EXCHANGE_RATE_USD_THB, EXCHANGE_RATE_USDT_THB } from '../constants';
 import { api } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
 import { User } from '../services/types';
@@ -42,11 +42,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
     }, [isOpen]);
 
     const handleNextStep = () => {
-        let val = parseFloat(amount);
-        if (depositCurrency === 'THB') {
-            val = val / EXCHANGE_RATE_USD_THB;
-        }
-        if (isNaN(val) || val < TRANSACTION_LIMITS.DEPOSIT.MIN || val > TRANSACTION_LIMITS.DEPOSIT.MAX) return;
+        const val = parseFloat(amount);
+        const limits = depositCurrency === 'USD' ? (TRANSACTION_LIMITS as any).DEPOSIT_USD : TRANSACTION_LIMITS.DEPOSIT;
+
+        if (isNaN(val) || val < limits.MIN || val > limits.MAX) return;
         setStep('PAYMENT');
     };
 
@@ -70,9 +69,11 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
         setIsLoading(true);
 
         // Create Pending Request
+        // Normalize all deposits to THB for backend (consistent with balance storage)
         let finalAmount = parseFloat(amount);
-        if (depositCurrency === 'THB') {
-            finalAmount = finalAmount / EXCHANGE_RATE_USD_THB;
+        if (depositCurrency === 'USD') {
+            const { EXCHANGE_RATE_USDT_THB } = require('../constants');
+            finalAmount = finalAmount * EXCHANGE_RATE_USDT_THB;
         }
 
         // For USDT we use a placeholder slip or indicate it's a USDT direct transfer
@@ -119,9 +120,12 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
 
     if (!isOpen) return null;
 
+    const currentLimits = depositCurrency === 'USD' ? (TRANSACTION_LIMITS as any).DEPOSIT_USD : TRANSACTION_LIMITS.DEPOSIT;
+    const quickAddValues = depositCurrency === 'USD' ? [10, 50, 100] : [500, 1000, 2000];
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-4">
-            <div className="bg-stone-900 border border-stone-700 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]">
+            <div className="bg-stone-900 border border-stone-700 w-[95%] sm:w-full sm:max-w-sm rounded-2xl shadow-2xl overflow-hidden relative flex flex-col max-h-[85vh]">
 
                 {/* Header */}
                 <div className="bg-gradient-to-r from-emerald-900/40 to-stone-900 p-4 border-b border-emerald-900/30 flex justify-between items-center shrink-0">
@@ -172,23 +176,23 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
                                             autoFocus
                                             className="w-full bg-stone-950 border border-stone-800 rounded-xl py-4 px-4 text-center text-3xl font-mono font-bold text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all placeholder:text-stone-800"
                                         />
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-stone-600 font-bold">{depositCurrency === 'THB' ? '฿' : CURRENCY}</span>
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-stone-600 font-bold">{depositCurrency === 'THB' ? '฿' : '$'}</span>
                                     </div>
                                 </div>
-                                {depositCurrency === 'THB' && amount && !isNaN(parseFloat(amount)) && (
+                                {depositCurrency === 'USD' && amount && !isNaN(parseFloat(amount)) && (
                                     <div className="flex items-center justify-center gap-2 text-stone-500 text-xs font-mono">
                                         <span>≈</span>
-                                        <span className="text-emerald-500 font-bold">{(parseFloat(amount) / EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {CURRENCY}</span>
+                                        <span className="text-emerald-500 font-bold">{(parseFloat(amount) * EXCHANGE_RATE_USDT_THB).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ฿</span>
                                     </div>
                                 )}
 
                                 <p className="text-xs text-stone-500">
-                                    {t('common.min')} {formatCurrency(TRANSACTION_LIMITS.DEPOSIT.MIN, { forceUSD: depositCurrency === 'USD', forceTHB: depositCurrency === 'THB' })} - {t('common.max')} {formatCurrency(TRANSACTION_LIMITS.DEPOSIT.MAX, { forceUSD: depositCurrency === 'USD', forceTHB: depositCurrency === 'THB' })}
+                                    {t('common.min')} {depositCurrency === 'USD' ? `$${currentLimits.MIN}` : `${currentLimits.MIN.toLocaleString()} ฿`} - {t('common.max')} {depositCurrency === 'USD' ? `$${currentLimits.MAX}` : `${currentLimits.MAX.toLocaleString()} ฿`}
                                 </p>
                             </div>
 
                             <div className="grid grid-cols-3 gap-2">
-                                {[10, 50, 100].map(val => (
+                                {quickAddValues.map(val => (
                                     <button
                                         key={val}
                                         onClick={() => setAmount(val.toString())}
@@ -201,6 +205,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
 
                             <button
                                 onClick={handleNextStep}
+                                disabled={!amount || parseFloat(amount) < currentLimits.MIN || parseFloat(amount) > currentLimits.MAX}
                                 className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-800 disabled:text-stone-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-900/20 transition-all flex items-center justify-center gap-2 mt-4"
                             >
                                 {t('deposit.proceed')} <ArrowRight size={18} />

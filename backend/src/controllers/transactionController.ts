@@ -69,12 +69,15 @@ export const createWithdrawalRequest = async (req: AuthRequest, res: Response) =
             }
         }
 
-        if (user.balance < amount) {
-            return res.status(400).json({ message: 'Insufficient balance' });
+        const USDT_RATE = 31;
+        const thbAmount = method === 'USDT' ? amount * USDT_RATE : amount;
+
+        if (user.balance < thbAmount) {
+            return res.status(400).json({ message: 'ยอดเงินคงเหลือไม่เพียงพอ (Insufficient balance)' });
         }
 
         // Deduct balance immediately upon request
-        user.balance -= amount;
+        user.balance -= thbAmount;
         await user.save();
 
         const withdrawal = await WithdrawalRequest.create({
@@ -186,6 +189,12 @@ export const createDepositRequest = async (req: AuthRequest, res: Response) => {
 
         if (!amount || !slipImage) {
             return res.status(400).json({ message: 'Amount and Slip Image are required' });
+        }
+
+        const systemAmount = Number(amount);
+        // Max limit is based on 200 USD (200 * 31 = 6,200 THB)
+        if (isNaN(systemAmount) || systemAmount < 200 || systemAmount > 6200) {
+            return res.status(400).json({ message: 'Deposit amount must be between 200 and 6,200 THB' });
         }
 
         const user = await User.findById(userId);

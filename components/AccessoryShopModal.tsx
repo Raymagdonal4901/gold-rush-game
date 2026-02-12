@@ -830,8 +830,8 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md p-4">
-            <div className="bg-stone-950 border border-yellow-900/50 w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 overflow-y-auto">
+            <div className="bg-stone-950 border border-yellow-900/50 w-[95%] sm:w-full sm:max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
                 <div className="bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 border-b border-stone-800 shrink-0">
                     <div className="p-4 flex justify-between items-center">
                         <div className="flex items-center gap-4">
