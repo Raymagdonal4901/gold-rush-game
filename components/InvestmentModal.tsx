@@ -40,7 +40,10 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
   const handleBuy = (preset: RigPreset) => {
     // 1. Check Max Allowed
     if (preset.specialProperties?.maxAllowed) {
-      const existingCount = rigs.filter(r => getLocalized(r.name) === getLocalized(preset.name)).length;
+      const existingCount = rigs.filter(r => {
+        const rName = typeof r.name === 'string' ? r.name : (r.name?.th || r.name?.en);
+        return rName === preset.name.th || rName === preset.name.en;
+      }).length;
       if (existingCount >= preset.specialProperties.maxAllowed) {
         if (addNotification) addNotification({
           id: Date.now().toString(),
@@ -178,7 +181,10 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
               // Check Max Limit
               let isMaxReached = false;
               if (preset.specialProperties?.maxAllowed) {
-                const existingCount = rigs.filter(r => getLocalized(r.name) === getLocalized(preset.name)).length;
+                const existingCount = rigs.filter(r => {
+                  const rName = typeof r.name === 'string' ? r.name : (r.name?.th || r.name?.en);
+                  return rName === preset.name.th || rName === preset.name.en;
+                }).length;
                 if (existingCount >= preset.specialProperties.maxAllowed) isMaxReached = true;
               }
 

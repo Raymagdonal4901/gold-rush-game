@@ -301,6 +301,10 @@ export const api = {
                 }
             })) as User[];
         },
+        deleteRig: async (rigId: string): Promise<any> => {
+            const res = await client.delete(`/admin/rigs/${rigId}`);
+            return res.data;
+        },
         getRigs: async (): Promise<OilRig[]> => {
             const res = await client.get('/admin/rigs');
             // We need to map rigs here too if format differs

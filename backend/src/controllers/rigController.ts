@@ -71,6 +71,21 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ message: 'เครื่องจักรนี้ไม่สามารถผลิตได้ หรือชื่อไม่ถูกต้อง' });
         }
 
+        // --- ENFORCE MAX ALLOWED (ID 8: Vibranium Reactor) ---
+        if (preset.id === 8) {
+            const userRigs = await Rig.find({ ownerId: userId });
+            const alreadyOwned = userRigs.some(r => {
+                const rName = typeof r.name === 'string' ? r.name : (r.name?.th || r.name?.en);
+                return rName === preset.name.th || rName === preset.name.en ||
+                    rName === 'เครื่องขุดปฏิกรณ์ไวเบรเนียม' || rName === 'Vibranium Reactor Rig' ||
+                    rName === 'Vibranium Reactor';
+            });
+
+            if (alreadyOwned) {
+                return res.status(400).json({ message: 'จำกัดการครอบครองเครื่องปฏิกรณ์เพียง 1 เครื่องต่อไอดี (Limited to 1 Reactor per account)' });
+            }
+        }
+
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -164,6 +179,30 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
 
         if (user.balance < investment) {
             return res.status(400).json({ message: 'Insufficient balance' });
+        }
+
+        // --- ENFORCE MAX ALLOWED (Language Agnostic) ---
+        // Restricted names for rigs that should only be bought once (ID 9: Rotten Glove)
+        const restrictedPresets = [
+            { th: 'ถุงมือเน่า', en: 'Rotten Glove' },
+            { th: 'ถุงมือเก่ากึ๊ก (ROTTEN GLOVE)', en: 'Rotten Glove (ROTTEN GLOVE)' } // Legacy/Alternative
+        ];
+
+        const isRestricted = restrictedPresets.some(p =>
+            (typeof name === 'string' && (name === p.th || name === p.en)) ||
+            (typeof name === 'object' && (name.th === p.th || name.en === p.en))
+        );
+
+        if (isRestricted) {
+            const userRigs = await Rig.find({ ownerId: userId });
+            const alreadyOwned = userRigs.some(r => {
+                const rName = typeof r.name === 'string' ? r.name : (r.name?.th || r.name?.en);
+                return restrictedPresets.some(p => rName === p.th || rName === p.en);
+            });
+
+            if (alreadyOwned) {
+                return res.status(400).json({ message: 'จำกัดการครอบครองเพียง 1 เครื่องต่อไอดี (Limited to 1 unit per account)' });
+            }
         }
 
         // Deduct balance

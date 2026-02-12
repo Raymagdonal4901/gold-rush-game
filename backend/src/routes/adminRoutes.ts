@@ -3,7 +3,7 @@ import { authenticate, authorizeAdmin } from '../middleware/auth';
 import {
     getAllUsers, getAllRigs, getSystemConfig, updateSystemConfig,
     getPendingClaims, getPendingWithdrawals, getPendingDeposits, processDepositRequest, processWithdrawalRequest, getUserStats,
-    adminGiveCompensation, adminGiveCompensationAll, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats, adminConvertCurrencyToUSD, resetAllBalances
+    adminGiveCompensation, adminGiveCompensationAll, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats, adminConvertCurrencyToUSD, resetAllBalances, deleteRig
 } from '../controllers/adminController';
 
 const router = express.Router();
@@ -27,6 +27,7 @@ router.post('/withdrawals/:id/process', processWithdrawalRequest);
 router.get('/deposits', getPendingDeposits);
 router.post('/deposits/:id/process', processDepositRequest);
 router.delete('/users/:userId', deleteUser);
+router.delete('/rigs/:rigId', deleteRig);
 router.post('/revenue/clear', clearRevenueStats);
 router.get('/revenue', getGlobalRevenueStats);
 

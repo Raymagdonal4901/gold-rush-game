@@ -604,3 +604,38 @@ export const resetAllBalances = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ message: 'Server error during reset', error });
     }
 };
+// Delete Rig (Admin)
+export const deleteRig = async (req: AuthRequest, res: Response) => {
+    try {
+        const { rigId } = req.params;
+        console.log(`[ADMIN] Deleting rig ${rigId}...`);
+
+        const rig = await Rig.findById(rigId);
+        if (!rig) return res.status(404).json({ message: 'Rig not found' });
+
+        // 1. Remove equipped items from owner's inventory
+        if (rig.ownerId) {
+            const user = await User.findById(rig.ownerId);
+            if (user) {
+                const itemsToDestroy = (rig.slots || []).filter(id => id !== null);
+                if (itemsToDestroy.length > 0) {
+                    console.log(`[ADMIN] Removing ${itemsToDestroy.length} items from user ${user.username}`);
+                    user.inventory = user.inventory.filter((item: any) => {
+                        const itemId = item.id || item._id;
+                        return !itemsToDestroy.includes(itemId.toString());
+                    });
+                    user.markModified('inventory');
+                    await user.save();
+                }
+            }
+        }
+
+        // 2. Delete the rig
+        await Rig.deleteOne({ _id: rigId });
+
+        res.json({ message: 'Rig deleted successfully' });
+    } catch (error) {
+        console.error('[ADMIN ERROR] deleteRig failed:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};

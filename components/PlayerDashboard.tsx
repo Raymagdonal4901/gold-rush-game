@@ -569,7 +569,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
         // Check Max Allowed for Special Rigs
         if (preset.specialProperties?.maxAllowed) {
-            const existingCount = rigs.filter(r => r.name === preset.name).length;
+            const existingCount = rigs.filter(r => {
+                const rName = typeof r.name === 'string' ? r.name : (r.name?.th || r.name?.en);
+                return rName === preset.name.th || rName === preset.name.en;
+            }).length;
             if (existingCount >= preset.specialProperties.maxAllowed) {
                 alert(language === 'th' ? `จำกัดการครอบครองเพียง ${preset.specialProperties.maxAllowed} เครื่องต่อไอดี` : `Limited to ${preset.specialProperties.maxAllowed} units per account`);
                 return;

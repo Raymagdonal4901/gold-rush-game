@@ -247,6 +247,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         }
     };
 
+    const handleDeleteRig = async (rigId: string) => {
+        if (!confirm('Are you sure you want to delete this rig? This action cannot be undone.')) return;
+
+        try {
+            await api.admin.deleteRig(rigId);
+            refreshData();
+            // Update selected user view if open
+            if (selectedUser) {
+                // We need to re-fetch user data or just filter out the rig locally for immediate feedback
+                // Since refreshData updates 'rigs' state, the 'getRigsForUser' will automatically reflect changes.
+                // However, let's force a small delay or manual filter to feel responsive if needed.
+                setRigs(prev => prev.filter(r => r.id !== rigId));
+            }
+            alert('Rig deleted successfully');
+        } catch (error) {
+            console.error("Failed to delete rig", error);
+            alert('Failed to delete rig');
+        }
+    };
+
     const handleClearRevenue = async () => {
         if (!confirm('ยืนยันการเคลียร์รายได้ผู้พัฒนาทั้งหมด? (ข้อมูลรายการที่เกี่ยวข้องจะถูกลบเพื่อเซ็ตยอดเป็น 0)')) return;
 
@@ -572,18 +592,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-stone-800">
-                                                {getRigsForUser(selectedUser.id).map(r => (
-                                                    <tr key={r.id} className="hover:bg-stone-900 transition-colors">
+                                                {getRigsForUser(selectedUser.id).map(r =>
+                                                    <tr key={r.id} className="hover:bg-stone-900 transition-colors group">
                                                         <td className="p-3">
                                                             <div className="font-bold text-stone-200">{getLocalized(r.name)}</div>
                                                             <div className="text-[10px] text-stone-500 font-mono">ID: {r.id}</div>
                                                         </td>
                                                         <td className="p-3 text-right">
-                                                            <div className="font-mono font-bold text-emerald-400">+{(r.dailyProfit + (r.bonusProfit || 0)).toLocaleString()}</div>
-                                                            <div className="text-[10px] text-stone-600">{CURRENCY}/Day</div>
+                                                            <div className="flex items-center justify-end gap-3">
+                                                                <div>
+                                                                    <div className="font-mono font-bold text-emerald-400">+{(r.dailyProfit + (r.bonusProfit || 0)).toLocaleString()}</div>
+                                                                    <div className="text-[10px] text-stone-600">{CURRENCY}/Day</div>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => handleDeleteRig(r.id)}
+                                                                    className="p-1.5 text-stone-600 hover:text-red-500 hover:bg-red-900/20 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                                                    title="Delete Rig"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
-                                                ))}
+                                                )}
                                             </tbody>
                                         </table>
                                     ) : (
