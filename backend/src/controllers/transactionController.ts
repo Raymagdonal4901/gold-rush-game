@@ -31,7 +31,7 @@ export const createWithdrawalRequest = async (req: AuthRequest, res: Response) =
             }
         } else {
             // Default BANK (Use slight tolerance for floating point)
-            if (amount < 2.857 || amount > 28.572) {
+            if (amount < 100 || amount > 1000) {
                 return res.status(400).json({ message: 'ถอนเงินขั้นต่ำ 100 บาท และสูงสุด 1,000 บาท' });
             }
         }

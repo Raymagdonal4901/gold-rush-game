@@ -80,7 +80,7 @@ export const SlotUnlockModal: React.FC<SlotUnlockModalProps> = ({ isOpen, onClos
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-white">ปลดล็อกพื้นที่เพิ่ม</h2>
-                            <p className="text-xs text-stone-500 uppercase tracking-wider">SLOT #{targetSlot}: {config.title}</p>
+                            <p className="text-xs text-stone-500 uppercase tracking-wider">SLOT #{targetSlot}: {getLocalized(config.title)}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
@@ -99,7 +99,7 @@ export const SlotUnlockModal: React.FC<SlotUnlockModalProps> = ({ isOpen, onClos
                                 <div className="bg-yellow-900/20 p-1.5 rounded"><Coins size={16} className="text-yellow-500" /></div>
                                 <span className="text-sm font-bold text-stone-300">ค่าก่อสร้าง</span>
                             </div>
-                            <div className={user.balance >= config.cost ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                            <div className={(user?.balance || 0) >= config.cost ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
                                 {config.cost.toLocaleString()} {CURRENCY}
                             </div>
                         </div>
@@ -150,8 +150,8 @@ export const SlotUnlockModal: React.FC<SlotUnlockModalProps> = ({ isOpen, onClos
                     >
                         {loading ? 'กำลังก่อสร้าง...' : canUnlock ? 'ยืนยันการปลดล็อก' : 'ทรัพยากรไม่เพียงพอ'}
                     </button>
-
                 </div>
+
             </div>
         </div>
     );
