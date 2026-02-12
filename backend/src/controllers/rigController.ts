@@ -460,7 +460,7 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
         user.inventory.push(newKey);
         user.markModified('inventory');
 
-        rig.lastCollectionAt = new Date(); // Reset cooldown
+        rig.lastGiftAt = new Date(); // Reset cooldown
         await rig.save();
         await user.save();
 

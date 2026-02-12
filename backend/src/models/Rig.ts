@@ -15,6 +15,7 @@ export interface IRig extends Document {
     lastEnergyUpdate: Date;
     lastCollectionAt?: Date;
     lastClaimAt?: Date;
+    lastGiftAt?: Date;
 }
 const RigSchema = new Schema<IRig>({
     ownerId: { type: String, required: true },
@@ -31,6 +32,7 @@ const RigSchema = new Schema<IRig>({
     energy: { type: Number, default: 100 },
     lastEnergyUpdate: { type: Date, default: Date.now },
     lastCollectionAt: { type: Date },
-    lastClaimAt: { type: Date }
+    lastClaimAt: { type: Date },
+    lastGiftAt: { type: Date }
 });
 export default mongoose.model<IRig>('Rig', RigSchema);
