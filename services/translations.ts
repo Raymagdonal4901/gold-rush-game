@@ -16,7 +16,7 @@ const landingEn = {
     },
     stats: {
         totalPlayers: "Total Players",
-        totalInvestment: "Total Investment",
+        totalInvestment: "Market Cap",
         activeRigs: "Active Rigs",
         avgRoi: "Avg ROI"
     },
@@ -111,7 +111,7 @@ const landingTh = {
     },
     stats: {
         totalPlayers: "ผู้เล่นทั้งหมด",
-        totalInvestment: "ยอดเงินลงทุนรวม",
+        totalInvestment: "มูลค่าตลาด",
         activeRigs: "เครื่องขุดที่ทำงาน",
         avgRoi: "ผลตอบแทนเฉลี่ย"
     },

@@ -182,6 +182,11 @@ export const api = {
     },
 
 
+    getLandingStats: async (): Promise<{ usersCount: number; activeRigs: number; marketCap: number }> => {
+        const res = await client.get('/auth/stats');
+        return res.data;
+    },
+
     // Accessories
     buyAccessory: async (item: Partial<AccessoryItem>): Promise<any> => {
         const response = await client.post('/accessories/buy', item);

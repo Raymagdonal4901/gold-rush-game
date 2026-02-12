@@ -8,14 +8,24 @@ import { AlertTriangle } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 import { WhitepaperPage } from './components/WhitepaperPage';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { STORAGE_KEYS } from './constants';
 
 const AppContent: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SESSION);
+    return saved ? JSON.parse(saved) : null;
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isSystemMaintenance, setIsSystemMaintenance] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
   const [showWhitepaper, setShowWhitepaper] = useState(false);
   // ... existing useEffect and component logic ...
+
+  useEffect(() => {
+    console.log('--- SYSTEM CORE INITIALIZED ---');
+    console.log('API URL:', (import.meta as any).env.VITE_API_URL || 'http://localhost:5001/api (Default)');
+    console.log('Current Session:', user?.username || 'Guest');
+  }, [user]);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -35,10 +45,12 @@ const AppContent: React.FC = () => {
           try {
             const userData = await api.getMe();
             setUser(userData);
+            localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(userData)); // Save user data to session
             setShowLanding(false); // Skip landing if logged in
           } catch (authError) {
             console.error('[SYSTEM] Token invalid', authError);
             localStorage.removeItem('token');
+            localStorage.removeItem(STORAGE_KEYS.SESSION); // Clear session if token invalid
           }
         }
       } catch (err) {

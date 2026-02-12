@@ -18,6 +18,29 @@ export const getPublicConfig = async (req: Request, res: Response) => {
     }
 };
 
+// Public Stats for Landing Page
+export const getLandingStats = async (req: Request, res: Response) => {
+    try {
+        const usersCount = await User.countDocuments();
+        const activeRigs = await Rig.countDocuments();
+
+        // Match Admin Dashboard "Total Investment" logic (Sum of user totalInvested)
+        const userInvestments = await User.aggregate([
+            { $group: { _id: null, total: { $sum: "$totalInvested" } } }
+        ]);
+        const marketCap = userInvestments.length > 0 ? userInvestments[0].total : 0;
+
+        res.json({
+            usersCount,
+            activeRigs,
+            marketCap: Math.floor(marketCap),
+            debugTimestamp: Date.now()
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
 // Register
 export const register = async (req: Request, res: Response) => {
     try {

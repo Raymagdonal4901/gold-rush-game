@@ -41,6 +41,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
         { id: 8, key: 't8', name: 'Vibranium Reactor', theme: 'purple', tier: 8, special: true },
     ];
 
+    const [stats, setStats] = React.useState({
+        usersCount: 0,
+        activeRigs: 0,
+        marketCap: 0
+    });
+
+    React.useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const data = await api.getLandingStats();
+                setStats(data);
+            } catch (error) {
+                console.error("Failed to fetch landing stats", error);
+            }
+        };
+        fetchStats();
+    }, []);
+
     React.useEffect(() => {
         const fetchMarket = async () => {
             try {
@@ -223,9 +241,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
 
                     <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto border-t border-stone-800 pt-8 animate-in fade-in zoom-in duration-1000 delay-500">
                         {[
-                            { label: t('landing.stats.totalPlayers'), value: '28' },
-                            { label: t('landing.stats.totalInvestment'), value: '฿34,658' },
-                            { label: t('landing.stats.activeRigs'), value: '52' },
+                            { label: t('landing.stats.totalPlayers'), value: stats.usersCount.toLocaleString() },
+                            { label: t('landing.stats.totalInvestment'), value: formatCurrency(stats.marketCap, { showDecimals: false }) },
+                            { label: t('landing.stats.activeRigs'), value: stats.activeRigs.toLocaleString() },
                             { label: t('landing.stats.avgRoi'), value: '18-25%' },
                         ].map((stat, i) => (
                             <div key={i} className="text-center">
