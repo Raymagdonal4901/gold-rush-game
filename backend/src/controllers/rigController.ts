@@ -390,6 +390,17 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
         const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
         if (!rig) return res.status(404).json({ message: 'Rig not found' });
 
+        // Server-side validation: Check if enough time has passed
+        const now = new Date();
+        const lastCollection = rig.lastCollectionAt ? new Date(rig.lastCollectionAt).getTime() : new Date(rig.purchaseDate).getTime();
+        const elapsed = Math.max(0, now.getTime() - lastCollection);
+        const DROP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 Hours
+
+        let generated = Math.floor(elapsed / DROP_INTERVAL_MS);
+        if (generated < 1) {
+            return res.status(400).json({ message: 'ยังไม่ถึงรอบเวลาการเก็บรวบรวมไอเทม' });
+        }
+
         // ALL Rigs now exclusively drop Chest Keys
         const newKey = {
             id: Math.random().toString(36).substr(2, 9),
@@ -407,7 +418,7 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
 
         if (!user.inventory) user.inventory = [];
         user.inventory.push(newKey);
-        rig.lastCollectionAt = new Date();
+        rig.lastCollectionAt = now;
 
         await user.save();
         await rig.save();
@@ -423,7 +434,7 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
         await keyTx.save();
 
         console.log(`[DEBUG_COLLECT] Success. User: ${userId}, Rig: ${rigId}, Item: Mining Key`);
-        return res.json({ success: true, item: newKey });
+        return res.json({ success: true, item: newKey, rig });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -440,6 +451,21 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
 
         const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
         if (!rig) return res.status(404).json({ message: 'Rig not found' });
+
+        // Server-side validation: Check gift cycle (default 1 day)
+        const GIFT_CYCLE_DAYS = 1;
+        const now = new Date();
+        const lastGift = rig.lastGiftAt ? new Date(rig.lastGiftAt).getTime() : new Date(rig.purchaseDate).getTime();
+
+        let boost = 1;
+        if (user.overclockExpiresAt && user.overclockExpiresAt.getTime() > now.getTime()) {
+            boost = 2; // Match frontend BOX_DROP_SPEED_BOOST logic
+        }
+
+        const giftIntervalMs = (GIFT_CYCLE_DAYS * 24 * 60 * 60 * 1000) / boost;
+        if (now.getTime() - lastGift < giftIntervalMs) {
+            return res.status(400).json({ message: 'ยังไม่ถึงเวลาเปิดกล่องของขวัญ' });
+        }
 
         // ALL Rig Gifts now exclusively drop Chest Keys
         const newKey = {
@@ -460,7 +486,7 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
         user.inventory.push(newKey);
         user.markModified('inventory');
 
-        rig.lastGiftAt = new Date(); // Reset cooldown
+        rig.lastGiftAt = now; // Reset cooldown
         await rig.save();
         await user.save();
 
@@ -477,6 +503,7 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
         res.json({
             type: 'ITEM',
             item: newKey,
+            rig,
             materials: user.materials // Return current state for sync
         });
 
