@@ -19,6 +19,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { api } from '../services/api';
 import { MATERIAL_CONFIG } from '../constants';
 import { OilRigAnimation } from './OilRigAnimation';
+import { TermsModal } from './TermsModal';
 
 interface LandingPageProps {
     onPlayNow: () => void;
@@ -46,6 +47,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
         activeRigs: 0,
         marketCap: 0
     });
+    const [showTerms, setShowTerms] = React.useState(false);
 
     React.useEffect(() => {
         const fetchStats = async () => {
@@ -233,6 +235,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
                         >
                             {t('landing.hero.startMining')}
                         </button>
+                        <a
+                            href="https://line.me/ti/g2/d_jd00pEBf2EKWFyQdkrc2B3FgpwUpZv_ghT0w?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full sm:w-auto bg-[#06C755] hover:bg-[#05b34c] text-white text-lg font-bold py-4 px-10 rounded-lg transition-all flex items-center justify-center gap-2 group shadow-[0_0_20px_rgba(6,199,85,0.3)] hover:shadow-[0_0_40px_rgba(6,199,85,0.5)] transform hover:-translate-y-1"
+                        >
+                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                                <path d="M21.928 11.607c-.12-4.887-4.482-9.61-10.435-9.605-6.224.005-11.458 4.757-11.488 10.154-.02 3.32 1.954 6.273 5.05 8.163.636.388.932 1.34.73 2.193l-.332 1.765c-.1.527.28.918.73.616l4.636-3.11c.54-.36 1.155-.51 1.738-.458 5.673.504 10.49-3.235 9.37-9.718zm-11.77 2.112h-2.203c-.302 0-.547-.245-.547-.547V8.92c0-.302.245-.547.547-.547.302 0 .547.245.547.547v3.702h1.656c.302 0 .547.245.547.547 0 .302-.245.547-.547.547zm4.27 0h-.547c-.302 0-.547-.245-.547-.547V8.92c0-.302.245-.547.547-.547.302 0 .547.245.547.547v4.25c0 .302-.245.547-.547.547zm3.177 0h-.57c-.302 0-.547-.245-.547-.547V8.92c0-.302.245-.547.547-.547.302 0 .547.245.547.547v2.964l-2.004-2.82c-.114-.15-.29-.24-.48-.24h-.548c-.302 0-.547.245-.547.547v4.25c0 .302.245.547.547.547.302 0 .547-.245.547-.547V10.1l2.008 2.822c.11.154.29.24.48.24h.57c.302 0 .547-.245.547-.547V8.918c0-.302-.245-.547-.547-.547-.302 0-.547.245-.547.547v4.25c.002.302.247.55.55.55z" />
+                            </svg>
+                            <span>Line</span>
+                        </a>
                         <button onClick={onWhitepaper} className="w-full sm:w-auto bg-[#2a2a2a] hover:bg-[#333] border border-stone-700 text-white text-lg font-bold py-4 px-10 rounded-lg transition-all flex items-center justify-center gap-2 group">
                             <span className="group-hover:text-yellow-400 transition-colors uppercase">{t('landing.hero.whitepaper')}</span>
                             <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -737,15 +750,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
                     <div>
                         <h4 className="text-white font-bold uppercase tracking-wider mb-4">{t('landing.footer.community')}</h4>
                         <ul className="space-y-2">
-                            <li><a href="#" className="hover:text-yellow-500 transition-colors">Discord Server</a></li>
+                            <li>
+                                <a
+                                    href="https://line.me/ti/g2/d_jd00pEBf2EKWFyQdkrc2B3FgpwUpZv_ghT0w?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-[#06C755] transition-colors flex items-center gap-2"
+                                >
+                                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#06C755]">
+                                        <path d="M21.928 11.607c-.12-4.887-4.482-9.61-10.435-9.605-6.224.005-11.458 4.757-11.488 10.154-.02 3.32 1.954 6.273 5.05 8.163.636.388.932 1.34.73 2.193l-.332 1.765c-.1.527.28.918.73.616l4.636-3.11c.54-.36 1.155-.51 1.738-.458 5.673.504 10.49-3.235 9.37-9.718zm-11.77 2.112h-2.203c-.302 0-.547-.245-.547-.547V8.92c0-.302.245-.547.547-.547.302 0 .547.245.547.547v3.702h1.656c.302 0 .547.245.547.547 0 .302-.245.547-.547.547zm4.27 0h-.547c-.302 0-.547-.245-.547-.547V8.92c0-.302.245-.547.547-.547.302 0 .547.245.547.547v4.25c0 .302-.245.547-.547.547zm3.177 0h-.57c-.302 0-.547-.245-.547-.547V8.92c0-.302.245-.547.547-.547.302 0 .547.245.547.547v2.964l-2.004-2.82c-.114-.15-.29-.24-.48-.24h-.548c-.302 0-.547.245-.547.547v4.25c0 .302.245.547.547.547.302 0 .547-.245.547-.547V10.1l2.008 2.822c.11.154.29.24.48.24h.57c.302 0 .547-.245.547-.547V8.918c0-.302-.245-.547-.547-.547-.302 0-.547.245-.547.547v4.25c.002.302.247.55.55.55z" />
+                                    </svg>
+                                    Line Community
+                                </a>
+                            </li>
                             <li><a href="#" className="hover:text-yellow-500 transition-colors">Facebook Group</a></li>
-                            <li><a href="#" className="hover:text-yellow-500 transition-colors">Twitter / X</a></li>
                         </ul>
                     </div>
                     <div>
                         <h4 className="text-white font-bold uppercase tracking-wider mb-4">{t('landing.footer.legal')}</h4>
                         <ul className="space-y-2">
-                            <li><a href="#" className="hover:text-yellow-500 transition-colors">Terms of Service</a></li>
+                            <li>
+                                <button
+                                    onClick={() => setShowTerms(true)}
+                                    className="hover:text-yellow-500 transition-colors"
+                                >
+                                    Terms of Service
+                                </button>
+                            </li>
                             <li><a href="#" className="hover:text-yellow-500 transition-colors">Privacy Policy</a></li>
                             <li><button onClick={onWhitepaper} className="hover:text-yellow-500 transition-colors">Whitepaper</button></li>
                         </ul>
@@ -759,6 +790,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
                     </div>
                 </div>
             </footer>
+
+            <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
         </div>
     );
 };
