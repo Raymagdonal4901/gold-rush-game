@@ -387,17 +387,28 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
-        if (!rig) return res.status(404).json({ message: 'Rig not found' });
-
         // Server-side validation: Check if enough time has passed
         const now = new Date();
-        const lastCollection = rig.lastCollectionAt ? new Date(rig.lastCollectionAt).getTime() : new Date(rig.purchaseDate).getTime();
-        const elapsed = Math.max(0, now.getTime() - lastCollection);
         const DROP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 Hours
 
-        let generated = Math.floor(elapsed / DROP_INTERVAL_MS);
-        if (generated < 1) {
+        // Use atomic findOneAndUpdate with cooldown condition
+        const rig = await Rig.findOneAndUpdate(
+            {
+                _id: rigId,
+                ownerId: userId,
+                $or: [
+                    { lastCollectionAt: { $exists: false } },
+                    { lastCollectionAt: { $lte: new Date(now.getTime() - DROP_INTERVAL_MS) } }
+                ]
+            },
+            { $set: { lastCollectionAt: now } },
+            { new: true }
+        );
+
+        if (!rig) {
+            // Either rig not found or cooldown not met
+            const existingRig = await Rig.findOne({ _id: rigId, ownerId: userId });
+            if (!existingRig) return res.status(404).json({ message: 'Rig not found' });
             return res.status(400).json({ message: 'ยังไม่ถึงรอบเวลาการเก็บรวบรวมไอเทม' });
         }
 
@@ -416,12 +427,10 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
             level: 1
         };
 
-        if (!user.inventory) user.inventory = [];
-        user.inventory.push(newKey);
-        rig.lastCollectionAt = now;
-
-        await user.save();
-        await rig.save();
+        // Atomic push to user inventory
+        await User.findByIdAndUpdate(userId, {
+            $push: { inventory: newKey }
+        });
 
         // Log Transaction
         const keyTx = new Transaction({
@@ -449,13 +458,9 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
-        if (!rig) return res.status(404).json({ message: 'Rig not found' });
-
         // Server-side validation: Check gift cycle (default 1 day)
         const GIFT_CYCLE_DAYS = 1;
         const now = new Date();
-        const lastGift = rig.lastGiftAt ? new Date(rig.lastGiftAt).getTime() : new Date(rig.purchaseDate).getTime();
 
         let boost = 1;
         if (user.overclockExpiresAt && user.overclockExpiresAt.getTime() > now.getTime()) {
@@ -463,7 +468,24 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
         }
 
         const giftIntervalMs = (GIFT_CYCLE_DAYS * 24 * 60 * 60 * 1000) / boost;
-        if (now.getTime() - lastGift < giftIntervalMs) {
+
+        // Use atomic findOneAndUpdate with cooldown condition
+        const rig = await Rig.findOneAndUpdate(
+            {
+                _id: rigId,
+                ownerId: userId,
+                $or: [
+                    { lastGiftAt: { $exists: false } },
+                    { lastGiftAt: { $lte: new Date(now.getTime() - giftIntervalMs) } }
+                ]
+            },
+            { $set: { lastGiftAt: now } },
+            { new: true }
+        );
+
+        if (!rig) {
+            const existingRig = await Rig.findOne({ _id: rigId, ownerId: userId });
+            if (!existingRig) return res.status(404).json({ message: 'Rig not found' });
             return res.status(400).json({ message: 'ยังไม่ถึงเวลาเปิดกล่องของขวัญ' });
         }
 
@@ -482,13 +504,10 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
             level: 1
         };
 
-        if (!user.inventory) user.inventory = [];
-        user.inventory.push(newKey);
-        user.markModified('inventory');
-
-        rig.lastGiftAt = now; // Reset cooldown
-        await rig.save();
-        await user.save();
+        // Atomic push to user inventory
+        await User.findByIdAndUpdate(userId, {
+            $push: { inventory: newKey }
+        });
 
         // Log Transaction
         const giftTx = new Transaction({

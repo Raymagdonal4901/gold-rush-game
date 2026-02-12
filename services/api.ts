@@ -477,7 +477,8 @@ const mapBackendRigToFrontend = (backendRig: any): OilRig => {
         energy: backendRig.energy !== undefined ? backendRig.energy : 100,
         lastEnergyUpdate: backendRig.lastEnergyUpdate ? new Date(backendRig.lastEnergyUpdate).getTime() : new Date(backendRig.purchaseDate || backendRig.createdAt || Date.now()).getTime(),
         currentMaterials: backendRig.currentMaterials,
-        lastCollectionAt: backendRig.lastCollectionAt ? new Date(backendRig.lastCollectionAt).getTime() : undefined
+        lastCollectionAt: backendRig.lastCollectionAt ? new Date(backendRig.lastCollectionAt).getTime() : undefined,
+        lastGiftAt: backendRig.lastGiftAt ? new Date(backendRig.lastGiftAt).getTime() : undefined
     } as OilRig;
 };
 
