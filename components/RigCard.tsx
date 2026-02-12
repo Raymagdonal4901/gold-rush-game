@@ -111,19 +111,21 @@ export const RigCard: React.FC<RigCardProps> = ({
         if (!itemId) return null;
         const item = inventory.find(i => i.id === itemId);
         if (item) {
-            equippedBonus += item.dailyBonus;
+            // Legacy Scale Fallback: If bonus is tiny, it's likely old USD scale
+            const effectiveItemBonus = (item.dailyBonus < 0.5 && item.dailyBonus > 0) ? item.dailyBonus * 35 : item.dailyBonus;
+            equippedBonus += effectiveItemBonus;
         }
         return item;
     });
 
     const gloveItem = equippedItems[0];
 
-    // Force remove bonus for specific rigs (Legacy data compatibility)
     const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
     const effectiveBonusProfit = isNoBonusRig ? 0 : (rig.bonusProfit || 0);
 
     // Override base profit for specific rigs (Balance Patch)
-    const baseDailyProfit = rig.dailyProfit;
+    // Legacy Scale Fallback: If profit is tiny (< 5), it's likely old USD scale
+    const baseDailyProfit = (rig.dailyProfit < 5 && rig.dailyProfit > 0) ? rig.dailyProfit * 35 : rig.dailyProfit;
 
     let totalDailyProfit = (baseDailyProfit + effectiveBonusProfit + equippedBonus) * globalMultiplier * reactorMultiplier;
 
@@ -209,7 +211,11 @@ export const RigCard: React.FC<RigCardProps> = ({
     const isBroken = healthPercent <= 0;
 
     let baseRepairCost = isInfiniteDurability ? 0 : (rig.repairCost || (preset ? preset.repairCost : Math.floor(rig.investment * 0.06)));
+    // Legacy Scale Fallback for Costs
+    if (baseRepairCost > 0 && baseRepairCost < 1) baseRepairCost *= 35;
+
     let energyCostPerDay = rig.energyCostPerDay || (preset ? preset.energyCostPerDay : 0);
+    if (energyCostPerDay > 0 && energyCostPerDay < 1) energyCostPerDay *= 35;
 
     const currentUser = rig.ownerId ? null : null; // MockDB usage replaced by null (will be hydrated by props/refresh if needed)
     const hasSilverBuff = (currentUser?.masteryPoints || 0) >= 300;
@@ -677,7 +683,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <div className="flex flex-col items-end gap-1">
                         <div className={`px-1.5 py-0.5 rounded border text-[9px] flex items-center gap-1 shadow-sm ${isOverclockActive ? 'bg-emerald-900/50 border-emerald-500 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : (globalMultiplier > 1 || reactorMultiplier > 1) ? 'bg-purple-900/30 border-purple-500 text-purple-300' : 'bg-emerald-950/30 border-emerald-900/50 text-emerald-400'}`}>
                             <Clock size={10} />
-                            <span className={isOverclockActive ? 'text-emerald-300 font-bold' : ''}>+{formatCurrency(totalDailyProfit, { showDecimals: true })}/{t('time.day')}</span>
+                            <span className={isOverclockActive ? 'text-emerald-300 font-bold' : ''}>+{formatCurrency(totalDailyProfit)}/{t('time.day')}</span>
                             {isOverclockActive && <Zap size={10} className="text-yellow-400 animate-pulse" />}
                         </div>
                         {isOverclockActive && (
@@ -690,13 +696,13 @@ export const RigCard: React.FC<RigCardProps> = ({
                             {rig.bonusProfit > 0 && !['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr) && (
                                 <div className={`text-[9px] ${rarityConfig.color} flex items-center gap-1 font-bold`}>
                                     <Zap size={8} />
-                                    {t('shop.bonus')} +{formatCurrency(rig.bonusProfit, { showDecimals: true })}
+                                    {t('shop.bonus')} +{formatCurrency(rig.bonusProfit)}
                                 </div>
                             )}
                             {equippedBonus > 0 && (
                                 <div className="text-[9px] text-blue-400 flex items-center gap-1 font-bold">
                                     <Briefcase size={8} />
-                                    {t('rig.equipment_bonus')} +{formatCurrency(equippedBonus, { showDecimals: true })}
+                                    {t('rig.equipment_bonus')} +{formatCurrency(equippedBonus)}
                                 </div>
                             )}
                         </div>
@@ -717,8 +723,15 @@ export const RigCard: React.FC<RigCardProps> = ({
                         >
                             {gloveItem ? (
                                 <div className="relative w-full h-full flex items-center justify-center">
-                                    <div className={`absolute inset-0 bg-gradient-to-br ${RARITY_SETTINGS[gloveItem.rarity && RARITY_SETTINGS[gloveItem.rarity] ? gloveItem.rarity : 'COMMON'].bgGradient} opacity-30`}></div>
-                                    <InfinityGlove rarity={gloveItem.rarity} size={24} className="relative z-10 drop-shadow-md" />
+                                    {(() => {
+                                        const safeRarity = gloveItem.rarity && RARITY_SETTINGS[gloveItem.rarity] ? gloveItem.rarity : 'COMMON';
+                                        return (
+                                            <>
+                                                <div className={`absolute inset-0 bg-gradient-to-br ${RARITY_SETTINGS[safeRarity].bgGradient} opacity-30`}></div>
+                                                <InfinityGlove rarity={safeRarity} size={24} className="relative z-10 drop-shadow-md" />
+                                            </>
+                                        );
+                                    })()}
                                     {gloveItem.level && gloveItem.level > 1 && (
                                         <span className="absolute -bottom-0.5 right-0 text-[8px] font-bold bg-black/80 text-yellow-500 px-1 rounded-tl-md">+{gloveItem.level}</span>
                                     )}
@@ -788,25 +801,28 @@ export const RigCard: React.FC<RigCardProps> = ({
                                         {item ? (
                                             <div className="relative w-full h-full flex items-center justify-center bg-stone-800/50 rounded-lg">
                                                 {(() => {
-                                                    const name = item.name || '';
+                                                    const nameRaw = item.name;
+                                                    const enName = typeof nameRaw === 'object' ? (nameRaw as any).en || '' : String(nameRaw || '');
+                                                    const thName = typeof nameRaw === 'object' ? (nameRaw as any).th || '' : String(nameRaw || '');
+
                                                     const typeIdLower = (item.typeId || '').toLowerCase();
 
                                                     let IconComp = InfinityGlove;
                                                     let colorClass = "text-yellow-100 drop-shadow-sm";
 
                                                     // priority check by name
-                                                    if (typeIdLower.startsWith('hat') || name.includes('หมวก') || name.includes('Helmet')) { IconComp = HardHat; colorClass = "text-emerald-400"; }
-                                                    else if (typeIdLower.startsWith('glasses') || name.includes('แว่น') || name.includes('Glasses')) { IconComp = Glasses; colorClass = "text-blue-400"; }
-                                                    else if (typeIdLower.startsWith('uniform') || typeIdLower.startsWith('shirt') || name.includes('ชุด') || name.includes('Uniform') || name.includes('Suit')) { IconComp = Shirt; colorClass = "text-orange-400"; }
-                                                    else if (typeIdLower.startsWith('bag') || name.includes('กระเป๋า') || name.includes('Bag') || name.includes('Backpack')) { IconComp = Backpack; colorClass = "text-purple-400"; }
-                                                    else if (typeIdLower.startsWith('boots') || name.includes('รองเท้า') || name.includes('Boots')) { IconComp = Footprints; colorClass = "text-yellow-400"; }
-                                                    else if (typeIdLower.startsWith('mobile') || name.includes('มือถือ') || name.includes('Mobile')) { IconComp = Smartphone; colorClass = "text-cyan-400"; }
-                                                    else if (typeIdLower.startsWith('pc') || name.includes('คอม') || name.includes('PC')) { IconComp = Monitor; colorClass = "text-rose-400"; }
-                                                    else if (typeIdLower.startsWith('robot') || name.includes('หุ่นยนต์') || name.includes('Robot')) { IconComp = Bot; colorClass = "text-fuchsia-400"; }
-                                                    else if (typeIdLower === 'auto_excavator' || name.includes('ระบบล็อค')) { IconComp = Zap; colorClass = "text-indigo-400"; }
-                                                    else if (typeIdLower === 'upgrade_chip' || name.includes('ชิป')) { IconComp = Cpu; colorClass = "text-blue-500"; }
-                                                    else if (typeIdLower === 'mixer' || name.includes('เครื่องผสม')) { IconComp = Factory; colorClass = "text-amber-500"; }
-                                                    else if (typeIdLower === 'magnifying_glass' || name.includes('แว่นขยาย')) { IconComp = Search; colorClass = "text-sky-400"; }
+                                                    if (typeIdLower.startsWith('hat') || thName.includes('หมวก') || enName.includes('Helmet')) { IconComp = HardHat; colorClass = "text-emerald-400"; }
+                                                    else if (typeIdLower.startsWith('glasses') || thName.includes('แว่น') || enName.includes('Glasses')) { IconComp = Glasses; colorClass = "text-blue-400"; }
+                                                    else if (typeIdLower.startsWith('uniform') || typeIdLower.startsWith('shirt') || thName.includes('ชุด') || enName.includes('Uniform') || enName.includes('Suit')) { IconComp = Shirt; colorClass = "text-orange-400"; }
+                                                    else if (typeIdLower.startsWith('bag') || thName.includes('กระเป๋า') || enName.includes('Bag') || enName.includes('Backpack')) { IconComp = Backpack; colorClass = "text-purple-400"; }
+                                                    else if (typeIdLower.startsWith('boots') || thName.includes('รองเท้า') || enName.includes('Boots')) { IconComp = Footprints; colorClass = "text-yellow-400"; }
+                                                    else if (typeIdLower.startsWith('mobile') || thName.includes('มือถือ') || enName.includes('Mobile')) { IconComp = Smartphone; colorClass = "text-cyan-400"; }
+                                                    else if (typeIdLower.startsWith('pc') || thName.includes('คอม') || enName.includes('PC')) { IconComp = Monitor; colorClass = "text-rose-400"; }
+                                                    else if (typeIdLower.startsWith('robot') || thName.includes('หุ่นยนต์') || enName.includes('Robot')) { IconComp = Bot; colorClass = "text-fuchsia-400"; }
+                                                    else if (typeIdLower === 'auto_excavator' || thName.includes('ระบบล็อค')) { IconComp = Zap; colorClass = "text-indigo-400"; }
+                                                    else if (typeIdLower === 'upgrade_chip' || thName.includes('ชิป')) { IconComp = Cpu; colorClass = "text-blue-500"; }
+                                                    else if (typeIdLower === 'mixer' || thName.includes('เครื่องผสม')) { IconComp = Factory; colorClass = "text-amber-500"; }
+                                                    else if (typeIdLower === 'magnifying_glass' || thName.includes('แว่นขยาย')) { IconComp = Search; colorClass = "text-sky-400"; }
 
                                                     if (IconComp === InfinityGlove) {
                                                         return <InfinityGlove size={22} rarity={item.rarity} />;
@@ -1015,7 +1031,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                         <div className="text-right w-full">
                             <div className={`text-xl font-mono font-bold tabular-nums flex items-center justify-end gap-1 text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.1)]`}>
                                 {isOverclockActive && <span className="text-emerald-400 text-xs mr-0.5 animate-pulse">x2</span>}
-                                {formatCurrency(currentAmount, { showDecimals: true })} <Sparkles size={12} className={!isExpired && !isBroken && isPowered && !isExploring ? "text-yellow-500" : "hidden"} />
+                                {formatCurrency(currentAmount, { showDecimals: true, precision: 4 })} <Sparkles size={12} className={!isExpired && !isBroken && isPowered && !isExploring ? "text-yellow-500" : "hidden"} />
                             </div>
                         </div>
                     </div>

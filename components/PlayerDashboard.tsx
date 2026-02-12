@@ -1039,12 +1039,24 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             return acc;
         }
 
+        const nameStr = typeof rig.name === 'string' ? rig.name : (rig.name?.en || rig.name?.th || '');
+        const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
+        const effectiveBonusProfit = isNoBonusRig ? 0 : (rig.bonusProfit || 0);
+
+        // Legacy Scale Fallback: If profit is tiny (< 5), it's likely old USD scale
+        const baseDailyProfit = (rig.dailyProfit < 5 && rig.dailyProfit > 0) ? rig.dailyProfit * 35 : rig.dailyProfit;
+
         const equippedBonus = (rig.slots || []).reduce((sum, itemId) => {
             if (!itemId) return sum;
             const item = inventory.find(i => i.id === itemId);
-            return sum + (item ? item.dailyBonus : 0);
+            if (item) {
+                // Legacy Scale Fallback for accessories
+                const effectiveItemBonus = (item.dailyBonus < 0.5 && item.dailyBonus > 0) ? item.dailyBonus * 35 : item.dailyBonus;
+                return sum + effectiveItemBonus;
+            }
+            return sum;
         }, 0);
-        return acc + rig.dailyProfit + (rig.bonusProfit || 0) + equippedBonus;
+        return acc + baseDailyProfit + effectiveBonusProfit + equippedBonus;
     }, 0) * globalMultiplier * currentOverclockMultiplier;
 
 
@@ -1102,11 +1114,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             <div className="flex flex-col items-end px-2 mr-1 sm:mr-2 border-r border-stone-800">
                                 <span className="text-[8px] sm:text-[10px] text-stone-500 uppercase tracking-widest leading-none mb-1">{t('common.balance')}</span>
                                 <span className="text-base sm:text-lg font-mono font-bold text-white tabular-nums leading-none">
-                                    {language === 'th' ?
-                                        <>{(user.balance * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] sm:text-xs text-stone-500">฿</span></>
-                                        :
-                                        <>{user.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] sm:text-xs text-stone-500">{CURRENCY}</span></>
-                                    }
+                                    {formatCurrency(user.balance)}
                                 </span>
                             </div>
                             <div className="flex gap-1 sm:gap-2">
@@ -1217,11 +1225,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                         <div className="flex flex-col">
                             <div className="text-2xl sm:text-4xl font-display font-bold text-green-400 flex items-center gap-2 group-hover:text-green-300">
                                 {isPowered ?
-                                    (language === 'th' ?
-                                        <>{(rigDaily * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-xs sm:text-sm text-stone-500">฿</span></>
-                                        :
-                                        <>{rigDaily.toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-xs sm:text-sm text-stone-500">{CURRENCY}</span></>
-                                    )
+                                    formatCurrency(rigDaily, { precision: 1 })
                                     : '0.0'}
                                 {hasVibranium && isPowered && <span className="text-[10px] sm:text-xs bg-purple-900/50 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500 animate-pulse font-mono">x2 Boost</span>}
                                 {!isPowered && <span className="text-[10px] sm:text-xs bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded border border-red-500 font-bold animate-pulse">{language === 'th' ? 'หยุดทำงาน' : 'SHUTDOWN'}</span>}
@@ -1528,10 +1532,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                 <BarChart2 size={12} /> {language === 'th' ? 'มูลค่าตลาด' : 'Market Volume'}
                             </div>
                             <div className="text-xl sm:text-2xl font-display font-bold text-emerald-400 font-mono group-hover:text-emerald-300">
-                                {language === 'th' ?
-                                    `${(globalStats.marketVolume * EXCHANGE_RATE_USD_THB).toLocaleString()} ฿` :
-                                    `${globalStats.marketVolume.toLocaleString()} ${CURRENCY}`
-                                }
+                                {formatCurrency(globalStats.marketVolume)}
                             </div>
                         </div>
                     </div>
@@ -1628,10 +1629,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             <div className="bg-stone-900 p-4 rounded-lg border border-stone-800 mb-6 flex justify-between items-center">
                                 <span className="text-xs font-bold text-stone-500 uppercase">ค่าบริการรวม</span>
                                 <span className="text-2xl font-mono font-bold text-white">
-                                    {language === 'th' ?
-                                        `${(energyConfirm.cost * EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿` :
-                                        `${energyConfirm.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${CURRENCY}`
-                                    }
+                                    {formatCurrency(energyConfirm.cost, { showDecimals: true })}
                                 </span>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
@@ -1704,7 +1702,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                         addNotification({
                             id: Date.now().toString(),
                             userId: user.id,
-                            message: `ขายสำเร็จ! ได้รับ +${price.toLocaleString()} ${CURRENCY}`,
+                            message: `ขายสำเร็จ! ได้รับ +${formatCurrency(price)}`,
                             type: 'SUCCESS',
                             read: false,
                             timestamp: Date.now()

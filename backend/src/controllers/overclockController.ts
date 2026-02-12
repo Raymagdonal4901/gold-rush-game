@@ -3,9 +3,9 @@ import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
 
-const EXCHANGE_RATE = 35;
+const EXCHANGE_RATE = 1;
 const OVERCLOCK_COST_THB = 50;
-const OVERCLOCK_COST = OVERCLOCK_COST_THB / EXCHANGE_RATE; // Convert to USD for backend balance
+const OVERCLOCK_COST = OVERCLOCK_COST_THB; // 1:1 direct Baht
 const OVERCLOCK_DURATION_MS = 48 * 60 * 60 * 1000; // 48 hours
 
 export const activateOverclock = async (req: AuthRequest, res: Response) => {

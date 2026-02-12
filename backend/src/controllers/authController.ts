@@ -54,7 +54,7 @@ export const register = async (req: Request, res: Response) => {
                 name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Helmet' },
                 rarity: 'COMMON',
                 lifespanDays: 10,
-                dailyBonus: 0.02857143,
+                dailyBonus: 0.03125, // 1 THB / 32
                 isHandmade: false
             };
 
@@ -243,7 +243,7 @@ export const refillEnergy = async (req: any, res: Response) => {
 
         // Flat rate: 0.02 Baht per 1% (matching ENERGY_CONFIG.COST_PER_UNIT in frontend)
         // Costs are defined in THB but balance is in USD
-        const EXCHANGE_RATE = 35;
+        const EXCHANGE_RATE = 1;
         const COST_PER_UNIT_THB = 0.02;
         const MIN_REFILL_FEE_THB = 2.0;
 

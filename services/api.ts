@@ -164,7 +164,7 @@ export const api = {
         return res.data;
     },
     claimRigGift: async (rigId: string): Promise<any> => {
-        const res = await client.post(`/rigs/${rigId}/claim-gift`);
+        const res = await client.post(`/rigs/${rigId}/gift`);
         return res.data;
     },
     getMyHistory: async (): Promise<Transaction[]> => {
@@ -244,9 +244,18 @@ export const api = {
         claim: async (queueId: string): Promise<any> => {
             const res = await client.post(`/accessories/crafting/claim/${queueId}`);
             return res.data;
+        },
+        useSkip: async (queueId: string, itemTypeId: string): Promise<any> => {
+            const res = await client.post('/accessories/crafting/use-skip', { queueId, itemTypeId });
+            return res.data;
         }
     },
 
+    // Equipment Repair
+    repairEquipment: async (targetItemId: string, repairKitId: string): Promise<any> => {
+        const res = await client.post('/accessories/repair', { targetItemId, repairKitId });
+        return res.data;
+    },
 
     // Quests
     getQuestStatus: async (): Promise<{ weeklyStats: any, lastQuestReset: number, nextResetAt: number, claimedQuests: string[] }> => {

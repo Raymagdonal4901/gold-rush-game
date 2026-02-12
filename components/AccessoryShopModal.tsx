@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase, CreditCard } from 'lucide-react';
+import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase, CreditCard, Ticket } from 'lucide-react';
 import { SHOP_ITEMS, CURRENCY, RARITY_SETTINGS, MATERIAL_CONFIG, EQUIPMENT_SERIES } from '../constants';
 import { CraftingQueueItem } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
@@ -180,6 +180,36 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         }
     };
 
+    const handleUseSkip = async (queueId: string, itemTypeId: string) => {
+        try {
+            const result = await api.crafting.useSkip(queueId, itemTypeId);
+            if (result.success) {
+                setCraftingQueue(result.queue || []);
+                setUserInventory(result.inventory || []);
+                setRefreshTrigger(prev => prev + 1);
+                if (addNotification) addNotification({
+                    id: Date.now().toString(),
+                    userId: userId || '',
+                    message: result.message || 'ใช้ไอเทมสำเร็จ',
+                    type: 'SUCCESS',
+                    read: false,
+                    timestamp: Date.now()
+                });
+            }
+        } catch (e: any) {
+            const message = e.response?.data?.message || e.message || 'เกิดข้อผิดพลาด';
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: userId || '',
+                message: message,
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
+        }
+    };
+
+
     const getItemDisplayName = (item: any) => {
         if (!item) return '';
         if (item.name && typeof item.name === 'object') {
@@ -189,6 +219,32 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
     };
 
     const getIcon = (iconName: string, className: string, itemId?: string) => {
+        if (itemId === 'time_skip_ticket') {
+            return (
+                <div className="relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-blue-500/20 rounded-lg scale-125 blur-md animate-pulse"></div>
+                    <div className="absolute -top-1 -right-1">
+                        <Timer size={14} className="text-blue-300 animate-[spin_3s_linear_infinite]" />
+                    </div>
+                    <Ticket className={`${className} text-blue-400 -rotate-12 relative z-10 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]`} />
+                </div>
+            );
+        }
+
+        if (itemId === 'construction_nanobot') {
+            return (
+                <div className="relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-cyan-500/30 rounded-full scale-[1.5] blur-xl animate-pulse"></div>
+                    <div className="absolute inset-0 border border-cyan-400/30 rounded-full scale-125 animate-[spin_8s_linear_infinite]"></div>
+                    <div className="absolute inset-0 border border-white/20 rounded-full scale-110 animate-[spin_5s_linear_infinite_reverse] border-dashed"></div>
+                    <div className="absolute -top-2 -right-2 bg-cyan-500 text-white rounded-full p-0.5 shadow-[0_0_10px_cyan]">
+                        <Zap size={10} className="animate-pulse" />
+                    </div>
+                    <Bot className={`${className} text-cyan-300 relative z-10 drop-shadow-[0_0_15px_rgba(34,211,238,0.8)]`} />
+                </div>
+            );
+        }
+
         if (itemId === 'auto_excavator') {
             return (
                 <div className="relative">
@@ -273,7 +329,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         );
     };
 
-    const specialIds = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'dungeon_ticket_magma', 'ancient_blueprint', 'insurance_card', 'vip_withdrawal_card'];
+    const specialIds = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'dungeon_ticket_magma', 'ancient_blueprint', 'insurance_card', 'vip_withdrawal_card', 'time_skip_ticket', 'construction_nanobot'];
     const specialItems = SHOP_ITEMS.filter(i => {
         if (!specialIds.includes(i.id) || i.buyable === false) return false;
         // Hide VIP card if already owned
@@ -344,6 +400,8 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         else if (item.id === 'hourglass_small') rarityStyle = RARITY_SETTINGS.UNCOMMON;
         else if (item.id === 'hourglass_medium') rarityStyle = RARITY_SETTINGS.EPIC;
         else if (item.id === 'hourglass_large') rarityStyle = RARITY_SETTINGS.LEGENDARY;
+        else if (item.id === 'time_skip_ticket') rarityStyle = RARITY_SETTINGS.UNCOMMON;
+        else if (item.id === 'construction_nanobot') rarityStyle = RARITY_SETTINGS.EPIC;
         else {
             // Default pricing logic for any other items
             if (item.price >= 500) rarityStyle = RARITY_SETTINGS.LEGENDARY;
@@ -352,7 +410,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
             else if (item.price >= 50) rarityStyle = RARITY_SETTINGS.UNCOMMON;
         }
 
-        const isBulkItem = ['upgrade_chip', 'mixer', 'insurance_card', 'hourglass_small', 'hourglass_medium', 'hourglass_large'].includes(item.id);
+        const isBulkItem = ['upgrade_chip', 'mixer', 'insurance_card', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'time_skip_ticket', 'construction_nanobot'].includes(item.id);
 
         const isVipCard = item.id === 'vip_withdrawal_card';
 
@@ -388,8 +446,14 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             </>
                         ) : (
                             <div className="flex items-center justify-center gap-1">
-                                {(item.id === 'insurance_card' || item.id.includes('hourglass') || item.id === 'upgrade_chip' || item.id === 'chest_key' || item.id === 'mixer' || item.id === 'magnifying_glass' || item.id === 'repair_kit') ? (
-                                    <span className="text-stone-500 font-medium">{t('item_shop.consumable')}</span>
+                                {(item.id === 'insurance_card' || item.id.includes('hourglass') || item.id === 'upgrade_chip' || item.id === 'chest_key' || item.id === 'mixer' || item.id === 'magnifying_glass' || item.id === 'repair_kit' || item.id === 'time_skip_ticket' || item.id === 'construction_nanobot') ? (
+                                    <span className="text-stone-500 font-medium">
+                                        {item.id.includes('hourglass')
+                                            ? (language === 'th' ? 'ใช้ลงเหมืองลับ' : 'Use in Secret Mine')
+                                            : (['time_skip_ticket', 'construction_nanobot'].includes(item.id)
+                                                ? (language === 'th' ? 'ไอเทมใช้งาน' : t('item_shop.consumable'))
+                                                : t('item_shop.consumable'))}
+                                    </span>
                                 ) : (
                                     <>
                                         <CalendarDays size={12} className="text-stone-500" />
@@ -403,10 +467,18 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                     </div>
 
                     <div className="flex flex-wrap gap-2 justify-center mb-2 mt-2">
-                        {['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'insurance_card', 'robot', 'vip_withdrawal_card'].includes(item.id) ? (
+                        {['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'insurance_card', 'robot', 'vip_withdrawal_card', 'time_skip_ticket', 'construction_nanobot'].includes(item.id) ? (
                             <div className="text-[9px] text-stone-400 flex items-center gap-1 bg-stone-800 px-2 py-0.5 rounded border border-stone-700">
                                 {['robot', 'vip_withdrawal_card'].includes(item.id) ? <Zap size={10} className="text-emerald-400" /> : <Zap size={10} className="text-yellow-500" />}
-                                {item.id === 'robot' ? t('item_shop.automation_system') : isVipCard ? (language === 'th' ? 'ปลดล็อกถาวร' : 'Permanent Unlock') : t('item_shop.consumable')}
+                                {item.id === 'robot'
+                                    ? t('item_shop.automation_system')
+                                    : isVipCard
+                                        ? (language === 'th' ? 'ปลดล็อกถาวร' : 'Permanent Unlock')
+                                        : (['time_skip_ticket', 'construction_nanobot'].includes(item.id))
+                                            ? (language === 'th' ? 'เร่งเวลาสร้างอุปกรณ์' : 'Accelerate Crafting')
+                                            : item.id.includes('hourglass')
+                                                ? (language === 'th' ? 'ใช้ลงเหมืองลับ' : 'Use in Secret Mine')
+                                                : t('item_shop.consumable')}
                             </div>
                         ) : (
                             <div className="text-[9px] text-yellow-500 flex items-center gap-1 bg-yellow-950/20 px-2 py-0.5 rounded border border-yellow-900/30">
@@ -681,7 +753,41 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                 </div>
                             </div>
 
-                            <div className="relative z-10">
+                            <div className="relative z-10 flex items-center gap-2">
+                                {!isReady && (
+                                    <div className="flex gap-1">
+                                        {/* Time Skip Ticket Button */}
+                                        {(() => {
+                                            const tickets = userInventory.filter(i => i.typeId === 'time_skip_ticket');
+                                            if (tickets.length === 0) return null;
+                                            return (
+                                                <button
+                                                    onClick={() => handleUseSkip(q.id, 'time_skip_ticket')}
+                                                    className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded flex items-center gap-1 shadow-md transition-all active:scale-95"
+                                                    title="Skip 1 Hour"
+                                                >
+                                                    <Timer size={12} /> -1h ({tickets.length})
+                                                </button>
+                                            );
+                                        })()}
+
+                                        {/* Construction Nanobot Button */}
+                                        {(() => {
+                                            const nanobots = userInventory.filter(i => i.typeId === 'construction_nanobot');
+                                            if (nanobots.length === 0) return null;
+                                            return (
+                                                <button
+                                                    onClick={() => handleUseSkip(q.id, 'construction_nanobot')}
+                                                    className="px-2 py-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold rounded flex items-center gap-1 shadow-md transition-all active:scale-95"
+                                                    title="Instant Finish"
+                                                >
+                                                    <Cpu size={12} /> Instant ({nanobots.length})
+                                                </button>
+                                            );
+                                        })()}
+                                    </div>
+                                )}
+
                                 {isReady ? (
                                     <button onClick={() => handleClaimCraft(q.id)} className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded flex items-center gap-1 shadow-lg animate-bounce">
                                         <Star size={12} /> {t('item_shop.claim_item')}
@@ -690,6 +796,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                     <div className="text-xs text-stone-500 font-mono"><Clock size={14} className="animate-spin-slow" /></div>
                                 )}
                             </div>
+
                         </div>
                     );
                 })}

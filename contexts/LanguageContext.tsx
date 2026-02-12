@@ -6,11 +6,11 @@ interface LanguageContextType {
     setLanguage: (lang: Language) => void;
     t: (key: string, params?: Record<string, any>) => any;
     getLocalized: (content: string | { th: string; en: string } | undefined) => string;
-    formatCurrency: (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean; showDecimals?: boolean }) => string;
+    formatCurrency: (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean; showDecimals?: boolean; precision?: number }) => string;
     formatBonus: (amount: number, typeId?: string) => string;
 }
 
-const EXCHANGE_RATE = 35; // Standard system rate
+const THB_TO_USD_RATE = 31; // 1 USD = 31 THB (USDT real rate)
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
@@ -53,18 +53,24 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         return content[language] || content['en'];
     };
 
-    const formatCurrency = (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean; showDecimals?: boolean }): string => {
+    const formatCurrency = (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean; showDecimals?: boolean; precision?: number }): string => {
         const isThai = options?.forceUSD ? false : (language === 'th' || options?.forceTHB);
-        let val = isThai ? (options?.showDecimals ? amount * EXCHANGE_RATE : Math.round(amount * EXCHANGE_RATE)) : amount;
 
-        if (Math.abs(val - Math.round(val)) < 0.001) {
+        // All amounts in system are stored as THB
+        // TH mode: show as-is (THB)
+        // EN mode: convert to USD by dividing by 31
+        let val = isThai ? amount : amount / THB_TO_USD_RATE;
+
+        // If not forcing decimals and it's basically an integer, round it
+        if (!options?.showDecimals && !options?.precision && Math.abs(val - Math.round(val)) < 0.01) {
             val = Math.round(val);
         }
 
-        const minDecimals = options?.showDecimals ? 2 : (val % 1 === 0 ? 0 : 2);
+        const defaultMaxDecimals = isThai ? 2 : 4; // USD needs more decimals due to smaller values
+        const minDecimals = options?.precision !== undefined ? options.precision : (options?.showDecimals ? 2 : (val % 1 === 0 ? 0 : 2));
         const formatted = val.toLocaleString(undefined, {
             minimumFractionDigits: minDecimals,
-            maximumFractionDigits: 4
+            maximumFractionDigits: options?.precision !== undefined ? options.precision : defaultMaxDecimals
         });
 
         if (options?.hideSymbol) return formatted;
@@ -72,16 +78,20 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
 
     const formatBonus = (amount: number, typeId?: string): string => {
-        if (language === 'en') return `+${amount}`;
-        if (typeId === 'hat' || (amount > 0.02 && amount < 0.03)) return '+1';
-        if (typeId === 'uniform' || (amount > 0.05 && amount < 0.06)) return '+2';
-        if (typeId === 'bag' || (amount > 0.08 && amount < 0.09)) return '+3';
-        if (typeId === 'boots' || (amount > 0.11 && amount < 0.12)) return '+4';
-        if (typeId === 'glasses' || (amount > 0.14 && amount < 0.15)) return '+5';
-        if (typeId === 'mobile' || (amount > 0.17 && amount < 0.18)) return '+6';
-        if (typeId === 'pc' || (amount > 0.22 && amount < 0.23)) return '+8';
-        if (typeId === 'auto_excavator' || (amount > 0.42 && amount < 0.43)) return '+10';
-        return `+${amount}`;
+        if (amount === 0) return '+0';
+
+        // If amount is small (legacy decimal), scale it up to THB first
+        const thbAmount = amount < 0.5 ? amount * 35 : amount;
+
+        // EN mode: convert THB bonus to USD
+        const displayAmount = language === 'en' ? thbAmount / THB_TO_USD_RATE : thbAmount;
+
+        const formatted = displayAmount.toLocaleString(undefined, {
+            minimumFractionDigits: displayAmount % 1 === 0 ? 0 : 2,
+            maximumFractionDigits: language === 'en' ? 4 : 2
+        });
+
+        return `+${formatted}`;
     };
 
     return (

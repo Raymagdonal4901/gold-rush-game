@@ -10,10 +10,10 @@ import ClaimRequest from '../models/ClaimRequest';
 import SystemConfig from '../models/SystemConfig';
 import Transaction from '../models/Transaction';
 
-// Convert All Currency Data to USD (1 USD = 35 THB)
+// Convert All Currency Data to USD (1 USD = 32 THB)
 export const adminConvertCurrencyToUSD = async (req: AuthRequest, res: Response) => {
     try {
-        const rate = 35;
+        const rate = 1;
 
         // 1. Convert User Balances
         await User.updateMany({}, [

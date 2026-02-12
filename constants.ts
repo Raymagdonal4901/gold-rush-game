@@ -1,5 +1,5 @@
 export const CURRENCY = '฿';
-export const EXCHANGE_RATE_USD_THB = 35;
+export const EXCHANGE_RATE_USD_THB = 1;
 export const BASE_CLAIM_AMOUNT = 0;
 export const DEMO_SPEED_MULTIPLIER = 10; // 10x Speed for simulation
 
@@ -99,11 +99,11 @@ export const EQUIPMENT_SERIES: Record<string, { title: { th: string; en: string 
 };
 
 export const GLOVE_DETAILS: Record<string, { name: { th: string; en: string } }> = {
-    COMMON: { name: { th: 'คนงานทั่วไป (JUNIOR)', en: 'General Worker (JUNIOR)' } },
-    RARE: { name: { th: 'หัวหน้าคนงาน (SENIOR)', en: 'Foreman (SENIOR)' } },
-    SUPER_RARE: { name: { th: 'วิศวกรเหมือง (ENGINEER)', en: 'Mining Engineer (ENGINEER)' } },
-    EPIC: { name: { th: 'ผู้เชี่ยวชาญ (EXPERT)', en: 'Expert (EXPERT)' } },
-    LEGENDARY: { name: { th: 'ตำนานนักขุด (LEGEND)', en: 'Legendary Miner (LEGEND)' } },
+    COMMON: { name: { th: 'พนักงานทั่วไป (STAFF)', en: 'Staff (STAFF)' } },
+    RARE: { name: { th: 'หัวหน้างาน (SUPERVISOR)', en: 'Supervisor (SUPERVISOR)' } },
+    SUPER_RARE: { name: { th: 'ผู้จัดการหอพัก (MANAGER)', en: 'Manager (MANAGER)' } },
+    EPIC: { name: { th: 'ผู้บริหารอาคาร (EXECUTIVE)', en: 'Executive (EXECUTIVE)' } },
+    LEGENDARY: { name: { th: 'หุ้นส่วนใหญ่ (PARTNER)', en: 'Partner (PARTNER)' } },
 };
 
 export const GIFT_CYCLE_DAYS = 1;
@@ -144,13 +144,13 @@ export const MATERIAL_CONFIG = {
     },
     PRICES: {
         0: 0,
-        1: 0.2857, // (~10 THB)
-        2: 0.5714, // (~20 THB)
-        3: 1.0000, // (~35 THB)
-        4: 1.7143, // (~60 THB)
-        5: 3.4286, // (~120 THB)
-        6: 8.5714, // (~300 THB)
-        7: 42.8571, // (~1500 THB)
+        1: 10, // (10 THB)
+        2: 20, // (20 THB)
+        3: 32, // (32 THB)
+        4: 60, // (60 THB)
+        5: 120, // (120 THB)
+        6: 300, // (300 THB)
+        7: 1500, // (1500 THB)
         8: 0,
         9: 0
     },
@@ -168,76 +168,76 @@ export const MATERIAL_CONFIG = {
 
 export const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, { matTier: number; matAmount: number; chance: number; chipAmount: number; cost: number; targetBonus: number; risk: string }>> = {
     hat: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 1.5, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 3.0, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 9.0, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 30.0, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     uniform: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 1.5, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 3.0, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 9.0, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 30.0, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     bag: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 1.5, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 3.0, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 9.0, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 30.0, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     boots: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 1.5, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 3.0, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 9.0, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 30.0, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     glasses: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 1.5, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 3.0, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 9.0, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 30.0, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     mobile: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 1.5, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 3.0, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 9.0, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 30.0, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     pc: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 1.5, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 3.0, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 9.0, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 30.0, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     auto_excavator: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 1.5, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 3.0, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 9.0, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 30.0, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     },
     glove: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 1.5, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 3.0, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 9.0, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 30.0, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     }
 };
 export const UPGRADE_REQUIREMENTS: Record<number, { matTier: number; matAmount: number; chance: number; label: string; catalyst?: number; chipAmount?: number; maxBonus?: number; cost: number; targetBonus?: number; risk?: string }> = {
-    1: { matTier: 1, matAmount: 10, chipAmount: 1, chance: 1.0, label: '+2', cost: 1.5, targetBonus: 0.5, risk: 'NONE' },
-    2: { matTier: 1, matAmount: 20, chipAmount: 5, chance: 0.8, label: '+3', cost: 3.0, targetBonus: 1.5, risk: 'DROP' },
-    3: { matTier: 2, matAmount: 20, chipAmount: 10, chance: 0.5, label: '+4', cost: 9.0, targetBonus: 3.0, risk: 'DROP' },
-    4: { matTier: 2, matAmount: 40, chipAmount: 20, chance: 0.25, label: '+5', cost: 30.0, targetBonus: 6.0, risk: 'BREAK' },
+    1: { matTier: 1, matAmount: 10, chipAmount: 1, chance: 1.0, label: '+2', cost: 50, targetBonus: 0.5, risk: 'NONE' },
+    2: { matTier: 1, matAmount: 20, chipAmount: 5, chance: 0.8, label: '+3', cost: 100, targetBonus: 1.5, risk: 'DROP' },
+    3: { matTier: 2, matAmount: 20, chipAmount: 10, chance: 0.5, label: '+4', cost: 300, targetBonus: 3.0, risk: 'DROP' },
+    4: { matTier: 2, matAmount: 40, chipAmount: 20, chance: 0.25, label: '+5', cost: 1000, targetBonus: 6.0, risk: 'BREAK' },
 };
 
 // สูตรการแปรรูปวัตถุดิบ (Tier ทรัพยากรหลักที่กด -> สูตรและผลลัพธ์)
 export const MATERIAL_RECIPES: Record<number, { ingredients: Record<number, number>; fee: number; requiredItem?: string }> = {
     0: { ingredients: { 0: 5 }, fee: 0, requiredItem: 'mixer' }, // เศษหิน x5 + 0 Baht -> ถ่านหิน
-    1: { ingredients: { 1: 2 }, fee: 0.05, requiredItem: 'mixer' }, // ถ่านหิน x2 + 1 Baht -> ทองแดง
-    2: { ingredients: { 1: 1, 2: 1 }, fee: 0.1, requiredItem: 'mixer' }, // ถ่านหิน x1 + ทองแดง x1 + 2 Baht -> เหล็ก
-    3: { ingredients: { 2: 1, 3: 1 }, fee: 0.15, requiredItem: 'mixer' }, // ทองแดง x1 + เหล็ก x1 + 3 Baht -> ทองคำ
-    4: { ingredients: { 2: 1, 3: 1, 4: 1 }, fee: 0.25, requiredItem: 'mixer' }, // ทองแดง x1 + เหล็ก x1 + ทองคำ x1 + 5 Baht -> เพชร
-    5: { ingredients: { 4: 1, 5: 1 }, fee: 0.5, requiredItem: 'mixer' }, // ทองคำ x1 + เพชร x1 + 10 Baht -> น้ำมันดิบ
-    6: { ingredients: { 1: 15, 2: 10, 3: 10, 4: 5, 5: 3, 6: 1 }, fee: 1.5, requiredItem: 'magnifying_glass' }, // Multi-mix -> แร่วาเบรเนียม
+    1: { ingredients: { 1: 2 }, fee: 1, requiredItem: 'mixer' }, // ถ่านหิน x2 + 1 Baht -> ทองแดง
+    2: { ingredients: { 1: 1, 2: 1 }, fee: 2, requiredItem: 'mixer' }, // ถ่านหิน x1 + ทองแดง x1 + 2 Baht -> เหล็ก
+    3: { ingredients: { 2: 1, 3: 1 }, fee: 3, requiredItem: 'mixer' }, // ทองแดง x1 + เหล็ก x1 + 3 Baht -> ทองคำ
+    4: { ingredients: { 2: 1, 3: 1, 4: 1 }, fee: 5, requiredItem: 'mixer' }, // ทองแดง x1 + เหล็ก x1 + ทองคำ x1 + 5 Baht -> เพชร
+    5: { ingredients: { 4: 1, 5: 1 }, fee: 10, requiredItem: 'mixer' }, // ทองคำ x1 + เพชร x1 + 10 Baht -> น้ำมันดิบ
+    6: { ingredients: { 1: 15, 2: 10, 3: 10, 4: 5, 5: 3, 6: 1 }, fee: 50, requiredItem: 'magnifying_glass' }, // Multi-mix -> แร่วาเบรเนียม (50 Baht)
 };
 
 export interface RigPreset {
@@ -265,22 +265,22 @@ export interface RigPreset {
 }
 
 export const RIG_PRESETS: RigPreset[] = [
-    { id: 1, name: { th: 'พลั่วสนิมเขรอะ', en: 'Rusty Shovel' }, price: 8.5714285714, dailyProfit: 1.4, bonusProfit: 0.8, durationDays: 7, repairCost: 0, energyCostPerDay: 0.03, specialProperties: { infiniteDurability: false, noGift: true } },
-    { id: 2, name: { th: 'สว่านพกพา', en: 'Portable Drill' }, price: 14.2857142857, dailyProfit: 1.1, bonusProfit: 2.0, durationDays: 15, repairCost: 0, energyCostPerDay: 0.05, image: '/images/rooms/fan_room.png', description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'UNCOMMON', specialProperties: { infiniteDurability: false } },
-    { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Coal Excavator' }, price: 28.5714285714, dailyProfit: 1.3, durationMonths: 1, repairCost: 1.8, energyCostPerDay: 0.09, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' } },
-    { id: 4, name: { th: 'เครื่องขุดทองแดง', en: 'Copper Excavator' }, price: 42.8571428571, dailyProfit: 1.6, durationMonths: 2, repairCost: 3.5, energyCostPerDay: 0.18, image: '/images/rooms/aircon_deluxe.png', description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'SUPER_RARE' },
-    { id: 5, name: { th: 'เครื่องขุดเหล็ก', en: 'Iron Excavator' }, price: 57.1428571429, dailyProfit: 1.9, durationMonths: 3, repairCost: 5.2, energyCostPerDay: 0.28, type: 'EPIC' },
-    { id: 6, name: { th: 'เครื่องขุดทองคำ', en: 'Gold Excavator' }, price: 71.4285714286, dailyProfit: 2.1, durationMonths: 4, repairCost: 7.2, energyCostPerDay: 0.42, type: 'MYTHIC' },
-    { id: 7, name: { th: 'เครื่องขุดเพชร', en: 'Diamond Excavator' }, price: 85.7142857143, dailyProfit: 2.5, durationMonths: 5, repairCost: 8.5, energyCostPerDay: 0.62, type: 'LEGENDARY' },
+    { id: 1, name: { th: 'พลั่วสนิมเขรอะ', en: 'Rusty Shovel' }, price: 300, dailyProfit: 50, bonusProfit: 30, durationDays: 7, repairCost: 0, energyCostPerDay: 1, specialProperties: { infiniteDurability: false, noGift: true } },
+    { id: 2, name: { th: 'สว่านพกพา', en: 'Portable Drill' }, price: 500, dailyProfit: 40, bonusProfit: 70, durationDays: 15, repairCost: 0, energyCostPerDay: 2, image: '/images/rooms/fan_room.png', description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'UNCOMMON', specialProperties: { infiniteDurability: false } },
+    { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Coal Excavator' }, price: 1000, dailyProfit: 45, durationMonths: 1, repairCost: 63, energyCostPerDay: 3, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' } },
+    { id: 4, name: { th: 'เครื่องขุดทองแดง', en: 'Copper Excavator' }, price: 1500, dailyProfit: 56, durationMonths: 2, repairCost: 122, energyCostPerDay: 6, image: '/images/rooms/aircon_deluxe.png', description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'SUPER_RARE' },
+    { id: 5, name: { th: 'เครื่องขุดเหล็ก', en: 'Iron Excavator' }, price: 2000, dailyProfit: 66, durationMonths: 3, repairCost: 182, energyCostPerDay: 10, type: 'EPIC' },
+    { id: 6, name: { th: 'เครื่องขุดทองคำ', en: 'Gold Excavator' }, price: 2500, dailyProfit: 73, durationMonths: 4, repairCost: 252, energyCostPerDay: 15, type: 'MYTHIC' },
+    { id: 7, name: { th: 'เครื่องขุดเพชร', en: 'Diamond Excavator' }, price: 3000, dailyProfit: 87, durationMonths: 5, repairCost: 297, energyCostPerDay: 22, type: 'LEGENDARY' },
     {
         id: 8,
         name: { th: 'เครื่องขุดปฏิกรณ์ไวเบรเนียม', en: 'Vibranium Reactor' },
         price: 0,
-        dailyProfit: 2.8,
+        dailyProfit: 100,
         bonusProfit: 0,
         durationMonths: 12,
         repairCost: 0,
-        energyCostPerDay: 1.42,
+        energyCostPerDay: 50,
         craftingRecipe: {
             materials: { 7: 1, 8: 2, 9: 3 }
         },
@@ -292,11 +292,11 @@ export const RIG_PRESETS: RigPreset[] = [
         id: 9,
         name: { th: 'ถุงมือเน่า', en: 'Rotten Glove' },
         price: 0,
-        dailyProfit: 0.57142857, // 20 THB / 35
+        dailyProfit: 20,
         bonusProfit: 0,
         durationDays: 3,
         repairCost: 0, // Free repair
-        energyCostPerDay: 0.02857143, // 1 THB / 35
+        energyCostPerDay: 1,
         specialProperties: { infiniteDurability: false, noGift: true, maxAllowed: 1, cannotRenew: true },
         description: { th: 'ถุงมือเก่าๆ สำหรับผู้เริ่มต้น (จำกัด 1 ชิ้น/ไอดี)', en: 'Old glove for beginners (Limit 1/ID)' },
         type: 'COMMON'
@@ -304,9 +304,9 @@ export const RIG_PRESETS: RigPreset[] = [
 ];
 
 export const SLOT_EXPANSION_CONFIG: Record<number, { title: { th: string; en: string }; cost: number; mats: Record<number, number>; item?: string; itemCount?: number }> = {
-    4: { title: { th: 'ขยายพื้นที่ขุดเจาะช่องที่ 4', en: 'Expand Mining Slot 4' }, cost: 57.0, mats: { 3: 30, 4: 10 }, item: 'chest_key', itemCount: 1 },
-    5: { title: { th: 'ขยายพื้นที่ขุดเจาะช่องที่ 5', en: 'Expand Mining Slot 5' }, cost: 85.0, mats: { 5: 10, 6: 5 }, item: 'upgrade_chip', itemCount: 5 },
-    6: { title: { th: 'สร้างแท่นขุดเจาะพิเศษ (Master Wing)', en: 'Establish Special Platform (Master Wing)' }, cost: 142.0, mats: { 7: 1, 8: 1, 9: 1 }, item: undefined, itemCount: 0 },
+    4: { title: { th: 'ขยายพื้นที่ขุดเจาะช่องที่ 4', en: 'Expand Mining Slot 4' }, cost: 2000, mats: { 3: 30, 4: 10 }, item: 'chest_key', itemCount: 1 },
+    5: { title: { th: 'ขยายพื้นที่ขุดเจาะช่องที่ 5', en: 'Expand Mining Slot 5' }, cost: 3000, mats: { 5: 10, 6: 5 }, item: 'upgrade_chip', itemCount: 5 },
+    6: { title: { th: 'สร้างแท่นขุดเจาะพิเศษ (Master Wing)', en: 'Establish Special Platform (Master Wing)' }, cost: 5000, mats: { 7: 1, 8: 1, 9: 1 }, item: undefined, itemCount: 0 },
 };
 
 export const TRANSACTION_LIMITS = {
@@ -315,8 +315,8 @@ export const TRANSACTION_LIMITS = {
         MAX: 1000,
     },
     WITHDRAW: {
-        MIN: 2.85714285, // 100 / 35
-        MAX: 28.57142857, // 1000 / 35
+        MIN: 100,
+        MAX: 1000,
     }
 };
 
@@ -344,10 +344,10 @@ export const STORAGE_KEYS = {
 export const ENERGY_CONFIG = {
     DRAIN_PER_RIG_PER_HOUR: 4.166, // 100% / 24 Hours
     MAX_ENERGY: 100,
-    FUEL_REFILL_COST: 0.05, // 0.05 USD for 24 Hours
-    COST_PER_UNIT: 0.0005, // 0.0005 USD per 1% energy refill
-    MIN_REFILL_FEE: 0.05, // Minimum 0.05 USD fee
-    OVERCLOCK_REFILL_COST: 1.5, // 1.5 USD for 48 Hours of x2 Power
+    FUEL_REFILL_COST: 2, // 2 THB for 24 Hours
+    COST_PER_UNIT: 0.02, // 0.02 THB per 1% energy refill
+    MIN_REFILL_FEE: 2, // Minimum 2 THB fee
+    OVERCLOCK_REFILL_COST: 50, // 50 THB for 48 Hours of x2 Power
     OVERCLOCK_DURATION_HOURS: 48,
     PROFIT_BOOST: 1.0, // Base boost when powered (not used if Overclock x2 is active)
     OVERCLOCK_PROFIT_BOOST: 2.0, // x2 Speed Booster
@@ -392,101 +392,150 @@ export interface ShopItemConfig {
 }
 
 export const SHOP_ITEMS: ShopItemConfig[] = [
-    { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 0.142857, icon: 'Cpu', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้สำหรับอัปเกรดเครื่องจักรเพื่อเพิ่มกำลังการขุด', en: 'Used for upgrading rigs to increase mining power' } },
-    { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mine Key' }, price: 0.142857, icon: 'Key', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้เปิดถ้ำสำรวจเพื่อลุ้นรับไอเทมหายาก', en: 'Used to open exploration caves for rare items' }, buyable: false },
-    { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 0.142857, icon: 'Factory', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้สำหรับสกัดแร่ระดับต่ำให้เป็นแร่ระดับสูง', en: 'Used for refining low tier materials' } },
-    { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 0.142857, icon: 'Search', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้ตรวจสอบหาแร่หายากโดยอัตโนมัติ', en: 'Automatically detects rare minerals' } },
-    { id: 'robot', name: { th: 'หุ่นยนต์ AI', en: 'AI Robot' }, price: 2.857142, icon: 'Bot', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 30, description: { th: 'หุ่นยนต์อัจฉริยะ: เก็บของขวัญอัตโนมัติ, เติมพลังงาน/ซ่อมแซมอัตโนมัติ, แจ้งเตือนราคาตลาด', en: 'Smart Robot: Auto-collect gifts, Auto-repair/refill, Market alerts' } },
-    { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 8.571428, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ป้องกันระดับเครื่องจักรลดระดับเมื่ออัปเกรดล้มเหลว', en: 'Prevents rig downgrade upon upgrade failure' }, buyable: true },
-    { id: 'vip_withdrawal_card', name: { th: 'บัตร VIP ปลดล็อกถอนเงิน', en: 'VIP Withdrawal Card' }, price: 5.685714, icon: 'CreditCard', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ใช้สำหรับปลดล็อกการถอนเงินถาวร', en: 'Unlocks permanent withdrawals' } },
-    { id: 'ancient_blueprint', name: { th: 'แผนที่ขุดทองโบราณ', en: 'Ancient Blueprint' }, price: 285.714285, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้แทนวัสดุหายากในการสร้างแท่นขุดระดับสูง', en: 'Substitute for rare materials in crafting high-tier rigs' }, buyable: false },
+    { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 5, icon: 'Cpu', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้สำหรับอัปเกรดเครื่องจักรเพื่อเพิ่มกำลังการขุด', en: 'Used for upgrading rigs to increase mining power' } },
+    { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mine Key' }, price: 5, icon: 'Key', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้เปิดถ้ำสำรวจเพื่อลุ้นรับไอเทมหายาก', en: 'Used to open exploration caves for rare items' }, buyable: false },
+    { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 5, icon: 'Factory', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้สำหรับสกัดแร่ระดับต่ำให้เป็นแร่ระดับสูง', en: 'Used for refining low tier materials' } },
+    { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 5, icon: 'Search', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้ตรวจสอบหาแร่หายากโดยอัตโนมัติ', en: 'Automatically detects rare minerals' } },
+    { id: 'robot', name: { th: 'หุ่นยนต์ AI', en: 'AI Robot' }, price: 100, icon: 'Bot', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 30, description: { th: 'หุ่นยนต์อัจฉริยะ: เก็บของขวัญอัตโนมัติ, เติมพลังงาน/ซ่อมแซมอัตโนมัติ, แจ้งเตือนราคาตลาด', en: 'Smart Robot: Auto-collect gifts, Auto-repair/refill, Market alerts' } },
+    { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 300, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ป้องกันระดับเครื่องจักรลดระดับเมื่ออัปเกรดล้มเหลว', en: 'Prevents rig downgrade upon upgrade failure' }, buyable: true },
+    { id: 'vip_withdrawal_card', name: { th: 'บัตร VIP ปลดล็อกถอนเงิน', en: 'VIP Withdrawal Card' }, price: 200, icon: 'CreditCard', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ใช้สำหรับปลดล็อกการถอนเงินถาวร', en: 'Unlocks permanent withdrawals' } },
+    { id: 'ancient_blueprint', name: { th: 'แผนที่ขุดทองโบราณ', en: 'Ancient Blueprint' }, price: 10000, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้แทนวัสดุหายากในการสร้างแท่นขุดระดับสูง', en: 'Substitute for rare materials in crafting high-tier rigs' }, buyable: false },
+    { id: 'hourglass_small', name: { th: 'นาฬิกาทราย (เล็ก)', en: 'Hourglass (Small)' }, price: 5, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 30 นาที', en: 'Speed up exploration by 30 mins' } },
+    { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Hourglass (Medium)' }, price: 20, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 2 ชั่วโมง', en: 'Speed up exploration by 2 hours' } },
+    { id: 'hourglass_large', name: { th: 'นาฬิกาทราย (ใหญ่)', en: 'Hourglass (Large)' }, price: 60, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 6 ชั่วโมง', en: 'Speed up exploration by 6 hours' } },
+    { id: 'time_skip_ticket', name: { th: 'ตั๋วเร่งเวลา', en: 'Time Skip Ticket' }, price: 5, icon: 'Timer', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ลดเวลาการคราฟต์ 1 ชั่วโมง (กดซ้ำได้)', en: 'Reduce crafting time by 1 hour (stackable)' } },
+    { id: 'construction_nanobot', name: { th: 'นาโนบอทก่อสร้าง', en: 'Construction Nanobot' }, price: 100, icon: 'Cpu', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'สร้างอุปกรณ์เสร็จทันที 100%', en: 'Instantly finish crafting (100%)' } },
 
-    { id: 'hourglass_small', name: { th: 'นาฬิกาทราย (เล็ก)', en: 'Hourglass (Small)' }, price: 0.142857, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 30 นาที', en: 'Speed up exploration by 30 mins' } },
-    { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Hourglass (Medium)' }, price: 0.571428, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 2 ชั่วโมง', en: 'Speed up exploration by 2 hours' } },
-    { id: 'hourglass_large', name: { th: 'นาฬิกาทราย (ใหญ่)', en: 'Hourglass (Large)' }, price: 1.714285, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 6 ชั่วโมง', en: 'Speed up exploration by 6 hours' } },
 
-
-    { id: 'repair_kit', name: { th: 'ชุดบำรุงรักษาพิเศษ', en: 'Repair Kit' }, price: 1.4, icon: 'Tool', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ซ่อมแซมเครื่องจักรจนเต็ม 100%', en: 'Fully repairs a rig to 100%' }, buyable: false },
+    { id: 'repair_kit', name: { th: 'ชุดบำรุงรักษาพิเศษ', en: 'Repair Kit' }, price: 50, icon: 'Tool', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ซ่อมแซมเครื่องจักรจนเต็ม 100%', en: 'Fully repairs a rig to 100%' }, buyable: false },
 
     {
-        id: 'hat', name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Helmet' }, price: 1.4, icon: 'HardHat', minBonus: 0.01428571, maxBonus: 0.02857143, durationBonus: 1, lifespanDays: 30, tier: 1, // 0.5 - 1.0 THB
-        craftingRecipe: { 1: 3 }, craftingFee: 0.3, craftDurationMinutes: 30, buyable: false, specialEffect: { th: 'ลดค่าดูแล -5%', en: 'Maintenance cost -5%' }
+        id: 'hat', name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Helmet' }, price: 50, icon: 'HardHat', minBonus: 0.5, maxBonus: 1.0, durationBonus: 1, lifespanDays: 30, tier: 1, // 0.5 - 1.0 THB
+        craftingRecipe: { 1: 3 }, craftingFee: 10, craftDurationMinutes: 30, buyable: false, specialEffect: { th: 'ลดค่าดูแล -5%', en: 'Maintenance cost -5%' }
     },
     {
-        id: 'uniform', name: { th: 'ชุดป้องกัน', en: 'Safety Uniform' }, price: 3.4, icon: 'Shirt', minBonus: 0.02857143, maxBonus: 0.05714286, durationBonus: 3, lifespanDays: 30, tier: 1, // 1.0 - 2.0 THB
-        craftingRecipe: { 1: 4, 2: 3 }, craftingFee: 0.3, craftDurationMinutes: 60, buyable: false, specialEffect: { th: 'ลดค่าชาร์จแบต 5%', en: 'Reduce charging cost 5%' }
+        id: 'uniform', name: { th: 'ชุดป้องกัน', en: 'Safety Uniform' }, price: 120, icon: 'Shirt', minBonus: 1.0, maxBonus: 2.0, durationBonus: 3, lifespanDays: 30, tier: 1, // 1.0 - 2.0 THB
+        craftingRecipe: { 1: 4, 2: 3 }, craftingFee: 20, craftDurationMinutes: 60, buyable: false, specialEffect: { th: 'ลดค่าชาร์จแบต 5%', en: 'Reduce charging cost 5%' }
     },
     {
-        id: 'bag', name: { th: 'เป้สนามอเนกประสงค์', en: 'Utility Backpack' }, price: 5.7, icon: 'Backpack', minBonus: 0.04285714, maxBonus: 0.08571429, durationBonus: 5, lifespanDays: 45, tier: 2, // 1.5 - 3.0 THB
-        craftingRecipe: { 2: 4, 3: 2 }, craftingFee: 0.6, craftDurationMinutes: 180, buyable: false, specialEffect: { th: 'ราคาขาย +1%', en: 'Sell price +1%' }
+        id: 'bag', name: { th: 'เป้สนามอเนกประสงค์', en: 'Utility Backpack' }, price: 200, icon: 'Backpack', minBonus: 1.5, maxBonus: 3.0, durationBonus: 5, lifespanDays: 45, tier: 2, // 1.5 - 3.0 THB
+        craftingRecipe: { 2: 4, 3: 2 }, craftingFee: 30, craftDurationMinutes: 180, buyable: false, specialEffect: { th: 'ราคาขาย +1%', en: 'Sell price +1%' }
     },
     {
-        id: 'boots', name: { th: 'รองเท้าเซฟตี้', en: 'Safety Boots' }, price: 10.0, icon: 'Footprints', minBonus: 0.05714286, maxBonus: 0.11428571, durationBonus: 5, lifespanDays: 45, tier: 2, // 2.0 - 4.0 THB
-        craftingRecipe: { 3: 5, 4: 2 }, craftingFee: 0.7, craftDurationMinutes: 300, buyable: false, specialEffect: { th: 'ประหยัดพลังงาน 5%', en: 'Energy saving 5%' }
+        id: 'boots', name: { th: 'รองเท้าเซฟตี้', en: 'Safety Boots' }, price: 350, icon: 'Footprints', minBonus: 2.0, maxBonus: 4.0, durationBonus: 5, lifespanDays: 45, tier: 2, // 2.0 - 4.0 THB
+        craftingRecipe: { 3: 5, 4: 2 }, craftingFee: 50, craftDurationMinutes: 300, buyable: false, specialEffect: { th: 'ประหยัดพลังงาน 5%', en: 'Energy saving 5%' }
     },
     {
-        id: 'glasses', name: { th: 'แว่นตากันฝุ่น', en: 'Safety Glasses' }, price: 11.4, icon: 'Glasses', minBonus: 0.07142857, maxBonus: 0.14285714, durationBonus: 7, lifespanDays: 60, tier: 2, // 2.5 - 5.0 THB
-        craftingRecipe: { 4: 3, 3: 4 }, craftingFee: 2.2, craftDurationMinutes: 420, buyable: false, specialEffect: { th: 'โบนัส +2%', en: 'Bonus +2%' }
+        id: 'glasses', name: { th: 'แว่นตากันฝุ่น', en: 'Safety Glasses' }, price: 400, icon: 'Glasses', minBonus: 2.5, maxBonus: 5.0, durationBonus: 7, lifespanDays: 60, tier: 2, // 2.5 - 5.0 THB
+        craftingRecipe: { 4: 3, 3: 4 }, craftingFee: 80, craftDurationMinutes: 420, buyable: false, specialEffect: { th: 'โบนัส +2%', en: 'Bonus +2%' }
     },
     {
-        id: 'mobile', name: { th: 'สมาทโฟน', en: 'Smartphone' }, price: 12.8, icon: 'Smartphone', minBonus: 0.08571429, maxBonus: 0.17142857, durationBonus: 7, lifespanDays: 90, tier: 2, // 3.0 - 6.0 THB
-        craftingRecipe: { 5: 1, 4: 4 }, craftingFee: 3.4, craftDurationMinutes: 540, buyable: false, specialEffect: { th: 'ลดค่าใช้จ่าย 2%', en: 'Reduce expenses 2%' }
+        id: 'mobile', name: { th: 'สมาทโฟน', en: 'Smartphone' }, price: 450, icon: 'Smartphone', minBonus: 3.0, maxBonus: 6.0, durationBonus: 7, lifespanDays: 90, tier: 2, // 3.0 - 6.0 THB
+        craftingRecipe: { 5: 1, 4: 4 }, craftingFee: 120, craftDurationMinutes: 540, buyable: false, specialEffect: { th: 'ลดค่าใช้จ่าย 2%', en: 'Reduce expenses 2%' }
     },
     {
-        id: 'pc', name: { th: 'โน๊ตบุ๊ค', en: 'Notebook' }, price: 14.2, icon: 'Monitor', minBonus: 0.11428571, maxBonus: 0.22857143, durationBonus: 7, lifespanDays: 90, tier: 3, // 4.0 - 8.0 THB
-        craftingRecipe: { 5: 2, 4: 3 }, craftingFee: 5.1, craftDurationMinutes: 720, buyable: false, specialEffect: { th: 'โอกาสโบนัส 1%', en: 'Bonus chance 1%' }
+        id: 'pc', name: { th: 'โน๊ตบุ๊ค', en: 'Notebook' }, price: 500, icon: 'Monitor', minBonus: 4.0, maxBonus: 8.0, durationBonus: 7, lifespanDays: 90, tier: 3, // 4.0 - 8.0 THB
+        craftingRecipe: { 5: 2, 4: 3 }, craftingFee: 180, craftDurationMinutes: 720, buyable: false, specialEffect: { th: 'โอกาสโบนัส 1%', en: 'Bonus chance 1%' }
     },
     {
-        id: 'auto_excavator', name: { th: 'รถไฟฟ้า', en: 'Electric Vehicle' }, price: 18.5, icon: 'TrainFront', minBonus: 0.28571429, maxBonus: 0.42857143, durationBonus: 0, lifespanDays: 120, tier: 3, // 10.0 - 15.0 THB
-        craftingRecipe: { 6: 1, 5: 2 }, craftingFee: 14.2, craftDurationMinutes: 1440, buyable: false, specialEffect: { th: 'Jackpot 2%', en: 'Jackpot 2%' }
+        id: 'auto_excavator', name: { th: 'รถไฟฟ้า', en: 'Electric Vehicle' }, price: 650, icon: 'TrainFront', minBonus: 10.0, maxBonus: 15.0, durationBonus: 0, lifespanDays: 120, tier: 3, // 10.0 - 15.0 THB
+        craftingRecipe: { 6: 1, 5: 2 }, craftingFee: 500, craftDurationMinutes: 1440, buyable: false, specialEffect: { th: 'Jackpot 2%', en: 'Jackpot 2%' }
+    }
+];
+
+// --- REPAIR KIT DEFINITIONS ---
+export const REPAIR_KITS = [
+    {
+        id: 'repair_kit_1',
+        name: { th: 'ชุดซ่อมพื้นฐาน', en: 'Basic Repair Kit' },
+        repairTier: 1,
+        repairDays: 30,
+        targetEquipment: ['hat', 'uniform'],
+        craftingRecipe: { 1: 2, 2: 2 } as Record<number, number>,
+        craftingFee: 5,
+        craftDurationMinutes: 15,
+        icon: 'Wrench'
+    },
+    {
+        id: 'repair_kit_2',
+        name: { th: 'ชุดซ่อมมาตรฐาน', en: 'Standard Repair Kit' },
+        repairTier: 2,
+        repairDays: 30,
+        targetEquipment: ['bag', 'boots'],
+        craftingRecipe: { 3: 3, 2: 3 } as Record<number, number>,
+        craftingFee: 10,
+        craftDurationMinutes: 30,
+        icon: 'Wrench'
+    },
+    {
+        id: 'repair_kit_3',
+        name: { th: 'ชุดซ่อมขั้นสูง', en: 'Advanced Repair Kit' },
+        repairTier: 3,
+        repairDays: 30,
+        targetEquipment: ['glasses', 'mobile'],
+        craftingRecipe: { 3: 5, 4: 2 } as Record<number, number>,
+        craftingFee: 50,
+        craftDurationMinutes: 60,
+        icon: 'Wrench'
+    },
+    {
+        id: 'repair_kit_4',
+        name: { th: 'ชุดซ่อมเครื่องจักรกล', en: 'Master Repair Kit' },
+        repairTier: 4,
+        repairDays: 30,
+        targetEquipment: ['pc', 'auto_excavator'],
+        craftingRecipe: { 4: 5, 5: 1 } as Record<number, number>,
+        craftingFee: 200,
+        craftDurationMinutes: 120,
+        icon: 'Wrench'
     }
 ];
 
 export const DAILY_CHECKIN_REWARDS = [
-    { day: 1, reward: 'money', amount: 0.3, amountTHB: 10, label: { th: '10 ฿', en: '0.3 $' } },
+    { day: 1, reward: 'money', amount: 10, label: { th: '10 ฿', en: '10 THB' } },
     { day: 2, reward: 'material', tier: 1, amount: 2, label: { th: 'ถ่านหิน x2', en: 'Coal x2' } },
-    { day: 3, reward: 'money', amount: 0.4, amountTHB: 15, label: { th: '15 ฿', en: '0.4 $' } },
+    { day: 3, reward: 'money', amount: 15, label: { th: '15 ฿', en: '15 THB' } },
     { day: 4, reward: 'material', tier: 1, amount: 3, label: { th: 'ถ่านหิน x3', en: 'Coal x3' } },
-    { day: 5, reward: 'money', amount: 0.5, amountTHB: 20, label: { th: '20 ฿', en: '0.5 $' } },
+    { day: 5, reward: 'money', amount: 20, label: { th: '20 ฿', en: '20 THB' } },
     { day: 6, reward: 'item', id: 'chest_key', amount: 1, label: { th: 'กุญแจเข้าเหมือง x1', en: 'Mine Key x1' } },
     { day: 7, reward: 'item', id: 'chest_key', amount: 3, label: { th: 'กุญแจเข้าเหมือง x3', en: 'Mine Key x3' }, highlight: true },
-    { day: 8, reward: 'money', amount: 0.7, amountTHB: 25, label: { th: '25 ฿', en: '0.7 $' } },
+    { day: 8, reward: 'money', amount: 25, label: { th: '25 ฿', en: '25 THB' } },
     { day: 9, reward: 'material', tier: 2, amount: 2, label: { th: 'ทองแดง x2', en: 'Copper x2' } },
-    { day: 10, reward: 'money', amount: 0.8, amountTHB: 30, label: { th: '30 ฿', en: '0.8 $' } },
+    { day: 10, reward: 'money', amount: 30, label: { th: '30 ฿', en: '30 THB' } },
     { day: 11, reward: 'material', tier: 3, amount: 1, label: { th: 'เหล็ก x1', en: 'Iron x1' } },
-    { day: 12, reward: 'money', amount: 1.0, amountTHB: 35, label: { th: '35 ฿', en: '1.0 $' } },
+    { day: 12, reward: 'money', amount: 35, label: { th: '35 ฿', en: '35 THB' } },
     { day: 13, reward: 'item', id: 'upgrade_chip', amount: 2, label: { th: 'ชิปอัปเกรด x2', en: 'Upgrade Chip x2' } },
     { day: 14, reward: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' }, highlight: true },
-    { day: 15, reward: 'money', amount: 1.1, amountTHB: 40, label: { th: '40 ฿', en: '1.1 $' } },
+    { day: 15, reward: 'money', amount: 40, label: { th: '40 ฿', en: '40 THB' } },
     { day: 16, reward: 'material', tier: 3, amount: 2, label: { th: 'เหล็ก x2', en: 'Iron x2' } },
     { day: 17, reward: 'material', tier: 2, amount: 5, label: { th: 'ทองแดง x5', en: 'Copper x5' } },
-    { day: 18, reward: 'money', amount: 1.2, amountTHB: 45, label: { th: '45 ฿', en: '1.2 $' } },
+    { day: 18, reward: 'money', amount: 45, label: { th: '45 ฿', en: '45 THB' } },
     { day: 19, reward: 'material', tier: 3, amount: 2, label: { th: 'เหล็ก x2', en: 'Iron x2' } },
     { day: 20, reward: 'item', id: 'upgrade_chip', amount: 5, label: { th: 'ชิปอัปเกรด x5', en: 'Upgrade Chip x5' } },
     { day: 21, reward: 'item', id: 'upgrade_chip', amount: 15, label: { th: 'ชิปอัปเกรด x15', en: 'Upgrade Chip x15' }, highlight: true },
-    { day: 22, reward: 'money', amount: 1.4, amountTHB: 50, label: { th: '50 ฿', en: '1.4 $' } },
+    { day: 22, reward: 'money', amount: 50, label: { th: '50 ฿', en: '50 THB' } },
     { day: 23, reward: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' } },
     { day: 24, reward: 'item', id: 'chest_key', amount: 5, label: { th: 'กุญแจเข้าเหมือง x5', en: 'Mine Key x5' } },
-    { day: 25, reward: 'money', amount: 1.7, amountTHB: 60, label: { th: '60 ฿', en: '1.7 $' } },
+    { day: 25, reward: 'money', amount: 60, label: { th: '60 ฿', en: '60 THB' } },
     { day: 26, reward: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' } },
     { day: 27, reward: 'item', id: 'mixer', amount: 1, label: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' } },
-    { day: 28, reward: 'money', amount: 2.8, amountTHB: 100, label: { th: 'Jackpot 100 ฿', en: 'Jackpot 2.8 $' }, highlight: true },
+    { day: 28, reward: 'money', amount: 100, label: { th: 'Jackpot 100 ฿', en: 'Jackpot 100 THB' }, highlight: true },
     { day: 29, reward: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' } },
     { day: 30, reward: 'grand_prize', label: { th: 'ใบประกันความเสี่ยง + แท่นขุดเจาะพิเศษ', en: 'Insurance Card + Master Wing' }, highlight: true, special: true },
 ];
 
 export const VIP_TIERS = [
     { level: 0, minExp: 0, perk: { th: 'สมาชิกทั่วไป', en: 'Regular Member' }, bonusDrop: 0 },
-    { level: 1, minExp: 30, perk: { th: 'เพิ่มอัตราดรอป 5%', en: 'Drop Rate +5%' }, bonusDrop: 0.05 },
-    { level: 2, minExp: 140, perk: { th: 'เพิ่มอัตราดรอป 10%', en: 'Drop Rate +10%' }, bonusDrop: 0.10 },
-    { level: 3, minExp: 570, perk: { th: 'เพิ่มอัตราดรอป 15% + ส่วนลดร้านค้า 5%', en: 'Drop Rate +15%, Shop Discount 5%' }, bonusDrop: 0.15 },
-    { level: 4, minExp: 1420, perk: { th: 'เพิ่มอัตราดรอป 20% + ส่วนลดร้านค้า 10%', en: 'Drop Rate +20%, Shop Discount 10%' }, bonusDrop: 0.20 },
-    { level: 5, minExp: 2850, perk: { th: 'King of Dormitory (มาสเตอร์อาคาร: ดรอป +30%, ร้านค้า -15%)', en: 'King of Dormitory (Master: Drop +30%, Shop -15%)' }, bonusDrop: 0.30 },
+    { level: 1, minExp: 1000, perk: { th: 'เพิ่มอัตราดรอป 5%', en: 'Drop Rate +5%' }, bonusDrop: 0.05 },
+    { level: 2, minExp: 5000, perk: { th: 'เพิ่มอัตราดรอป 10%', en: 'Drop Rate +10%' }, bonusDrop: 0.10 },
+    { level: 3, minExp: 20000, perk: { th: 'เพิ่มอัตราดรอป 15% + ส่วนลดร้านค้า 5%', en: 'Drop Rate +15%, Shop Discount 5%' }, bonusDrop: 0.15 },
+    { level: 4, minExp: 50000, perk: { th: 'เพิ่มอัตราดรอป 20% + ส่วนลดร้านค้า 10%', en: 'Drop Rate +20%, Shop Discount 10%' }, bonusDrop: 0.20 },
+    { level: 5, minExp: 100000, perk: { th: 'King of Dormitory (มาสเตอร์อาคาร: ดรอป +30%, ร้านค้า -15%)', en: 'King of Dormitory (Master: Drop +30%, Shop -15%)' }, bonusDrop: 0.30 },
 ];
 
 export const QUESTS = [
     { id: 'q1', type: 'materials_crafted', target: 20, rewardType: 'points', rewardAmount: 20, title: { th: 'นักสกัดแร่', en: 'Mineral Refiner' }, desc: { th: 'สกัดวัสดุสำเร็จ 20 ครั้ง', en: 'Successfully refine 20 materials' } },
-    { id: 'q2', type: 'spend', target: 142, rewardType: 'points', rewardAmount: 30, title: { th: 'นักลงทุนเหมือง', en: 'Mine Investor' }, desc: { th: 'ใช้จ่าย 142 $', en: 'Spend 142 $' } },
+    { id: 'q2', type: 'spend', target: 5000, rewardType: 'points', rewardAmount: 30, title: { th: 'นักลงทุนเหมือง', en: 'Mine Investor' }, desc: { th: 'ใช้จ่าย 5000 ฿', en: 'Spend 5000 THB' } },
     { id: 'q3', type: 'dungeon', target: 30, rewardType: 'points', rewardAmount: 50, title: { th: 'นักสำรวจยอดเยี่ยม', en: 'Top Explorer' }, desc: { th: 'สำรวจแหล่งแร่ 30 รอบ', en: 'Complete 30 expeditions' } },
     { id: 'q4', type: 'items_crafted', target: 20, rewardType: 'points', rewardAmount: 40, title: { th: 'ช่างประกอบหัวเจาะ', en: 'Drill Assembler' }, desc: { th: 'ประกอบหัวเจาะ 20 ชิ้น', en: 'Assemble 20 drills' } },
     { id: 'q5', type: 'repair', target: 100, rewardType: 'points', rewardAmount: 20, title: { th: 'ผู้ดูแลเครื่องจักร', en: 'Machine Maintainer' }, desc: { th: 'ซ่อมบำรุงหัวเจาะครบ 100%', en: 'Reach 100% repair status' } },
@@ -503,14 +552,14 @@ export const MINING_RANKS = [
 
 export const ACHIEVEMENTS = [
     { id: 'a1', type: 'materials_crafted', target: 50, points: 50, title: { th: 'ช่างฝีมือ', en: 'Craftsman' }, desc: { th: 'แปรรูปวัสดุสำเร็จ 50 ครั้ง', en: 'Refine 50 materials' } },
-    { id: 'a2', type: 'vip', target: 285, points: 100, title: { th: 'VIP Member', en: 'VIP Member' }, desc: { th: 'สะสมยอดใช้จ่ายครบ 285 $', en: 'Total spend 285 $' } },
+    { id: 'a2', type: 'vip', target: 10000, points: 100, title: { th: 'VIP Member', en: 'VIP Member' }, desc: { th: 'สะสมยอดใช้จ่ายครบ 10000 ฿', en: 'Total spend 10000 THB' } },
 ];
 
 export const LUCKY_DRAW_CONFIG = {
-    COST: 0.3,
+    COST: 10,
     FREE_COOLDOWN_MS: 24 * 60 * 60 * 1000,
     PROBABILITIES: [
-        { type: 'money', amount: 0.15, chance: 41, label: { th: 'เงิน 0.15 $', en: '0.15 $ Cash' } },
+        { type: 'money', amount: 5, chance: 41, label: { th: 'เงิน 5 ฿', en: '5 THB Cash' } },
         { type: 'material', chance: 15, label: { th: 'วัสดุสุ่ม (ถ่านหิน/ทองแดง/เหล็ก)', en: 'Random Material (Coal/Copper/Iron)' } },
         { type: 'energy', amount: 50, chance: 30, label: { th: 'พลังงานเครื่องจักร +50%', en: 'Machine Energy +50%' } },
         { type: 'item', chance: 13, label: { th: 'ไอเทมสุ่ม (กุญแจเข้าเหมือง/ชิป/โต๊ะช่าง)', en: 'Random Item (Key/Chip/Crafting Table)' } },
@@ -537,7 +586,7 @@ export const DUNGEON_CONFIG: DungeonLevel[] = [
         id: 1,
         name: { th: 'หุบเขาเหมืองร้าง (The Abandoned Canyon)', en: 'The Abandoned Canyon' },
         description: { th: 'ค้นหาเศษแร่ที่หลงเหลือในเหมืองร้าง', en: 'Search for leftover ore fragments in the abandoned mine.' },
-        cost: 2.857142,
+        cost: 100,
         keyCost: 2,
         durationHours: 2,
         rewards: {
@@ -559,7 +608,7 @@ export const DUNGEON_CONFIG: DungeonLevel[] = [
         id: 2,
         name: { th: 'นครทองคำที่สาบสูญ (Lost City of Gold)', en: 'Lost City of Gold' },
         description: { th: 'ปฏิบัติการเจาะทะลุชั้นหินแข็ง เพื่อค้นหาทรัพยากรล้ำค่าที่ซ่อนอยู่', en: 'Drilling through hard rock layers to find hidden precious resources.' },
-        cost: 8.571428,
+        cost: 300,
         keyCost: 10,
         durationHours: 6,
         rewards: {
@@ -583,7 +632,7 @@ export const DUNGEON_CONFIG: DungeonLevel[] = [
         id: 3,
         name: { th: 'เหมืองผลึกคริสตัล (Crystal Caverns)', en: 'Crystal Caverns' },
         description: { th: 'เดินทางสู่ดินแดนต้องห้าม ที่เล่าขานว่ามีขุมทรัพย์ระดับตำนานหลับใหลอยู่', en: 'Journey to forbidden lands where legendary treasures are said to lie.' },
-        cost: 28.571428,
+        cost: 1000,
         durationHours: 12,
         rewards: {
             common: [

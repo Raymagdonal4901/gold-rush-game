@@ -21,12 +21,12 @@ const MATERIAL_CONFIG = {
 
 const MATERIAL_RECIPES: Record<number, { ingredients: Record<number, number>; fee: number; requiredItem?: string }> = {
     0: { ingredients: { 0: 5 }, fee: 0, requiredItem: 'mixer' }, // Stone Shards x5 + 0 Baht -> Coal
-    1: { ingredients: { 1: 2 }, fee: 0.0286, requiredItem: 'mixer' }, // Coal x2 + ~1 Baht -> Copper
-    2: { ingredients: { 1: 1, 2: 1 }, fee: 0.0571, requiredItem: 'mixer' }, // Coal x1 + Copper x1 + ~2 Baht -> Iron
-    3: { ingredients: { 2: 1, 3: 1 }, fee: 0.0857, requiredItem: 'mixer' }, // Copper x1 + Iron x1 + ~3 Baht -> Gold
-    4: { ingredients: { 2: 1, 3: 1, 4: 1 }, fee: 0.1429, requiredItem: 'mixer' }, // Copper x1 + Iron x1 + Gold x1 + ~5 Baht -> Diamond
-    5: { ingredients: { 4: 1, 5: 1 }, fee: 0.2857, requiredItem: 'mixer' }, // Gold x1 + Diamond x1 + ~10 Baht -> Synthetic Oil
-    6: { ingredients: { 1: 15, 2: 10, 3: 10, 4: 5, 5: 3, 6: 1 }, fee: 1.4286, requiredItem: 'magnifying_glass' }, // Multi-mix -> Vibranium (~50 Baht)
+    1: { ingredients: { 1: 2 }, fee: 1, requiredItem: 'mixer' }, // Coal x2 + 1 Baht -> Copper
+    2: { ingredients: { 1: 1, 2: 1 }, fee: 2, requiredItem: 'mixer' }, // Coal x1 + Copper x1 + 2 Baht -> Iron
+    3: { ingredients: { 2: 1, 3: 1 }, fee: 3, requiredItem: 'mixer' }, // Copper x1 + Iron x1 + 3 Baht -> Gold
+    4: { ingredients: { 2: 1, 3: 1, 4: 1 }, fee: 5, requiredItem: 'mixer' }, // Copper x1 + Iron x1 + Gold x1 + 5 Baht -> Diamond
+    5: { ingredients: { 4: 1, 5: 1 }, fee: 10, requiredItem: 'mixer' }, // Gold x1 + Diamond x1 + 10 Baht -> Synthetic Oil
+    6: { ingredients: { 1: 15, 2: 10, 3: 10, 4: 5, 5: 3, 6: 1 }, fee: 50, requiredItem: 'magnifying_glass' }, // Multi-mix -> Vibranium (50 Baht)
 };
 
 const SHOP_ITEMS = [
@@ -36,13 +36,13 @@ const SHOP_ITEMS = [
 
 // --- MARKET LOGIC ---
 const BASE_PRICES: Record<number, number> = {
-    1: 0.2857, // (~10 ฿)
-    2: 0.5714, // (~20 ฿)
-    3: 1.0000, // (~35 ฿)
-    4: 1.7143, // (~60 ฿)
-    5: 3.4286, // (~120 ฿)
-    6: 8.5714, // (~300 ฿)
-    7: 42.8571 // (~1500 ฿)
+    1: 10, // (10 ฿)
+    2: 20, // (20 ฿)
+    3: 32, // (32 ฿)
+    4: 60, // (60 ฿)
+    5: 120, // (120 ฿)
+    6: 300, // (300 ฿)
+    7: 1500 // (1500 ฿)
 };
 
 export const getMarketPrices = () => {

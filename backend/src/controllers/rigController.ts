@@ -172,27 +172,22 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
         // --- GLOVE GENERATION (Free Starter Glove) ---
         const rand = Math.random() * 100;
         let rarity = 'COMMON';
-        let bonus = 0.01428571; // 0.5 THB / 35
-        if (rand < 80) { rarity = 'COMMON'; bonus = 0.01428571; }
-        else if (rand < 91) { rarity = 'RARE'; bonus = 0.02857143; } // 1.0 THB
-        else if (rand < 96) { rarity = 'SUPER_RARE'; bonus = 0.04285714; } // 1.5 THB
-        else if (rand < 99) { rarity = 'EPIC'; bonus = 0.05714286; } // 2.0 THB
-        else { rarity = 'LEGENDARY'; bonus = 0.08571429; } // 3.0 THB
+        let bonus = 0.5; // 0.5 THB
+
+        // Updated names and bonuses based on user images
+        let gloveName: { th: string, en: string } = { th: 'พนักงานทั่วไป (STAFF)', en: 'Staff (STAFF)' }; // Default
+        if (rand < 80) { rarity = 'COMMON'; bonus = 0.5; gloveName = { th: 'พนักงานทั่วไป (STAFF)', en: 'Staff (STAFF)' }; }
+        else if (rand < 91) { rarity = 'RARE'; bonus = 1.0; gloveName = { th: 'หัวหน้างาน (SUPERVISOR)', en: 'Supervisor (SUPERVISOR)' }; }
+        else if (rand < 96) { rarity = 'SUPER_RARE'; bonus = 1.5; gloveName = { th: 'ผู้จัดการหอพัก (MANAGER)', en: 'Manager (MANAGER)' }; }
+        else if (rand < 99) { rarity = 'EPIC'; bonus = 2.0; gloveName = { th: 'ผู้บริหารอาคาร (EXECUTIVE)', en: 'Executive (EXECUTIVE)' }; }
+        else { rarity = 'LEGENDARY'; bonus = 3.0; gloveName = { th: 'หุ้นส่วนใหญ่ (PARTNER)', en: 'Partner (PARTNER)' }; }
 
         const gloveId = Math.random().toString(36).substr(2, 9);
-        // Updated names based on user requirement
-        const names: any = {
-            COMMON: { th: 'ถุงมือทำงาน (WORK)', en: 'Work Glove (WORK)' },
-            RARE: { th: 'ถุงมือเสริมแรง (REINFORCED)', en: 'Reinforced Glove (REINFORCED)' },
-            SUPER_RARE: { th: 'ถุงมือยุทธวิธี (TACTICAL)', en: 'Tactical Glove (TACTICAL)' },
-            EPIC: { th: 'ถุงมือพาวเวอร์ (POWER)', en: 'Power Glove (POWER)' },
-            LEGENDARY: { th: 'ถุงมืออินฟินิตี้ (INFINITY)', en: 'Infinity Glove (INFINITY)' }
-        };
 
         const newGlove = {
             id: gloveId,
             typeId: 'glove',
-            name: names[rarity] || 'Glove',
+            name: gloveName,
             price: 0,
             dailyBonus: bonus,
             durationBonus: 0,

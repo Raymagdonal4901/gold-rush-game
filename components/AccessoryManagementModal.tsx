@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Sparkles, XCircle, Hammer, Backpack, Glasses, Monitor, Smartphone, Truck, Footprints, Zap, TrendingUp, Rocket, Flame, CloudFog, Anvil, FileText, HardHat, Shirt, Bot, Key, Factory, Search, Hourglass, Gem, Lock } from 'lucide-react';
+import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Sparkles, XCircle, Hammer, Backpack, Glasses, Monitor, Smartphone, Truck, Footprints, Zap, TrendingUp, Rocket, Flame, CloudFog, Anvil, FileText, HardHat, Shirt, Bot, Key, Factory, Search, Hourglass, Gem, Lock, Wrench, Clock, Timer, Ticket } from 'lucide-react';
 import { AccessoryItem, OilRig } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
-import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS } from '../constants';
+import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS, REPAIR_KITS } from '../constants';
 import { api } from '../services/api';
 import { MaterialIcon } from './MaterialIcon';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -25,7 +25,7 @@ interface AccessoryManagementModalProps {
 export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> = ({
     isOpen, onClose, rig, slotIndex, equippedItem, inventory, userId, onEquip, onUnequip, onRefresh, materials = {}, addNotification
 }) => {
-    const { t, language, getLocalized, formatBonus } = useTranslation();
+    const { t, language, getLocalized, formatBonus, formatCurrency } = useTranslation();
     const [view, setView] = useState<'MANAGE' | 'SELECT'>('MANAGE');
     const [isUpgrading, setIsUpgrading] = useState(false);
     const [useInsurance, setUseInsurance] = useState(false);
@@ -40,6 +40,12 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         itemName?: string
     } | null>(null);
 
+    // --- REPAIR STATE ---
+    const [showRepairConfirm, setShowRepairConfirm] = useState(false);
+    const [selectedRepairKit, setSelectedRepairKit] = useState<any>(null);
+    const [isRepairing, setIsRepairing] = useState(false);
+    const [repairMsg, setRepairMsg] = useState<{ type: 'SUCCESS' | 'ERROR', text: string } | null>(null);
+
     useEffect(() => {
         if (isOpen) {
             setView(equippedItem ? 'MANAGE' : 'SELECT');
@@ -47,6 +53,9 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             setIsUpgrading(false);
             setUpgradePhase('IDLE');
             setUseInsurance(false);
+            setShowRepairConfirm(false);
+            setSelectedRepairKit(null);
+            setRepairMsg(null);
         }
     }, [isOpen, equippedItem?.id]);
 
@@ -100,7 +109,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                         subtext: t('blacksmith.upgrade_success'),
                         oldBonus,
                         newBonus: res.item?.dailyBonus,
-                        itemName
+                        itemName: getLocalized(itemName)
                     });
                 } else {
                     setUpgradeMsg({
@@ -127,12 +136,52 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         }
     };
 
-    // ... (rendering code)
-    // I will replace `handleUpgrade` definition and add state.
-    // But `insuranceCount` needs to be defined in render scope.
+    // --- REPAIR HANDLER ---
+    const handleRepair = async () => {
+        if (!equippedItem || !selectedRepairKit) return;
+        setIsRepairing(true);
+        setRepairMsg(null);
+        try {
+            const res = await api.repairEquipment(equippedItem.id, selectedRepairKit.id);
+            if (res.success) {
+                setRepairMsg({ type: 'SUCCESS', text: res.message || (language === 'th' ? 'ซ่อมบำรุงสำเร็จ!' : 'Repair successful!') });
+                onRefresh();
+            } else {
+                setRepairMsg({ type: 'ERROR', text: res.message || (language === 'th' ? 'ซ่อมไม่สำเร็จ' : 'Repair failed') });
+            }
+        } catch (e: any) {
+            setRepairMsg({ type: 'ERROR', text: e.response?.data?.message || e.message || 'Error' });
+        }
+        setIsRepairing(false);
+        setShowRepairConfirm(false);
+        setSelectedRepairKit(null);
+    };
 
-    // Let's replace the top part first (state + useEffect)
+    // --- EQUIPMENT EXPIRY HELPERS ---
+    const getExpiryInfo = (item: any) => {
+        if (!item || !item.expireAt) return null;
+        const now = Date.now();
+        const msLeft = item.expireAt - now;
+        const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
+        const isExpired = msLeft <= 0;
+        const isWarning = !isExpired && daysLeft <= 3;
+        return { daysLeft, isExpired, isWarning, expireAt: item.expireAt };
+    };
 
+    // Find available repair kits for the equipped item
+    const getAvailableRepairKits = () => {
+        if (!equippedItem) return [];
+        const typeId = equippedItem.typeId || '';
+        // Find which repair kit tier targets this equipment
+        const matchingKitConfig = REPAIR_KITS.find(k => k.targetEquipment.includes(typeId));
+        if (!matchingKitConfig) return [];
+        // Find inventory items matching this kit type
+        return inventory.filter(i => i.typeId === matchingKitConfig.id);
+    };
+
+    const getRepairKitConfigForEquipment = (typeId: string) => {
+        return REPAIR_KITS.find(k => k.targetEquipment.includes(typeId)) || null;
+    };
 
     if (!isOpen) return null;
 
@@ -154,16 +203,19 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         if (itemConfig && itemConfig.tier !== undefined) return true;
 
         // 2. Fallback: Check by Name
-        const name = item.name || '';
-        if (name.includes('หมวก') || name.includes('Helmet')) return true;
-        if (name.includes('แว่นขยาย') || name.includes('Magnifying')) return false; // Auto-activate tool
-        if (name.includes('แว่น') || name.includes('Glasses')) return true;
-        if (name.includes('ชุด') || name.includes('Uniform') || name.includes('Suit')) return true;
-        if (name.includes('กระเป๋า') || name.includes('Bag') || name.includes('Backpack')) return true;
-        if (name.includes('รองเท้า') || name.includes('Boots')) return true;
-        if (name.includes('มือถือ') || name.includes('Mobile') || name.includes('Phone')) return true;
-        if (name.includes('คอม') || name.includes('PC') || name.includes('Computer')) return true;
-        if (name.includes('รถขุด') || name.includes('Excavator')) return true;
+        const nameRaw = item.name;
+        const enName = typeof nameRaw === 'object' ? (nameRaw as any).en || '' : String(nameRaw || '');
+        const thName = typeof nameRaw === 'object' ? (nameRaw as any).th || '' : String(nameRaw || '');
+
+        if (thName.includes('หมวก') || enName.includes('Helmet')) return true;
+        if (thName.includes('แว่นขยาย') || enName.includes('Magnifying')) return false; // Auto-activate tool
+        if (thName.includes('แว่น') || enName.includes('Glasses')) return true;
+        if (thName.includes('ชุด') || enName.includes('Uniform') || enName.includes('Suit')) return true;
+        if (thName.includes('กระเป๋า') || enName.includes('Bag') || enName.includes('Backpack')) return true;
+        if (thName.includes('รองเท้า') || enName.includes('Boots')) return true;
+        if (thName.includes('มือถือ') || enName.includes('Mobile') || enName.includes('Phone')) return true;
+        if (thName.includes('คอม') || enName.includes('PC') || enName.includes('Computer')) return true;
+        if (thName.includes('รถขุด') || enName.includes('Excavator')) return true;
 
         return false;
     };
@@ -223,6 +275,8 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         else if (enName.includes('Boots') || thName.includes('รองเท้า')) typeId = 'boots';
         else if (enName.includes('Mobile') || enName.includes('Phone') || thName.includes('มือถือ')) typeId = 'mobile';
         else if (enName.includes('PC') || enName.includes('Computer') || thName.includes('คอม')) typeId = 'pc';
+        else if (enName.includes('Time Skip Ticket') || thName.includes('ตั๋วเร่งเวลา')) typeId = 'time_skip_ticket';
+        else if (enName.includes('Construction Nanobot') || thName.includes('นาโนบอทก่อสร้าง')) typeId = 'construction_nanobot';
 
         if (typeId.includes('glove')) return <InfinityGlove rarity={item.rarity} size={size} />;
 
@@ -280,6 +334,29 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             }
             if (typeId === 'legendary_ore') {
                 return <Gem {...props} className={`${props.className} text-red-400 drop-shadow-[0_0_12px_rgba(248,113,113,0.8)]`} />;
+            }
+            if (typeId === 'time_skip_ticket') {
+                return (
+                    <div className="relative flex items-center justify-center">
+                        <div className="absolute inset-0 bg-blue-500/20 rounded-lg scale-125 blur-md animate-pulse"></div>
+                        <div className="absolute -top-3 -right-3">
+                            <Timer size={14} className="text-blue-300 animate-[spin_3s_linear_infinite]" />
+                        </div>
+                        <Ticket {...props} className={`${props.className} text-blue-400 -rotate-12 relative z-10`} />
+                    </div>
+                );
+            }
+            if (typeId === 'construction_nanobot') {
+                return (
+                    <div className="relative flex items-center justify-center">
+                        <div className="absolute inset-0 bg-cyan-500/30 rounded-full scale-[1.5] blur-xl animate-pulse"></div>
+                        <div className="absolute inset-0 border border-cyan-400/30 rounded-full scale-110 animate-[spin_8s_linear_infinite]"></div>
+                        <div className="absolute -top-3 -right-3 bg-cyan-500 text-white rounded-full p-1">
+                            <Zap size={10} className="animate-pulse" />
+                        </div>
+                        <Bot {...props} className={`${props.className} text-cyan-300 relative z-10`} />
+                    </div>
+                );
             }
 
             return <InfinityGlove size={size} className={props.className} />;
@@ -406,9 +483,9 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                 </div>
                             </div>
                             <div className="flex items-center justify-center gap-4 text-sm font-bold">
-                                <div className="text-stone-500">{upgradeMsg.oldBonus?.toFixed(2)}</div>
+                                <div className="text-stone-500">{formatCurrency(upgradeMsg.oldBonus || 0, { showDecimals: true })}</div>
                                 <div className="text-yellow-500">→</div>
-                                <div className="text-green-400 font-bold">+{upgradeMsg.newBonus?.toFixed(2)}</div>
+                                <div className="text-green-400 font-bold">+{formatCurrency(upgradeMsg.newBonus || 0, { showDecimals: true })}</div>
                             </div>
                         </div>
                     )}
@@ -514,6 +591,88 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 <div className="bg-stone-900 p-3 border-t border-stone-800">
                     {equippedItem ? (
                         <div className="space-y-2">
+                            {/* --- EXPIRY STATUS INDICATOR --- */}
+                            {(() => {
+                                const expiryInfo = getExpiryInfo(equippedItem);
+                                if (!expiryInfo) return null;
+                                const kitConfig = getRepairKitConfigForEquipment(equippedItem.typeId || '');
+                                const availableKits = getAvailableRepairKits();
+                                return (
+                                    <div className={`rounded-lg p-2 border flex items-center justify-between ${expiryInfo.isExpired
+                                        ? 'bg-red-950/30 border-red-900/50'
+                                        : expiryInfo.isWarning
+                                            ? 'bg-yellow-950/30 border-yellow-900/50'
+                                            : 'bg-stone-950 border-stone-800'
+                                        }`}>
+                                        <div className="flex items-center gap-2">
+                                            {expiryInfo.isExpired ? (
+                                                <XCircle size={16} className="text-red-500" />
+                                            ) : expiryInfo.isWarning ? (
+                                                <AlertTriangle size={16} className="text-yellow-500 animate-pulse" />
+                                            ) : (
+                                                <Clock size={16} className="text-stone-400" />
+                                            )}
+                                            <div>
+                                                <div className={`text-xs font-bold ${expiryInfo.isExpired ? 'text-red-400' : expiryInfo.isWarning ? 'text-yellow-400' : 'text-stone-300'
+                                                    }`}>
+                                                    {expiryInfo.isExpired
+                                                        ? (language === 'th' ? '❌ หมดอายุแล้ว!' : '❌ Expired!')
+                                                        : expiryInfo.isWarning
+                                                            ? (language === 'th' ? `⚠️ เหลือ ${expiryInfo.daysLeft} วัน!` : `⚠️ ${expiryInfo.daysLeft} days left!`)
+                                                            : (language === 'th' ? `เหลือ ${expiryInfo.daysLeft} วัน` : `${expiryInfo.daysLeft} days left`)
+                                                    }
+                                                </div>
+                                                <div className="text-[9px] text-stone-500">
+                                                    {new Date(expiryInfo.expireAt).toLocaleDateString(language === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {kitConfig && (
+                                            <button
+                                                onClick={() => {
+                                                    if (availableKits.length > 0) {
+                                                        setSelectedRepairKit(availableKits[0]);
+                                                        setShowRepairConfirm(true);
+                                                    } else {
+                                                        if (addNotification) addNotification({
+                                                            id: Date.now().toString(),
+                                                            userId,
+                                                            message: language === 'th'
+                                                                ? `ไม่มี ${getLocalized(kitConfig.name)} ในกระเป๋า — ไปคราฟต์ก่อน!`
+                                                                : `No ${kitConfig.name.en} in inventory — craft one first!`,
+                                                            type: 'WARNING',
+                                                            read: false,
+                                                            timestamp: Date.now()
+                                                        });
+                                                    }
+                                                }}
+                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${availableKits.length > 0
+                                                    ? 'bg-emerald-700 hover:bg-emerald-600 border border-emerald-500/50 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                                                    : 'bg-stone-800 border border-stone-700 text-stone-500 cursor-not-allowed'
+                                                    }`}
+                                            >
+                                                <Wrench size={12} />
+                                                {language === 'th' ? 'ซ่อมบำรุง' : 'Repair'}
+                                                {availableKits.length > 0 && (
+                                                    <span className="bg-emerald-900 px-1.5 py-0.5 rounded text-emerald-300 text-[9px]">x{availableKits.length}</span>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
+                            {/* --- REPAIR SUCCESS/ERROR MESSAGE --- */}
+                            {repairMsg && (
+                                <div className={`rounded-lg p-2 border text-center text-xs font-bold animate-in fade-in duration-300 ${repairMsg.type === 'SUCCESS'
+                                    ? 'bg-emerald-950/30 border-emerald-700 text-emerald-400'
+                                    : 'bg-red-950/30 border-red-700 text-red-400'
+                                    }`}>
+                                    {repairMsg.type === 'SUCCESS' ? <CheckCircle2 size={14} className="inline mr-1" /> : <XCircle size={14} className="inline mr-1" />}
+                                    {repairMsg.text}
+                                </div>
+                            )}
+
                             <div className="flex gap-2">
                                 {slotIndex !== 0 ? (
                                     <>
@@ -678,7 +837,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                 {getAccessoryIcon(item)}
                             </div>
                             <div>
-                                <div className={`text-xs font-bold ${RARITY_SETTINGS[item.rarity].color} font-mono tracking-tighter`}>{getItemDisplayName(item)}</div>
+                                <div className={`text-xs font-bold ${(RARITY_SETTINGS[item.rarity] || RARITY_SETTINGS.COMMON).color} font-mono tracking-tighter`}>{getItemDisplayName(item)}</div>
                                 <div className="flex flex-col items-center mt-1">
                                     <div className="text-[10px] text-cyan-400 font-mono">{formatBonus(item.dailyBonus || 0, item.typeId)} {t('lootbox.per_day')}</div>
                                     <div className="text-[9px] text-yellow-500 font-bold uppercase tracking-widest mt-0.5">{t('blacksmith.bonus')}: {formatBonus(item.dailyBonus || 0, item.typeId)} {t('lootbox.per_day')}</div>
@@ -691,10 +850,78 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         </div>
     );
 
+    // --- REPAIR CONFIRMATION MODAL ---
+    const renderRepairConfirm = () => {
+        if (!showRepairConfirm || !selectedRepairKit || !equippedItem) return null;
+        const kitConfig = getRepairKitConfigForEquipment(equippedItem.typeId || '');
+        const kitName = getLocalized(selectedRepairKit.name || kitConfig?.name);
+        const equipName = getItemDisplayName(equippedItem);
+        const expiryInfo = getExpiryInfo(equippedItem);
+
+        return (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setShowRepairConfirm(false)}>
+                <div className="bg-stone-950 border-2 border-emerald-700 rounded-xl w-full max-w-xs p-6 shadow-[0_0_30px_rgba(16,185,129,0.2)]" onClick={e => e.stopPropagation()}>
+                    <div className="text-center mb-4">
+                        <div className="w-16 h-16 mx-auto bg-emerald-900/30 rounded-full flex items-center justify-center border-2 border-emerald-600 mb-3">
+                            <Wrench size={32} className="text-emerald-400" />
+                        </div>
+                        <h3 className="text-lg font-black text-white uppercase tracking-wider">
+                            {language === 'th' ? 'ยืนยันการซ่อมบำรุง' : 'Confirm Repair'}
+                        </h3>
+                    </div>
+
+                    <div className="bg-stone-900 border border-stone-800 rounded-lg p-3 mb-4 space-y-2 text-xs">
+                        <div className="flex justify-between">
+                            <span className="text-stone-500">{language === 'th' ? 'อุปกรณ์:' : 'Equipment:'}</span>
+                            <span className="text-white font-bold">{equipName}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-stone-500">{language === 'th' ? 'ชุดซ่อม:' : 'Kit:'}</span>
+                            <span className="text-emerald-400 font-bold">{kitName}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-stone-500">{language === 'th' ? 'ยืดอายุ:' : 'Extend:'}</span>
+                            <span className="text-cyan-400 font-bold">+30 {language === 'th' ? 'วัน' : 'days'}</span>
+                        </div>
+                        {expiryInfo && (
+                            <div className="flex justify-between border-t border-stone-800 pt-2">
+                                <span className="text-stone-500">{language === 'th' ? 'สถานะ:' : 'Status:'}</span>
+                                <span className={expiryInfo.isExpired ? 'text-red-400 font-bold' : expiryInfo.isWarning ? 'text-yellow-400 font-bold' : 'text-stone-300'}>
+                                    {expiryInfo.isExpired
+                                        ? (language === 'th' ? 'หมดอายุแล้ว' : 'Expired')
+                                        : (language === 'th' ? `เหลือ ${expiryInfo.daysLeft} วัน` : `${expiryInfo.daysLeft} days left`)
+                                    }
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowRepairConfirm(false)}
+                            className="flex-1 py-3 bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-lg text-stone-300 font-bold text-xs uppercase tracking-wider transition-all"
+                        >
+                            {language === 'th' ? 'ยกเลิก' : 'Cancel'}
+                        </button>
+                        <button
+                            onClick={handleRepair}
+                            disabled={isRepairing}
+                            className="flex-1 py-3 bg-emerald-700 hover:bg-emerald-600 border border-emerald-500/50 rounded-lg text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.3)] disabled:opacity-50"
+                        >
+                            <Wrench size={14} className={isRepairing ? 'animate-spin' : ''} />
+                            {isRepairing ? (language === 'th' ? 'กำลังซ่อม...' : 'Repairing...') : (language === 'th' ? 'ยืนยัน' : 'Confirm')}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 text-sans">
             {renderMiningAnimation()}
             {renderResultPopup()}
+            {renderRepairConfirm()}
             <div className="bg-stone-950 border border-stone-800 w-full max-w-sm rounded-xl shadow-2xl overflow-hidden flex flex-col h-[80vh] relative">
 
                 <div className="bg-stone-900 p-4 border-b border-stone-800 flex justify-between items-center shrink-0">

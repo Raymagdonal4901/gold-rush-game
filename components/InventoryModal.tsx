@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { X, Backpack, DollarSign, ArrowUpCircle, Cpu, Hammer, HardHat, Glasses, Shirt, Footprints, Smartphone, Monitor, Bot, Truck, ShoppingBag, Sparkles, AlertTriangle, Hourglass, Search, Factory, Key, FileText, Timer, Shield, Gem, Star, TrendingUp, TrendingDown } from 'lucide-react';
+import { X, Backpack, DollarSign, ArrowUpCircle, Cpu, Hammer, HardHat, Glasses, Shirt, Footprints, Smartphone, Monitor, Bot, Truck, ShoppingBag, Sparkles, AlertTriangle, Hourglass, Search, Factory, Key, FileText, Timer, Shield, Gem, Star, TrendingUp, TrendingDown, Ticket, Zap } from 'lucide-react';
 import { AccessoryItem } from '../services/types';
 import { CURRENCY, RARITY_SETTINGS, UPGRADE_REQUIREMENTS, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
 import { InfinityGlove } from './InfinityGlove';
@@ -114,6 +114,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         else if (nameToCheck.includes('Boots')) typeId = 'boots';
         else if (nameToCheck.includes('Mobile') || nameToCheck.includes('Phone')) typeId = 'mobile';
         else if (nameToCheck.includes('PC') || nameToCheck.includes('Computer')) typeId = 'pc';
+        else if (nameToCheck.includes('Time Skip Ticket') || nameToCheck.includes('ตั๋วเร่งเวลา')) typeId = 'time_skip_ticket';
+        else if (nameToCheck.includes('Construction Nanobot') || nameToCheck.includes('นาโนบอทก่อสร้าง')) typeId = 'construction_nanobot';
 
         // Also check Thai if English check failed and we have it (for legacy or direct string)
         if (!typeId && typeof item.name === 'string') {
@@ -160,6 +162,31 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         if (typeId === 'FileText') return <FileText className={className} />;
         if (typeId === 'mystery_ore') return <Sparkles className={className} />;
         if (typeId === 'legendary_ore') return <Gem className={className} />;
+
+        if (typeId === 'time_skip_ticket') {
+            return (
+                <div className="relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-blue-500/20 rounded-lg scale-125 blur-md animate-pulse"></div>
+                    <div className="absolute -top-1 -right-1">
+                        <Timer size={10} className="text-blue-300 animate-[spin_3s_linear_infinite]" />
+                    </div>
+                    <Ticket className={`${className} text-blue-400 -rotate-12 relative z-10`} />
+                </div>
+            );
+        }
+
+        if (typeId === 'construction_nanobot') {
+            return (
+                <div className="relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-cyan-500/30 rounded-full scale-[1.5] blur-xl animate-pulse"></div>
+                    <div className="absolute inset-0 border border-cyan-400/30 rounded-full scale-110 animate-[spin_8s_linear_infinite]"></div>
+                    <div className="absolute -top-1 -right-1 bg-cyan-500 text-white rounded-full p-0.5">
+                        <Zap size={8} className="animate-pulse" />
+                    </div>
+                    <Bot className={`${className} text-cyan-300 relative z-10`} />
+                </div>
+            );
+        }
 
         switch (typeId) {
             case 'miner_card_bronze':
@@ -262,7 +289,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                 <div className="space-y-2 text-sm text-stone-400 mb-6 relative z-10">
                     <div className="flex justify-between">
                         <span>{t('inventory.daily_bonus')}</span>
-                        <span className="text-white font-mono">{formatBonus(selectedItem.dailyBonus || 0, selectedItem.typeId)}</span>
+                        <span className="text-white font-mono">{formatCurrency(selectedItem.dailyBonus || 0, { showDecimals: true })}</span>
                     </div>
                     {selectedItem.specialEffect && (
                         <div className="flex justify-between">
@@ -320,7 +347,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                 <div className="text-sm text-stone-300 mb-2 font-bold">{t('inventory.upgrade_req')}</div>
                                 <div className="flex justify-center items-center gap-2 mb-2">
                                     <div className="w-10 h-10 border border-stone-700 bg-stone-800 rounded flex items-center justify-center relative">
-                                        {getIcon(selectedItem, `w-6 h-6 ${RARITY_SETTINGS[selectedItem.rarity].color}`)}
+                                        {getIcon(selectedItem, `w-6 h-6 ${(RARITY_SETTINGS[selectedItem.rarity] || RARITY_SETTINGS.COMMON).color}`)}
                                     </div>
                                     <span className="text-stone-500">+</span>
                                     <div className="w-10 h-10 border border-purple-500 bg-purple-900/20 rounded flex items-center justify-center" title="ชิปอัปเกรด">
@@ -360,8 +387,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                             <div className="relative">
                                 <div className="absolute top-20 left-1/2 -translate-x-1/2 w-32 h-10 bg-stone-800 rounded-full blur-xl opacity-50"></div>
                                 <div className={`relative z-10 transition-transform duration-100 ${animationStep === 'IMPACT' ? 'scale-90 translate-y-2' : 'scale-150 animate-[float-gold_2s_infinite]'}`}>
-                                    <div className={`w-32 h-32 rounded-xl border-4 ${RARITY_SETTINGS[selectedItem.rarity].border} bg-stone-900 flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.5)]`}>
-                                        {getIcon(selectedItem, `w-20 h-20 ${RARITY_SETTINGS[selectedItem.rarity].color}`)}
+                                    <div className={`w-32 h-32 rounded-xl border-4 ${(RARITY_SETTINGS[selectedItem.rarity] || RARITY_SETTINGS.COMMON).border} bg-stone-900 flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.5)]`}>
+                                        {getIcon(selectedItem, `w-20 h-20 ${(RARITY_SETTINGS[selectedItem.rarity] || RARITY_SETTINGS.COMMON).color}`)}
                                     </div>
                                 </div>
                                 {animationStep === 'PREPARE' && (
@@ -468,7 +495,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
 `}
                                     >
                                         <div className="relative">
-                                            {getIcon(item, `w-8 h-8 ${RARITY_SETTINGS[safeRarity].color} group-hover:scale-110 transition-transform`)}
+                                            {getIcon(item, `w-8 h-8 ${(RARITY_SETTINGS[safeRarity] || RARITY_SETTINGS.COMMON).color} group-hover:scale-110 transition-transform`)}
 
                                             {/* Quantity Badge */}
                                             {group.count > 1 && (
@@ -487,7 +514,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
 
                                             {/* Tooltip */}
                                             <div className="absolute left-[80%] top-0 z-[150] bg-stone-900/95 text-[10px] text-white p-2 rounded-lg border border-stone-700 shadow-xl opacity-0 group-hover:opacity-100 hover:opacity-100 pointer-events-none transition-opacity min-w-[120px] backdrop-blur-sm whitespace-nowrap">
-                                                <div className={`font-bold ${RARITY_SETTINGS[safeRarity].color} mb-1`}>{getItemDisplayName(item)}</div>
+                                                <div className={`font-bold ${(RARITY_SETTINGS[safeRarity] || RARITY_SETTINGS.COMMON).color} mb-1`}>{getItemDisplayName(item)}</div>
                                                 {group.count > 1 && <div className="text-stone-400 text-[9px] mb-1 italic">{t('inventory.remaining_count').replace('{count}', group.count.toString())}</div>}
                                                 {item.specialEffect && (
                                                     <div className="text-[9px] text-emerald-400 mb-1 font-bold">

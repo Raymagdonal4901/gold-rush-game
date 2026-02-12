@@ -2,6 +2,7 @@ import { Response } from 'express';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
+import { SHOP_ITEMS } from './craftingController';
 
 // --- MIRRORED CONSTANTS ---
 const MATERIAL_CONFIG = {
@@ -17,34 +18,21 @@ const MATERIAL_CONFIG = {
 
 const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, any>> = {
     'glove': {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 1.428571, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 2.857142, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 8.571428, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 28.571428, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
     }
 };
 
 const UPGRADE_REQUIREMENTS: Record<number, any> = {
-    1: { matTier: 1, matAmount: 10, chipAmount: 1, chance: 1.0, label: '+2', cost: 1.428571, targetBonus: 0.5, risk: 'NONE' },
-    2: { matTier: 1, matAmount: 20, chipAmount: 5, chance: 0.8, label: '+3', cost: 2.857142, targetBonus: 1.5, risk: 'DROP' },
-    3: { matTier: 2, matAmount: 20, chipAmount: 10, chance: 0.5, label: '+4', cost: 8.571428, targetBonus: 3.0, risk: 'DROP' },
-    4: { matTier: 2, matAmount: 40, chipAmount: 20, chance: 0.25, label: '+5', cost: 28.571428, targetBonus: 6.0, risk: 'BREAK' },
+    1: { matTier: 1, matAmount: 10, chipAmount: 1, chance: 1.0, label: '+2', cost: 50, targetBonus: 0.5, risk: 'NONE' },
+    2: { matTier: 1, matAmount: 20, chipAmount: 5, chance: 0.8, label: '+3', cost: 100, targetBonus: 1.5, risk: 'DROP' },
+    3: { matTier: 2, matAmount: 20, chipAmount: 10, chance: 0.5, label: '+4', cost: 300, targetBonus: 3.0, risk: 'DROP' },
+    4: { matTier: 2, matAmount: 40, chipAmount: 20, chance: 0.25, label: '+5', cost: 1000, targetBonus: 6.0, risk: 'BREAK' },
 };
 
-// Assuming SHOP_ITEMS is defined elsewhere or will be imported.
-// For the purpose of this change, we'll define a placeholder if not present.
-// In a real application, this would likely come from a constants file or database.
-const SHOP_ITEMS = [
-    { id: 'glove', minBonus: 0.1 }, // Example base bonus for glove
-    { id: 'hat', minBonus: 0.1 },
-    { id: 'uniform', minBonus: 0.5 },
-    { id: 'bag', minBonus: 1.0 },
-    { id: 'boots', minBonus: 2.0 },
-    { id: 'glasses', minBonus: 2.5 },
-    { id: 'mobile', minBonus: 3.0 },
-    { id: 'pc', minBonus: 4.0 },
-    { id: 'auto_excavator', minBonus: 10.0 }
-];
+
 
 // ... existing buyAccessory ...
 export const buyAccessory = async (req: AuthRequest, res: Response) => {
@@ -275,3 +263,132 @@ export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+// --- EQUIPMENT REPAIR ---
+// Repair Kit Tier -> Target Equipment mapping
+const REPAIR_KIT_TARGETS: Record<string, string[]> = {
+    'repair_kit_1': ['hat', 'uniform'],
+    'repair_kit_2': ['bag', 'boots'],
+    'repair_kit_3': ['glasses', 'mobile'],
+    'repair_kit_4': ['pc', 'auto_excavator']
+};
+
+export const repairEquipment = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.userId;
+        const { targetItemId, repairKitId } = req.body;
+
+        if (!targetItemId || !repairKitId) {
+            return res.status(400).json({ message: 'กรุณาระบุอุปกรณ์และชุดซ่อม' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user || !user.inventory) return res.status(404).json({ message: 'User not found' });
+
+        // Find both items in inventory
+        const targetIndex = user.inventory.findIndex((i: any) => i.id === targetItemId);
+        const kitIndex = user.inventory.findIndex((i: any) => i.id === repairKitId);
+
+        if (targetIndex === -1) return res.status(404).json({ message: 'ไม่พบอุปกรณ์ที่ต้องการซ่อม' });
+        if (kitIndex === -1) return res.status(404).json({ message: 'ไม่พบชุดซ่อม' });
+
+        const targetItem = user.inventory[targetIndex];
+        const repairKit = user.inventory[kitIndex];
+
+        // Validate it's actually a repair kit
+        if (!repairKit.isRepairKit && !repairKit.typeId?.startsWith('repair_kit_')) {
+            return res.status(400).json({ message: 'ไอเทมนี้ไม่ใช่ชุดซ่อม' });
+        }
+
+        // Validate tier match
+        const kitTypeId = repairKit.typeId;
+        const allowedTargets = repairKit.targetEquipment || REPAIR_KIT_TARGETS[kitTypeId] || [];
+        const targetTypeId = targetItem.typeId || '';
+
+        if (!allowedTargets.includes(targetTypeId)) {
+            return res.status(400).json({
+                message: `ชุดซ่อมนี้ใช้ไม่ได้กับ ${typeof targetItem.name === 'object' ? targetItem.name.th : targetItem.name}`,
+                allowedTargets
+            });
+        }
+
+        // Validate target has expireAt
+        if (!targetItem.expireAt && !targetItem.lifespanDays) {
+            return res.status(400).json({ message: 'อุปกรณ์นี้ไม่มีอายุการใช้งาน ไม่ต้องซ่อม' });
+        }
+
+        // Calculate new expiry
+        const repairDays = repairKit.repairDays || 30;
+        const repairMs = repairDays * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+
+        // If expired, extend from now. If not expired, extend from current expiry.
+        // If expired, extend from now. If not expired, extend from current expiry.
+        const currentExpiry = targetItem.expireAt || now;
+        const baseTime = currentExpiry > now ? currentExpiry : now;
+
+        let newExpiry = baseTime + repairMs;
+
+        // Cap expiry to max lifespan (prevent infinite stacking)
+        if (targetItem.lifespanDays) {
+            const maxExpiry = now + (targetItem.lifespanDays * 24 * 60 * 60 * 1000);
+            if (newExpiry > maxExpiry) {
+                newExpiry = maxExpiry;
+            }
+        } else {
+            // Fallback to finding config if lifespanDays missing on item instance
+            const config = SHOP_ITEMS.find(s => s.id === targetItem.typeId);
+            if (config && config.lifespanDays) {
+                const maxExpiry = now + (config.lifespanDays * 24 * 60 * 60 * 1000);
+                if (newExpiry > maxExpiry) {
+                    newExpiry = maxExpiry;
+                }
+            }
+        }
+
+        targetItem.expireAt = newExpiry;
+
+        // Burn the repair kit
+        user.inventory.splice(kitIndex, 1);
+        user.markModified('inventory');
+
+        // Update weekly stats
+        if (!user.weeklyStats) user.weeklyStats = {};
+        user.weeklyStats.repairAmount = (user.weeklyStats.repairAmount || 0) + 1;
+        user.markModified('weeklyStats');
+
+        await user.save();
+
+        // Log transaction
+        const repairTx = new Transaction({
+            userId,
+            type: 'EQUIPMENT_REPAIR',
+            amount: 0,
+            status: 'COMPLETED',
+            description: JSON.stringify({
+                th: `ซ่อมบำรุง: ${typeof targetItem.name === 'object' ? targetItem.name.th : targetItem.name} (+${repairDays} วัน)`,
+                en: `Repaired: ${typeof targetItem.name === 'object' ? targetItem.name.en : targetItem.name} (+${repairDays} days)`
+            })
+        });
+        await repairTx.save();
+
+        const newExpiryDate = new Date(targetItem.expireAt);
+        const daysLeft = Math.ceil((targetItem.expireAt - now) / (24 * 60 * 60 * 1000));
+
+        console.log(`[REPAIR] User ${userId} repaired ${targetItem.typeId} with ${kitTypeId}, new expiry: ${newExpiryDate.toISOString()}`);
+
+        res.json({
+            success: true,
+            message: `ซ่อมบำรุงสำเร็จ! อายุใช้งานเพิ่ม ${repairDays} วัน`,
+            item: targetItem,
+            newExpireAt: targetItem.expireAt,
+            daysLeft,
+            inventory: user.inventory
+        });
+
+    } catch (error) {
+        console.error('repairEquipment Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+

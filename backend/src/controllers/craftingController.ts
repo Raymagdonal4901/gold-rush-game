@@ -16,7 +16,7 @@ const MATERIAL_CONFIG = {
     } as Record<number, { th: string; en: string }>
 };
 
-const SHOP_ITEMS = [
+export const SHOP_ITEMS = [
     {
         id: 'hat', name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Safety Hat' }, minBonus: 0.1, maxBonus: 0.5, lifespanDays: 30, tier: 1,
         craftingRecipe: { 1: 3 }, craftingFee: 0.2857, craftDurationMinutes: 30, specialEffect: 'ลดค่าซ่อม -5%'
@@ -48,8 +48,69 @@ const SHOP_ITEMS = [
     {
         id: 'auto_excavator', name: { th: 'รถขุดไฟฟ้า (Electric)', en: 'Electric Excavator' }, minBonus: 10.0, maxBonus: 12.0, lifespanDays: 120, tier: 3,
         craftingRecipe: { 6: 1, 5: 2 }, craftingFee: 14.2857, craftDurationMinutes: 1440, specialEffect: 'โอกาส Jackpot 2%'
+    },
+    {
+        id: 'time_skip_ticket', name: { th: 'ตั๋วเร่งเวลา', en: 'Time Skip Ticket' }, price: 0.142857, icon: 'Timer',
+        description: { th: 'ลดเวลาการคราฟต์ 1 ชั่วโมง (กดซ้ำได้)', en: 'Reduce crafting time by 1 hour (stackable)' }
+    },
+    {
+        id: 'construction_nanobot', name: { th: 'นาโนบอทก่อสร้าง', en: 'Construction Nanobot' }, price: 2.828571, icon: 'Cpu',
+        description: { th: 'สร้างอุปกรณ์เสร็จทันที 100%', en: 'Instantly finish crafting (100%)' }
     }
 ];
+
+// --- REPAIR KIT DEFINITIONS ---
+const REPAIR_KITS = [
+    {
+        id: 'repair_kit_1',
+        name: { th: 'ชุดซ่อมพื้นฐาน', en: 'Basic Repair Kit' },
+        repairTier: 1,
+        repairDays: 30,
+        targetEquipment: ['hat', 'uniform'],
+        craftingRecipe: { 1: 2, 2: 2 }, // Coal x2, Copper x2
+        craftingFee: 5,
+        craftDurationMinutes: 15
+    },
+    {
+        id: 'repair_kit_2',
+        name: { th: 'ชุดซ่อมมาตรฐาน', en: 'Standard Repair Kit' },
+        repairTier: 2,
+        repairDays: 30,
+        targetEquipment: ['bag', 'boots'],
+        craftingRecipe: { 3: 3, 2: 3 }, // Iron x3, Copper x3
+        craftingFee: 10,
+        craftDurationMinutes: 30
+    },
+    {
+        id: 'repair_kit_3',
+        name: { th: 'ชุดซ่อมขั้นสูง', en: 'Advanced Repair Kit' },
+        repairTier: 3,
+        repairDays: 30,
+        targetEquipment: ['glasses', 'mobile'],
+        craftingRecipe: { 3: 5, 4: 2 }, // Iron x5, Gold x2
+        craftingFee: 50,
+        craftDurationMinutes: 60
+    },
+    {
+        id: 'repair_kit_4',
+        name: { th: 'ชุดซ่อมเครื่องจักรกล', en: 'Master Repair Kit' },
+        repairTier: 4,
+        repairDays: 30,
+        targetEquipment: ['pc', 'auto_excavator'],
+        craftingRecipe: { 4: 5, 5: 1 }, // Gold x5, Diamond x1
+        craftingFee: 200,
+        craftDurationMinutes: 120
+    }
+];
+
+// Helper to find item config from either SHOP_ITEMS or REPAIR_KITS
+const findCraftableItem = (itemId: string) => {
+    const shopItem = SHOP_ITEMS.find(i => i.id === itemId);
+    if (shopItem) return { ...shopItem, isRepairKit: false };
+    const repairKit = REPAIR_KITS.find(i => i.id === itemId);
+    if (repairKit) return { ...repairKit, isRepairKit: true, lifespanDays: 0, minBonus: 0, maxBonus: 0 };
+    return null;
+};
 
 // Get crafting queue
 export const getCraftingQueue = async (req: AuthRequest, res: Response) => {
@@ -74,7 +135,7 @@ export const startCrafting = async (req: AuthRequest, res: Response) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        const itemConfig = SHOP_ITEMS.find(i => i.id === itemId);
+        const itemConfig = findCraftableItem(itemId);
         if (!itemConfig || !itemConfig.craftingRecipe) {
             return res.status(400).json({ message: 'ไม่พบสูตรการผลิตสำหรับไอเทมนี้' });
         }
@@ -192,38 +253,59 @@ export const claimCraftedItem = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ message: `ยังไม่เสร็จ อีก ${remaining} นาที` });
         }
 
-        const itemConfig = SHOP_ITEMS.find(i => i.id === queueItem.itemId);
+        const itemConfig = findCraftableItem(queueItem.itemId);
         if (!itemConfig) {
             return res.status(400).json({ message: 'ไม่พบข้อมูลไอเทม' });
         }
 
-        // Roll for Great Success (10% chance for bonus stats)
-        const isGreatSuccess = Math.random() < 0.1;
-        const bonusMultiplier = isGreatSuccess ? 1.5 : 1.0;
+        let newItem: any;
+        let isGreatSuccess = false;
 
-        // Calculate random bonus within range
-        const { minBonus, maxBonus } = itemConfig;
-        let dailyBonus = Math.random() * (maxBonus - minBonus) + minBonus;
-        dailyBonus = Math.round(dailyBonus * bonusMultiplier * 100) / 100;
+        if (itemConfig.isRepairKit) {
+            // Repair Kit: no bonus, no expiry, just a consumable
+            const kitId = Math.random().toString(36).substr(2, 9);
+            newItem = {
+                id: kitId,
+                typeId: itemConfig.id,
+                name: itemConfig.name,
+                price: 0,
+                dailyBonus: 0,
+                rarity: 'COMMON',
+                purchasedAt: Date.now(),
+                isRepairKit: true,
+                repairTier: (itemConfig as any).repairTier,
+                repairDays: (itemConfig as any).repairDays,
+                targetEquipment: (itemConfig as any).targetEquipment
+            };
+        } else {
+            // Regular equipment crafting
+            isGreatSuccess = Math.random() < 0.1;
+            const bonusMultiplier = isGreatSuccess ? 1.5 : 1.0;
 
-        // Create the accessory item
-        const accessoryId = Math.random().toString(36).substr(2, 9);
-        const expireAt = Date.now() + (itemConfig.lifespanDays * 24 * 60 * 60 * 1000);
+            const minBonus = itemConfig.minBonus || 0;
+            const maxBonus = itemConfig.maxBonus || 0;
+            let dailyBonusValue = Math.random() * (maxBonus - minBonus) + minBonus;
+            dailyBonusValue = Math.round(dailyBonusValue * bonusMultiplier * 100) / 100;
 
-        const newItem = {
-            id: accessoryId,
-            typeId: itemConfig.id,
-            name: itemConfig.name,
-            price: 0,
-            dailyBonus,
-            rarity: isGreatSuccess ? 'RARE' : 'COMMON',
-            purchasedAt: Date.now(),
-            lifespanDays: itemConfig.lifespanDays,
-            expireAt,
-            level: 1,
-            specialEffect: itemConfig.specialEffect,
-            isHandmade: true
-        };
+            const accessoryId = Math.random().toString(36).substr(2, 9);
+            const lifespanDays = itemConfig.lifespanDays || 30;
+            const expireAt = Date.now() + (lifespanDays * 24 * 60 * 60 * 1000);
+
+            newItem = {
+                id: accessoryId,
+                typeId: itemConfig.id,
+                name: itemConfig.name,
+                price: 0,
+                dailyBonus: dailyBonusValue,
+                rarity: isGreatSuccess ? 'RARE' : 'COMMON',
+                purchasedAt: Date.now(),
+                lifespanDays: lifespanDays,
+                expireAt,
+                level: 1,
+                specialEffect: (itemConfig as any).specialEffect,
+                isHandmade: true
+            };
+        }
 
         // Add to inventory
         if (!user.inventory) user.inventory = [];
@@ -251,7 +333,7 @@ export const claimCraftedItem = async (req: AuthRequest, res: Response) => {
         });
         await claimTx.save();
 
-        console.log(`[CRAFTING] User ${userId} claimed ${itemConfig.name}, ID: ${accessoryId}, Great: ${isGreatSuccess}`);
+        console.log(`[CRAFTING] User ${userId} claimed ${typeof itemConfig.name === 'object' ? itemConfig.name.en : itemConfig.name}, ID: ${newItem.id}, Great: ${isGreatSuccess}`);
 
         res.json({
             success: true,
@@ -263,6 +345,81 @@ export const claimCraftedItem = async (req: AuthRequest, res: Response) => {
 
     } catch (error) {
         console.error('claimCraftedItem Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Use Time Skip Item (Ticket or Nanobot)
+export const useTimeSkip = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.userId;
+        const { queueId, itemTypeId } = req.body;
+
+        if (!queueId || !itemTypeId) {
+            return res.status(400).json({ message: 'Missing parameters' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // 1. Find entry in crafting queue
+        const queueIndex = user.craftingQueue.findIndex((q: any) => q.id === queueId);
+        if (queueIndex === -1) {
+            return res.status(404).json({ message: 'ไม่พบรายการคราฟต์นี้' });
+        }
+
+        const queueItem = user.craftingQueue[queueIndex];
+        if (Date.now() >= queueItem.finishAt) {
+            return res.status(400).json({ message: 'รายการนี้สร้างเสร็จแล้ว' });
+        }
+
+        // 2. Check if user owns the skip item
+        const itemIndex = user.inventory.findIndex((i: any) => i.typeId === itemTypeId);
+        if (itemIndex === -1) {
+            return res.status(400).json({ message: 'คุณไม่มีไอเทมนี้ในกระเป๋า' });
+        }
+
+        // 3. Apply effect
+        let skipAmountMs = 0;
+        let itemName = '';
+
+        if (itemTypeId === 'time_skip_ticket') {
+            skipAmountMs = 60 * 60 * 1000; // 1 hour
+            itemName = 'ตั๋วเร่งเวลา (Time Skip Ticket)';
+            queueItem.finishAt -= skipAmountMs;
+        } else if (itemTypeId === 'construction_nanobot') {
+            itemName = 'นาโนบอทก่อสร้าง (Construction Nanobot)';
+            queueItem.finishAt = Date.now(); // Instant finish
+        } else {
+            return res.status(400).json({ message: 'ไอเทมนี้ไม่สามารถใช้เร่งเวลาได้' });
+        }
+
+        // 4. Burn the item
+        user.inventory.splice(itemIndex, 1);
+        user.markModified('inventory');
+        user.markModified('craftingQueue');
+
+        await user.save();
+
+        // Log transaction
+        const skipTx = new Transaction({
+            userId,
+            type: 'ACCESSORY_PURCHASE', // Or define a new type like TIME_SKIP_USE
+            amount: 0,
+            status: 'COMPLETED',
+            description: `ใช้ไอเทมเร่งเวลา: ${itemName}`
+        });
+        await skipTx.save();
+
+        res.json({
+            success: true,
+            message: `ใช้ ${itemName} เรียบร้อยแล้ว`,
+            queue: user.craftingQueue,
+            inventory: user.inventory
+        });
+
+    } catch (error) {
+        console.error('useTimeSkip Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

@@ -23,7 +23,7 @@ interface GloveManagementModalProps {
 export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
     isOpen, onClose, rig, equippedGlove, inventory, userId, onEquip, onUnequip, onRefresh
 }) => {
-    const { getLocalized, t } = useTranslation();
+    const { getLocalized, t, formatCurrency } = useTranslation();
     const [view, setView] = useState<'MANAGE' | 'SELECT'>('MANAGE');
     const [isUpgrading, setIsUpgrading] = useState(false);
     const [upgradeMsg, setUpgradeMsg] = useState<{ type: 'SUCCESS' | 'ERROR', text: string, level?: number, subtext?: string } | null>(null);
@@ -120,13 +120,14 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
     };
 
     const renderManageView = () => {
-        const rarityConfig = equippedGlove ? RARITY_SETTINGS[equippedGlove.rarity] : RARITY_SETTINGS['COMMON'];
+        const safeRarity = equippedGlove?.rarity && RARITY_SETTINGS[equippedGlove.rarity] ? equippedGlove.rarity : 'COMMON';
+        const rarityConfig = RARITY_SETTINGS[safeRarity];
         const currentLevel = equippedGlove?.level || 1;
         const nextLevel = currentLevel + 1;
         const upgradeReq = UPGRADE_REQUIREMENTS[currentLevel];
 
         const matName = upgradeReq ? MATERIAL_CONFIG.NAMES[upgradeReq.matTier as keyof typeof MATERIAL_CONFIG.NAMES] : '';
-        const increment = equippedGlove ? RARITY_SETTINGS[equippedGlove.rarity].upgradeIncrement : 0;
+        const increment = equippedGlove ? RARITY_SETTINGS[safeRarity].upgradeIncrement : 0;
 
         return (
             <div className="flex flex-col">
@@ -153,7 +154,7 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
 
                             <div className="absolute bottom-0 w-full bg-stone-950/80 backdrop-blur-sm py-2 text-center border-t border-stone-800">
                                 <div className="text-stone-400 text-[10px] uppercase tracking-wider">{t('glove_management.daily_bonus')}</div>
-                                <div className="text-emerald-400 font-mono font-bold text-lg">+{(equippedGlove.dailyBonus || 0).toFixed(2)} {CURRENCY}</div>
+                                <div className="text-emerald-400 font-mono font-bold text-lg">+{formatCurrency(equippedGlove.dailyBonus || 0, { showDecimals: true })}</div>
                             </div>
                         </div>
                     ) : (
@@ -279,8 +280,15 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                                     {item.level && item.level > 1 && <div className="absolute -bottom-1 -right-2 bg-yellow-600 text-white text-[9px] px-1 rounded">+{item.level}</div>}
                                 </div>
                                 <div>
-                                    <div className={`text-xs font-bold ${RARITY_SETTINGS[item.rarity].color}`}>{getLocalized(item.name)}</div>
-                                    <div className="text-[10px] text-emerald-400 mt-1">+{item.dailyBonus || 0}{t('common.per_day')}</div>
+                                    {(() => {
+                                        const safeItemRarity = item.rarity && RARITY_SETTINGS[item.rarity] ? item.rarity : 'COMMON';
+                                        return (
+                                            <>
+                                                <div className={`text-xs font-bold ${RARITY_SETTINGS[safeItemRarity].color}`}>{getLocalized(item.name)}</div>
+                                                <div className="text-[10px] text-emerald-400 mt-1">+{formatCurrency(item.dailyBonus || 0, { showDecimals: true })}</div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         ))

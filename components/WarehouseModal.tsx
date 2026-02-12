@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Hourglass, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown, FileText, CreditCard } from 'lucide-react';
+import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Hourglass, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown, FileText, CreditCard, Ticket, Timer } from 'lucide-react';
 import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, RARITY_SETTINGS, SHOP_ITEMS, MATERIAL_RECIPES, EXCHANGE_RATE_USD_THB } from '../constants';
 import { MarketState, MarketItemData, AccessoryItem } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
@@ -24,7 +24,7 @@ interface WarehouseModalProps {
 export const WarehouseModal: React.FC<WarehouseModalProps> = ({
     isOpen, onClose, userId, materials = {}, inventory = [], balance = 0, marketState, onSell, onCraft, onPlayGoldRain, onOpenMarket
 }) => {
-    const { t, language, getLocalized } = useTranslation();
+    const { t, language, getLocalized, formatCurrency, formatBonus } = useTranslation();
     const [hasMixer, setHasMixer] = useState(false); // Deprecated state, removing logic but keeping to avoid breaking if referenced elsewhere briefly. Actually, removing it.
     const [activeTab, setActiveTab] = useState<'MATERIALS' | 'ITEMS' | 'EQUIPMENT'>('MATERIALS');
 
@@ -75,7 +75,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
     const equipmentTypes = ['hat', 'glasses', 'uniform', 'bag', 'boots', 'mobile', 'pc', 'auto_excavator'];
 
     // Consumable/utility items (non-equipment)
-    const itemTypes = ['mixer', 'magnifying_glass', 'chest_key', 'upgrade_chip', 'insurance_card', 'robot', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'repair_kit', 'ancient_blueprint'];
+    const itemTypes = ['mixer', 'magnifying_glass', 'chest_key', 'upgrade_chip', 'insurance_card', 'robot', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'repair_kit', 'ancient_blueprint', 'time_skip_ticket', 'construction_nanobot', 'vip_withdrawal_card'];
 
     const isItem = (i: AccessoryItem) => {
         if (!i.typeId && !i.name) return false;
@@ -219,6 +219,8 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         if (typeId === 'mixer' || nameStr.includes('โต๊ะช่าง') || nameStr.includes('Mixer')) return t('warehouse.extract');
         if (typeId === 'magnifying_glass' || nameStr.includes('แว่นขยาย') || nameStr.includes('Search')) return t('warehouse.click_stats');
         if (typeId === 'robot' || nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) return t('dashboard.shop'); // Shop key used for Generic Icon label fallback
+        if (typeId === 'time_skip_ticket' || nameStr.includes('ตั๋วเร่งเวลา')) return language === 'th' ? 'ตั๋วเร่งเวลา' : 'Time Skip Ticket';
+        if (typeId === 'construction_nanobot' || nameStr.includes('นาโนบอทก่อสร้าง')) return language === 'th' ? 'นาโนบอทก่อสร้าง' : 'Construction Nanobot';
 
         return getLocalized(item.name);
     };
@@ -255,6 +257,8 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         else if (nameStr.includes('รองเท้า') || nameStr.includes('Boots')) typeId = 'boots';
         else if (nameStr.includes('มือถือ') || nameStr.includes('Mobile') || nameStr.includes('Phone')) typeId = 'mobile';
         else if (nameStr.includes('คอม') || nameStr.includes('PC') || nameStr.includes('Computer')) typeId = 'pc';
+        else if (nameStr.includes('ตั๋วเร่งเวลา') || nameStr.includes('Time Skip Ticket')) typeId = 'time_skip_ticket';
+        else if (nameStr.includes('นาโนบอทก่อสร้าง') || nameStr.includes('Construction Nanobot')) typeId = 'construction_nanobot';
 
         if (typeId === 'vip_withdrawal_card' || nameStr.includes('บัตร VIP')) {
             return (
@@ -293,6 +297,31 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         if (typeId === 'FileText') return <FileText className={className} />;
         if (typeId.includes('mystery_ore')) return <Sparkles className={className} />;
         if (typeId.includes('legendary_ore')) return <Gem className={className} />;
+
+        if (typeId === 'time_skip_ticket') {
+            return (
+                <div className="relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-blue-500/20 rounded-lg scale-125 blur-md animate-pulse"></div>
+                    <div className="absolute -top-1 -right-1">
+                        <Timer size={10} className="text-blue-300 animate-[spin_3s_linear_infinite]" />
+                    </div>
+                    <Ticket className={`${className} text-blue-400 -rotate-12 relative z-10`} />
+                </div>
+            );
+        }
+
+        if (typeId === 'construction_nanobot') {
+            return (
+                <div className="relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-cyan-500/30 rounded-full scale-[1.5] blur-xl animate-pulse"></div>
+                    <div className="absolute inset-0 border border-cyan-400/30 rounded-full scale-110 animate-[spin_8s_linear_infinite]"></div>
+                    <div className="absolute -top-1 -right-1 bg-cyan-500 text-white rounded-full p-0.5">
+                        <Zap size={8} className="animate-pulse" />
+                    </div>
+                    <Bot className={`${className} text-cyan-300 relative z-10`} />
+                </div>
+            );
+        }
 
         return <InfinityGlove rarity={rarity} className={className} />;
     };
@@ -434,10 +463,10 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                     <Coins size={24} />
                                                 </div>
                                                 <span className={`absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[10px] font-black border border-stone-950 shadow-lg animate-in zoom-in ${balance >= confirmState.recipe.fee ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
-                                                    x{(confirmState.recipe.fee * EXCHANGE_RATE_USD_THB).toFixed(2)}
+                                                    x{formatCurrency(confirmState.recipe.fee, { hideSymbol: true, showDecimals: true, forceTHB: true })}
                                                 </span>
                                             </div>
-                                            <span className="text-[9px] text-stone-500 font-bold uppercase">{t('common.thb')} <span className="text-[8px] opacity-70">({CURRENCY}{confirmState.recipe.fee})</span></span>
+                                            <span className="text-[9px] text-stone-500 font-bold uppercase">{t('common.thb')} <span className="text-[8px] opacity-70">({formatCurrency(confirmState.recipe.fee, { forceUSD: true })})</span></span>
                                         </div>
                                     </>
                                 )}
@@ -583,9 +612,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                         <div className="space-y-1 mt-1">
                                                             <div className="flex items-center justify-between text-[10px] text-stone-500 font-bold uppercase tracking-wider">
                                                                 <span>{t('warehouse.base_price')}</span>
-                                                                <span>{
-                                                                    ((MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES] || 0) * (language === 'th' ? EXCHANGE_RATE_USD_THB : 1)).toFixed(2)
-                                                                } {language === 'th' ? t('common.thb') : CURRENCY}</span>
+                                                                <span>{formatCurrency(MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES] || 0)}</span>
                                                             </div>
                                                             <div
                                                                 className="flex items-center justify-between cursor-pointer hover:bg-stone-800/50 p-1 -mx-1 rounded transition-colors group/price"
@@ -603,17 +630,10 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                                         <div className="flex flex-col">
                                                                             <div className="flex items-center gap-1.5">
                                                                                 <Tag size={10} className="text-stone-500 group-hover/price:text-emerald-400" />
-                                                                                {language === 'th' ? (
-                                                                                    <span className="text-[11px] text-emerald-400 font-mono font-bold">
-                                                                                        {(currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} {t('common.thb')}
-                                                                                        <span className="text-[9px] text-stone-500 font-normal ml-1">({CURRENCY}{currentPrice.toFixed(2)})</span>
-                                                                                    </span>
-                                                                                ) : (
-                                                                                    <span className="text-[11px] text-emerald-400 font-mono font-bold">
-                                                                                        {CURRENCY}{currentPrice.toFixed(2)}
-                                                                                        <span className="text-[9px] text-stone-500 font-normal ml-1">({(currentPrice * EXCHANGE_RATE_USD_THB).toFixed(2)} {t('common.thb')})</span>
-                                                                                    </span>
-                                                                                )}
+                                                                                {formatCurrency(currentPrice)}
+                                                                                <span className="text-[9px] text-stone-500 font-normal ml-1">
+                                                                                    ({formatCurrency(currentPrice, { forceTHB: language === 'en', forceUSD: language === 'th' })})
+                                                                                </span>
                                                                             </div>
                                                                             {marketState?.trends?.[tier]?.history && renderSparkline(marketState.trends[tier].history)}
                                                                         </div>
@@ -698,6 +718,9 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                     case 'hourglass_large': return RARITY_SETTINGS.LEGENDARY;
                                                     case 'repair_kit': return RARITY_SETTINGS.RARE;
                                                     case 'ancient_blueprint': return RARITY_SETTINGS.DIVINE;
+                                                    case 'time_skip_ticket': return RARITY_SETTINGS.RARE;
+                                                    case 'construction_nanobot': return RARITY_SETTINGS.EPIC;
+                                                    case 'vip_withdrawal_card': return RARITY_SETTINGS.LEGENDARY;
                                                     default: return RARITY_SETTINGS[item.rarity] || RARITY_SETTINGS.COMMON;
                                                 }
                                             };
@@ -723,7 +746,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                                 {item.level && item.level > 1 && <span className="ml-1 text-[10px] text-yellow-500">+{item.level}</span>}
                                                             </div>
                                                             <div className="text-[10px] text-stone-500 truncate">
-                                                                {item.dailyBonus > 0 ? `+${item.dailyBonus.toFixed(1)} ${CURRENCY}/${t('time.day')}` : (item.specialEffect || (activeTab === 'ITEMS' ? t('warehouse.items_tab') : t('warehouse.equipment_tab')))}
+                                                                {item.dailyBonus > 0 ? `${formatBonus(item.dailyBonus)}/${t('time.day')}` : (item.specialEffect || (activeTab === 'ITEMS' ? t('warehouse.items_tab') : t('warehouse.equipment_tab')))}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -760,7 +783,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                                 {item.level && item.level > 1 && <span className="ml-1 text-[10px] text-yellow-500">+{item.level}</span>}
                                                             </div>
                                                             <div className="text-[10px] text-stone-500 truncate">
-                                                                {item.dailyBonus > 0 ? `+${item.dailyBonus.toFixed(1)} ${CURRENCY}/${t('time.day')}` : (item.specialEffect || (activeTab === 'ITEMS' ? t('warehouse.items_tab') : t('warehouse.equipment_tab')))}
+                                                                {item.dailyBonus > 0 ? `${formatBonus(item.dailyBonus)}/${t('time.day')}` : (item.specialEffect || (activeTab === 'ITEMS' ? t('warehouse.items_tab') : t('warehouse.equipment_tab')))}
                                                             </div>
                                                             <div className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${RARITY_SETTINGS[safeRarity].color}`}>
                                                                 {safeRarity}
@@ -784,11 +807,10 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                             <Coins className="text-yellow-500" size={18} />
                             <span className="text-sm text-stone-400 font-bold uppercase tracking-widest">{t('common.balance')}:</span>
                             <span className="text-lg font-mono font-bold text-white">
-                                {language === 'th' ? (
-                                    <>{(balance * EXCHANGE_RATE_USD_THB).toLocaleString()} {t('common.thb')} <span className="text-sm font-normal opacity-50">({balance.toLocaleString()} {CURRENCY})</span></>
-                                ) : (
-                                    <>{balance.toLocaleString()} {CURRENCY} <span className="text-sm font-normal opacity-50">({(balance * EXCHANGE_RATE_USD_THB).toLocaleString()} {t('common.thb')})</span></>
-                                )}
+                                {formatCurrency(balance)}
+                                <span className="text-sm font-normal opacity-50 ml-2">
+                                    ({formatCurrency(balance, { forceTHB: language === 'en', forceUSD: language === 'th' })})
+                                </span>
                             </span>
                         </div>
                         <div className="flex items-center gap-2 bg-stone-950 px-3 py-1 rounded-lg border border-stone-800">
@@ -797,7 +819,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
         </>
     );
 };
