@@ -18,35 +18,35 @@ const MATERIAL_CONFIG = {
 
 export const SHOP_ITEMS = [
     {
-        id: 'hat', name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Safety Hat' }, minBonus: 0.1, maxBonus: 0.5, lifespanDays: 30, tier: 1,
+        id: 'hat', name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Safety Hat' }, minBonus: 0.1, maxBonus: 0.5, lifespanDays: 30, maxDurability: 3000, tier: 1,
         craftingRecipe: { 1: 3 }, craftingFee: 0.2857, craftDurationMinutes: 30, specialEffect: 'ลดค่าซ่อม -5%'
     },
     {
-        id: 'uniform', name: { th: 'ชุดหมีช่างกล', en: 'Mechanic Uniform' }, minBonus: 0.5, maxBonus: 1.5, lifespanDays: 30, tier: 1,
+        id: 'uniform', name: { th: 'ชุดหมีช่างกล', en: 'Mechanic Uniform' }, minBonus: 0.5, maxBonus: 1.5, lifespanDays: 30, maxDurability: 3000, tier: 1,
         craftingRecipe: { 1: 4, 2: 3 }, craftingFee: 0.2857, craftDurationMinutes: 60, specialEffect: 'อายุใช้งาน +5 วัน'
     },
     {
-        id: 'bag', name: { th: 'กระเป๋าผ้าใบ', en: 'Canvas Bag' }, minBonus: 1.0, maxBonus: 2.0, lifespanDays: 45, tier: 2,
+        id: 'bag', name: { th: 'กระเป๋าผ้าใบ', en: 'Canvas Bag' }, minBonus: 1.0, maxBonus: 2.0, lifespanDays: 45, maxDurability: 4500, tier: 2,
         craftingRecipe: { 2: 4, 3: 2 }, craftingFee: 0.5714, craftDurationMinutes: 180, specialEffect: 'ราคาขาย +1%'
     },
     {
-        id: 'boots', name: { th: 'รองเท้าบูทกันน้ำ', en: 'Waterproof Boots' }, minBonus: 2.0, maxBonus: 3.0, lifespanDays: 45, tier: 2,
+        id: 'boots', name: { th: 'รองเท้าบูทกันน้ำ', en: 'Waterproof Boots' }, minBonus: 2.0, maxBonus: 3.0, lifespanDays: 45, maxDurability: 4500, tier: 2,
         craftingRecipe: { 3: 5, 4: 2 }, craftingFee: 0.7143, craftDurationMinutes: 300, specialEffect: 'โอกาสประหยัดไฟ 5%'
     },
     {
-        id: 'glasses', name: { th: 'แว่นตานิรภัยใส', en: 'Clear Safety Glasses' }, minBonus: 2.5, maxBonus: 3.5, lifespanDays: 60, tier: 2,
+        id: 'glasses', name: { th: 'แว่นตานิรภัยใส', en: 'Clear Safety Glasses' }, minBonus: 2.5, maxBonus: 3.5, lifespanDays: 60, maxDurability: 6000, tier: 2,
         craftingRecipe: { 4: 3, 3: 4 }, craftingFee: 2.2857, craftDurationMinutes: 420, specialEffect: 'โอกาสดรอป +2%'
     },
     {
-        id: 'mobile', name: { th: 'มือถือรุ่นปุ่มกด', en: 'Button Phone' }, minBonus: 3.0, maxBonus: 4.0, lifespanDays: 90, tier: 2,
+        id: 'mobile', name: { th: 'มือถือรุ่นปุ่มกด', en: 'Button Phone' }, minBonus: 3.0, maxBonus: 4.0, lifespanDays: 90, maxDurability: 9000, tier: 2,
         craftingRecipe: { 5: 1, 4: 4 }, craftingFee: 3.4286, craftDurationMinutes: 540, specialEffect: 'ลดภาษีตลาด 2%'
     },
     {
-        id: 'pc', name: { th: 'พีซีสำนักงาน', en: 'Office PC' }, minBonus: 4.0, maxBonus: 5.0, lifespanDays: 90, tier: 3,
+        id: 'pc', name: { th: 'พีซีสำนักงาน', en: 'Office PC' }, minBonus: 4.0, maxBonus: 5.0, lifespanDays: 90, maxDurability: 9000, tier: 3,
         craftingRecipe: { 5: 2, 4: 3 }, craftingFee: 5.1429, craftDurationMinutes: 720, specialEffect: 'โอกาสเบิ้ลรายได้ 1%'
     },
     {
-        id: 'auto_excavator', name: { th: 'รถขุดไฟฟ้า (Electric)', en: 'Electric Excavator' }, minBonus: 10.0, maxBonus: 12.0, lifespanDays: 120, tier: 3,
+        id: 'auto_excavator', name: { th: 'รถขุดไฟฟ้า (Electric)', en: 'Electric Excavator' }, minBonus: 10.0, maxBonus: 12.0, lifespanDays: 120, maxDurability: 12000, tier: 3,
         craftingRecipe: { 6: 1, 5: 2 }, craftingFee: 14.2857, craftDurationMinutes: 1440, specialEffect: 'โอกาส Jackpot 2%'
     },
     {
@@ -59,13 +59,13 @@ export const SHOP_ITEMS = [
     }
 ];
 
-// --- REPAIR KIT DEFINITIONS ---
+// --- REPAIR KIT DEFINITIONS (HP-based) ---
 const REPAIR_KITS = [
     {
         id: 'repair_kit_1',
         name: { th: 'ชุดซ่อมพื้นฐาน', en: 'Basic Repair Kit' },
         repairTier: 1,
-        repairDays: 30,
+        repairValue: 3000, // +3,000 HP
         targetEquipment: ['hat', 'uniform'],
         craftingRecipe: { 1: 2, 2: 2 }, // Coal x2, Copper x2
         craftingFee: 5,
@@ -75,17 +75,17 @@ const REPAIR_KITS = [
         id: 'repair_kit_2',
         name: { th: 'ชุดซ่อมมาตรฐาน', en: 'Standard Repair Kit' },
         repairTier: 2,
-        repairDays: 30,
+        repairValue: 4500, // +4,500 HP
         targetEquipment: ['bag', 'boots'],
-        craftingRecipe: { 3: 3, 2: 3 }, // Iron x3, Copper x3
+        craftingRecipe: { 2: 3, 3: 3 }, // Copper x3, Iron x3
         craftingFee: 10,
         craftDurationMinutes: 30
     },
     {
         id: 'repair_kit_3',
-        name: { th: 'ชุดซ่อมขั้นสูง', en: 'Advanced Repair Kit' },
+        name: { th: 'ชุดซ่อมอิเล็กทรอนิกส์', en: 'Electronic Repair Kit' },
         repairTier: 3,
-        repairDays: 30,
+        repairValue: 6000, // +6,000 HP
         targetEquipment: ['glasses', 'mobile'],
         craftingRecipe: { 3: 5, 4: 2 }, // Iron x5, Gold x2
         craftingFee: 50,
@@ -93,11 +93,11 @@ const REPAIR_KITS = [
     },
     {
         id: 'repair_kit_4',
-        name: { th: 'ชุดซ่อมเครื่องจักรกล', en: 'Master Repair Kit' },
+        name: { th: 'ชุดซ่อมเครื่องจักรกล', en: 'Mechanic Parts Kit' },
         repairTier: 4,
-        repairDays: 30,
+        repairValue: 9000, // +9,000 HP
         targetEquipment: ['pc', 'auto_excavator'],
-        craftingRecipe: { 4: 5, 5: 1 }, // Gold x5, Diamond x1
+        craftingRecipe: { 4: 5, 5: 1, 6: 1 }, // Gold x5, Diamond x1, Oil x1
         craftingFee: 200,
         craftDurationMinutes: 120
     }
@@ -262,7 +262,7 @@ export const claimCraftedItem = async (req: AuthRequest, res: Response) => {
         let isGreatSuccess = false;
 
         if (itemConfig.isRepairKit) {
-            // Repair Kit: no bonus, no expiry, just a consumable
+            // Repair Kit: consumable ไม่มีโบนัส ไม่มี durability
             const kitId = Math.random().toString(36).substr(2, 9);
             newItem = {
                 id: kitId,
@@ -274,7 +274,7 @@ export const claimCraftedItem = async (req: AuthRequest, res: Response) => {
                 purchasedAt: Date.now(),
                 isRepairKit: true,
                 repairTier: (itemConfig as any).repairTier,
-                repairDays: (itemConfig as any).repairDays,
+                repairValue: (itemConfig as any).repairValue, // HP-based
                 targetEquipment: (itemConfig as any).targetEquipment
             };
         } else {
@@ -289,7 +289,8 @@ export const claimCraftedItem = async (req: AuthRequest, res: Response) => {
 
             const accessoryId = Math.random().toString(36).substr(2, 9);
             const lifespanDays = itemConfig.lifespanDays || 30;
-            const expireAt = Date.now() + (lifespanDays * 24 * 60 * 60 * 1000);
+            const maxDurability = (itemConfig as any).maxDurability || lifespanDays * 100;
+            const expireAt = Date.now() + (lifespanDays * 24 * 60 * 60 * 1000); // Keep for backward compat
 
             newItem = {
                 id: accessoryId,
@@ -301,6 +302,8 @@ export const claimCraftedItem = async (req: AuthRequest, res: Response) => {
                 purchasedAt: Date.now(),
                 lifespanDays: lifespanDays,
                 expireAt,
+                currentDurability: maxDurability, // เริ่มต้น HP เต็ม
+                maxDurability: maxDurability,
                 level: 1,
                 specialEffect: (itemConfig as any).specialEffect,
                 isHandmade: true

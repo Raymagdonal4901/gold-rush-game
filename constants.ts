@@ -382,6 +382,7 @@ export interface ShopItemConfig {
     maxBonus: number;
     durationBonus: number;
     lifespanDays: number;
+    maxDurability?: number; // HP-based durability (1 day = 100 HP)
     craftingRecipe?: Record<number, number>;
     craftingFee?: number;
     craftDurationMinutes?: number;
@@ -410,48 +411,48 @@ export const SHOP_ITEMS: ShopItemConfig[] = [
     { id: 'repair_kit', name: { th: 'ชุดบำรุงรักษาพิเศษ', en: 'Repair Kit' }, price: 50, icon: 'Tool', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ซ่อมแซมเครื่องจักรจนเต็ม 100%', en: 'Fully repairs a rig to 100%' }, buyable: false },
 
     {
-        id: 'hat', name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Helmet' }, price: 50, icon: 'HardHat', minBonus: 0.5, maxBonus: 1.0, durationBonus: 1, lifespanDays: 30, tier: 1, // 0.5 - 1.0 THB
+        id: 'hat', name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Helmet' }, price: 50, icon: 'HardHat', minBonus: 0.5, maxBonus: 1.0, durationBonus: 1, lifespanDays: 30, maxDurability: 3000, tier: 1, // 0.5 - 1.0 THB | 30d = 3000 HP
         craftingRecipe: { 1: 3 }, craftingFee: 10, craftDurationMinutes: 30, buyable: false, specialEffect: { th: 'ลดค่าดูแล -5%', en: 'Maintenance cost -5%' }
     },
     {
-        id: 'uniform', name: { th: 'ชุดป้องกัน', en: 'Safety Uniform' }, price: 120, icon: 'Shirt', minBonus: 1.0, maxBonus: 2.0, durationBonus: 3, lifespanDays: 30, tier: 1, // 1.0 - 2.0 THB
+        id: 'uniform', name: { th: 'ชุดป้องกัน', en: 'Safety Uniform' }, price: 120, icon: 'Shirt', minBonus: 1.0, maxBonus: 2.0, durationBonus: 3, lifespanDays: 30, maxDurability: 3000, tier: 1, // 1.0 - 2.0 THB | 30d = 3000 HP
         craftingRecipe: { 1: 4, 2: 3 }, craftingFee: 20, craftDurationMinutes: 60, buyable: false, specialEffect: { th: 'ลดค่าชาร์จแบต 5%', en: 'Reduce charging cost 5%' }
     },
     {
-        id: 'bag', name: { th: 'เป้สนามอเนกประสงค์', en: 'Utility Backpack' }, price: 200, icon: 'Backpack', minBonus: 1.5, maxBonus: 3.0, durationBonus: 5, lifespanDays: 45, tier: 2, // 1.5 - 3.0 THB
+        id: 'bag', name: { th: 'เป้สนามอเนกประสงค์', en: 'Utility Backpack' }, price: 200, icon: 'Backpack', minBonus: 1.5, maxBonus: 3.0, durationBonus: 5, lifespanDays: 45, maxDurability: 4500, tier: 2, // 1.5 - 3.0 THB | 45d = 4500 HP
         craftingRecipe: { 2: 4, 3: 2 }, craftingFee: 30, craftDurationMinutes: 180, buyable: false, specialEffect: { th: 'ราคาขาย +1%', en: 'Sell price +1%' }
     },
     {
-        id: 'boots', name: { th: 'รองเท้าเซฟตี้', en: 'Safety Boots' }, price: 350, icon: 'Footprints', minBonus: 2.0, maxBonus: 4.0, durationBonus: 5, lifespanDays: 45, tier: 2, // 2.0 - 4.0 THB
+        id: 'boots', name: { th: 'รองเท้าเซฟตี้', en: 'Safety Boots' }, price: 350, icon: 'Footprints', minBonus: 2.0, maxBonus: 4.0, durationBonus: 5, lifespanDays: 45, maxDurability: 4500, tier: 2, // 2.0 - 4.0 THB | 45d = 4500 HP
         craftingRecipe: { 3: 5, 4: 2 }, craftingFee: 50, craftDurationMinutes: 300, buyable: false, specialEffect: { th: 'ประหยัดพลังงาน 5%', en: 'Energy saving 5%' }
     },
     {
-        id: 'glasses', name: { th: 'แว่นตากันฝุ่น', en: 'Safety Glasses' }, price: 400, icon: 'Glasses', minBonus: 2.5, maxBonus: 5.0, durationBonus: 7, lifespanDays: 60, tier: 2, // 2.5 - 5.0 THB
+        id: 'glasses', name: { th: 'แว่นตากันฝุ่น', en: 'Safety Glasses' }, price: 400, icon: 'Glasses', minBonus: 2.5, maxBonus: 5.0, durationBonus: 7, lifespanDays: 60, maxDurability: 6000, tier: 2, // 2.5 - 5.0 THB | 60d = 6000 HP
         craftingRecipe: { 4: 3, 3: 4 }, craftingFee: 80, craftDurationMinutes: 420, buyable: false, specialEffect: { th: 'โบนัส +2%', en: 'Bonus +2%' }
     },
     {
-        id: 'mobile', name: { th: 'สมาทโฟน', en: 'Smartphone' }, price: 450, icon: 'Smartphone', minBonus: 3.0, maxBonus: 6.0, durationBonus: 7, lifespanDays: 90, tier: 2, // 3.0 - 6.0 THB
+        id: 'mobile', name: { th: 'สมาทโฟน', en: 'Smartphone' }, price: 450, icon: 'Smartphone', minBonus: 3.0, maxBonus: 6.0, durationBonus: 7, lifespanDays: 90, maxDurability: 9000, tier: 2, // 3.0 - 6.0 THB | 90d = 9000 HP
         craftingRecipe: { 5: 1, 4: 4 }, craftingFee: 120, craftDurationMinutes: 540, buyable: false, specialEffect: { th: 'ลดค่าใช้จ่าย 2%', en: 'Reduce expenses 2%' }
     },
     {
-        id: 'pc', name: { th: 'โน๊ตบุ๊ค', en: 'Notebook' }, price: 500, icon: 'Monitor', minBonus: 4.0, maxBonus: 8.0, durationBonus: 7, lifespanDays: 90, tier: 3, // 4.0 - 8.0 THB
+        id: 'pc', name: { th: 'โน๊ตบุ๊ค', en: 'Notebook' }, price: 500, icon: 'Monitor', minBonus: 4.0, maxBonus: 8.0, durationBonus: 7, lifespanDays: 90, maxDurability: 9000, tier: 3, // 4.0 - 8.0 THB | 90d = 9000 HP
         craftingRecipe: { 5: 2, 4: 3 }, craftingFee: 180, craftDurationMinutes: 720, buyable: false, specialEffect: { th: 'โอกาสโบนัส 1%', en: 'Bonus chance 1%' }
     },
     {
-        id: 'auto_excavator', name: { th: 'รถไฟฟ้า', en: 'Electric Vehicle' }, price: 650, icon: 'TrainFront', minBonus: 10.0, maxBonus: 15.0, durationBonus: 0, lifespanDays: 120, tier: 3, // 10.0 - 15.0 THB
+        id: 'auto_excavator', name: { th: 'รถไฟฟ้า', en: 'Electric Vehicle' }, price: 650, icon: 'TrainFront', minBonus: 10.0, maxBonus: 15.0, durationBonus: 0, lifespanDays: 120, maxDurability: 12000, tier: 3, // 10.0 - 15.0 THB | 120d = 12000 HP
         craftingRecipe: { 6: 1, 5: 2 }, craftingFee: 500, craftDurationMinutes: 1440, buyable: false, specialEffect: { th: 'Jackpot 2%', en: 'Jackpot 2%' }
     }
 ];
 
-// --- REPAIR KIT DEFINITIONS ---
+// --- REPAIR KIT DEFINITIONS (HP-based) ---
 export const REPAIR_KITS = [
     {
         id: 'repair_kit_1',
         name: { th: 'ชุดซ่อมพื้นฐาน', en: 'Basic Repair Kit' },
         repairTier: 1,
-        repairDays: 30,
+        repairValue: 3000, // +3,000 HP
         targetEquipment: ['hat', 'uniform'],
-        craftingRecipe: { 1: 2, 2: 2 } as Record<number, number>,
+        craftingRecipe: { 1: 2, 2: 2 } as Record<number, number>, // Coal×2, Copper×2
         craftingFee: 5,
         craftDurationMinutes: 15,
         icon: 'Wrench'
@@ -460,31 +461,31 @@ export const REPAIR_KITS = [
         id: 'repair_kit_2',
         name: { th: 'ชุดซ่อมมาตรฐาน', en: 'Standard Repair Kit' },
         repairTier: 2,
-        repairDays: 30,
+        repairValue: 4500, // +4,500 HP
         targetEquipment: ['bag', 'boots'],
-        craftingRecipe: { 3: 3, 2: 3 } as Record<number, number>,
+        craftingRecipe: { 2: 3, 3: 3 } as Record<number, number>, // Copper×3, Iron×3
         craftingFee: 10,
         craftDurationMinutes: 30,
         icon: 'Wrench'
     },
     {
         id: 'repair_kit_3',
-        name: { th: 'ชุดซ่อมขั้นสูง', en: 'Advanced Repair Kit' },
+        name: { th: 'ชุดซ่อมอิเล็กทรอนิกส์', en: 'Electronic Repair Kit' },
         repairTier: 3,
-        repairDays: 30,
+        repairValue: 6000, // +6,000 HP
         targetEquipment: ['glasses', 'mobile'],
-        craftingRecipe: { 3: 5, 4: 2 } as Record<number, number>,
+        craftingRecipe: { 3: 5, 4: 2 } as Record<number, number>, // Iron×5, Gold×2
         craftingFee: 50,
         craftDurationMinutes: 60,
         icon: 'Wrench'
     },
     {
         id: 'repair_kit_4',
-        name: { th: 'ชุดซ่อมเครื่องจักรกล', en: 'Master Repair Kit' },
+        name: { th: 'ชุดซ่อมเครื่องจักรกล', en: 'Mechanic Parts Kit' },
         repairTier: 4,
-        repairDays: 30,
+        repairValue: 9000, // +9,000 HP
         targetEquipment: ['pc', 'auto_excavator'],
-        craftingRecipe: { 4: 5, 5: 1 } as Record<number, number>,
+        craftingRecipe: { 4: 5, 5: 1, 6: 1 } as Record<number, number>, // Gold×5, Diamond×1, Oil×1
         craftingFee: 200,
         craftDurationMinutes: 120,
         icon: 'Wrench'

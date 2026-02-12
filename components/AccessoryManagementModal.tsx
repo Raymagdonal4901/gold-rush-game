@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Sparkles, XCircle, Hammer, Backpack, Glasses, Monitor, Smartphone, Truck, Footprints, Zap, TrendingUp, Rocket, Flame, CloudFog, Anvil, FileText, HardHat, Shirt, Bot, Key, Factory, Search, Hourglass, Gem, Lock, Wrench, Clock, Timer, Ticket } from 'lucide-react';
 import { AccessoryItem, OilRig } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
+import { PixelProgressBar } from './PixelProgressBar';
 import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS, REPAIR_KITS } from '../constants';
 import { api } from '../services/api';
 import { MaterialIcon } from './MaterialIcon';
@@ -157,15 +158,32 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         setSelectedRepairKit(null);
     };
 
-    // --- EQUIPMENT EXPIRY HELPERS ---
-    const getExpiryInfo = (item: any) => {
-        if (!item || !item.expireAt) return null;
-        const now = Date.now();
-        const msLeft = item.expireAt - now;
-        const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
-        const isExpired = msLeft <= 0;
-        const isWarning = !isExpired && daysLeft <= 3;
-        return { daysLeft, isExpired, isWarning, expireAt: item.expireAt };
+    // --- EQUIPMENT DURABILITY HELPERS ---
+    const getDurabilityInfo = (item: any) => {
+        if (!item) return null;
+        // HP-based system
+        if (item.currentDurability !== undefined && item.maxDurability) {
+            const current = item.currentDurability;
+            const max = item.maxDurability;
+            const percent = Math.round((current / max) * 100);
+            const isExpired = current <= 0;
+            const isWarning = !isExpired && percent <= 20;
+            return { current, max, percent, isExpired, isWarning };
+        }
+        // Fallback: old expireAt system → convert to HP
+        if (item.expireAt) {
+            const now = Date.now();
+            const msLeft = item.expireAt - now;
+            const daysLeft = Math.max(0, msLeft / (24 * 60 * 60 * 1000));
+            const current = Math.round(daysLeft * 100);
+            const shopConfig = SHOP_ITEMS.find(s => s.id === item.typeId);
+            const max = (shopConfig as any)?.maxDurability || (item.lifespanDays || 30) * 100;
+            const percent = max > 0 ? Math.round((current / max) * 100) : 0;
+            const isExpired = current <= 0;
+            const isWarning = !isExpired && percent <= 20;
+            return { current, max, percent, isExpired, isWarning };
+        }
+        return null;
     };
 
     // Find available repair kits for the equipped item
@@ -226,7 +244,12 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         const isGlove = typeId.includes('glove');
         if (slotIndex === 0) return isGlove;
         return !isGlove && isEquipable(item);
-    }).filter(item => !item.expireAt || item.expireAt > Date.now());
+    }).filter(item => {
+        // HP-based check
+        if (item.currentDurability !== undefined) return item.currentDurability > 0;
+        // fallback: old expireAt check
+        return !item.expireAt || item.expireAt > Date.now();
+    });
 
 
 
@@ -591,73 +614,83 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 <div className="bg-stone-900 p-3 border-t border-stone-800">
                     {equippedItem ? (
                         <div className="space-y-2">
-                            {/* --- EXPIRY STATUS INDICATOR --- */}
+                            {/* --- DURABILITY BAR --- */}
                             {(() => {
-                                const expiryInfo = getExpiryInfo(equippedItem);
-                                if (!expiryInfo) return null;
+                                const durInfo = getDurabilityInfo(equippedItem);
+                                if (!durInfo) return null;
                                 const kitConfig = getRepairKitConfigForEquipment(equippedItem.typeId || '');
                                 const availableKits = getAvailableRepairKits();
+                                const barColor = durInfo.isExpired
+                                    ? 'bg-red-500'
+                                    : durInfo.percent <= 20
+                                        ? 'bg-red-500'
+                                        : durInfo.percent <= 50
+                                            ? 'bg-yellow-500'
+                                            : 'bg-emerald-500';
+                                const barGlow = durInfo.isExpired
+                                    ? 'shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+                                    : durInfo.percent <= 20
+                                        ? 'shadow-[0_0_8px_rgba(239,68,68,0.4)]'
+                                        : durInfo.percent <= 50
+                                            ? 'shadow-[0_0_8px_rgba(234,179,8,0.4)]'
+                                            : 'shadow-[0_0_8px_rgba(16,185,129,0.4)]';
                                 return (
-                                    <div className={`rounded-lg p-2 border flex items-center justify-between ${expiryInfo.isExpired
+                                    <div className={`rounded-lg p-2.5 border ${durInfo.isExpired
                                         ? 'bg-red-950/30 border-red-900/50'
-                                        : expiryInfo.isWarning
+                                        : durInfo.isWarning
                                             ? 'bg-yellow-950/30 border-yellow-900/50'
                                             : 'bg-stone-950 border-stone-800'
                                         }`}>
-                                        <div className="flex items-center gap-2">
-                                            {expiryInfo.isExpired ? (
-                                                <XCircle size={16} className="text-red-500" />
-                                            ) : expiryInfo.isWarning ? (
-                                                <AlertTriangle size={16} className="text-yellow-500 animate-pulse" />
-                                            ) : (
-                                                <Clock size={16} className="text-stone-400" />
+                                        <PixelProgressBar
+                                            current={durInfo.current}
+                                            max={durInfo.max}
+                                            showValue={true}
+                                            label={language === 'th' ? 'ความทนทาน' : 'Durability'}
+                                            icon={durInfo.isExpired ? <XCircle size={14} className="text-red-500" /> : durInfo.isWarning ? <AlertTriangle size={14} className="text-yellow-500 animate-pulse" /> : <Shield size={14} className="text-emerald-400" />}
+                                            color={durInfo.isExpired ? 'red' : durInfo.percent <= 20 ? 'red' : durInfo.percent <= 50 ? 'yellow' : 'green'}
+                                            className="w-full"
+                                        />
+
+                                        <div className="flex items-center justify-between mt-1.5">
+                                            <span className={`text-[10px] font-bold ${durInfo.isExpired ? 'text-red-500' : durInfo.isWarning ? 'text-yellow-500' : 'text-stone-500'
+                                                }`}>
+                                                {durInfo.isExpired
+                                                    ? (language === 'th' ? '❌ พัง!' : '❌ Broken!')
+                                                    : `${durInfo.percent}%`
+                                                }
+                                            </span>
+                                            {kitConfig && (
+                                                <button
+                                                    onClick={() => {
+                                                        if (availableKits.length > 0) {
+                                                            setSelectedRepairKit(availableKits[0]);
+                                                            setShowRepairConfirm(true);
+                                                        } else {
+                                                            if (addNotification) addNotification({
+                                                                id: Date.now().toString(),
+                                                                userId,
+                                                                message: language === 'th'
+                                                                    ? `ไม่มี ${getLocalized(kitConfig.name)} ในกระเป๋า — ไปคราฟต์ก่อน!`
+                                                                    : `No ${kitConfig.name.en} in inventory — craft one first!`,
+                                                                type: 'WARNING',
+                                                                read: false,
+                                                                timestamp: Date.now()
+                                                            });
+                                                        }
+                                                    }}
+                                                    className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${availableKits.length > 0
+                                                        ? 'bg-emerald-700 hover:bg-emerald-600 border border-emerald-500/50 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                                                        : 'bg-stone-800 border border-stone-700 text-stone-500 cursor-not-allowed'
+                                                        }`}
+                                                >
+                                                    <Wrench size={12} />
+                                                    {language === 'th' ? 'ซ่อมบำรุง' : 'Repair'}
+                                                    {availableKits.length > 0 && (
+                                                        <span className="bg-emerald-900 px-1.5 py-0.5 rounded text-emerald-300 text-[9px]">x{availableKits.length}</span>
+                                                    )}
+                                                </button>
                                             )}
-                                            <div>
-                                                <div className={`text-xs font-bold ${expiryInfo.isExpired ? 'text-red-400' : expiryInfo.isWarning ? 'text-yellow-400' : 'text-stone-300'
-                                                    }`}>
-                                                    {expiryInfo.isExpired
-                                                        ? (language === 'th' ? '❌ หมดอายุแล้ว!' : '❌ Expired!')
-                                                        : expiryInfo.isWarning
-                                                            ? (language === 'th' ? `⚠️ เหลือ ${expiryInfo.daysLeft} วัน!` : `⚠️ ${expiryInfo.daysLeft} days left!`)
-                                                            : (language === 'th' ? `เหลือ ${expiryInfo.daysLeft} วัน` : `${expiryInfo.daysLeft} days left`)
-                                                    }
-                                                </div>
-                                                <div className="text-[9px] text-stone-500">
-                                                    {new Date(expiryInfo.expireAt).toLocaleDateString(language === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                </div>
-                                            </div>
                                         </div>
-                                        {kitConfig && (
-                                            <button
-                                                onClick={() => {
-                                                    if (availableKits.length > 0) {
-                                                        setSelectedRepairKit(availableKits[0]);
-                                                        setShowRepairConfirm(true);
-                                                    } else {
-                                                        if (addNotification) addNotification({
-                                                            id: Date.now().toString(),
-                                                            userId,
-                                                            message: language === 'th'
-                                                                ? `ไม่มี ${getLocalized(kitConfig.name)} ในกระเป๋า — ไปคราฟต์ก่อน!`
-                                                                : `No ${kitConfig.name.en} in inventory — craft one first!`,
-                                                            type: 'WARNING',
-                                                            read: false,
-                                                            timestamp: Date.now()
-                                                        });
-                                                    }
-                                                }}
-                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${availableKits.length > 0
-                                                    ? 'bg-emerald-700 hover:bg-emerald-600 border border-emerald-500/50 text-white shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                                                    : 'bg-stone-800 border border-stone-700 text-stone-500 cursor-not-allowed'
-                                                    }`}
-                                            >
-                                                <Wrench size={12} />
-                                                {language === 'th' ? 'ซ่อมบำรุง' : 'Repair'}
-                                                {availableKits.length > 0 && (
-                                                    <span className="bg-emerald-900 px-1.5 py-0.5 rounded text-emerald-300 text-[9px]">x{availableKits.length}</span>
-                                                )}
-                                            </button>
-                                        )}
                                     </div>
                                 );
                             })()}
@@ -856,7 +889,8 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         const kitConfig = getRepairKitConfigForEquipment(equippedItem.typeId || '');
         const kitName = getLocalized(selectedRepairKit.name || kitConfig?.name);
         const equipName = getItemDisplayName(equippedItem);
-        const expiryInfo = getExpiryInfo(equippedItem);
+        const durInfo = getDurabilityInfo(equippedItem);
+        const repairHP = selectedRepairKit.repairValue || (kitConfig as any)?.repairValue || 3000;
 
         return (
             <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setShowRepairConfirm(false)}>
@@ -880,16 +914,16 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                             <span className="text-emerald-400 font-bold">{kitName}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-stone-500">{language === 'th' ? 'ยืดอายุ:' : 'Extend:'}</span>
-                            <span className="text-cyan-400 font-bold">+30 {language === 'th' ? 'วัน' : 'days'}</span>
+                            <span className="text-stone-500">{language === 'th' ? 'ฟื้นฟู HP:' : 'Restore HP:'}</span>
+                            <span className="text-cyan-400 font-bold">+{repairHP.toLocaleString()} HP</span>
                         </div>
-                        {expiryInfo && (
+                        {durInfo && (
                             <div className="flex justify-between border-t border-stone-800 pt-2">
                                 <span className="text-stone-500">{language === 'th' ? 'สถานะ:' : 'Status:'}</span>
-                                <span className={expiryInfo.isExpired ? 'text-red-400 font-bold' : expiryInfo.isWarning ? 'text-yellow-400 font-bold' : 'text-stone-300'}>
-                                    {expiryInfo.isExpired
-                                        ? (language === 'th' ? 'หมดอายุแล้ว' : 'Expired')
-                                        : (language === 'th' ? `เหลือ ${expiryInfo.daysLeft} วัน` : `${expiryInfo.daysLeft} days left`)
+                                <span className={durInfo.isExpired ? 'text-red-400 font-bold' : durInfo.isWarning ? 'text-yellow-400 font-bold' : 'text-stone-300'}>
+                                    {durInfo.isExpired
+                                        ? (language === 'th' ? 'พัง' : 'Broken')
+                                        : `${durInfo.current.toLocaleString()} / ${durInfo.max.toLocaleString()} HP (${durInfo.percent}%)`
                                     }
                                 </span>
                             </div>

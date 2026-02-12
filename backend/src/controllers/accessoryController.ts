@@ -92,7 +92,11 @@ export const buyAccessory = async (req: AuthRequest, res: Response) => {
             calculatedBonus = Math.round(calculatedBonus * 100) / 100;
         }
 
-        const newItem = {
+        // Look up maxDurability from SHOP_ITEMS config
+        const shopConfig = SHOP_ITEMS.find(s => s.id === actualItemId);
+        const maxDurability = (shopConfig as any)?.maxDurability || (lifespanDays ? lifespanDays * 100 : 0);
+
+        const newItem: any = {
             id: accessoryId,
             typeId: actualItemId,
             name: name,
@@ -104,6 +108,12 @@ export const buyAccessory = async (req: AuthRequest, res: Response) => {
             expireAt: expireAt,
             level: 1
         };
+
+        // เพิ่ม durability fields สำหรับ equipment items
+        if (maxDurability > 0) {
+            newItem.currentDurability = maxDurability;
+            newItem.maxDurability = maxDurability;
+        }
 
         if (!user.inventory) user.inventory = [];
         user.inventory.push(newItem);
@@ -312,44 +322,43 @@ export const repairEquipment = async (req: AuthRequest, res: Response) => {
             });
         }
 
-        // Validate target has expireAt
-        if (!targetItem.expireAt && !targetItem.lifespanDays) {
-            return res.status(400).json({ message: 'อุปกรณ์นี้ไม่มีอายุการใช้งาน ไม่ต้องซ่อม' });
-        }
-
-        // Calculate new expiry
-        const repairDays = repairKit.repairDays || 30;
-        const repairMs = repairDays * 24 * 60 * 60 * 1000;
+        // --- HP-based Durability Repair ---
+        const repairValue = repairKit.repairValue || 3000; // Default 3000 HP
         const now = Date.now();
 
-        // If expired, extend from now. If not expired, extend from current expiry.
-        // If expired, extend from now. If not expired, extend from current expiry.
-        const currentExpiry = targetItem.expireAt || now;
-        const baseTime = currentExpiry > now ? currentExpiry : now;
-
-        let newExpiry = baseTime + repairMs;
-
-        // Cap expiry to max lifespan (prevent infinite stacking)
-        if (targetItem.lifespanDays) {
-            const maxExpiry = now + (targetItem.lifespanDays * 24 * 60 * 60 * 1000);
-            if (newExpiry > maxExpiry) {
-                newExpiry = maxExpiry;
-            }
-        } else {
-            // Fallback to finding config if lifespanDays missing on item instance
+        // Get maxDurability from item or config
+        let maxDurability = targetItem.maxDurability;
+        if (!maxDurability) {
             const config = SHOP_ITEMS.find(s => s.id === targetItem.typeId);
-            if (config && config.lifespanDays) {
-                const maxExpiry = now + (config.lifespanDays * 24 * 60 * 60 * 1000);
-                if (newExpiry > maxExpiry) {
-                    newExpiry = maxExpiry;
-                }
+            maxDurability = (config as any)?.maxDurability || (targetItem.lifespanDays || 30) * 100;
+        }
+
+        // Get current durability (fallback: calculate from expireAt if old item)
+        let currentDurability = targetItem.currentDurability;
+        if (currentDurability === undefined || currentDurability === null) {
+            // Migration fallback: convert expireAt to HP
+            if (targetItem.expireAt) {
+                const remainingMs = Math.max(0, targetItem.expireAt - now);
+                const remainingDays = remainingMs / (24 * 60 * 60 * 1000);
+                currentDurability = Math.round(remainingDays * 100);
+            } else {
+                currentDurability = 0;
             }
         }
 
-        targetItem.expireAt = newExpiry;
+        // Apply repair: min(current + repairValue, maxDurability)
+        const newDurability = Math.min(currentDurability + repairValue, maxDurability);
+        const hpRestored = newDurability - currentDurability;
+
+        targetItem.currentDurability = newDurability;
+        targetItem.maxDurability = maxDurability;
+
+        // Also update expireAt for backward compat
+        const newExpireDays = newDurability / 100;
+        targetItem.expireAt = now + (newExpireDays * 24 * 60 * 60 * 1000);
 
         // Burn the repair kit
-        user.inventory.splice(kitIndex, 1);
+        user.inventory.splice(kitIndex > targetIndex ? kitIndex : kitIndex, 1);
         user.markModified('inventory');
 
         // Update weekly stats
@@ -366,23 +375,23 @@ export const repairEquipment = async (req: AuthRequest, res: Response) => {
             amount: 0,
             status: 'COMPLETED',
             description: JSON.stringify({
-                th: `ซ่อมบำรุง: ${typeof targetItem.name === 'object' ? targetItem.name.th : targetItem.name} (+${repairDays} วัน)`,
-                en: `Repaired: ${typeof targetItem.name === 'object' ? targetItem.name.en : targetItem.name} (+${repairDays} days)`
+                th: `ซ่อมบำรุง: ${typeof targetItem.name === 'object' ? targetItem.name.th : targetItem.name} (+${hpRestored} HP)`,
+                en: `Repaired: ${typeof targetItem.name === 'object' ? targetItem.name.en : targetItem.name} (+${hpRestored} HP)`
             })
         });
         await repairTx.save();
 
-        const newExpiryDate = new Date(targetItem.expireAt);
-        const daysLeft = Math.ceil((targetItem.expireAt - now) / (24 * 60 * 60 * 1000));
+        const durabilityPercent = Math.round((newDurability / maxDurability) * 100);
 
-        console.log(`[REPAIR] User ${userId} repaired ${targetItem.typeId} with ${kitTypeId}, new expiry: ${newExpiryDate.toISOString()}`);
+        console.log(`[REPAIR] User ${userId} repaired ${targetItem.typeId} with ${kitTypeId}, HP: ${currentDurability} -> ${newDurability}/${maxDurability} (${durabilityPercent}%)`);
 
         res.json({
             success: true,
-            message: `ซ่อมบำรุงสำเร็จ! อายุใช้งานเพิ่ม ${repairDays} วัน`,
+            message: `ซ่อมบำรุงสำเร็จ! ความทนทานเพิ่ม +${hpRestored} HP`,
             item: targetItem,
-            newExpireAt: targetItem.expireAt,
-            daysLeft,
+            currentDurability: newDurability,
+            maxDurability,
+            durabilityPercent,
             inventory: user.inventory
         });
 

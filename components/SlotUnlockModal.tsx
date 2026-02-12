@@ -22,21 +22,29 @@ export const SlotUnlockModal: React.FC<SlotUnlockModalProps> = ({ isOpen, onClos
 
     if (!isOpen) return null;
 
-    const config = SLOT_EXPANSION_CONFIG[targetSlot as keyof typeof SLOT_EXPANSION_CONFIG];
+    const config = SLOT_EXPANSION_CONFIG?.[targetSlot as keyof typeof SLOT_EXPANSION_CONFIG];
     if (!config) return null;
 
-    const userMats = user.materials || {};
-    const userInv = user.inventory || [];
+    const userMats = user?.materials || {};
+    const userInv = user?.inventory || [];
 
     // Check Requirements
     let canUnlock = true;
-    if (user.balance < config.cost) canUnlock = false;
+    if ((user?.balance || 0) < config.cost) canUnlock = false;
 
-    const matReqs = Object.entries(config.mats).map(([tierStr, amt]) => {
+    const matReqs = Object.entries(config.mats || {}).map(([tierStr, amt]) => {
         const tier = Number(tierStr);
         const owned = userMats[tier] || 0;
         if (owned < amt) canUnlock = false;
-        return { tier, amt, owned };
+
+        // Safety check for Material Name
+        let localizedName = `Material T${tier}`;
+        if (MATERIAL_CONFIG && MATERIAL_CONFIG.NAMES) {
+            const materialName = MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES];
+            if (materialName) localizedName = getLocalized(materialName);
+        }
+
+        return { tier, amt, owned, name: localizedName };
     });
 
     let itemReq = null;
@@ -62,7 +70,7 @@ export const SlotUnlockModal: React.FC<SlotUnlockModalProps> = ({ isOpen, onClos
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
             <div className="bg-stone-950 border border-stone-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
 
                 <div className="bg-stone-900 p-5 border-b border-stone-800 flex justify-between items-center">
@@ -101,7 +109,7 @@ export const SlotUnlockModal: React.FC<SlotUnlockModalProps> = ({ isOpen, onClos
                             <div key={i} className="flex justify-between items-center bg-stone-900 p-3 rounded-lg border border-stone-800">
                                 <div className="flex items-center gap-2">
                                     <MaterialIcon id={req.tier} size="w-8 h-8" iconSize={16} />
-                                    <span className="text-sm font-bold text-stone-300">{getLocalized(MATERIAL_CONFIG.NAMES[req.tier as keyof typeof MATERIAL_CONFIG.NAMES])}</span>
+                                    <span className="text-sm font-bold text-stone-300">{req.name}</span>
                                 </div>
                                 <div className={req.owned >= req.amt ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
                                     {req.owned}/{req.amt}

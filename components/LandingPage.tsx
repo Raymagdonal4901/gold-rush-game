@@ -20,6 +20,7 @@ import { api } from '../services/api';
 import { MATERIAL_CONFIG } from '../constants';
 import { OilRigAnimation } from './OilRigAnimation';
 import { TermsModal } from './TermsModal';
+import { PrivacyModal } from './PrivacyModal';
 
 interface LandingPageProps {
     onPlayNow: () => void;
@@ -48,6 +49,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
         marketCap: 0
     });
     const [showTerms, setShowTerms] = React.useState(false);
+    const [showPrivacy, setShowPrivacy] = React.useState(false);
 
     React.useEffect(() => {
         const fetchStats = async () => {
@@ -777,7 +779,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
                                     Terms of Service
                                 </button>
                             </li>
-                            <li><a href="#" className="hover:text-yellow-500 transition-colors">Privacy Policy</a></li>
+                            <li>
+                                <button
+                                    onClick={() => setShowPrivacy(true)}
+                                    className="hover:text-yellow-500 transition-colors"
+                                >
+                                    Privacy Policy
+                                </button>
+                            </li>
                             <li><button onClick={onWhitepaper} className="hover:text-yellow-500 transition-colors">Whitepaper</button></li>
                         </ul>
                     </div>
@@ -792,6 +801,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
             </footer>
 
             <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
+            <PrivacyModal isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
         </div>
     );
 };

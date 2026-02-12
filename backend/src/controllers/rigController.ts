@@ -132,8 +132,10 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
             durationBonus: 0,
             rarity: 'RARE',
             purchasedAt: Date.now(),
-            lifespanDays: preset.durationDays,
-            expireAt: Date.now() + (preset.durationDays * 24 * 60 * 60 * 1000),
+            lifespanDays: preset.durationDays || 365,
+            expireAt: Date.now() + ((preset.durationDays || 365) * 24 * 60 * 60 * 1000),
+            currentDurability: (preset.durationDays || 365) * 100, // HP-based
+            maxDurability: (preset.durationDays || 365) * 100,
             level: 1,
             isHandmade: true
         };
@@ -234,6 +236,8 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
             purchasedAt: Date.now(),
             lifespanDays: 9999,
             expireAt: Date.now() + (9999 * 24 * 60 * 60 * 1000),
+            currentDurability: 999900, // HP-based (9999 days * 100)
+            maxDurability: 999900,
             level: 1
         };
 
@@ -597,13 +601,8 @@ export const equipAccessory = async (req: AuthRequest, res: Response) => {
         // Ensure slots array exists
         if (!rig.slots) rig.slots = [null, null, null, null, null];
 
-        // SYNC LIFESPAN: Set item expiry to match Rig expiry
-        const rigExpireAt = new Date(rig.expiresAt).getTime();
-        item.expireAt = rigExpireAt;
-
-        // Calculate lifespanDays for display
-        const remainingMs = Math.max(0, rigExpireAt - Date.now());
-        item.lifespanDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+        // SYNC LIFESPAN: Equipment durability is independent (HP-based)
+        // No longer sync expireAt to rig expiry
 
         // Check if item is already equipped elsewhere
         const otherRigs = await Rig.find({ ownerId: userId, _id: { $ne: rigId } });

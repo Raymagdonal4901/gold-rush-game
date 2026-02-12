@@ -46,6 +46,8 @@ export interface AccessoryItem {
   purchasedAt: number;
   lifespanDays: number;
   expireAt: number;
+  currentDurability?: number; // HP-based durability (new system)
+  maxDurability?: number; // Max HP (1 day = 100 HP)
   level?: number; // Upgrade Level
   isHandmade?: boolean; // New: Great Success flag
   specialEffect?: string; // New: Description of the specific effect

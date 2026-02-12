@@ -85,7 +85,7 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
             case 'money':
                 return (
                     <div className="flex flex-col items-center">
-                        <span className="text-2xl font-bold text-emerald-400">{reward.amountTHB || (reward.amount * 35)}</span>
+                        <span className="text-2xl font-bold text-emerald-400">{reward.amount}</span>
                         <span className="text-[10px] text-stone-500 font-bold">฿</span>
                     </div>
                 );

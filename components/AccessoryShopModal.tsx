@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase, CreditCard, Ticket } from 'lucide-react';
+import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase, CreditCard, Ticket, Shield } from 'lucide-react';
 import { SHOP_ITEMS, CURRENCY, RARITY_SETTINGS, MATERIAL_CONFIG, EQUIPMENT_SERIES } from '../constants';
 import { CraftingQueueItem } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
+import { PixelProgressBar } from './PixelProgressBar';
 import { api } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -455,12 +456,24 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                                 : t('item_shop.consumable'))}
                                     </span>
                                 ) : (
-                                    <>
-                                        <CalendarDays size={12} className="text-stone-500" />
-                                        {item.lifespanDays > 0 ?
-                                            (language === 'th' ? `อายุการใช้งาน ${item.lifespanDays} วัน` : `Lifespan: ${item.lifespanDays} Days`)
-                                            : (language === 'th' ? 'ถาวร' : 'Permanent')}
-                                    </>
+                                    <div className="w-full px-2">
+                                        {(item as any).maxDurability > 0 ? (
+                                            <PixelProgressBar
+                                                current={(item as any).maxDurability}
+                                                max={(item as any).maxDurability}
+                                                showValue={true}
+                                                label={language === 'th' ? 'ความทนทาน' : 'Durability'}
+                                                icon={<Shield size={12} className="text-emerald-500" />}
+                                                className="w-full"
+                                                color="green"
+                                            />
+                                        ) : (
+                                            <div className="flex items-center justify-center gap-1 text-xs text-stone-400">
+                                                <CalendarDays size={12} className="text-stone-500" />
+                                                <span>{language === 'th' ? 'ถาวร' : 'Permanent'}</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         )}
@@ -638,11 +651,23 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                     <span className="flex items-center gap-1"><Clock size={10} /> {item.craftDurationMinutes ? item.craftDurationMinutes / 60 : 0} ชม.</span>
                                 </div>
                             </div>
-                            <div className="text-xs text-stone-400 mt-1 flex items-center gap-1">
-                                <CalendarDays size={12} className="text-stone-500" />
-                                {item.lifespanDays > 0 ?
-                                    (language === 'th' ? `อายุการใช้งาน ${item.lifespanDays} วัน` : `Lifespan: ${item.lifespanDays} Days`)
-                                    : (language === 'th' ? 'ถาวร' : 'Permanent')}
+                            <div className="mt-1 w-full">
+                                {(item as any).maxDurability > 0 ? (
+                                    <PixelProgressBar
+                                        current={(item as any).maxDurability}
+                                        max={(item as any).maxDurability}
+                                        showValue={true}
+                                        label={language === 'th' ? 'ความทนทาน' : 'Durability'}
+                                        icon={<Shield size={12} className="text-emerald-500" />}
+                                        className="w-full"
+                                        color="green"
+                                    />
+                                ) : (
+                                    <div className="flex items-center gap-1 text-xs text-stone-400">
+                                        <CalendarDays size={12} className="text-stone-500" />
+                                        <span>{language === 'th' ? 'ถาวร' : 'Permanent'}</span>
+                                    </div>
+                                )}
                             </div>
                             {item.specialEffect && (
                                 <div className="text-[10px] text-emerald-400 mt-1 font-bold">
