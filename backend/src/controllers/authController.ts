@@ -24,17 +24,16 @@ export const getLandingStats = async (req: Request, res: Response) => {
         const usersCount = await User.countDocuments();
         const activeRigs = await Rig.countDocuments();
 
-        // Match Admin Dashboard "Total Investment" logic (Sum of user totalInvested)
-        const userInvestments = await User.aggregate([
-            { $group: { _id: null, total: { $sum: "$totalInvested" } } }
+        // Match Admin Dashboard "Total Investment" logic (Sum of rig investments only)
+        const rigInvestments = await Rig.aggregate([
+            { $group: { _id: null, total: { $sum: "$investment" } } }
         ]);
-        const marketCap = userInvestments.length > 0 ? userInvestments[0].total : 0;
+        const marketCap = rigInvestments.length > 0 ? rigInvestments[0].total : 0;
 
         res.json({
             usersCount,
             activeRigs,
-            marketCap: Math.floor(marketCap),
-            debugTimestamp: Date.now()
+            marketCap: Math.floor(marketCap)
         });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error });

@@ -242,7 +242,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onPlayNow, onWhitepape
                     <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto border-t border-stone-800 pt-8 animate-in fade-in zoom-in duration-1000 delay-500">
                         {[
                             { label: t('landing.stats.totalPlayers'), value: stats.usersCount.toLocaleString() },
-                            { label: t('landing.stats.totalInvestment'), value: formatCurrency(stats.marketCap, { showDecimals: false }) },
+                            { label: t('landing.stats.totalInvestment'), value: formatCurrency(stats.marketCap) },
                             { label: t('landing.stats.activeRigs'), value: stats.activeRigs.toLocaleString() },
                             { label: t('landing.stats.avgRoi'), value: '18-25%' },
                         ].map((stat, i) => (
