@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthPage } from './components/AuthPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { PlayerDashboard } from './components/PlayerDashboard';
+import { AnnouncementModal } from './components/AnnouncementModal'; // Import Modal
 import { User } from './services/types';
 import { api } from './services/api';
 import { AlertTriangle } from 'lucide-react';
@@ -159,7 +160,10 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <AppContent />
+    <>
+      <AnnouncementModal />
+      <AppContent />
+    </>
   );
 };
 
