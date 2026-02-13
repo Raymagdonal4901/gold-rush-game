@@ -18,83 +18,83 @@ export const RARITY_SETTINGS: Record<string, { color: string; label: string; bon
 
 export const EQUIPMENT_SERIES: Record<string, { title: { th: string; en: string }; desc: { th: string; en: string }; tiers: { rarity: string; name: { th: string; en: string }; stat: { th: string; en: string } }[] }> = {
     hat: {
-        title: { th: "Power Supply", en: "Power Supply" },
-        desc: { th: "แหล่งจ่ายไฟ & ความเสถียร", en: "Power Supply & Stability" },
+        title: { th: "หมวกนิรภัย", en: "Safety Helmet" },
+        desc: { th: "เพิ่มความปลอดภัย & ลดค่าซ่อม", en: "Safety & Repair Cost Reduction" },
         tiers: [
-            { rarity: 'COMMON', name: { th: 'แหล่งจ่ายไฟ 500W Standard', en: 'Power Supply 500W Standard' }, stat: { th: 'ค่าซ่อม -5%', en: 'Repair Cost -5%' } },
-            { rarity: 'RARE', name: { th: 'แหล่งจ่ายไฟ 750W Gold', en: 'Power Supply 750W Gold' }, stat: { th: 'ค่าซ่อม -10%', en: 'Repair Cost -10%' } },
-            { rarity: 'EPIC', name: { th: 'แหล่งจ่ายไฟ 1000W Platinum', en: 'Power Supply 1000W Platinum' }, stat: { th: 'ค่าซ่อม -15%', en: 'Repair Cost -15%' } },
-            { rarity: 'LEGENDARY', name: { th: 'แหล่งจ่ายไฟ 1600W Titanium', en: 'Power Supply 1600W Titanium' }, stat: { th: 'ค่าซ่อม -20%', en: 'Repair Cost -20%' } },
+            { rarity: 'COMMON', name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Safety Helmet' }, stat: { th: 'ค่าซ่อม -5%', en: 'Repair Cost -5%' } },
+            { rarity: 'RARE', name: { th: 'หมวกนิรภัยทนความร้อน', en: 'Heat-Resistant Helmet' }, stat: { th: 'ค่าซ่อม -10%', en: 'Repair Cost -10%' } },
+            { rarity: 'EPIC', name: { th: 'หมวกนิรภัยอัจฉริยะ', en: 'Smart Helmet' }, stat: { th: 'ค่าซ่อม -15%', en: 'Repair Cost -15%' } },
+            { rarity: 'LEGENDARY', name: { th: 'หมวกนิรภัยนาโน', en: 'Nano Helmet' }, stat: { th: 'ค่าซ่อม -20%', en: 'Repair Cost -20%' } },
         ]
     },
     uniform: {
-        title: { th: "ระบบระบายความร้อน", en: "Cooling System" },
-        desc: { th: "อุณหภูมิ & อายุการใช้งาน", en: "Temperature & Lifespan" },
+        title: { th: "ชุดปฏิบัติงาน", en: "Work Uniform" },
+        desc: { th: "ลดความเหนื่อยล้า & ยืดอายุสัญญา", en: "Reduce Fatigue & Extend Contract" },
         tiers: [
-            { rarity: 'COMMON', name: { th: 'พัดลมเคส 120mm', en: '120mm Case Fan' }, stat: { th: 'สัญญา +5 วัน', en: 'Contract +5 Days' } },
-            { rarity: 'RARE', name: { th: 'ฮีรตซิงค์ระบายความร้อน', en: 'Heat Sink' }, stat: { th: 'สัญญา +10 วัน', en: 'Contract +10 Days' } },
-            { rarity: 'EPIC', name: { th: 'ชุดน้ำปิด (AIO Water Cool)', en: 'AIO Water Cooling' }, stat: { th: 'สัญญา +20 วัน', en: 'Contract +20 Days' } },
-            { rarity: 'LEGENDARY', name: { th: 'ห้องเย็น (Immersion Cooling)', en: 'Immersion Cooling' }, stat: { th: 'สัญญา +30 วัน', en: 'Contract +30 Days' } },
+            { rarity: 'COMMON', name: { th: 'ชุดป้องกัน', en: 'Safety Uniform' }, stat: { th: 'สัญญา +5 วัน', en: 'Contract +5 Days' } },
+            { rarity: 'RARE', name: { th: 'ชุดหมีช่าง', en: 'Mechanic Coveralls' }, stat: { th: 'สัญญา +10 วัน', en: 'Contract +10 Days' } },
+            { rarity: 'EPIC', name: { th: 'ชุดกันความร้อน', en: 'Heat Suit' }, stat: { th: 'สัญญา +20 วัน', en: 'Contract +20 Days' } },
+            { rarity: 'LEGENDARY', name: { th: 'ชุดเกราะ Exosuit', en: 'Exosuit Armor' }, stat: { th: 'สัญญา +30 วัน', en: 'Contract +30 Days' } },
         ]
     },
     bag: {
-        title: { th: "Hardware Wallet", en: "Hardware Wallet" },
-        desc: { th: "ความปลอดภัย & มูลค่า", en: "Security & Value" },
+        title: { th: "กระเป๋าใส่อุปกรณ์", en: "Equipment Bag" },
+        desc: { th: "เก็บของได้เยอะ & เพิ่มมูลค่า", en: "Capacity & Value" },
         tiers: [
-            { rarity: 'COMMON', name: { th: 'Paper Wallet', en: 'Paper Wallet' }, stat: { th: 'ราคาขาย +1%', en: 'Sell Price +1%' } },
-            { rarity: 'RARE', name: { th: 'USB Wallet', en: 'USB Wallet' }, stat: { th: 'ราคาขาย +2%', en: 'Sell Price +2%' } },
-            { rarity: 'EPIC', name: { th: 'Crypto Steel', en: 'Crypto Steel' }, stat: { th: 'ราคาขาย +3%', en: 'Sell Price +3%' } },
-            { rarity: 'LEGENDARY', name: { th: 'Cold Storage Vault', en: 'Cold Storage Vault' }, stat: { th: 'ราคาขาย +5%', en: 'Sell Price +5%' } },
+            { rarity: 'COMMON', name: { th: 'เป้สนามอเนกประสงค์', en: 'Utility Backpack' }, stat: { th: 'ราคาขาย +1%', en: 'Sell Price +1%' } },
+            { rarity: 'RARE', name: { th: 'กระเป๋าเก็บความเย็น', en: 'Cooler Bag' }, stat: { th: 'ราคาขาย +2%', en: 'Sell Price +2%' } },
+            { rarity: 'EPIC', name: { th: 'กล่องนิรภัย', en: 'Security Box' }, stat: { th: 'ราคาขาย +3%', en: 'Sell Price +3%' } },
+            { rarity: 'LEGENDARY', name: { th: 'ตู้เซฟพกพา', en: 'Portable Safe' }, stat: { th: 'ราคาขาย +5%', en: 'Sell Price +5%' } },
         ]
     },
     boots: {
-        title: { th: "สายไฟ & การเชื่อมต่อ", en: "Power Cables & Connectivity" },
-        desc: { th: "ความเสถียร & ประหยัดไฟ", en: "Stability & Energy Saving" },
+        title: { th: "รองเท้าปฏิบัติงาน", en: "Work Boots" },
+        desc: { th: "ความคล่องตัว & ประหยัดพลังงาน", en: "Agility & Energy Saving" },
         tiers: [
-            { rarity: 'COMMON', name: { th: 'สายไฟมาตรฐาน', en: 'Standard Power Cable' }, stat: { th: 'ประหยัดค่าไฟ 5%', en: 'Save Energy 5%' } },
-            { rarity: 'RARE', name: { th: 'สายถักทนความร้อน', en: 'Heat-Resistant Braided Cable' }, stat: { th: 'ประหยัดค่าไฟ 10%', en: 'Save Energy 10%' } },
-            { rarity: 'EPIC', name: { th: 'รางไฟอุตสาหกรรม', en: 'Industrial Power Strip' }, stat: { th: 'ประหยัดค่าไฟ 20%', en: 'Save Energy 20%' } },
-            { rarity: 'LEGENDARY', name: { th: 'ระบบเดินไฟอัจฉริยะ', en: 'Smart Power System' }, stat: { th: 'ประหยัดค่าไฟ 30%', en: 'Save Energy 30%' } },
+            { rarity: 'COMMON', name: { th: 'รองเท้าเซฟตี้', en: 'Safety Boots' }, stat: { th: 'ประหยัดค่าไฟ 5%', en: 'Save Energy 5%' } },
+            { rarity: 'RARE', name: { th: 'รองเท้าพื้นยางกันลื่น', en: 'Anti-Slip Boots' }, stat: { th: 'ประหยัดค่าไฟ 10%', en: 'Save Energy 10%' } },
+            { rarity: 'EPIC', name: { th: 'รองเท้าแม่เหล็ก', en: 'Magnetic Boots' }, stat: { th: 'ประหยัดค่าไฟ 20%', en: 'Save Energy 20%' } },
+            { rarity: 'LEGENDARY', name: { th: 'รองเท้าไร้น้ำหนัก', en: 'Zero-G Boots' }, stat: { th: 'ประหยัดค่าไฟ 30%', en: 'Save Energy 30%' } },
         ]
     },
     mobile: {
-        title: { th: "Network Connection", en: "Network Connection" },
-        desc: { th: "การเชื่อมต่อ & ความเร็ว", en: "Connectivity & Speed" },
+        title: { th: "อุปกรณ์สื่อสาร", en: "Communication Device" },
+        desc: { th: "การเชื่อมต่อ & ลดค่าใช้จ่าย", en: "Connection & Reduce Expenses" },
         tiers: [
-            { rarity: 'COMMON', name: { th: 'LAN Cable Cat5e', en: 'LAN Cable Cat5e' }, stat: { th: 'ลดค่าใช้จ่าย 2%', en: 'Reduce Expenses 2%' } },
-            { rarity: 'RARE', name: { th: 'WiFi 6 Router', en: 'WiFi 6 Router' }, stat: { th: 'ลดค่าใช้จ่าย 5%', en: 'Reduce Expenses 5%' } },
-            { rarity: 'EPIC', name: { th: 'Fiber Optic', en: 'Fiber Optic' }, stat: { th: 'ลดค่าใช้จ่าย 8%', en: 'Reduce Expenses 8%' } },
-            { rarity: 'LEGENDARY', name: { th: 'Satellite Link (Starlink)', en: 'Satellite Link (Starlink)' }, stat: { th: 'ลดค่าใช้จ่าย 12%', en: 'Reduce Expenses 12%' } },
+            { rarity: 'COMMON', name: { th: 'สมาทโฟน', en: 'Smartphone' }, stat: { th: 'ลดค่าใช้จ่าย 2%', en: 'Reduce Expenses 2%' } },
+            { rarity: 'RARE', name: { th: 'แท็บเล็ตสื่อสาร', en: 'Comm Tablet' }, stat: { th: 'ลดค่าใช้จ่าย 5%', en: 'Reduce Expenses 5%' } },
+            { rarity: 'EPIC', name: { th: 'ดาวเทียมพกพา', en: 'Portable Satellite' }, stat: { th: 'ลดค่าใช้จ่าย 8%', en: 'Reduce Expenses 8%' } },
+            { rarity: 'LEGENDARY', name: { th: 'เครื่องสื่อสารควอนตัม', en: 'Quantum Comm' }, stat: { th: 'ลดค่าใช้จ่าย 12%', en: 'Reduce Expenses 12%' } },
         ]
     },
     pc: {
-        title: { th: "Control Board", en: "Control Board" },
-        desc: { th: "ควบคุม & ประมวลผล", en: "Control & Processing" },
+        title: { th: "อุปกรณ์ควบคุม", en: "Control Unit" },
+        desc: { th: "ควบคุมการทำงาน & เพิ่มโบนัส", en: "Control & Bonus Chance" },
         tiers: [
-            { rarity: 'COMMON', name: { th: 'Raspberry Pi', en: 'Raspberry Pi' }, stat: { th: 'โอกาสโบนัส 1%', en: 'Bonus Chance 1%' } },
-            { rarity: 'RARE', name: { th: 'Mainboard BTC', en: 'Mainboard BTC' }, stat: { th: 'โอกาสโบนัส 2%', en: 'Bonus Chance 2%' } },
-            { rarity: 'EPIC', name: { th: 'Industrial Controller', en: 'Industrial Controller' }, stat: { th: 'โอกาสโบนัส 4%', en: 'Bonus Chance 4%' } },
-            { rarity: 'LEGENDARY', name: { th: 'Quantum Controller', en: 'Quantum Controller' }, stat: { th: 'โอกาสโบนัส 6%', en: 'Bonus Chance 6%' } },
+            { rarity: 'COMMON', name: { th: 'โน๊ตบุ๊ค', en: 'Notebook' }, stat: { th: 'โอกาสโบนัส 1%', en: 'Bonus Chance 1%' } },
+            { rarity: 'RARE', name: { th: 'พีซีตั้งโต๊ะ', en: 'Desktop PC' }, stat: { th: 'โอกาสโบนัส 2%', en: 'Bonus Chance 2%' } },
+            { rarity: 'EPIC', name: { th: 'เซิร์ฟเวอร์', en: 'Server' }, stat: { th: 'โอกาสโบนัส 4%', en: 'Bonus Chance 4%' } },
+            { rarity: 'LEGENDARY', name: { th: 'ซูเปอร์คอมพิวเตอร์', en: 'Super Computer' }, stat: { th: 'โอกาสโบนัส 6%', en: 'Bonus Chance 6%' } },
         ]
     },
     glasses: {
-        title: { th: "Mining Firmware", en: "Mining Firmware" },
-        desc: { th: "ซอฟต์แวร์ & ประสิทธิภาพ", en: "Software & Performance" },
+        title: { th: "แว่นตาอัจฉริยะ", en: "Smart Glasses" },
+        desc: { th: "การมองเห็น & ประสิทธิภาพ", en: "Vision & Performance" },
         tiers: [
-            { rarity: 'COMMON', name: { th: 'Stock Firmware', en: 'Stock Firmware' }, stat: { th: 'โบนัส +2%', en: 'Bonus +2%' } },
-            { rarity: 'RARE', name: { th: 'Overclock BIOS', en: 'Overclock BIOS' }, stat: { th: 'โบนัส +5%', en: 'Bonus +5%' } },
-            { rarity: 'EPIC', name: { th: 'Custom Modded OS', en: 'Custom Modded OS' }, stat: { th: 'โบนัส +8%', en: 'Bonus +8%' } },
-            { rarity: 'LEGENDARY', name: { th: 'AI Optimized Kernel', en: 'AI Optimized Kernel' }, stat: { th: 'โบนัส +12%', en: 'Bonus +12%' } },
+            { rarity: 'COMMON', name: { th: 'แว่นตากันฝุ่น', en: 'Safety Glasses' }, stat: { th: 'โบนัส +2%', en: 'Bonus +2%' } },
+            { rarity: 'RARE', name: { th: 'แว่นตากรองแสง', en: 'Blue Light Glasses' }, stat: { th: 'โบนัส +5%', en: 'Bonus +5%' } },
+            { rarity: 'EPIC', name: { th: 'แว่นตา AR', en: 'AR Glasses' }, stat: { th: 'โบนัส +8%', en: 'Bonus +8%' } },
+            { rarity: 'LEGENDARY', name: { th: 'แว่นตา X-Ray', en: 'X-Ray Glasses' }, stat: { th: 'โบนัส +12%', en: 'Bonus +12%' } },
         ]
     },
     auto_excavator: {
-        title: { th: "Rig Frame", en: "Rig Frame" },
-        desc: { th: "โครงสร้าง & ความจุ", en: "Structure & Capacity" },
+        title: { th: "ยานพาหนะ", en: "Vehicle" },
+        desc: { th: "ขนส่ง & ความจุ", en: "Transport & Capacity" },
         tiers: [
-            { rarity: 'COMMON', name: { th: 'โครงเหล็ก (Steel Frame)', en: 'Steel Frame' }, stat: { th: 'Jackpot 2%', en: 'Jackpot 2%' } },
-            { rarity: 'RARE', name: { th: 'เคสอลูมิเนียม (Alu Case)', en: 'Aluminum Case' }, stat: { th: 'Jackpot 5%', en: 'Jackpot 5%' } },
-            { rarity: 'EPIC', name: { th: 'ตู้ Rack Server', en: 'Server Rack' }, stat: { th: 'Jackpot 8%', en: 'Jackpot 8%' } },
-            { rarity: 'LEGENDARY', name: { th: 'ตู้คอนเทนเนอร์ (Container)', en: 'Mining Container' }, stat: { th: 'Jackpot 12%', en: 'Jackpot 12%' } },
+            { rarity: 'COMMON', name: { th: 'รถไฟฟ้า', en: 'Electric Vehicle' }, stat: { th: 'Jackpot 2%', en: 'Jackpot 2%' } },
+            { rarity: 'RARE', name: { th: 'รถกระบะ', en: 'Pickup Truck' }, stat: { th: 'Jackpot 5%', en: 'Jackpot 5%' } },
+            { rarity: 'EPIC', name: { th: 'รถบรรทุก', en: 'Truck' }, stat: { th: 'Jackpot 8%', en: 'Jackpot 8%' } },
+            { rarity: 'LEGENDARY', name: { th: 'โดรนขนส่ง', en: 'Transport Drone' }, stat: { th: 'Jackpot 12%', en: 'Jackpot 12%' } },
         ]
     }
 };
@@ -468,7 +468,7 @@ export const SHOP_ITEMS: ShopItemConfig[] = [
     { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mine Key' }, price: 5, icon: 'Key', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้เปิดถ้ำสำรวจเพื่อลุ้นรับไอเทมหายาก', en: 'Used to open exploration caves for rare items' }, buyable: false },
     { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 5, icon: 'Factory', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้สำหรับสกัดแร่ระดับต่ำให้เป็นแร่ระดับสูง', en: 'Used for refining low tier materials' } },
     { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 5, icon: 'Search', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้ตรวจสอบหาแร่หายากโดยอัตโนมัติ', en: 'Automatically detects rare minerals' } },
-    { id: 'robot', name: { th: 'หุ่นยนต์ AI', en: 'AI Robot' }, price: 100, icon: 'Bot', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 30, description: { th: 'หุ่นยนต์อัจฉริยะ: เก็บของขวัญอัตโนมัติ, เติมพลังงาน/ซ่อมแซมอัตโนมัติ, แจ้งเตือนราคาตลาด', en: 'Smart Robot: Auto-collect gifts, Auto-repair/refill, Market alerts' } },
+    { id: 'robot', name: { th: 'หุ่นยนต์ AI', en: 'AI Robot' }, price: 100, icon: 'Bot', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 29, description: { th: 'หุ่นยนต์อัจฉริยะ: เก็บของขวัญอัตโนมัติ, เติมพลังงาน/ซ่อมแซมอัตโนมัติ, แจ้งเตือนราคาตลาด', en: 'Smart Robot: Auto-collect gifts, Auto-repair/refill, Market alerts' } },
     { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 300, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ป้องกันระดับเครื่องจักรลดระดับเมื่ออัปเกรดล้มเหลว', en: 'Prevents rig downgrade upon upgrade failure' }, buyable: true },
     { id: 'vip_withdrawal_card', name: { th: 'บัตร VIP ปลดล็อกถอนเงิน', en: 'VIP Withdrawal Card' }, price: 200, icon: 'CreditCard', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ใช้สำหรับปลดล็อกการถอนเงินถาวร', en: 'Unlocks permanent withdrawals' } },
     { id: 'ancient_blueprint', name: { th: 'แผนที่ขุดทองโบราณ', en: 'Ancient Blueprint' }, price: 10000, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้แทนวัสดุหายากในการสร้างแท่นขุดระดับสูง', en: 'Substitute for rare materials in crafting high-tier rigs' }, buyable: false },
@@ -634,7 +634,7 @@ export const QUESTS = [
 export const MINING_RANKS = [
     { id: 'bronze', label: { th: 'นักขุดระดับบรอนซ์', en: 'Bronze Miner' }, points: 100, rewardId: 'chest_key', amount: 5, buff: '', desc: { th: 'รับกุญแจเข้าเหมือง x5', en: 'Get Mine Key x5' } },
     { id: 'silver', label: { th: 'นักขุดระดับซิลเวอร์', en: 'Silver Miner' }, points: 300, rewardId: null, amount: 0, buff: { th: 'ค่าซ่อมบำรุง -5%', en: 'Repair Cost -5%' }, desc: { th: 'ลดค่าซ่อมบำรุงเครื่องจักร 5% (30 วัน)', en: 'Reduce repair cost 5% (30 days)' } },
-    { id: 'gold', label: { th: 'นักขุดระดับโกลด์', en: 'Gold Miner' }, points: 600, rewardId: 'robot', amount: 1, buff: '', desc: { th: 'หุ่นยนต์ AI (30 วัน)', en: 'AI Robot (30 days)' } },
+    { id: 'gold', label: { th: 'นักขุดระดับโกลด์', en: 'Gold Miner' }, points: 600, rewardId: 'robot', amount: 1, buff: '', desc: { th: 'หุ่นยนต์ AI (29 วัน)', en: 'AI Robot (29 days)' } },
     { id: 'platinum', label: { th: 'นักขุดระดับแพลตตินัม', en: 'Platinum Miner' }, points: 1000, rewardId: null, amount: 0, buff: { th: 'ภาษีตลาด 3%', en: 'Market Tax 3%' }, desc: { th: 'ลดภาษีขายแร่ 3% (30 วัน)', en: 'Reduce sell tax 3% (30 days)' } },
     { id: 'diamond', label: { th: 'นักขุดระดับแชมป์', en: 'Champion Miner' }, points: 1500, rewardId: null, amount: 0, buff: { th: 'Craft Great Success +5%', en: 'Craft Great Success +5%' }, desc: { th: 'เพิ่มโอกาสสกัดแร่สำเร็จ +5% (30 วัน)', en: 'Increase craft success +5% (30 days)' } },
 ];

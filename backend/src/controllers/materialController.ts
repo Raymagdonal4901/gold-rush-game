@@ -2,48 +2,9 @@ import { Response } from 'express';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
+import { MATERIAL_CONFIG, MATERIAL_RECIPES, SHOP_ITEMS } from '../constants';
 
-// --- CONSTANTS (Mirrored from frontend for now) ---
-const MATERIAL_CONFIG = {
-    NAMES: {
-        0: { th: 'เศษหิน', en: 'Stone Shards' },
-        1: { th: 'ถ่านหิน', en: 'Coal' },
-        2: { th: 'ทองแดง', en: 'Copper' },
-        3: { th: 'เหล็ก', en: 'Iron' },
-        4: { th: 'ทองคำ', en: 'Gold' },
-        5: { th: 'เพชร', en: 'Diamond' },
-        6: { th: 'น้ำมันดิบ', en: 'Crude Oil' },
-        7: { th: 'แร่วาเบรเนียม', en: 'Vibranium' },
-        8: { th: 'แร่ลึกลับ', en: 'Mysterious Ore' },
-        9: { th: 'แร่ในตำนาน', en: 'Legendary Ore' },
-    } as Record<number, { th: string; en: string }>
-};
 
-const MATERIAL_RECIPES: Record<number, { ingredients: Record<number, number>; fee: number; requiredItem?: string }> = {
-    0: { ingredients: { 0: 5 }, fee: 0, requiredItem: 'mixer' }, // Stone Shards x5 + 0 Baht -> Coal
-    1: { ingredients: { 1: 2 }, fee: 1, requiredItem: 'mixer' }, // Coal x2 + 1 Baht -> Copper
-    2: { ingredients: { 1: 1, 2: 1 }, fee: 2, requiredItem: 'mixer' }, // Coal x1 + Copper x1 + 2 Baht -> Iron
-    3: { ingredients: { 2: 1, 3: 1 }, fee: 3, requiredItem: 'mixer' }, // Copper x1 + Iron x1 + 3 Baht -> Gold
-    4: { ingredients: { 2: 1, 3: 1, 4: 1 }, fee: 5, requiredItem: 'mixer' }, // Copper x1 + Iron x1 + Gold x1 + 5 Baht -> Diamond
-    5: { ingredients: { 4: 1, 5: 1 }, fee: 10, requiredItem: 'mixer' }, // Gold x1 + Diamond x1 + 10 Baht -> Synthetic Oil
-    6: { ingredients: { 1: 15, 2: 10, 3: 10, 4: 5, 5: 3, 6: 1 }, fee: 50, requiredItem: 'magnifying_glass' }, // Multi-mix -> Vibranium (50 Baht)
-};
-
-const SHOP_ITEMS = [
-    { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' } },
-    { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' } }
-];
-
-// --- MARKET LOGIC ---
-const BASE_PRICES: Record<number, number> = {
-    1: 10, // (10 ฿)
-    2: 20, // (20 ฿)
-    3: 32, // (32 ฿)
-    4: 60, // (60 ฿)
-    5: 120, // (120 ฿)
-    6: 300, // (300 ฿)
-    7: 1500 // (1500 ฿)
-};
 
 export const getMarketPrices = () => {
     const now = Date.now();
@@ -51,7 +12,7 @@ export const getMarketPrices = () => {
     const trends: any = {};
 
     [1, 2, 3, 4, 5, 6, 7].forEach(id => {
-        const base = BASE_PRICES[id];
+        const base = (MATERIAL_CONFIG.PRICES as Record<number, number>)[id] || 10;
         // Use sine wave based on time + seed from id to simulate different trends
         const timeOffset = (now % cycle) / cycle;
         const seed = id * 1000;

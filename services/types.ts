@@ -10,7 +10,7 @@ export interface RigConfig {
 export interface OilRig {
   id: string;
   ownerId: string;
-  name: string;
+  name: string | { th: string; en: string };
   investment: number;
   durationMonths: number;
   durationDays?: number; // Added for shorter contracts
@@ -38,7 +38,7 @@ export interface AccessoryItem {
   id: string;
   typeId: string;
   itemId?: string; // Add for API compatibility
-  name: string;
+  name: string | { th: string; en: string };
   price: number;
   dailyBonus: number;
   durationBonus: number;

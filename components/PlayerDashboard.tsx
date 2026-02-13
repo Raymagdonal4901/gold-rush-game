@@ -28,7 +28,7 @@ import { GloveRevealModal } from './GloveRevealModal';
 import { GoldRain } from './GoldRain';
 import { ChatSystem } from './ChatSystem';
 import { MailModal } from './MailModal';
-import { ReferralAnnouncement } from './ReferralAnnouncement';
+
 import { OilRig, User, Rarity, Notification, AccessoryItem, MarketState } from '../services/types';
 import { CURRENCY, RigPreset, MAX_RIGS_PER_USER, RARITY_SETTINGS, SHOP_ITEMS, MAX_ACCESSORIES, RIG_PRESETS, ENERGY_CONFIG, REPAIR_CONFIG, GLOVE_DETAILS, MATERIAL_CONFIG, DEMO_SPEED_MULTIPLIER, ROBOT_CONFIG, GIFT_CYCLE_DAYS, EXCHANGE_RATE_USD_THB } from '../constants';
 import { MockDB } from '../services/db';
@@ -144,7 +144,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
     // Mail System
     const [isMailOpen, setIsMailOpen] = useState(false);
-    const [showReferralAnnouncement, setShowReferralAnnouncement] = useState(false);
+
 
     // --- TUTORIAL LOGIC ---
     useEffect(() => {
@@ -176,24 +176,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         }
     };
 
-    // --- REFERRAL ANNOUNCEMENT LOGIC ---
-    useEffect(() => {
-        if (user && user.id) {
-            const hasSeenAnnouncement = localStorage.getItem(`referral_announcement_v1_shown_${user.id}`);
-            if (!hasSeenAnnouncement) {
-                // Delay slightly for dramatic effect
-                const timer = setTimeout(() => {
-                    setShowReferralAnnouncement(true);
-                }, 1500);
-                return () => clearTimeout(timer);
-            }
-        }
-    }, [user.id]);
 
-    const handleCloseAnnouncement = () => {
-        setShowReferralAnnouncement(false);
-        localStorage.setItem(`referral_announcement_v1_shown_${user.id}`, 'true');
-    };
 
     // ... useEffects and helper functions ...
     // Ref to block refresh during sensitive operations
@@ -712,7 +695,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             const targetRig = rigs.find(r => r.id === rigId);
             if (!targetRig) return;
 
-            const preset = RIG_PRESETS.find(p => p.name === targetRig.name);
+            const rigNameStr = typeof targetRig.name === 'string' ? targetRig.name : (targetRig.name?.th || targetRig.name?.en || '');
+            const preset = RIG_PRESETS.find(p => p.name.th === rigNameStr || p.name.en === rigNameStr);
             const energyCostPerDay = targetRig.energyCostPerDay || (preset ? preset.energyCostPerDay : 0);
 
             // Calculate current energy like RigCard does
@@ -900,28 +884,34 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
         const nameStr = typeof rig.name === 'string' ? rig.name : (rig.name?.en || rig.name?.th || '');
         const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
-        const effectiveBonusProfit = isNoBonusRig ? 0 : (rig.bonusProfit || 0);
+        const effectiveBonusProfit = isNoBonusRig ? 0 : (Number(rig.bonusProfit) || 0);
 
         // Legacy Scale Fallback: If profit is tiny (< 5), it's likely old USD scale
-        const baseDailyProfit = (rig.dailyProfit < 5 && rig.dailyProfit > 0) ? rig.dailyProfit * 35 : rig.dailyProfit;
+        const baseDailyProfit = (Number(rig.dailyProfit) < 5 && Number(rig.dailyProfit) > 0) ? Number(rig.dailyProfit) * 35 : Number(rig.dailyProfit);
 
         const equippedBonus = (rig.slots || []).reduce((sum, itemId) => {
             if (!itemId) return sum;
-            const item = inventory.find(i => i.id === itemId);
+            const item = (inventory || []).find(i => i.id === itemId);
             if (item) {
                 // Legacy Scale Fallback for accessories
-                const effectiveItemBonus = (item.dailyBonus < 0.5 && item.dailyBonus > 0) ? item.dailyBonus * 35 : item.dailyBonus;
-                return sum + effectiveItemBonus;
+                const effectiveItemBonus = (Number(item.dailyBonus) < 0.5 && Number(item.dailyBonus) > 0) ? Number(item.dailyBonus) * 35 : Number(item.dailyBonus);
+                return sum + (isNaN(effectiveItemBonus) ? 0 : effectiveItemBonus);
             }
             return sum;
         }, 0);
 
-        acc.totalBaseDaily += baseDailyProfit + effectiveBonusProfit;
-        acc.totalEquipmentDaily += equippedBonus;
+        const safeBase = isNaN(baseDailyProfit) ? 0 : baseDailyProfit;
+        const safeBonus = isNaN(effectiveBonusProfit) ? 0 : effectiveBonusProfit;
+
+        acc.totalBaseDaily += safeBase + safeBonus;
+        acc.totalEquipmentDaily += isNaN(equippedBonus) ? 0 : equippedBonus;
         return acc;
     }, { totalBaseDaily: 0, totalEquipmentDaily: 0 });
 
-    const totalMultiplier = globalMultiplier * currentOverclockMultiplier;
+    const safeGlobalMult = isNaN(Number(globalMultiplier)) ? 1 : Number(globalMultiplier);
+    const safeOverclockMult = isNaN(Number(currentOverclockMultiplier)) ? 1 : Number(currentOverclockMultiplier);
+    const totalMultiplier = safeGlobalMult * safeOverclockMult;
+
     const rigDaily = (totalBaseDaily + totalEquipmentDaily) * totalMultiplier;
     const finalBaseDaily = totalBaseDaily * totalMultiplier;
     const finalEquipmentDaily = totalEquipmentDaily * totalMultiplier;
@@ -982,7 +972,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
 
             // 2. Auto-refill & Auto-repair
             for (const rig of rigs) {
-                const preset = RIG_PRESETS.find(p => p.name === rig.name);
+                const rigNameStr = typeof rig.name === 'string' ? rig.name : (rig.name?.th || rig.name?.en || '');
+                const preset = RIG_PRESETS.find(p => p.name.th === rigNameStr || p.name.en === rigNameStr);
 
                 // Energy Logic
                 const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || Date.now();
@@ -1429,8 +1420,9 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                                                         <Timer size={14} className="text-emerald-400 animate-spin" />
                                                         <span className="text-lg font-mono font-bold text-emerald-300 tabular-nums drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
                                                             {(() => {
-                                                                const expiry = new Date(user.overclockExpiresAt!).getTime();
+                                                                const expiry = user.overclockExpiresAt ? new Date(user.overclockExpiresAt).getTime() : 0;
                                                                 const left = expiry - Date.now();
+                                                                if (left <= 0) return "00:00:00";
                                                                 const hours = Math.floor(Math.max(0, left) / (1000 * 60 * 60));
                                                                 const mins = Math.floor((Math.max(0, left) % (1000 * 60 * 60)) / (1000 * 60));
                                                                 const secs = Math.floor((Math.max(0, left) % (1000 * 60)) / 1000);
@@ -1797,11 +1789,11 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                     if (!rig) return null;
                     const slotIndex = managingAccessory.slotIndex;
                     const itemId = rig.slots?.[slotIndex];
-                    const equippedItem = itemId ? inventory.find(i => i.id === itemId) || null : null;
+                    const equippedItem = itemId ? (inventory || []).find(i => i.id === itemId) || null : null;
 
                     // Filter out items already equipped on ANY rig
                     const allEquippedIds = rigs.flatMap(r => r.slots || []).filter(id => id !== null && id !== itemId);
-                    const filteredInventory = inventory.filter(item => !allEquippedIds.includes(item.id));
+                    const filteredInventory = (inventory || []).filter(item => !allEquippedIds.includes(item.id));
 
                     return (
                         <AccessoryManagementModal
@@ -1815,7 +1807,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             onEquip={handleAccessoryEquip}
                             onUnequip={handleAccessoryUnequip}
                             onRefresh={refreshData}
-                            materials={user.materials}
+                            materials={user.materials || {}}
                             addNotification={addNotification}
                         />
                     );
@@ -1856,9 +1848,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                             <button onClick={() => { setIsReferralOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all relative">
                                 <Users className="text-emerald-400" size={24} />
                                 <span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{language === 'th' ? 'แนะนำเพื่อน' : 'Referral'}</span>
-                                {showReferralAnnouncement && (
-                                    <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full border border-stone-900"></span>
-                                )}
+
                             </button>
                             <button onClick={() => { setIsHistoryOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all"><History className="text-stone-400" size={24} /><span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{t('common.history')}</span></button>
                             <button onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }} className="bg-stone-900 p-2.5 rounded-xl border border-stone-800 flex flex-col items-center gap-1.5 hover:bg-stone-800 active:scale-95 transition-all"><Settings className="text-stone-400" size={24} /><span className="text-[10px] font-bold text-stone-300 text-center line-clamp-1">{t('dashboard.settings')}</span></button>
@@ -1948,10 +1938,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 onDeleteNotification={handleDeleteNotification}
             />
 
-            {/* Referral Announcement */}
-            {showReferralAnnouncement && (
-                <ReferralAnnouncement onClose={handleCloseAnnouncement} />
-            )}
+
 
             {/* Global Modals */}
 

@@ -797,7 +797,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                                 <div className="text-[9px] text-stone-500 uppercase">{t('blacksmith.bonus')}</div>
                                                 <div className="text-cyan-400 font-bold font-mono text-base flex items-center justify-end gap-1">
                                                     <TrendingUp size={12} />
-                                                    {formatBonus(bonusDiff, equippedItem.typeId)}
+                                                    {formatCurrency(bonusDiff).replace('฿', '')} ฿
                                                 </div>
                                             </div>
                                         </div>
@@ -914,34 +914,77 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
     const renderSelectView = () => (
         <div className="flex flex-col h-full bg-stone-950">
-            <div className="p-4 border-b border-stone-800 bg-stone-900 flex items-center gap-2">
+            <div className="p-4 border-b border-stone-800 bg-stone-900 flex items-center gap-2 shrink-0">
                 <button onClick={() => setView('MANAGE')} className="p-1 hover:bg-stone-800 rounded"><ArrowUpCircle className="-rotate-90" size={20} /></button>
                 <span className="font-bold text-white uppercase tracking-wider">{t('blacksmith.select_equip')}</span>
             </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 grid grid-cols-2 gap-3">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 flex flex-col gap-2">
                 {availableItems.length === 0 ? (
-                    <div className="col-span-2 text-center text-stone-500 py-10">{t('blacksmith.no_items')}</div>
+                    <div className="text-center text-stone-500 py-10 flex flex-col items-center">
+                        <Backpack size={48} className="opacity-20 mb-2" />
+                        {t('blacksmith.no_items')}
+                    </div>
                 ) : (
-                    availableItems.map(item => (
-                        <div key={item.id} onClick={() => { onEquip(item.id); setView('MANAGE'); }} className="bg-stone-900 border border-stone-800 hover:border-cyan-500 rounded-xl p-3 cursor-pointer transition-all flex flex-col items-center text-center gap-2 group relative overflow-hidden">
-                            <div className="absolute inset-0 bg-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <div className="relative scale-75">
-                                {getAccessoryIcon(item)}
-                                {item.level && item.level > 1 && (
-                                    <div className="absolute -top-2 -right-2 z-20 px-1.5 py-0.5 rounded-sm bg-black text-cyan-400 text-[10px] font-bold border border-cyan-500/50 font-mono shadow-sm">
-                                        +{item.level}
+                    availableItems.map(item => {
+                        const rarityConfig = RARITY_SETTINGS[item.rarity || 'COMMON'] || RARITY_SETTINGS.COMMON;
+                        const durInfo = getDurabilityInfo(item);
+
+                        return (
+                            <div
+                                key={item.id}
+                                onClick={() => { onEquip(item.id); setView('MANAGE'); }}
+                                className="bg-stone-900 border border-stone-800 hover:border-cyan-500 rounded-xl p-2 cursor-pointer transition-all flex items-center gap-3 group relative overflow-hidden"
+                            >
+                                {/* Hover Effect */}
+                                <div className="absolute inset-0 bg-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+
+                                {/* Icon Box */}
+                                <div className={`w-16 h-16 shrink-0 rounded-lg bg-stone-950 border ${rarityConfig.border} flex items-center justify-center relative overflow-hidden`}>
+                                    <div className={`absolute inset-0 bg-gradient-to-br ${rarityConfig.bgGradient} opacity-20`}></div>
+                                    <div className="relative z-10 scale-90">
+                                        {getAccessoryIcon(item, 40)}
                                     </div>
-                                )}
-                            </div>
-                            <div>
-                                <div className={`text-xs font-bold ${(RARITY_SETTINGS[item.rarity] || RARITY_SETTINGS.COMMON).color} font-mono tracking-tighter`}>{getItemDisplayName(item)}</div>
-                                <div className="flex flex-col items-center mt-1">
-                                    <div className="text-[10px] text-cyan-400 font-mono">{formatBonus(item.dailyBonus || 0, item.typeId)} {t('lootbox.per_day')}</div>
-                                    <div className="text-[9px] text-yellow-500 font-bold uppercase tracking-widest mt-0.5">{t('blacksmith.bonus')}: {formatBonus(item.dailyBonus || 0, item.typeId)} {t('lootbox.per_day')}</div>
+                                    {item.level && item.level > 1 && (
+                                        <div className="absolute top-0.5 right-0.5 z-20 px-1 py-[1px] rounded-sm bg-black text-cyan-400 text-[9px] font-bold border border-cyan-500/50 font-mono shadow-sm leading-none">
+                                            +{item.level}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Details */}
+                                <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+                                    <div className="flex justify-between items-start">
+                                        <div className={`text-sm font-bold ${rarityConfig.color} truncate pr-2`}>
+                                            {getItemDisplayName(item)}
+                                        </div>
+                                        <div className="text-xs font-mono text-emerald-400 font-bold whitespace-nowrap bg-emerald-950/30 px-1.5 py-0.5 rounded border border-emerald-900/50">
+                                            +{formatCurrency(item.dailyBonus || 0)}/d
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className={`text-[9px] px-1.5 py-0.5 rounded bg-stone-950 border border-stone-800 text-stone-400 uppercase tracking-wider font-bold`}>
+                                            {rarityConfig.label}
+                                        </span>
+
+                                        {durInfo && (
+                                            <div className="flex items-center gap-1.5 ml-auto">
+                                                <div className="w-16 h-1.5 bg-stone-950 rounded-full overflow-hidden border border-stone-800">
+                                                    <div
+                                                        className={`h-full ${durInfo.isExpired ? 'bg-red-500' : durInfo.percent <= 20 ? 'bg-red-500' : durInfo.percent <= 50 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
+                                                        style={{ width: `${Math.max(0, Math.min(100, durInfo.percent))}%` }}
+                                                    ></div>
+                                                </div>
+                                                <span className={`text-[9px] font-mono ${durInfo.isWarning ? 'text-red-400' : 'text-stone-500'}`}>
+                                                    {durInfo.percent}%
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
         </div>

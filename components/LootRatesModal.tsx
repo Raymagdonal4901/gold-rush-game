@@ -72,7 +72,7 @@ export const LootRatesModal: React.FC<LootRatesModalProps> = ({ isOpen, onClose 
 
                                 <div className="text-right">
                                     <div className="text-sm font-bold text-stone-300">{tier.chance}</div>
-                                    <div className="text-xs font-mono text-green-400">+{formatCurrency(tier.bonus, { forceUSD: true, hideSymbol: isThai })}{t('common.per_day')}</div>
+                                    <div className="text-xs font-mono text-green-400">+{formatCurrency(tier.bonus)}{t('common.per_day')}</div>
                                 </div>
                             </div>
                         ))}

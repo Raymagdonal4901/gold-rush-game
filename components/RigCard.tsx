@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { OilRig, AccessoryItem } from '../services/types';
 import { OilRigAnimation } from './OilRigAnimation';
-import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES } from '../constants';
+import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS } from '../constants';
 import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star, Settings } from 'lucide-react';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
@@ -107,6 +107,12 @@ export const RigCard: React.FC<RigCardProps> = ({
     const rarityKey = (preset?.type?.toUpperCase() || rig.rarity || 'COMMON') as keyof typeof RARITY_SETTINGS;
     const rarityConfig = RARITY_SETTINGS[rarityKey] || RARITY_SETTINGS['COMMON'];
 
+    // --- STABILITY HELPERS ---
+    const safeNumber = (val: any) => {
+        const n = Number(val);
+        return isNaN(n) ? 0 : n;
+    };
+
     let equippedBonus = 0;
     const equippedItems = (rig.slots || Array(MAX_SLOTS_PER_RIG).fill(null)).map(itemId => {
         if (!itemId) return null;
@@ -122,13 +128,16 @@ export const RigCard: React.FC<RigCardProps> = ({
     const gloveItem = equippedItems[0];
 
     const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
-    const effectiveBonusProfit = isNoBonusRig ? 0 : (rig.bonusProfit || 0);
+    const effectiveBonusProfit = isNoBonusRig ? 0 : safeNumber(rig.bonusProfit);
 
     // Override base profit for specific rigs (Balance Patch)
     // Legacy Scale Fallback: If profit is tiny (< 5), it's likely old USD scale
-    const baseDailyProfit = (rig.dailyProfit < 5 && rig.dailyProfit > 0) ? rig.dailyProfit * 35 : rig.dailyProfit;
+    // --- PROFIT CALCULATION GUARDS ---
+    // Fallback to preset if DB dailyProfit is missing/0 (e.g. Rotten Glove starter)
+    const rawProfit = safeNumber(rig.dailyProfit) || safeNumber(preset?.dailyProfit);
+    const baseDailyProfit = (rawProfit < 5 && rawProfit > 0) ? rawProfit * 35 : rawProfit;
 
-    let totalDailyProfit = (baseDailyProfit + effectiveBonusProfit + equippedBonus) * globalMultiplier * reactorMultiplier;
+    let totalDailyProfit = safeNumber(baseDailyProfit + effectiveBonusProfit + equippedBonus) * safeNumber(globalMultiplier) * safeNumber(reactorMultiplier);
 
     // OVERCLOCK Dynamic Boost
     if (isOverclockActive) {
@@ -228,25 +237,27 @@ export const RigCard: React.FC<RigCardProps> = ({
     const isInfiniteContract = (rig.durationMonths >= 900) || (preset?.specialProperties?.infiniteDurability === true);
 
     const now = Date.now();
-    const bonusDurationMs = (rig.renewalCount || 0) * (RENEWAL_CONFIG.WINDOW_DAYS * 24 * 60 * 60 * 1000);
-    const expiryTime = rig.expiresAt + bonusDurationMs;
+    const bonusDurationMs = (safeNumber(rig.renewalCount)) * (RENEWAL_CONFIG.WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+
+    const expiryTime = safeNumber(rig.expiresAt) + bonusDurationMs;
     const timeLeftMs = Math.max(0, expiryTime - now);
     const isExpired = !isInfiniteContract && timeLeftMs <= 0;
 
     const durabilityMs = (REPAIR_CONFIG.DURABILITY_DAYS * 24 * 60 * 60 * 1000);
-    const timeSinceRepair = now - (rig.lastRepairAt || rig.purchasedAt);
+    const timeSinceRepair = now - (safeNumber(rig.lastRepairAt) || safeNumber(rig.purchasedAt) || now);
     const healthPercent = (isInfiniteContract || isInfiniteDurability) ? 100 : Math.max(0, 100 * (1 - timeSinceRepair / durabilityMs));
     const isBroken = healthPercent <= 0;
 
-    let baseRepairCost = isInfiniteDurability ? 0 : (rig.repairCost || (preset ? preset.repairCost : Math.floor(rig.investment * 0.06)));
+    let baseRepairCost = isInfiniteDurability ? 0 : (safeNumber(rig.repairCost) || (preset ? safeNumber(preset.repairCost) : Math.floor(safeNumber(rig.investment) * 0.06)));
     // Legacy Scale Fallback for Costs
     if (baseRepairCost > 0 && baseRepairCost < 1) baseRepairCost *= 35;
 
-    let energyCostPerDay = rig.energyCostPerDay || (preset ? preset.energyCostPerDay : 0);
+    let energyCostPerDay = safeNumber(rig.energyCostPerDay) || (preset ? safeNumber(preset.energyCostPerDay) : 0);
     if (energyCostPerDay > 0 && energyCostPerDay < 1) energyCostPerDay *= 35;
 
     const currentUser = rig.ownerId ? null : null; // MockDB usage replaced by null (will be hydrated by props/refresh if needed)
-    const hasSilverBuff = (currentUser?.masteryPoints || 0) >= 300;
+    const hasSilverBuff = safeNumber(currentUser?.masteryPoints) >= 300;
 
     // --- Hat Discount Logic ---
     let discountMultiplier = 0;
@@ -263,8 +274,9 @@ export const RigCard: React.FC<RigCardProps> = ({
         const hatItem = inventory.find(i => i.id === hatId);
         if (hatItem) {
             const series = EQUIPMENT_SERIES.hat.tiers.find(t => t.rarity === hatItem.rarity);
-            if (series) {
-                const match = getLocalized(series.stat).match(/-(\d+)%/);
+            const rawStat = series?.stat ? getLocalized(series.stat) : '';
+            if (rawStat && typeof rawStat === 'string') {
+                const match = rawStat.match(/-(\d+)%/);
                 if (match) {
                     const p = parseInt(match[1]);
                     discountMultiplier += (p / 100);
@@ -274,8 +286,8 @@ export const RigCard: React.FC<RigCardProps> = ({
         }
     }
 
-    const isVibranium = rig.investment === 0 || rig.name.includes('Vibranium');
-    const repairCost = isVibranium ? 0 : Math.floor(baseRepairCost * (1 - discountMultiplier));
+    const isVibranium = rig.investment === 0 || (rig.name && (typeof rig.name === 'string' ? rig.name.includes('Vibranium') : (rig.name.en?.includes('Vibranium') || rig.name.th?.includes('Vibranium'))));
+    const repairCost = isVibranium ? 0 : Math.floor(baseRepairCost * (1 - safeNumber(discountMultiplier)));
 
     // --- Uniform Energy Discount ---
     const uniformId = rig.slots ? rig.slots.find(id => {
@@ -284,9 +296,9 @@ export const RigCard: React.FC<RigCardProps> = ({
         return item && (item.typeId === 'uniform' || item.typeId.startsWith('uniform'));
     }) : null;
     const energyDiscount = uniformId ? 0.05 : 0;
-    const effectiveEnergyCostPerDay = energyCostPerDay * (1 - energyDiscount);
+    const effectiveEnergyCostPerDay = energyCostPerDay * (1 - safeNumber(energyDiscount));
 
-    const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || Date.now();
+    const lastUpdate = Number(rig.lastEnergyUpdate) || Number(rig.purchasedAt) || Date.now();
     const elapsedMs = now - lastUpdate;
 
     // Use speed multiplier (Demo only)
@@ -303,14 +315,14 @@ export const RigCard: React.FC<RigCardProps> = ({
     const elapsedHours = (elapsedMs * speedMultiplier) / (1000 * 60 * 60);
     const drain = elapsedHours * drainRatePerHour;
 
-    const calculatedEnergyPercent = isZeroEnergy ? 100 : Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
+    const calculatedEnergyPercent = isZeroEnergy ? 100 : Math.max(0, Math.min(100, safeNumber(rig.energy) - drain));
     const energyPercent = calculatedEnergyPercent;
     const isOutOfEnergy = energyPercent <= 0;
 
     const daysRemaining = (timeLeftMs / (1000 * 60 * 60 * 24)); // Display as normal days
-    const isRenewable = !isInfiniteContract && daysRemaining <= RENEWAL_CONFIG.WINDOW_DAYS && (rig.renewalCount || 0) < RENEWAL_CONFIG.MAX_RENEWALS;
+    const isRenewable = !isInfiniteContract && daysRemaining <= RENEWAL_CONFIG.WINDOW_DAYS && safeNumber(rig.renewalCount) < RENEWAL_CONFIG.MAX_RENEWALS;
     const renewalDiscount = RENEWAL_CONFIG.DISCOUNT_PERCENT;
-    const renewalCost = rig.investment * (1 - renewalDiscount);
+    const renewalCost = safeNumber(rig.investment) * (1 - renewalDiscount);
 
     // Override IsPowered
     const effectiveIsPowered = isPowered || !!isZeroEnergy;
@@ -336,8 +348,16 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     const keyCount = inventory.filter(i => i.typeId === 'chest_key').length;
     const hasKey = keyCount > 0;
-    const aiRobotItem = inventory.find(i => i.typeId === 'robot');
-    const aiRobotTimeLeft = aiRobotItem ? Math.max(0, aiRobotItem.expireAt - Date.now()) : 0;
+    const aiRobotItem = (inventory || []).find(i => i.typeId === 'robot');
+    const shopRobot = SHOP_ITEMS.find(i => i.id === 'robot');
+    const defaultLifespanDays = shopRobot?.lifespanDays || 29;
+
+    const aiRobotTimeLeft = aiRobotItem
+        ? (aiRobotItem.expireAt && !isNaN(safeNumber(aiRobotItem.expireAt)) && safeNumber(aiRobotItem.expireAt) > 0
+            ? Math.max(0, safeNumber(aiRobotItem.expireAt) - Date.now())
+            : Math.max(0, safeNumber(aiRobotItem.purchasedAt || Date.now()) + (defaultLifespanDays * 24 * 60 * 60 * 1000) - Date.now())
+        )
+        : 0;
 
     const formatTimeLeft = (ms: number) => {
         const gameMs = ms;
@@ -372,7 +392,8 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     const animate = () => {
         const now = Date.now();
-        const timeElapsedSeconds = ((now - rig.lastClaimAt) / 1000);
+        const lastClaimAt = Number(rig.lastClaimAt) || Number(rig.purchasedAt) || now;
+        const timeElapsedSeconds = ((now - lastClaimAt) / 1000);
         if (!isExpired && !isBroken && effectiveIsPowered && !isExploring && !isOutOfEnergy) {
             const minedValue = timeElapsedSeconds * totalRatePerSecond;
             const total = BASE_CLAIM_AMOUNT + minedValue;
@@ -391,7 +412,8 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     // Energy Depletion Animation
     useEffect(() => {
-        const preset = RIG_PRESETS.find(p => p.name === rig.name);
+        const rigNameStr = typeof rig.name === 'string' ? rig.name : (rig.name?.th || rig.name?.en || '');
+        const preset = RIG_PRESETS.find(p => p.name.th === rigNameStr || p.name.en === rigNameStr);
         if (preset?.specialProperties?.zeroEnergy) {
             setCurrentEnergyPercent(100);
             return;
@@ -404,13 +426,13 @@ export const RigCard: React.FC<RigCardProps> = ({
             }
             const now = Date.now();
 
-            const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || now;
+            const lastUpdate = safeNumber(rig.lastEnergyUpdate) || safeNumber(rig.purchasedAt) || now;
             const elapsedMs = now - lastUpdate;
             // Apply speed multiplier for Demo mode (720x faster drain)
             const elapsedHours = (elapsedMs) / (1000 * 60 * 60);
-            const drainRate = isOverclockActive ? (drainRatePerHour * overclockMultiplier) : drainRatePerHour;
+            const drainRate = isOverclockActive ? (safeNumber(drainRatePerHour) * safeNumber(overclockMultiplier)) : safeNumber(drainRatePerHour);
             const drain = elapsedHours * drainRate;
-            const calculatedEnergy = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
+            const calculatedEnergy = Math.max(0, Math.min(100, safeNumber(rig.energy ?? 100) - drain));
             setCurrentEnergyPercent(calculatedEnergy);
         };
 
@@ -800,7 +822,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                     onClick={handleChargeClick}
                                     disabled={isExploring || energyPercent >= 100}
                                     className={`w-11 h-11 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center hover:bg-stone-800 transition-all group/charge relative shadow-lg backdrop-blur-sm ${isOutOfEnergy ? 'animate-bounce border-emerald-500' : ''} disabled:opacity-30`}
-                                    title={`${t('rig.refill')}: ${formatCurrency(effectiveEnergyCostPerDay)}/${t('time.day')}${uniformId ? ' (-5%)' : ''}`}
+                                    title={`${t('rig.refill')}: ${formatCurrency(effectiveEnergyCostPerDay)}/${t('time.day')} ${uniformId ? '(-5%)' : ''}`}
                                 >
                                     <Zap size={18} className={`text-emerald-400 transition-transform group-hover/charge:scale-110 ${isOutOfEnergy ? 'animate-pulse' : ''}`} />
                                     {isOutOfEnergy && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full animate-pulse border-2 border-black" />}
@@ -873,7 +895,18 @@ export const RigCard: React.FC<RigCardProps> = ({
 
                                                 {/* Tooltip for Accessories */}
                                                 <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[100] bg-stone-900/95 text-xs text-white p-2 rounded-lg border border-stone-700 shadow-xl opacity-0 group-hover/item:opacity-100 hover:opacity-100 pointer-events-none transition-opacity min-w-[140px] backdrop-blur-sm whitespace-nowrap">
-                                                    <div className="font-bold text-yellow-500 mb-1">{getLocalized(item.name)}</div>
+                                                    <div className="font-bold text-yellow-500 mb-1 text-xs capitalize">
+                                                        {(() => {
+                                                            if (!item) return t('rig.empty_slot');
+                                                            // Try to resolve localized name from EQUIPMENT_SERIES
+                                                            const series = EQUIPMENT_SERIES[item.typeId as keyof typeof EQUIPMENT_SERIES];
+                                                            if (series) {
+                                                                const tier = series.tiers.find(t => t.rarity === item.rarity);
+                                                                if (tier) return getLocalized(tier.name);
+                                                            }
+                                                            return item.name || item.typeId;
+                                                        })()}
+                                                    </div>
                                                     {item.specialEffect && (
                                                         <div className="text-[9px] text-emerald-400 mb-1 font-bold">
                                                             {item.specialEffect}

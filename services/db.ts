@@ -707,7 +707,8 @@ export const MockDB = {
         if (!rig) throw new Error('Rig not found');
 
         // Logic similar to PlayerDashboard
-        const preset = RIG_PRESETS.find(p => p.name === rig.name);
+        const rigNameStr = typeof rig.name === 'string' ? rig.name : (rig.name?.th || rig.name?.en || '');
+        const preset = RIG_PRESETS.find(p => p.name.th === rigNameStr || p.name.en === rigNameStr);
         const energyCostPerDay = rig.energyCostPerDay || (preset ? preset.energyCostPerDay : 0);
 
         const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || Date.now();

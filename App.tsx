@@ -3,6 +3,7 @@ import { AuthPage } from './components/AuthPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { PlayerDashboard } from './components/PlayerDashboard';
 import { AnnouncementModal } from './components/AnnouncementModal'; // Import Modal
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { User } from './services/types';
 import { api } from './services/api';
 import { AlertTriangle } from 'lucide-react';
@@ -101,10 +102,9 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <>
-      <AnnouncementModal />
+    <ErrorBoundary>
       <AppContent />
-    </>
+    </ErrorBoundary>
   );
 };
 

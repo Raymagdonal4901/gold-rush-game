@@ -2,83 +2,9 @@ import { Response } from 'express';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
-import { SHOP_ITEMS } from './craftingController';
+import { SHOP_ITEMS, MATERIAL_CONFIG, EQUIPMENT_UPGRADE_CONFIG, UPGRADE_REQUIREMENTS, REPAIR_KITS } from '../constants';
 
-// --- MIRRORED CONSTANTS ---
-const MATERIAL_CONFIG = {
-    NAMES: {
-        1: { th: 'ถ่านหิน', en: 'Coal' },
-        2: { th: 'ทองแดง', en: 'Copper' },
-        3: { th: 'เหล็ก', en: 'Iron' },
-        4: { th: 'ทองคำ', en: 'Gold' },
-        5: { th: 'เพชร', en: 'Diamond' },
-        7: { th: 'ไวเบรเนียม', en: 'Vibranium' }
-    } as Record<number, { th: string; en: string }>
-};
 
-const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, { matTier: number; matAmount: number; chance: number; chipAmount: number; cost: number; targetBonus: number; risk: string }>> = {
-    hat: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
-    },
-    uniform: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
-    },
-    bag: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
-    },
-    boots: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
-    },
-    glasses: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
-    },
-    mobile: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
-    },
-    pc: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
-    },
-    auto_excavator: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
-    },
-    glove: {
-        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
-        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
-        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
-        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
-    }
-};
-
-const UPGRADE_REQUIREMENTS: Record<number, { matTier: number; matAmount: number; chance: number; chipAmount: number; cost: number; targetBonus: number; risk: string }> = {
-    1: { matTier: 1, matAmount: 10, chipAmount: 1, chance: 1.0, cost: 50, targetBonus: 0.5, risk: 'NONE' },
-    2: { matTier: 1, matAmount: 20, chipAmount: 5, chance: 0.8, cost: 100, targetBonus: 1.5, risk: 'DROP' },
-    3: { matTier: 2, matAmount: 20, chipAmount: 10, chance: 0.5, cost: 300, targetBonus: 3.0, risk: 'DROP' },
-    4: { matTier: 2, matAmount: 40, chipAmount: 20, chance: 0.25, cost: 1000, targetBonus: 6.0, risk: 'BREAK' },
-};
 
 
 
@@ -116,33 +42,17 @@ export const buyAccessory = async (req: AuthRequest, res: Response) => {
         const accessoryId = Math.random().toString(36).substr(2, 9);
         const expireAt = lifespanDays ? Date.now() + (lifespanDays * 24 * 60 * 60 * 1000) : null;
 
-        // --- BONUS RANDOMIZATION LOGIC ---
-        // Mirroring min/max bonus logic from frontend constants to ensure server-side validation/generation
+        // Look up item config from centralized SHOP_ITEMS
+        const shopConfig = SHOP_ITEMS.find(s => s.id === actualItemId);
         let calculatedBonus = dailyBonus || 0;
 
-        // Define bonus ranges for known items (Mirrored from constants.ts)
-        const BONUS_CONFIG: Record<string, { min: number, max: number }> = {
-            'hat': { min: 0.1, max: 0.5 },
-            'uniform': { min: 0.5, max: 1.5 },
-            'bag': { min: 1.0, max: 2.0 },
-            'boots': { min: 2.0, max: 3.0 },
-            'glasses': { min: 2.5, max: 3.5 },
-            'mobile': { min: 3.0, max: 4.0 },
-            'pc': { min: 4.0, max: 5.0 },
-            'auto_excavator': { min: 10.0, max: 12.0 }
-        };
-
-        if (BONUS_CONFIG[actualItemId]) {
-            const { min, max } = BONUS_CONFIG[actualItemId];
-            // Randomize between min and max (inclusive-ish for floats)
+        if (shopConfig && shopConfig.minBonus !== undefined && shopConfig.maxBonus !== undefined && shopConfig.minBonus < shopConfig.maxBonus) {
+            const { minBonus: min, maxBonus: max } = shopConfig;
             calculatedBonus = Math.random() * (max - min) + min;
-            // Round to 2 decimal places
             calculatedBonus = Math.round(calculatedBonus * 100) / 100;
         }
 
-        // Look up maxDurability from SHOP_ITEMS config
-        const shopConfig = SHOP_ITEMS.find(s => s.id === actualItemId);
-        const maxDurability = (shopConfig as any)?.maxDurability || (lifespanDays ? lifespanDays * 100 : 0);
+        const maxDurability = shopConfig?.maxDurability || (lifespanDays ? lifespanDays * 100 : 0);
 
         const newItem: any = {
             id: accessoryId,
@@ -322,14 +232,7 @@ export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
     }
 };
 
-// --- EQUIPMENT REPAIR ---
-// Repair Kit Tier -> Target Equipment mapping
-const REPAIR_KIT_TARGETS: Record<string, string[]> = {
-    'repair_kit_1': ['hat', 'uniform'],
-    'repair_kit_2': ['bag', 'boots'],
-    'repair_kit_3': ['glasses', 'mobile'],
-    'repair_kit_4': ['pc', 'auto_excavator']
-};
+
 
 export const repairEquipment = async (req: AuthRequest, res: Response) => {
     try {
@@ -360,7 +263,8 @@ export const repairEquipment = async (req: AuthRequest, res: Response) => {
 
         // Validate tier match
         const kitTypeId = repairKit.typeId;
-        const allowedTargets = repairKit.targetEquipment || REPAIR_KIT_TARGETS[kitTypeId] || [];
+        const configKit = REPAIR_KITS.find(k => k.id === kitTypeId);
+        const allowedTargets = repairKit.targetEquipment || configKit?.targetEquipment || [];
         const targetTypeId = targetItem.typeId || '';
 
         if (!allowedTargets.includes(targetTypeId)) {

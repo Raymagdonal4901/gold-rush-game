@@ -55,12 +55,16 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
 
     const formatCurrency = (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean; showDecimals?: boolean; precision?: number }): string => {
+        // Guard against undefined/NaN
+        if (amount === undefined || amount === null || isNaN(Number(amount))) {
+            return options?.hideSymbol ? '0' : (language === 'th' || options?.forceTHB) ? '0 ฿' : '$0';
+        }
         const isThai = options?.forceUSD ? false : (language === 'th' || options?.forceTHB);
 
         // All amounts in system are stored as THB
         // TH mode: show as-is (THB)
         // EN mode: convert to USD by dividing by 31
-        let val = isThai ? amount : amount / THB_TO_USD_RATE;
+        let val = isThai ? Number(amount) : Number(amount) / THB_TO_USD_RATE;
 
         // If not forcing decimals and it's basically an integer, round it
         if (!options?.showDecimals && !options?.precision && Math.abs(val - Math.round(val)) < 0.01) {
@@ -79,10 +83,12 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
 
     const formatBonus = (amount: number, typeId?: string): string => {
+        // Guard against undefined/NaN
+        if (amount === undefined || amount === null || isNaN(Number(amount))) return '+0';
         if (amount === 0) return '+0';
 
         // If amount is small (legacy decimal), scale it up to THB first
-        const thbAmount = amount < 0.5 ? amount * 35 : amount;
+        const thbAmount = Number(amount) < 0.5 ? Number(amount) * 35 : Number(amount);
 
         // EN mode: convert THB bonus to USD
         const displayAmount = language === 'en' ? thbAmount / THB_TO_USD_RATE : thbAmount;

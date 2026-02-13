@@ -41,8 +41,10 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
             }
 
             const availableRigs = (rigs.length > 0 ? rigs : MockDB.getMyRigs(user.id)).filter(r => {
-                const baseDurationMs = r.durationMonths * 30 * 24 * 60 * 60 * 1000;
-                const expiryTime = r.purchasedAt + baseDurationMs;
+                const durationMonths = r.durationMonths || 0;
+                const purchasedAt = r.purchasedAt || Date.now();
+                const baseDurationMs = durationMonths * 30 * 24 * 60 * 60 * 1000;
+                const expiryTime = purchasedAt + baseDurationMs;
                 const isExpired = Date.now() >= expiryTime;
 
                 // Exclude rigs that are already on an expedition

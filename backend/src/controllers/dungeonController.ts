@@ -4,71 +4,9 @@ import Rig from '../models/Rig';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
 import SystemConfig from '../models/SystemConfig';
+import { SHOP_ITEMS, DUNGEON_CONFIG, MATERIAL_CONFIG } from '../constants';
 
-const SHOP_ITEMS = [
-    { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 0.142857, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mining Key' }, price: 0.142857, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
-    { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 0.142857, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
-    { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 0.142857, lifespanDays: 365, minBonus: 0, maxBonus: 0 },
-    { id: 'robot', name: { th: 'หุ่นยนต์ AI', en: 'AI Robot' }, price: 2.857142, lifespanDays: 30, minBonus: 0, maxBonus: 0 },
-    { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 8.571428, lifespanDays: 0, minBonus: 0, maxBonus: 0 },
-    { id: 'ancient_blueprint', name: { th: 'แผนที่ขุดทองโบราณ', en: 'Ancient Mining Map' }, price: 285.714285, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'hourglass_small', name: { th: 'นาฬิกาทราย (เล็ก)', en: 'Small Hourglass' }, price: 0.142857, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Medium Hourglass' }, price: 0.571428, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'hourglass_large', name: { th: 'นาฬิกาทราย (ใหญ่)', en: 'Large Hourglass' }, price: 1.714285, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-    { id: 'repair_kit', name: { th: 'ชุดบำรุงรักษาพิเศษ', en: 'Special Maintenance Kit' }, price: 1.428571, lifespanDays: 999, minBonus: 0, maxBonus: 0 },
-];
-
-const DUNGEON_CONFIG = [
-    {
-        id: 1,
-        name: { th: 'หุบเขาเหมืองร้าง (The Abandoned Canyon)', en: 'The Abandoned Canyon' },
-        cost: 2.857142,
-        durationHours: 2,
-        keyCost: 2,
-        rewards: {
-            common: [{ tier: 1, amount: 10, chance: 100 }, { tier: 2, amount: 5, chance: 100 }],
-            salt: [{ tier: 1, amount: 5, chance: 100 }],
-            rare: [
-                { itemId: 'chest_key', amount: 1, chance: 33 },
-                { itemId: 'hourglass_small', amount: 1, chance: 33 },
-                { itemId: 'upgrade_chip', amount: 1, chance: 34 }
-            ]
-        }
-    },
-    {
-        id: 2,
-        name: { th: 'นครทองคำที่สาบสูญ (Lost City of Gold)', en: 'Lost City of Gold' },
-        cost: 8.571428,
-        durationHours: 6,
-        keyCost: 10,
-        rewards: {
-            common: [{ tier: 3, amount: 10, chance: 100 }, { tier: 4, amount: 5, chance: 100 }],
-            salt: [{ tier: 3, amount: 5, chance: 100 }, { tier: 1, amount: 5, chance: 100 }],
-            rare: [
-                { itemId: 'upgrade_chip', amount: 1, chance: 25 },
-                { itemId: 'mixer', amount: 1, chance: 25 },
-                { itemId: 'magnifying_glass', amount: 1, chance: 25 },
-                { itemId: 'hourglass_medium', amount: 1, chance: 25 }
-            ]
-        }
-    },
-    {
-        id: 3,
-        name: { th: 'เหมืองผลึกคริสตัล (Crystal Caverns)', en: 'Crystal Caverns' },
-        cost: 28.571428,
-        durationHours: 12,
-        keyCost: 0,
-        rewards: {
-            common: [{ tier: 5, amount: 15, chance: 100 }, { tier: 6, amount: 5, chance: 100 }],
-            salt: [{ tier: 5, amount: 5, chance: 100 }],
-            rare: [
-                { tier: 9, amount: 1, chance: 50 },
-                { tier: 8, amount: 1, chance: 50 }
-            ]
-        }
-    }
-];
+const materialNames = MATERIAL_CONFIG.NAMES;
 
 export const startExpedition = async (req: AuthRequest, res: Response) => {
     try {
@@ -208,17 +146,22 @@ export const claimExpedition = async (req: AuthRequest, res: Response) => {
                 const shopItem = SHOP_ITEMS.find((s: any) => s.id === r.itemId);
                 if (shopItem) {
                     nameObj = shopItem.name;
-                    const lifespan = r.itemId === 'robot' ? 30 : (shopItem.lifespanDays || 30);
+                    const lifespan = r.itemId === 'robot' ? 29 : (shopItem.lifespanDays || 29);
+                    const bonus = (Number(shopItem.minBonus) + Number(shopItem.maxBonus)) / 2 || 0;
+
                     user.inventory.push({
                         id: Math.random().toString(36).substr(2, 9),
                         typeId: shopItem.id,
                         name: shopItem.name,
                         price: shopItem.price,
-                        dailyBonus: (shopItem.minBonus + shopItem.maxBonus) / 2,
+                        dailyBonus: bonus,
+                        durationBonus: shopItem.durationBonus || 0,
                         rarity: 'RARE',
                         purchasedAt: Date.now(),
                         lifespanDays: lifespan,
                         expireAt: Date.now() + (lifespan * 24 * 60 * 60 * 1000),
+                        maxDurability: shopItem.maxDurability || (lifespan * 100),
+                        currentDurability: shopItem.maxDurability || (lifespan * 100),
                         level: 1
                     });
                     user.markModified('inventory');

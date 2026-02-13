@@ -2,6 +2,7 @@ import { Response } from 'express';
 import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthRequest } from '../middleware/auth';
+import { SHOP_ITEMS } from '../constants';
 import User from '../models/User';
 import Rig from '../models/Rig';
 import WithdrawalRequest from '../models/WithdrawalRequest';
@@ -163,16 +164,29 @@ export const adminAddItem = async (req: AuthRequest, res: Response) => {
         const { userId, itemId, amount, message } = req.body; // Added message (optional)
         const amountNum = Number(amount) || 1;
 
-        // Common Item Structure Template
-        const createItem = () => ({
-            id: uuidv4(),
-            typeId: itemId,
-            name: itemId,
-            rarity: 'COMMON',
-            purchasedAt: Date.now(),
-            lifespanDays: 30,
-            isHandmade: false
-        });
+        // Common Item Structure Template (using centralized metadata)
+        const shopItem = SHOP_ITEMS.find(s => s.id === itemId);
+
+        const createItem = () => {
+            const lifespan = shopItem?.lifespanDays || 30;
+            const bonus = shopItem ? (Number(shopItem.minBonus) + Number(shopItem.maxBonus)) / 2 : 0;
+
+            return {
+                id: uuidv4(),
+                typeId: itemId,
+                name: shopItem?.name || itemId,
+                rarity: shopItem ? 'RARE' : 'COMMON',
+                purchasedAt: Date.now(),
+                lifespanDays: lifespan,
+                expireAt: lifespan > 0 ? Date.now() + (lifespan * 24 * 60 * 60 * 1000) : 0,
+                dailyBonus: bonus,
+                durationBonus: shopItem?.durationBonus || 0,
+                currentDurability: shopItem?.maxDurability || (lifespan * 100),
+                maxDurability: shopItem?.maxDurability || (lifespan * 100),
+                level: 1,
+                isHandmade: false
+            };
+        };
 
         // Generate the item array
         const itemsToSend: any[] = [];
@@ -733,7 +747,7 @@ export const adminAdjustRevenue = async (req: AuthRequest, res: Response) => {
     }
 };
 
-// Reset Individual User (Money, Rigs, Inventory)
+// Reset Individual User (Money, Rigs, Inventory, Stats, Expeditions)
 export const resetUser = async (req: AuthRequest, res: Response) => {
     try {
         const { userId } = req.params;
@@ -743,28 +757,59 @@ export const resetUser = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        console.log(`[ADMIN] Resetting user ${user.username} (${userId})...`);
+        console.log(`[ADMIN] Performing FULL RESET for user ${user.username} (${userId})...`);
 
-        // 1. Reset user fields
+        // 1. Reset user fields to defaults
         user.balance = 0;
+        user.energy = 100;
         user.inventory = [];
         user.materials = {};
-        user.energy = 100;
+        user.stats = {};
+        user.weeklyStats = {};
+        user.claimedQuests = [];
+        user.claimedAchievements = [];
+        user.masteryPoints = 0;
+        user.claimedRanks = [];
+        user.notifications = [];
+        user.checkInStreak = 0;
+        user.lastCheckIn = undefined;
+        user.activeExpedition = null;
+        user.craftingQueue = [];
+        user.unlockedSlots = 3;
+        user.lastLuckyDraw = 0;
+        user.overclockExpiresAt = undefined;
+        user.overclockRemainingMs = 0;
+        user.isOverclockActive = false;
+        user.isFirstDepositPaid = false;
+        user.referralCount = 0;
         user.lastEnergyUpdate = new Date();
+
+        // Mark modified for complex objects/arrays
         user.markModified('inventory');
         user.markModified('materials');
+        user.markModified('stats');
+        user.markModified('weeklyStats');
+        user.markModified('claimedQuests');
+        user.markModified('claimedAchievements');
+        user.markModified('claimedRanks');
+        user.markModified('notifications');
+        user.markModified('activeExpedition');
+        user.markModified('craftingQueue');
+
         await user.save();
 
         // 2. Delete all rigs owned by the user
-        await Rig.deleteMany({ ownerId: userId });
+        const rigDeleteResult = await Rig.deleteMany({ ownerId: userId });
+        console.log(`[ADMIN] Deleted ${rigDeleteResult.deletedCount} rigs for user ${user.username}`);
 
         // 3. Delete related requests to keep it clean
         await ClaimRequest.deleteMany({ userId: userId });
+        await Transaction.deleteMany({ userId: userId });
 
         res.json({ message: 'User reset successfully' });
     } catch (error) {
         console.error('[ADMIN ERROR] resetUser failed:', error);
-        res.status(500).json({ message: 'Server error during user reset', error });
+        res.status(500).json({ message: 'Server error during user reset', error: error instanceof Error ? error.message : error });
     }
 };
 

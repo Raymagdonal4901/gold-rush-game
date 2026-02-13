@@ -3,69 +3,9 @@ import Rig from '../models/Rig';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
+import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS } from '../constants';
 
-// --- Material Names ---
-const MATERIAL_NAMES: Record<number, { th: string; en: string }> = {
-    0: { th: 'เศษหิน', en: 'Stone Shards' },
-    1: { th: 'ถ่านหิน', en: 'Coal' },
-    2: { th: 'ทองแดง', en: 'Copper' },
-    3: { th: 'เหล็ก', en: 'Iron' },
-    4: { th: 'ทองคำ', en: 'Gold' },
-    5: { th: 'เพชร', en: 'Diamond' },
-    6: { th: 'น้ำมันดิบสังเคราะห์', en: 'Synthetic Crude Oil' },
-    7: { th: 'ไวเบรเนียม', en: 'Vibranium' },
-    8: { th: 'แร่ลึกลับ', en: 'Mysterious Ore' },
-    9: { th: 'แร่ในตำนาน', en: 'Legendary Ore' }
-};
-
-// --- Per-Rig Loot Tables ---
-interface LootEntry { matTier: number; minAmount: number; maxAmount: number; chance: number; }
-
-const RIG_LOOT_TABLES: Record<number, LootEntry[]> = {
-    // Tier 2: สว่านพกพา (Portable Drill)
-    2: [
-        { matTier: 0, minAmount: 3, maxAmount: 5, chance: 60 },
-        { matTier: 1, minAmount: 1, maxAmount: 1, chance: 35 },
-        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 5 },
-    ],
-    // Tier 3: เครื่องขุดถ่านหิน (Coal Excavator)
-    3: [
-        { matTier: 0, minAmount: 5, maxAmount: 8, chance: 30 },
-        { matTier: 1, minAmount: 1, maxAmount: 2, chance: 50 },
-        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 15 },
-        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 5 },
-    ],
-    // Tier 4: เครื่องขุดทองแดง (Copper Excavator)
-    4: [
-        { matTier: 1, minAmount: 2, maxAmount: 3, chance: 50 },
-        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 40 },
-        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 10 },
-    ],
-    // Tier 5: เครื่องขุดเหล็ก (Iron Excavator)
-    5: [
-        { matTier: 2, minAmount: 2, maxAmount: 2, chance: 40 },
-        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 50 },
-        { matTier: 4, minAmount: 1, maxAmount: 1, chance: 10 },
-    ],
-    // Tier 6: เครื่องขุดทองคำ (Gold Excavator)
-    6: [
-        { matTier: 3, minAmount: 2, maxAmount: 2, chance: 40 },
-        { matTier: 4, minAmount: 1, maxAmount: 1, chance: 55 },
-        { matTier: 5, minAmount: 1, maxAmount: 1, chance: 5 },
-    ],
-    // Tier 7: เครื่องขุดเพชร (Diamond Excavator)
-    7: [
-        { matTier: 4, minAmount: 2, maxAmount: 2, chance: 40 },
-        { matTier: 5, minAmount: 1, maxAmount: 1, chance: 50 },
-        { matTier: 6, minAmount: 1, maxAmount: 1, chance: 10 },
-    ],
-    // Tier 8: เครื่องขุดปฏิกรณ์ไวเบรเนียม (Vibranium Reactor)
-    8: [
-        { matTier: 5, minAmount: 1, maxAmount: 2, chance: 60 },
-        { matTier: 6, minAmount: 1, maxAmount: 1, chance: 35 },
-        { matTier: 7, minAmount: 1, maxAmount: 1, chance: 5 },
-    ],
-};
+const MATERIAL_NAMES = MATERIAL_CONFIG.NAMES;
 
 // Determine rig preset ID from investment amount
 function getRigPresetId(rig: any): number {
@@ -142,17 +82,8 @@ export const getMyRigs = async (req: AuthRequest, res: Response) => {
     }
 };
 
-const CRAFTABLE_RIGS: Record<string, any> = {
-    'เครื่องขุดปฏิกรณ์ไวเบรเนียม': {
-        id: 8,
-        recipe: { materials: { 7: 1, 8: 2, 9: 3 } },
-        dailyProfit: 100,
-        durationHours: 365 * 24, // Use hours for consistency if model expects it
-        dailyEnergyCost: 50,
-        rarity: 'ULTRA_LEGENDARY',
-        name: { th: 'เครื่องขุดปฏิกรณ์ไวเบรเนียม', en: 'Vibranium Reactor Rig' }
-    }
-};
+// Craftable rigs are now derived from constants.ts RIG_PRESETS
+const CRAFTABLE_RIGS = RIG_PRESETS.filter(rig => rig.craftingRecipe);
 
 export const craftRig = async (req: AuthRequest, res: Response) => {
     try {
@@ -160,14 +91,10 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
         const userId = req.userId;
         console.log(`[CRAFT_RIG] Attempting to craft: "${name}" for user: ${userId}`);
 
-        // Robust name matching or ID fallback
-        let preset = CRAFTABLE_RIGS[name];
-        if (!preset) {
-            // Try to find by partial match or known ID if possible 
-            // Since we know ID 8 is the reactor, let's check if it's the one
-            if (name.includes('ปฏิกรณ์')) {
-                preset = CRAFTABLE_RIGS['เครื่องขุดปฏิกรณ์ไวเบรเนียม'];
-            }
+        // Robust matching using RIG_PRESETS for machines
+        let preset = RIG_PRESETS.find(i => i.name.th === name || i.name.en === name || i.id.toString() === name);
+        if (!preset && name.includes('ปฏิกรณ์')) {
+            preset = RIG_PRESETS.find(i => i.id === 8); // Vibranium Reactor ID
         }
 
         if (!preset) {
@@ -195,7 +122,9 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
 
         // Check Materials
         if (!user.materials) user.materials = {};
-        for (const [tier, amount] of Object.entries(preset.recipe.materials)) {
+        const materialsNeeded = preset.craftingRecipe?.materials || {};
+
+        for (const [tier, amount] of Object.entries(materialsNeeded)) {
             const has = user.materials[tier] || 0;
             console.log(`[CRAFT_RIG] Tier ${tier}: have ${has}, need ${amount}`);
             if (has < (amount as number)) {
@@ -211,7 +140,7 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
         }
 
         // Deduct Materials
-        for (const [tier, amount] of Object.entries(preset.recipe.materials)) {
+        for (const [tier, amount] of Object.entries(materialsNeeded)) {
             user.materials[tier] -= (amount as number);
         }
         user.markModified('materials');
@@ -226,7 +155,8 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
         });
         await craftTx.save();
 
-        // Give a Starter Glove (Handmade / High Quality for T8!)
+        const lifespanDays = preset.durationMonths ? (preset.durationMonths * 30) : (preset.durationDays || 365);
+
         const starterGlove = {
             id: Math.random().toString(36).substr(2, 9),
             typeId: 'glove',
@@ -236,10 +166,10 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
             durationBonus: 0,
             rarity: 'RARE',
             purchasedAt: Date.now(),
-            lifespanDays: preset.durationDays || 365,
-            expireAt: Date.now() + ((preset.durationDays || 365) * 24 * 60 * 60 * 1000),
-            currentDurability: (preset.durationDays || 365) * 100, // HP-based
-            maxDurability: (preset.durationDays || 365) * 100,
+            lifespanDays: lifespanDays,
+            expireAt: Date.now() + (lifespanDays * 24 * 60 * 60 * 1000),
+            currentDurability: lifespanDays * 100, // HP-based
+            maxDurability: lifespanDays * 100,
             level: 1,
             isHandmade: true
         };
@@ -249,7 +179,7 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
 
         // Create Rig
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + preset.durationDays);
+        expiresAt.setDate(expiresAt.getDate() + lifespanDays);
 
         const rig = await Rig.create({
             ownerId: userId,
@@ -258,9 +188,9 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
             dailyProfit: preset.dailyProfit,
             expiresAt,
             slots: [starterGlove.id, null, null, null, null], // Set starter glove
-            rarity: preset.rarity,
+            rarity: preset.type || 'ULTRA_LEGENDARY',
             repairCost: 0,
-            energyCostPerDay: preset.dailyEnergyCost,
+            energyCostPerDay: preset.energyCostPerDay,
             bonusProfit: 0,
             lastClaimAt: new Date()
         });
@@ -697,6 +627,14 @@ export const equipAccessory = async (req: AuthRequest, res: Response) => {
 
         const item = user.inventory[itemIndex];
 
+        // VALIDATION: Only allow actual equipment types, not utility items
+        const VALID_EQUIPMENT_TYPES = ['hat', 'uniform', 'bag', 'boots', 'glasses', 'mobile', 'pc', 'auto_excavator', 'glove'];
+        if (!VALID_EQUIPMENT_TYPES.includes(item.typeId)) {
+            return res.status(400).json({
+                message: `ไอเทมประเภท ${item.typeId} ไม่สามารถสวมใส่ได้ (Item type ${item.typeId} cannot be equipped)`
+            });
+        }
+
         // Ensure slots array exists
         if (!rig.slots) rig.slots = [null, null, null, null, null];
 
@@ -841,12 +779,7 @@ export const repairRig = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
-// --- Constants (Duplicated from constants.ts to avoid import issues) ---
-const RENEWAL_CONFIG = {
-    WINDOW_DAYS: 3,
-    MAX_RENEWALS: 2,
-    DISCOUNT_PERCENT: 0.05,
-};
+
 
 // ... existing code ...
 
