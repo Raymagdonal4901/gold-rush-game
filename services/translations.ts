@@ -212,6 +212,14 @@ export const translations = {
             thb: 'บาท',
             per_day: '/วัน',
         },
+        actions: {
+            repair: 'ซ่อมแซม',
+            charge: 'ชาร์จไฟ',
+            renew: 'ต่อสัญญา',
+            scrap: 'ทุบทิ้ง',
+            cancel: 'ยกเลิก',
+            confirm: 'ยืนยัน',
+        },
         items: {
             mining_key: 'กุญแจเข้าเหมือง',
             upgrade_chip: 'ชิปอัปเกรด',
@@ -769,7 +777,7 @@ export const translations = {
             expired: 'หมดอายุ',
             expires_at: 'หมดอายุวันที่',
             pending_income: 'รายได้ค้างรับ',
-            destroy: 'ทุบทิ้ง (Destroy)',
+            destroy: 'ทุบทิ้ง',
             maintenance_fee: 'ค่าดูแลรักษา',
             bonus: 'โบนัส',
             power_supply: 'แหล่งจ่ายไฟ',

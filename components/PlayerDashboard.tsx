@@ -638,7 +638,21 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     }, [user.isDemo, user.id, language, getLocalized, addNotification]);
 
 
-    const handleRenew = (rigId: string) => { try { const cost = MockDB.renewRig(user.id, rigId, 0); refreshData(); addNotification({ id: Date.now().toString(), userId: user.id, message: `ต่ออายุเครื่องจักรสำเร็จ (-${formatCurrency(cost)})`, type: 'SUCCESS', read: false, timestamp: Date.now() }); } catch (e: any) { alert(e.message); } };
+    const handleRenew = async (rigId: string) => {
+        try {
+            if (user.isDemo) {
+                const cost = MockDB.renewRig(user.id, rigId, 0);
+                refreshData();
+                addNotification({ id: Date.now().toString(), userId: user.id, message: t('rig.renew_complete') + ` (-${formatCurrency(cost)})`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            } else {
+                const res = await api.renewRig(rigId);
+                refreshData();
+                addNotification({ id: Date.now().toString(), userId: user.id, message: t('rig.renew_complete') + ` (-${formatCurrency(res.cost || 0)})`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            }
+        } catch (e: any) {
+            alert(e.response?.data?.message || e.message);
+        }
+    };
     const handleRepair = React.useCallback(async (rigId: string) => {
         try {
             let cost = 0;
@@ -649,7 +663,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 cost = res.cost;
             }
             refreshData();
-            addNotification({ id: Date.now().toString(), userId: user.id, message: `ซ่อมแซมเครื่องจักรสำเร็จ (-${formatCurrency(cost)})`, type: 'SUCCESS', read: false, timestamp: Date.now() });
+            addNotification({ id: Date.now().toString(), userId: user.id, message: t('rig.repair_complete') + ` (-${formatCurrency(cost)})`, type: 'SUCCESS', read: false, timestamp: Date.now() });
         } catch (e: any) {
             alert(e.response?.data?.message || e.message);
         }

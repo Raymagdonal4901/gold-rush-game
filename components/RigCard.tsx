@@ -466,10 +466,14 @@ export const RigCard: React.FC<RigCardProps> = ({
         if (onRenew) {
             onRenew(rig.id);
             setIsRenewConfirming(false);
-            setCurrentAmount(BASE_CLAIM_AMOUNT);
             setShowRenewed(true);
             setTimeout(() => setShowRenewed(false), 3000);
         }
+    };
+
+    const cancelRenew = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsRenewConfirming(false);
     };
 
     const handleRepairClick = (e: React.MouseEvent) => {
@@ -803,8 +807,9 @@ export const RigCard: React.FC<RigCardProps> = ({
                                 </button>
                             )}
                         </div>
-
-                        <div className="flex flex-col gap-2.5">
+                        {/* Action Buttons */}
+                        {/* Action Buttons - MOVED TO BOTTOM */}
+                        <div className="flex flex-col gap-2.5 mt-4">
                             {equippedItems.slice(1, 5).map((item, index) => {
                                 const actualIndex = index + 1;
                                 return (
@@ -1081,67 +1086,135 @@ export const RigCard: React.FC<RigCardProps> = ({
                         </div>
                     </div>
 
-                    {isRenewable && !isRenewConfirming && !preset?.specialProperties?.cannotRenew ? (
-                        <div className="grid grid-cols-2 gap-2">
-                            <button
-                                onClick={handleClaimClick}
-                                disabled={(isExpired || isBroken || !effectiveIsPowered || isExploring) && currentAmount <= 0}
-                                className="font-bold py-2 rounded border border-stone-600 bg-stone-800 hover:bg-stone-700 text-stone-200 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-1 active:scale-95"
-                            >
-                                <Coins size={14} /> {t('rig.collect')}
-                            </button>
-                            <button
-                                onClick={handleRenewClick}
-                                disabled={isExploring}
-                                className="font-bold py-2 rounded border border-blue-500 bg-blue-600 hover:bg-blue-500 text-white transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-1 shadow-lg shadow-blue-900/20 active:scale-95"
-                            >
-                                <RefreshCw size={14} /> {t('rig.pay')}
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={(e) => {
-                                if (isExploring) return;
-                                if (isBroken && !isExpired) handleRepairClick(e);
-                                else handleClaimClick();
-                            }}
-                            disabled={(isExpired || (!isBroken && !effectiveIsPowered) || isExploring) && currentAmount <= 0}
-                            className={`w-full font-bold py-2 rounded border transition-all active:scale-[0.98] flex items-center justify-center gap-2 font-display uppercase tracking-wider
-                        ${isExpired
-                                    ? 'bg-stone-800 text-stone-600 border-stone-700 cursor-not-allowed'
-                                    : isExploring
-                                        ? 'bg-purple-900/20 text-purple-500 border-purple-900/50 cursor-not-allowed'
-                                        : isBroken
-                                            ? 'bg-red-600 hover:bg-red-500 text-white border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.4)] cursor-pointer'
-                                            : !effectiveIsPowered
-                                                ? 'bg-orange-900/20 text-orange-500 border-orange-900/50 cursor-not-allowed'
-                                                : currentTier === 7
-                                                    ? 'bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 text-white border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:shadow-[0_0_30px_rgba(168,85,247,0.7)]'
-                                                    : currentTier >= 5
-                                                        ? 'bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 text-black border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)] hover:shadow-[0_0_25px_rgba(234,179,8,0.6)]'
-                                                        : currentTier === 4
-                                                            ? 'bg-gradient-to-r from-orange-700 to-orange-600 text-white border-orange-500 hover:brightness-110'
-                                                            : currentTier === 3
-                                                                ? 'bg-gradient-to-r from-sky-700 to-sky-600 text-white border-sky-500 hover:brightness-110 shadow-[0_0_15px_rgba(2,132,199,0.3)]'
-                                                                : currentTier === 2
-                                                                    ? 'bg-gradient-to-r from-emerald-700 to-emerald-600 text-white border-emerald-500 hover:brightness-110 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                                                                    : 'bg-stone-800 hover:bg-stone-700 text-stone-200 border-stone-600'
-                                }
-                      `}
-                        >
-                            {isExploring ? (
-                                <><Skull size={18} /> {language === 'th' ? 'กำลังสำรวจ...' : 'Exploring...'}</>
-                            ) : isBroken && !isExpired && !isVibranium ? (
-                                <><Wrench size={18} /> {t('rig.repair_now')} ({formatCurrency(baseRepairCost)})</>
-                            ) : !effectiveIsPowered && !isExpired ? (
-                                <><ZapOff size={18} /> {t('rig.out_of_energy')}</>
+                    {/* Dead State Actions (Renew / Scrap) */}
+                    {rig.isDead && (
+                        <div className="mb-2">
+                            {!isRenewConfirming ? (
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={handleRenewClick}
+                                        className="relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all flex items-center justify-center gap-1.5 shadow-lg border group bg-gradient-to-br from-green-600 to-green-800 text-white border-green-500 hover:from-green-500 hover:to-green-700 hover:shadow-green-500/20 active:scale-95 h-10"
+                                    >
+                                        <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] px-1.5 rounded-bl-md font-bold z-10 shadow-sm">
+                                            -{(RENEWAL_CONFIG.DISCOUNT_PERCENT * 100).toFixed(0)}%
+                                        </div>
+                                        <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 skew-x-12"></div>
+                                        <RefreshCw size={14} className="group-hover:rotate-180 transition-transform" />
+                                        {t('actions.renew')}
+                                    </button>
+
+                                    <button
+                                        onClick={handleDestroyClick}
+                                        className="relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all flex items-center justify-center gap-1.5 shadow-lg border group bg-stone-800 text-red-500 border-stone-700 hover:bg-stone-700 hover:text-red-400 hover:border-red-900/50 hover:shadow-red-900/10 active:scale-95 h-10"
+                                    >
+                                        <Trash2 size={14} />
+                                        {t('actions.scrap')}
+                                    </button>
+                                </div>
                             ) : (
-                                <><Coins size={18} strokeWidth={2.5} /> {isExpired ? t('rig.expired') : t('rig.claim_rent')}</>
+                                <div className="flex gap-2 animate-fadeIn h-10">
+                                    <button
+                                        onClick={confirmRenew}
+                                        className="flex-1 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg border border-green-400 active:scale-95 transition-all"
+                                    >
+                                        <Check size={18} /> {t('actions.confirm')}
+                                    </button>
+                                    <button
+                                        onClick={cancelRenew}
+                                        className="flex-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg border border-red-400 active:scale-95 transition-all"
+                                    >
+                                        <X size={18} /> {t('actions.cancel')}
+                                    </button>
+                                </div>
                             )}
-                        </button>
+                        </div>
                     )}
 
-                    {isExpired && (
+                    {/* Alive State Actions (Repair / Charge / Claim) */}
+                    {!rig.isDead && (
+                        <div className="mb-2">
+                            {/* Standard Actions: Repair & Charge - Above Collect Button */}
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                                <button
+                                    onClick={handleRepairClick}
+                                    disabled={isRepairing || healthPercent >= 100}
+                                    className={`
+                                        relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all
+                                        flex items-center justify-center gap-1.5 shadow-lg border group h-10
+                                        ${healthPercent >= 100
+                                            ? 'bg-stone-800 text-stone-500 border-stone-700 cursor-not-allowed opacity-50'
+                                            : 'bg-gradient-to-br from-blue-600 to-blue-800 text-white border-blue-500 hover:from-blue-500 hover:to-blue-700 hover:shadow-blue-500/20 active:scale-95'
+                                        }
+                                    `}
+                                >
+                                    <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 skew-x-12"></div>
+                                    <Wrench size={14} className={isRepairing ? "animate-spin" : "group-hover:rotate-12 transition-transform"} />
+                                    {isRepairing ? t('common.processing') : t('actions.repair')}
+                                </button>
+
+                                <button
+                                    onClick={handleChargeClick}
+                                    disabled={rig.energy >= 100}
+                                    className={`
+                                        relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all
+                                        flex items-center justify-center gap-1.5 shadow-lg border group h-10
+                                        ${rig.energy >= 100
+                                            ? 'bg-stone-800 text-stone-500 border-stone-700 cursor-not-allowed opacity-50'
+                                            : 'bg-gradient-to-br from-yellow-500 to-amber-700 text-white border-yellow-500 hover:from-yellow-400 hover:to-amber-600 hover:shadow-yellow-500/20 active:scale-95'
+                                        }
+                                    `}
+                                >
+                                    <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 skew-x-12"></div>
+                                    <Zap size={14} className={rig.energy < 100 ? "fill-white animate-pulse" : ""} />
+                                    {t('actions.charge')}
+                                </button>
+                            </div>
+
+                            {/* Collect Button (Full Width) */}
+                            <button
+                                onClick={(e) => {
+                                    if (isExploring) return;
+                                    handleClaimClick();
+                                }}
+                                disabled={(isExpired || (!isBroken && !effectiveIsPowered) || isExploring) && currentAmount <= 0}
+                                className={`w-full font-bold py-2 rounded border transition-all active:scale-[0.98] flex items-center justify-center gap-2 font-display uppercase tracking-wider h-10
+                                    ${isExpired
+                                        ? 'bg-stone-800 text-stone-600 border-stone-700 cursor-not-allowed'
+                                        : isExploring
+                                            ? 'bg-purple-900/20 text-purple-500 border-purple-900/50 cursor-not-allowed'
+                                            : isBroken
+                                                ? 'bg-red-600 hover:bg-red-500 text-white border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.4)] cursor-pointer'
+                                                : !effectiveIsPowered
+                                                    ? 'bg-orange-900/20 text-orange-500 border-orange-900/50 cursor-not-allowed'
+                                                    : currentTier === 7
+                                                        ? 'bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 text-white border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:shadow-[0_0_30px_rgba(168,85,247,0.7)]'
+                                                        : currentTier >= 5
+                                                            ? 'bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 text-black border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)] hover:shadow-[0_0_25px_rgba(234,179,8,0.6)]'
+                                                            : currentTier === 4
+                                                                ? 'bg-gradient-to-r from-orange-700 to-orange-600 text-white border-orange-500 hover:brightness-110'
+                                                                : currentTier === 3
+                                                                    ? 'bg-gradient-to-r from-sky-700 to-sky-600 text-white border-sky-500 hover:brightness-110 shadow-[0_0_15px_rgba(2,132,199,0.3)]'
+                                                                    : currentTier === 2
+                                                                        ? 'bg-gradient-to-r from-emerald-700 to-emerald-600 text-white border-emerald-500 hover:brightness-110 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                                                                        : 'bg-stone-800 hover:bg-stone-700 text-stone-200 border-stone-600'
+                                    }
+                                `}
+                            >
+                                {isExploring ? (
+                                    <><Skull size={18} /> {language === 'th' ? 'กำลังสำรวจ...' : 'Exploring...'}</>
+                                ) : isBroken && !isExpired && !isVibranium ? (
+                                    <><Wrench size={18} /> {t('rig.repair_now')} ({formatCurrency(baseRepairCost)})</>
+                                ) : !effectiveIsPowered && !isExpired ? (
+                                    <><ZapOff size={18} /> {t('rig.out_of_energy')}</>
+                                ) : (
+                                    <><Coins size={18} strokeWidth={2.5} /> {isExpired ? t('rig.expired') : t('rig.claim_rent')}</>
+                                )}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Legacy Destroy Button (Only shown if expired but NOT dead, which shouldn't happen often properly, but as fallback) */}
+                    {isExpired && !rig.isDead && (
                         <button
                             onClick={handleDestroyClick}
                             className="w-full font-bold py-2 rounded border border-red-500 bg-red-900/20 hover:bg-red-500 text-red-500 hover:text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-wider"
@@ -1153,53 +1226,55 @@ export const RigCard: React.FC<RigCardProps> = ({
             </div>
 
             {/* Loot Table Overlay - Moved to cover WHOLE card */}
-            {showLootTable && preset && RIG_LOOT_TABLES[preset.id] && (
-                <div className="absolute inset-0 z-[100] bg-stone-950/98 backdrop-blur-xl rounded-xl p-4 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-200">
-                    <button
-                        onClick={(e) => { e.stopPropagation(); setShowLootTable(false); }}
-                        className="absolute top-3 right-3 p-1.5 rounded-full bg-stone-800 text-stone-400 hover:text-white transition-colors"
-                    >
-                        <X size={20} />
-                    </button>
+            {
+                showLootTable && preset && RIG_LOOT_TABLES[preset.id] && (
+                    <div className="absolute inset-0 z-[100] bg-stone-950/98 backdrop-blur-xl rounded-xl p-4 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-200">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setShowLootTable(false); }}
+                            className="absolute top-3 right-3 p-1.5 rounded-full bg-stone-800 text-stone-400 hover:text-white transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
 
-                    <div className="flex flex-col items-center mb-5">
-                        <div className="bg-yellow-500/10 p-4 rounded-full mb-3 border border-yellow-500/20">
-                            <Package className="text-yellow-500" size={32} />
+                        <div className="flex flex-col items-center mb-5">
+                            <div className="bg-yellow-500/10 p-4 rounded-full mb-3 border border-yellow-500/20">
+                                <Package className="text-yellow-500" size={32} />
+                            </div>
+                            <h4 className="text-stone-200 text-base font-bold uppercase tracking-widest">{t('loot.possible_rewards')}</h4>
+                            <p className="text-yellow-500/60 text-[10px] uppercase font-mono mt-1 border-t border-yellow-500/20 pt-1">{getLocalized(preset.name)}</p>
                         </div>
-                        <h4 className="text-stone-200 text-base font-bold uppercase tracking-widest">{t('loot.possible_rewards')}</h4>
-                        <p className="text-yellow-500/60 text-[10px] uppercase font-mono mt-1 border-t border-yellow-500/20 pt-1">{getLocalized(preset.name)}</p>
-                    </div>
 
-                    <div className="w-full space-y-2 max-h-[220px] overflow-y-auto px-2 custom-scrollbar">
-                        {RIG_LOOT_TABLES[preset.id].map((entry, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-stone-900/50 border border-stone-800/50 hover:bg-stone-900 transition-colors">
-                                <div className="flex flex-col">
-                                    <span className={`text-sm font-bold ${MATERIAL_CONFIG.COLORS[entry.matTier as keyof typeof MATERIAL_CONFIG.COLORS] || 'text-stone-300'}`}>
-                                        {getLocalized(MATERIAL_CONFIG.NAMES[entry.matTier])}
-                                    </span>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-[10px] text-stone-500 font-bold uppercase tracking-tighter opacity-60">{t('rig.amount')}</span>
-                                        <span className="text-xs text-white font-mono font-bold">
-                                            x{entry.minAmount === entry.maxAmount ? entry.minAmount : `${entry.minAmount}-${entry.maxAmount}`}
+                        <div className="w-full space-y-2 max-h-[220px] overflow-y-auto px-2 custom-scrollbar">
+                            {RIG_LOOT_TABLES[preset.id].map((entry, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-stone-900/50 border border-stone-800/50 hover:bg-stone-900 transition-colors">
+                                    <div className="flex flex-col">
+                                        <span className={`text-sm font-bold ${MATERIAL_CONFIG.COLORS[entry.matTier as keyof typeof MATERIAL_CONFIG.COLORS] || 'text-stone-300'}`}>
+                                            {getLocalized(MATERIAL_CONFIG.NAMES[entry.matTier])}
                                         </span>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-tighter opacity-60">{t('rig.amount')}</span>
+                                            <span className="text-xs text-white font-mono font-bold">
+                                                x{entry.minAmount === entry.maxAmount ? entry.minAmount : `${entry.minAmount}-${entry.maxAmount}`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[9px] text-yellow-500/60 uppercase font-bold tracking-tighter">{t('loot.chance')}</span>
+                                        <span className="text-sm font-mono font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{entry.chance}%</span>
                                     </div>
                                 </div>
-                                <div className="flex flex-col items-end">
-                                    <span className="text-[9px] text-yellow-500/60 uppercase font-bold tracking-tighter">{t('loot.chance')}</span>
-                                    <span className="text-sm font-mono font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{entry.chance}%</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
 
-                    <button
-                        onClick={(e) => { e.stopPropagation(); setShowLootTable(false); }}
-                        className="mt-6 w-full py-2.5 rounded bg-stone-800 hover:bg-stone-750 border border-stone-700 text-stone-300 text-xs font-bold uppercase tracking-widest transition-all active:scale-95"
-                    >
-                        {t('common.close')}
-                    </button>
-                </div>
-            )}
-        </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setShowLootTable(false); }}
+                            className="mt-6 w-full py-2.5 rounded bg-stone-800 hover:bg-stone-750 border border-stone-700 text-stone-300 text-xs font-bold uppercase tracking-widest transition-all active:scale-95"
+                        >
+                            {t('common.close')}
+                        </button>
+                    </div>
+                )
+            }
+        </div >
     );
 };

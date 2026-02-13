@@ -90,5 +90,30 @@ export const en = {
         legal: "Legal",
         rights: "All rights reserved.",
         secure: "Secure & Verified"
+    },
+    actions: {
+        repair: "Repair",
+        charge: "Charge",
+        renew: "Renew",
+        scrap: "Scrap",
+        cancel: "Cancel",
+        confirm: "Confirm"
+    },
+    rig: {
+        repair_now: "Repair Now",
+        broken: "Broken",
+        out_of_energy: "Out of Energy",
+        expired: "Expired",
+        claim_rent: "Claim Yield",
+        destroy: "Destroy",
+        mining_key: "Mining Key",
+        waiting_discovery: "Waiting Discovery",
+        capacity: "Capacity",
+        collect: "Collect",
+        pay: "Pay",
+        refill: "Refill"
+    },
+    time: {
+        day: "Day"
     }
 };

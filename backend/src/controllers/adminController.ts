@@ -157,23 +157,14 @@ export const adminGiveCompensationAll = async (req: AuthRequest, res: Response) 
     }
 };
 
-// Add Item to User
+// Add Item to User (Single or All) via Mailbox
 export const adminAddItem = async (req: AuthRequest, res: Response) => {
     try {
-        const { userId, itemId, amount } = req.body;
-        let user;
-        if (userId.match(/^[0-9a-fA-F]{24}$/)) {
-            user = await User.findById(userId);
-        }
-        if (!user) {
-            user = await User.findOne({ username: userId });
-        }
-
-        if (!user) return res.status(404).json({ message: 'User not found' });
-
+        const { userId, itemId, amount, message } = req.body; // Added message (optional)
         const amountNum = Number(amount) || 1;
 
-        const newItem = {
+        // Common Item Structure Template
+        const createItem = () => ({
             id: uuidv4(),
             typeId: itemId,
             name: itemId,
@@ -181,16 +172,87 @@ export const adminAddItem = async (req: AuthRequest, res: Response) => {
             purchasedAt: Date.now(),
             lifespanDays: 30,
             isHandmade: false
-        };
+        });
 
+        // Generate the item array
+        const itemsToSend: any[] = [];
         for (let i = 0; i < amountNum; i++) {
-            user.inventory.push({ ...newItem, id: uuidv4() });
+            itemsToSend.push(createItem());
         }
 
-        await user.save();
+        const notificationTitle = 'Admin Gift';
+        const notificationMessage = message || `คุณได้รับไอเทมจากผู้ดูแลระบบจำนวน ${amountNum} ชิ้น`;
 
-        res.json({ message: 'Item added successfully', inventory: user.inventory });
+        const createNotification = () => ({
+            id: uuidv4(),
+            userId: '', // Will be set in loop or below
+            title: notificationTitle,
+            message: notificationMessage,
+            type: 'REWARD',
+            read: false,
+            timestamp: Date.now(),
+            hasReward: true,
+            rewardType: 'ITEM',
+            rewardValue: itemsToSend,
+            isClaimed: false
+        });
+
+        if (userId === 'ALL') {
+            console.log(`[ADMIN] Sending ${amountNum}x ${itemId} to ALL users (Mailbox)...`);
+            const users = await User.find({});
+            let count = 0;
+
+            for (const user of users) {
+                // Duplicate items for each user to ensure unique IDs (though createItem call above does it once per request, 
+                // wait, strict uniqueness means I should generate items INSIDE the loop if the Item ID matters globally.
+                // However, User.inventory validation usually checks uniqueness within the user doc.
+                // But better safe: UUIDs should be unique globally. 
+                // Let's regenerate items for each user to be safe.
+
+                const userItems = [];
+                for (let i = 0; i < amountNum; i++) {
+                    userItems.push(createItem());
+                }
+
+                const notif = createNotification();
+                notif.userId = user._id.toString(); // Fix ObjectId to string
+                notif.rewardValue = userItems; // unique items for this user
+
+                user.notifications.push(notif);
+                user.markModified('notifications');
+                await user.save();
+                count++;
+            }
+
+            console.log(`[ADMIN] Successfully sent items to ${count} users.`);
+            return res.json({ message: `Successfully sent ${itemId} x${amountNum} to all ${count} users (via Mailbox).` });
+
+        } else {
+            // Single User Logic
+            let user;
+            if (userId.match(/^[0-9a-fA-F]{24}$/)) {
+                user = await User.findById(userId);
+            }
+            if (!user) {
+                user = await User.findOne({ username: userId });
+            }
+
+            if (!user) return res.status(404).json({ message: 'User not found' });
+
+            const notif = createNotification();
+            notif.userId = user._id.toString(); // Fix ObjectId to string
+
+            user.notifications.push(notif);
+
+            user.markModified('notifications');
+            await user.save();
+
+            console.log(`[ADMIN] Sent ${amountNum}x ${itemId} to user ${user.username} (Mailbox)`);
+            res.json({ message: 'Item sent to Mailbox successfully', notifications: user.notifications });
+        }
+
     } catch (error) {
+        console.error('[ADMIN ERROR] adminAddItem failed:', error);
         res.status(500).json({ message: 'Server error', error });
     }
 };
@@ -668,5 +730,70 @@ export const adminAdjustRevenue = async (req: AuthRequest, res: Response) => {
     } catch (error) {
         console.error('[ADMIN ERROR] adminAdjustRevenue failed:', error);
         res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+// Reset Individual User (Money, Rigs, Inventory)
+export const resetUser = async (req: AuthRequest, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        console.log(`[ADMIN] Resetting user ${user.username} (${userId})...`);
+
+        // 1. Reset user fields
+        user.balance = 0;
+        user.inventory = [];
+        user.materials = {};
+        user.energy = 100;
+        user.lastEnergyUpdate = new Date();
+        user.markModified('inventory');
+        user.markModified('materials');
+        await user.save();
+
+        // 2. Delete all rigs owned by the user
+        await Rig.deleteMany({ ownerId: userId });
+
+        // 3. Delete related requests to keep it clean
+        await ClaimRequest.deleteMany({ userId: userId });
+
+        res.json({ message: 'User reset successfully' });
+    } catch (error) {
+        console.error('[ADMIN ERROR] resetUser failed:', error);
+        res.status(500).json({ message: 'Server error during user reset', error });
+    }
+};
+
+// Remove VIP Card from User
+export const removeVip = async (req: AuthRequest, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        console.log(`[ADMIN] Removing VIP status from user ${user.username}...`);
+
+        // Filter out VIP items from inventory
+        const originalCount = user.inventory.length;
+        user.inventory = user.inventory.filter((item: any) => item.typeId !== 'vip_withdrawal_card');
+
+        if (user.inventory.length === originalCount) {
+            return res.status(400).json({ message: 'User does not have a VIP card' });
+        }
+
+        user.markModified('inventory');
+        await user.save();
+
+        res.json({ message: 'VIP card removed successfully' });
+    } catch (error) {
+        console.error('[ADMIN ERROR] removeVip failed:', error);
+        res.status(500).json({ message: 'Server error during VIP removal', error });
     }
 };

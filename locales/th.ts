@@ -90,5 +90,30 @@ export const th = {
         legal: "กฎหมาย",
         rights: "สงวนลิขสิทธิ์",
         secure: "ปลอดภัยและได้รับการรับรอง"
+    },
+    actions: {
+        repair: "ซ่อมแซม",
+        charge: "ชาร์จไฟ",
+        renew: "ต่อสัญญา",
+        scrap: "ทุบทิ้ง",
+        cancel: "ยกเลิก",
+        confirm: "ยืนยัน"
+    },
+    rig: {
+        repair_now: "ซ่อมทันที",
+        broken: "เสียหาย",
+        out_of_energy: "พลังงานหมด",
+        expired: "หมดอายุ",
+        claim_rent: "เก็บผลผลิต",
+        destroy: "ทำลาย",
+        mining_key: "กุญแจเหมือง",
+        waiting_discovery: "รอการค้นพบ",
+        capacity: "ความจุ",
+        collect: "เก็บ",
+        pay: "จ่าย",
+        refill: "เติม"
+    },
+    time: {
+        day: "วัน"
     }
 };

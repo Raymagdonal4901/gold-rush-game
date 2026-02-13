@@ -841,3 +841,77 @@ export const repairRig = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+// --- Constants (Duplicated from constants.ts to avoid import issues) ---
+const RENEWAL_CONFIG = {
+    WINDOW_DAYS: 3,
+    MAX_RENEWALS: 2,
+    DISCOUNT_PERCENT: 0.05,
+};
+
+// ... existing code ...
+
+export const renewRig = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.userId; // Fixed: req.userId instead of req.user.userId
+        const rigId = req.params.id;
+
+        if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const rig = await Rig.findOne({ _id: rigId, ownerId: userId }); // Fixed: ownerId instead of userId
+        if (!rig) return res.status(404).json({ message: 'Rig not found' });
+
+        // Check if rig is actually dead or eligible for renewal
+        // Allow renewal if it's dead OR if it's close to dying (optional, but requested feature is for expired rigs)
+        // For now, let's allow it if isDead is true.
+        if (!rig.isDead) { // Fixed: added to model
+            return res.status(400).json({ message: 'Rig is not expired yet.' });
+        }
+
+        // Find Preset to get original price
+        // We might not have the original price stored on the rig if it was a custom one, 
+        // but typically it should match a preset.
+        // If rig has 'investment' field (from earlier code analysis), use that.
+        // Fallback to preset if needed.
+
+        let originalPrice = rig.investment || 0;
+
+        // Discount Logic
+        const discount = originalPrice * RENEWAL_CONFIG.DISCOUNT_PERCENT;
+        const cost = Math.floor(originalPrice - discount);
+
+        if (user.balance < cost) {
+            return res.status(400).json({ message: 'Insufficient balance' });
+        }
+
+        // Deduct Balance
+        user.balance -= cost;
+        await user.save();
+
+        // Update Rig
+        rig.isDead = false;
+        rig.purchaseDate = new Date(); // Fixed: purchaseDate and Date object
+        rig.energy = 100;
+        rig.lastEnergyUpdate = new Date();
+        rig.lastRepairAt = new Date(); // Fixed: added to model
+        // Increment renewal count if we want to track it, but not strictly required by prompt
+
+        await rig.save();
+
+        // Log Transaction
+        await Transaction.create({
+            userId,
+            type: 'EXPENSE',
+            amount: cost,
+            description: `Renewed Rig: ${typeof rig.name === 'string' ? rig.name : rig.name['en']} (-5% Discount)`,
+            timestamp: Date.now()
+        });
+
+        res.json({ success: true, message: 'Rig renewed successfully', rig, balance: user.balance });
+
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};

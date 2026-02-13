@@ -11,6 +11,8 @@ import {
     Truck,
     Gift,
     ChevronRight,
+    Hammer,
+    Wrench,
 } from 'lucide-react';
 
 interface WhitepaperPageProps {
@@ -145,7 +147,7 @@ export const WhitepaperPage: React.FC<WhitepaperPageProps> = ({ onBack, onPlayNo
                                 สร้างอุปกรณ์สวมใส่ (หมวกนิรภัย, ชุดกันความร้อน) เพื่อเพิ่มบัฟ
                             </InfoCard>
                         </div>
-                        <div className="bg-stone-900/50 border border-stone-800 rounded-xl p-5">
+                        <div className="bg-stone-900/50 border border-stone-800 rounded-xl p-5 mb-6">
                             <h5 className="text-white font-bold text-sm mb-3">🎲 ค่าสถานะจากอุปกรณ์คราฟต์:</h5>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 {[
@@ -160,6 +162,29 @@ export const WhitepaperPage: React.FC<WhitepaperPageProps> = ({ onBack, onPlayNo
                                     </div>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Repair Kit Section */}
+                        <div className="mb-4">
+                            <RepairKitVisual />
+                        </div>
+                    </SubSection>
+
+                    {/* 2.4 Maintenance & Repair */}
+                    <SubSection emoji="🔧" title="2.4 ระบบซ่อมบำรุง" subtitle="Maintenance & Repair System">
+                        <p className="text-stone-400 leading-relaxed mb-6">
+                            เครื่องขุดทุกเครื่องมีค่าความทนทาน (Durability) ที่ลดลงตามการใช้งาน หากปล่อยให้เหลือ 0% เครื่องจะหยุดทำงานทันที ผู้เล่นต้องคอยหมั่นตรวจเช็คสภาพเครื่องจักรอยู่เสมอ
+                        </p>
+
+                        <RepairStationVisual />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <InfoCard title="Repair Process" color="red">
+                                การซ่อมแซมปกติจะใช้วัตถุดิบ (เช่น เหล็ก, แผงวงจร) และเงิน (Token) ยิ่งเครื่อง Tier สูง ยิ่งใช้วัตถุดิบหายาก
+                            </InfoCard>
+                            <InfoCard title="Breakdown Risk" color="yellow">
+                                หากเครื่องพัง (HP = 0) จะไม่สามารถได้รับรายได้จนกว่าจะซ่อมแซมเสร็จสิ้น
+                            </InfoCard>
                         </div>
                     </SubSection>
                 </Section>
@@ -352,7 +377,7 @@ export const WhitepaperPage: React.FC<WhitepaperPageProps> = ({ onBack, onPlayNo
                     </button>
                 </footer>
             </div>
-        </div>
+        </div >
     );
 };
 
@@ -537,3 +562,66 @@ const RoadmapPhase: React.FC<RoadmapPhaseProps> = ({ phase, title, status, items
         </div>
     );
 };
+
+const RepairStationVisual: React.FC = () => (
+    <div className="bg-stone-900/80 border border-stone-800 p-6 rounded-xl relative overflow-hidden mb-6">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-[50px] rounded-full"></div>
+        <div className="flex flex-col sm:flex-row items-center gap-4 relative z-10 w-full">
+            {/* Damaged Rig */}
+            <div className="relative shrink-0">
+                <div className="w-16 h-16 bg-stone-800 rounded-lg flex items-center justify-center border border-red-500/50 relative overflow-hidden shadow-lg shadow-red-500/20">
+                    <Pickaxe size={32} className="text-stone-600 animate-pulse" />
+                    <div className="absolute inset-0 bg-red-500/20 animate-pulse"></div>
+                </div>
+                <div className="absolute -bottom-2 -right-2 bg-red-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded border border-red-400 animate-bounce">BROKEN</div>
+            </div>
+
+            <div className="flex-1 w-full sm:w-auto">
+                <div className="flex justify-between items-center mb-1">
+                    <span className="text-white font-bold text-sm">Rusty Shovel (Tier 1)</span>
+                    <span className="text-red-500 text-xs font-bold animate-pulse">HP: 0/100</span>
+                </div>
+                {/* HP Bar */}
+                <div className="w-full h-2 bg-stone-800 rounded-full overflow-hidden mb-2 border border-stone-700">
+                    <div className="w-full h-full bg-red-500/20 relative">
+                        <div className="absolute inset-0 bg-stripes-red opacity-50 animate-move-stripes"></div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <div className="text-[10px] text-stone-400 font-bold uppercase">Repair Cost:</div>
+                    <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded border border-stone-700 hover:border-stone-500 transition-colors">
+                        <div className="w-1.5 h-1.5 bg-stone-400 rounded-full"></div>
+                        <span className="text-[10px] text-stone-300">Iron x2</span>
+                    </div>
+                    <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded border border-stone-700 hover:border-stone-500 transition-colors">
+                        <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></div>
+                        <span className="text-[10px] text-yellow-500">50 ฿</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-2 sm:mt-0 bg-green-500 hover:bg-green-400 text-black text-xs font-bold px-6 py-2 rounded cursor-pointer transition-all shadow-lg hover:shadow-green-500/40 hover:-translate-y-0.5 active:translate-y-0.5 shrink-0 flex items-center gap-2">
+                <Hammer size={14} />
+                REPAIR
+            </div>
+        </div>
+    </div>
+);
+
+const RepairKitVisual: React.FC = () => (
+    <div className="bg-gradient-to-r from-blue-900/30 to-blue-900/10 border border-blue-500/30 p-4 rounded-xl flex items-center gap-4 relative overflow-hidden backdrop-blur-sm hover:border-blue-500/50 transition-colors group">
+        <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors"></div>
+        <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center border border-blue-400/50 shadow-[0_0_15px_rgba(59,130,246,0.3)] shrink-0 relative z-10 group-hover:scale-105 transition-transform">
+            <Wrench size={24} className="text-blue-400" />
+        </div>
+        <div className="relative z-10">
+            <div className="text-blue-400 font-bold text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
+                Repair Kit (ชุดซ่อมแซม) <span className="bg-blue-500 text-white text-[8px] px-1.5 rounded font-black">ITEM</span>
+            </div>
+            <div className="text-stone-400 text-xs leading-relaxed">
+                ไอเทมพิเศษสำหรับช่างเทคนิค ใช้กู้คืนค่าความทนทาน <span className="text-white font-bold text-blue-300">100%</span> ทันที โดยไม่ต้องใช้วัตถุดิบในการซ่อม สามารถคราฟต์ได้ที่โรงงาน
+            </div>
+        </div>
+    </div>
+);

@@ -166,21 +166,30 @@ export const claimNotificationReward = async (req: AuthRequest, res: Response) =
             user.balance += amount;
             rewardMessage = `ได้รับเงินจำนวน ${amount.toLocaleString()} เรียบร้อย!`;
         } else if (notification.rewardType === 'ITEM') {
-            // Find item in SHOP_ITEMS or constants if available, 
-            // but for now we'll assume rewardValue is the Full Item Object or we map it
-            // Based on previous work, we might have a helper or just push to inventory
-            // Let's assume rewardValue is the item data for now or handled via admin give logic
-            const itemData: any = notification.rewardValue;
-            if (itemData && typeof itemData === 'object') {
-                user.inventory.push({
-                    ...itemData,
-                    id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    purchasedAt: Date.now()
-                });
-                rewardMessage = `ได้รับไอเทม ${itemData.name} เรียบร้อย!`;
+            // Handle Array of Items or Single Item
+            const rewards = Array.isArray(notification.rewardValue)
+                ? notification.rewardValue
+                : [notification.rewardValue];
+
+            let addedCount = 0;
+            for (const itemData of rewards) {
+                if (itemData && typeof itemData === 'object') {
+                    user.inventory.push({
+                        ...itemData,
+                        id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        purchasedAt: Date.now()
+                    });
+                    addedCount++;
+                }
+            }
+
+            if (addedCount > 0) {
+                const firstItemName = rewards[0]?.name?.th || rewards[0]?.name || 'Item';
+                rewardMessage = addedCount > 1
+                    ? `ได้รับ ${addedCount} ไอเทม เรียบร้อย!`
+                    : `ได้รับ ${firstItemName} เรียบร้อย!`;
             } else {
-                // Fallback if it's just a string ID
-                rewardMessage = `ได้รับไอเทมเรียบร้อย!`;
+                rewardMessage = `เกิดข้อผิดพลาดในการรับไอเทม`;
             }
         }
 

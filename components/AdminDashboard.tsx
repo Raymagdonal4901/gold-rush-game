@@ -82,7 +82,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         compUser: '',
         compAmount: 0,
         compReason: 'Server Maintenance',
-        compScope: 'SINGLE' as 'SINGLE' | 'ALL'
+        compScope: 'SINGLE' as 'SINGLE' | 'ALL',
+        itemScope: 'SINGLE' as 'SINGLE' | 'ALL',
+        message: '' // Custom message for items
     });
     const [compCurrency, setCompCurrency] = useState<'THB' | 'USDT'>('THB');
     const [adjustForm, setAdjustForm] = useState({
@@ -251,6 +253,46 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         }
     };
 
+    const handleResetUser = async (userId: string) => {
+        if (!confirm('ยืนยันการรีเซ็ตข้อมูลผู้ใช้? (เงินจะเป็น 0 และเครื่องขุดจะถูกลบทั้งหมด) \nConfirm reset user? (Balance will be 0 and all rigs deleted)')) return;
+
+        try {
+            await api.admin.resetUser(userId);
+            refreshData();
+            alert('รีเซ็ตข้อมูลผู้ใช้เรียบร้อยแล้ว');
+            // Re-fetch user stats if modal is open
+            if (selectedUser?.id === userId) {
+                const updatedUser = users.find(u => u.id === userId);
+                if (updatedUser) {
+                    setSelectedUser({ ...updatedUser, balance: 0 });
+                    setUserStats({ totalDeposits: 0, totalWithdrawals: 0 });
+                }
+            }
+        } catch (error) {
+            console.error("Failed to reset user", error);
+            alert('เกิดข้อผิดพลาดในการรีเซ็ต');
+        }
+    };
+
+    const handleRemoveVip = async (userId: string) => {
+        if (!confirm('ยืนยันการลบบัตร VIP ออกจากผู้ใช้? \nConfirm remove VIP card?')) return;
+
+        try {
+            await api.admin.removeVip(userId);
+            refreshData();
+            alert('ลบบัตร VIP เรียบร้อยแล้ว');
+            if (selectedUser?.id === userId) {
+                setSelectedUser(prev => prev ? ({
+                    ...prev,
+                    inventory: prev.inventory.filter((i: any) => i.typeId !== 'vip_withdrawal_card')
+                }) : null);
+            }
+        } catch (error) {
+            console.error("Failed to remove VIP", error);
+            alert('เกิดข้อผิดพลาดในการลบ VIP');
+        }
+    };
+
     const handleDeleteRig = async (rigId: string) => {
         if (!confirm('Are you sure you want to delete this rig? This action cannot be undone.')) return;
 
@@ -335,13 +377,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     };
 
     const handleAddItem = async () => {
-        if (!economyForm.targetUser || !economyForm.itemId) return;
-        if (!confirm(`Confirm send ${economyForm.itemAmount}x ${economyForm.itemId} to ${economyForm.targetUser}?`)) return;
+        if (economyForm.itemScope === 'SINGLE' && !economyForm.targetUser) return;
+        if (!economyForm.itemId) return;
+
+        const targetLabel = economyForm.itemScope === 'ALL' ? 'ALL USERS' : economyForm.targetUser;
+
+        if (!confirm(`Confirm send ${economyForm.itemAmount}x ${economyForm.itemId} to ${targetLabel}?`)) return;
 
         try {
-            await api.admin.addItem(economyForm.targetUser, economyForm.itemId, economyForm.itemAmount);
-            alert('ส่งไอเทมเรียบร้อยแล้ว! (Item sent successfully)');
-            setEconomyForm(prev => ({ ...prev, targetUser: '', itemAmount: 1 }));
+            const target = economyForm.itemScope === 'ALL' ? 'ALL' : economyForm.targetUser;
+            await api.admin.addItem(target, economyForm.itemId, economyForm.itemAmount, economyForm.message);
+            alert('ส่งไอเทมเข้ากล่องจดหมายเรียบร้อยแล้ว! (Item sent to Mailbox successfully)');
+            setEconomyForm(prev => ({ ...prev, targetUser: '', itemAmount: 1, itemScope: 'SINGLE', message: '' }));
         } catch (error) {
             console.error(error);
             alert('เกิดข้อผิดพลาดในการส่งไอเทม (Failed to send item)');
@@ -926,6 +973,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         >
                             <Trash2 size={24} />
                         </button>
+                        <button
+                            onClick={() => handleResetUser(selectedUser.id)}
+                            className="flex-1 bg-orange-900/40 hover:bg-orange-800 text-orange-500 border border-orange-900 py-3 rounded font-bold transition-colors"
+                        >
+                            รีเซ็ต (Reset)
+                        </button>
+                        {selectedUser.inventory?.some((i: any) => i.typeId === 'vip_withdrawal_card') && (
+                            <button
+                                onClick={() => handleRemoveVip(selectedUser.id)}
+                                className="flex-1 bg-yellow-900/40 hover:bg-yellow-800 text-yellow-500 border border-yellow-900 py-3 rounded font-bold transition-colors"
+                            >
+                                ลบ VIP
+                            </button>
+                        )}
                         <button className="flex-1 bg-stone-800 hover:bg-stone-700 text-stone-300 py-3 rounded font-bold transition-colors">
                             รีเซ็ตรหัสผ่าน
                         </button>
@@ -1460,13 +1521,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         <div className="space-y-4">
                             <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">{t('admin.add_item')}</h4>
                             <div className="space-y-3">
-                                <input
-                                    type="text"
-                                    placeholder="User ID / Username"
-                                    className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
-                                    value={economyForm.targetUser}
-                                    onChange={e => setEconomyForm({ ...economyForm, targetUser: e.target.value })}
-                                />
+                                <div className="flex bg-stone-950 p-1 rounded border border-stone-800">
+                                    <button
+                                        className={`flex-1 py-1 text-xs font-bold rounded transition-all ${economyForm.itemScope === 'SINGLE' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:text-stone-300'}`}
+                                        onClick={() => setEconomyForm({ ...economyForm, itemScope: 'SINGLE' })}
+                                    >
+                                        รายบุคคล (Single)
+                                    </button>
+                                    <button
+                                        className={`flex-1 py-1 text-xs font-bold rounded transition-all ${economyForm.itemScope === 'ALL' ? 'bg-indigo-900/40 text-indigo-400 border border-indigo-900/50' : 'text-stone-500 hover:text-stone-300'}`}
+                                        onClick={() => setEconomyForm({ ...economyForm, itemScope: 'ALL' })}
+                                    >
+                                        ทั้งหมด (All Users)
+                                    </button>
+                                </div>
+
+                                {economyForm.itemScope === 'SINGLE' && (
+                                    <input
+                                        type="text"
+                                        placeholder="User ID / Username"
+                                        className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                        value={economyForm.targetUser}
+                                        onChange={e => setEconomyForm({ ...economyForm, targetUser: e.target.value })}
+                                    />
+                                )}
                                 <select
                                     className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
                                     value={economyForm.itemId}
@@ -1484,6 +1562,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                         ))}
                                     </optgroup>
                                 </select>
+                                <input
+                                    type="text"
+                                    placeholder="ข้อความ (Optional)"
+                                    className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                    value={economyForm.message}
+                                    onChange={e => setEconomyForm({ ...economyForm, message: e.target.value })}
+                                />
                                 <input
                                     type="number"
                                     placeholder={t('admin.amount')}

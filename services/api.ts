@@ -202,6 +202,10 @@ export const api = {
         const response = await client.post(`/rigs/${rigId}/unequip`, { slotIndex });
         return response.data;
     },
+    renewRig: async (rigId: string): Promise<any> => {
+        const response = await client.post(`/rigs/${rigId}/renew`);
+        return response.data;
+    },
     destroyRig: async (rigId: string): Promise<any> => {
         const response = await client.post(`/rigs/${rigId}/destroy`);
         return response.data;
@@ -368,8 +372,8 @@ export const api = {
             const res = await client.post('/admin/users/compensation-all', { amount, reason });
             return res.data;
         },
-        addItem: async (userId: string, itemId: string, amount: number): Promise<any> => {
-            const res = await client.post('/admin/users/items', { userId, itemId, amount });
+        addItem: async (userId: string, itemId: string, amount: number, message?: string): Promise<any> => {
+            const res = await client.post('/admin/users/items', { userId, itemId, amount, message });
             return res.data;
         },
         resetAllBalances: async (): Promise<any> => {
@@ -383,6 +387,14 @@ export const api = {
         },
         toggleBan: async (userId: string): Promise<any> => {
             const res = await client.post(`/admin/users/${userId}/toggle-ban`);
+            return res.data;
+        },
+        resetUser: async (userId: string): Promise<any> => {
+            const res = await client.post(`/admin/users/${userId}/reset`);
+            return res.data;
+        },
+        removeVip: async (userId: string): Promise<any> => {
+            const res = await client.post(`/admin/users/${userId}/remove-vip`);
             return res.data;
         },
         getDashboardStats: async (): Promise<any> => {
