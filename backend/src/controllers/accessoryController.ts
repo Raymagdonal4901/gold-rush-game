@@ -16,8 +16,56 @@ const MATERIAL_CONFIG = {
     } as Record<number, { th: string; en: string }>
 };
 
-const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, any>> = {
-    'glove': {
+const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, { matTier: number; matAmount: number; chance: number; chipAmount: number; cost: number; targetBonus: number; risk: string }>> = {
+    hat: {
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+    },
+    uniform: {
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+    },
+    bag: {
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+    },
+    boots: {
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+    },
+    glasses: {
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+    },
+    mobile: {
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+    },
+    pc: {
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+    },
+    auto_excavator: {
+        1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+    },
+    glove: {
         1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
         2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
         3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
@@ -25,11 +73,11 @@ const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, any>> = {
     }
 };
 
-const UPGRADE_REQUIREMENTS: Record<number, any> = {
-    1: { matTier: 1, matAmount: 10, chipAmount: 1, chance: 1.0, label: '+2', cost: 50, targetBonus: 0.5, risk: 'NONE' },
-    2: { matTier: 1, matAmount: 20, chipAmount: 5, chance: 0.8, label: '+3', cost: 100, targetBonus: 1.5, risk: 'DROP' },
-    3: { matTier: 2, matAmount: 20, chipAmount: 10, chance: 0.5, label: '+4', cost: 300, targetBonus: 3.0, risk: 'DROP' },
-    4: { matTier: 2, matAmount: 40, chipAmount: 20, chance: 0.25, label: '+5', cost: 1000, targetBonus: 6.0, risk: 'BREAK' },
+const UPGRADE_REQUIREMENTS: Record<number, { matTier: number; matAmount: number; chance: number; chipAmount: number; cost: number; targetBonus: number; risk: string }> = {
+    1: { matTier: 1, matAmount: 10, chipAmount: 1, chance: 1.0, cost: 50, targetBonus: 0.5, risk: 'NONE' },
+    2: { matTier: 1, matAmount: 20, chipAmount: 5, chance: 0.8, cost: 100, targetBonus: 1.5, risk: 'DROP' },
+    3: { matTier: 2, matAmount: 20, chipAmount: 10, chance: 0.5, cost: 300, targetBonus: 3.0, risk: 'DROP' },
+    4: { matTier: 2, matAmount: 40, chipAmount: 20, chance: 0.25, cost: 1000, targetBonus: 6.0, risk: 'BREAK' },
 };
 
 
@@ -181,7 +229,7 @@ export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
         const matTier = reqs.matTier || 1;
         const matAmount = reqs.matAmount || 0;
         const cost = reqs.cost || 0;
-        const chipAmount = reqs.chipAmount || reqs.catalyst || 0;
+        const chipAmount = reqs.chipAmount || 0;
         const chance = reqs.chance || 0.5;
 
         // Validate Materials

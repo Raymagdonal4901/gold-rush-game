@@ -189,7 +189,7 @@ export const claimExpedition = async (req: AuthRequest, res: Response) => {
         }
 
         const materialNames: any = {
-            0: { th: 'วัสดุปริศนา', en: 'Mysterious Material' },
+            0: { th: 'เศษหิน', en: 'Stone Shards' },
             1: { th: 'ถ่านหิน', en: 'Coal' },
             2: { th: 'ทองแดง', en: 'Copper' },
             3: { th: 'เหล็ก', en: 'Iron' },

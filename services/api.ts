@@ -262,6 +262,12 @@ export const api = {
         return res.data;
     },
 
+    // Equipment Upgrade (Leveling)
+    upgradeItem: async (targetItemId: string, materialItemId: string): Promise<any> => {
+        const res = await client.post('/upgrade', { targetItemId, materialItemId });
+        return res.data;
+    },
+
     // Quests
     getQuestStatus: async (): Promise<{ weeklyStats: any, lastQuestReset: number, nextResetAt: number, claimedQuests: string[] }> => {
         const res = await client.get('/quests/status');

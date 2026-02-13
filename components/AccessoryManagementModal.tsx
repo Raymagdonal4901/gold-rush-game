@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Sparkles, XCircle, Hammer, Backpack, Glasses, Monitor, Smartphone, Truck, Footprints, Zap, TrendingUp, Rocket, Flame, CloudFog, Anvil, FileText, HardHat, Shirt, Bot, Key, Factory, Search, Hourglass, Gem, Lock, Wrench, Clock, Timer, Ticket } from 'lucide-react';
+import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Sparkles, XCircle, Hammer, Backpack, Glasses, Monitor, Smartphone, Truck, Footprints, Zap, TrendingUp, Rocket, Flame, CloudFog, Anvil, FileText, HardHat, Shirt, Bot, Key, Factory, Search, Hourglass, Gem, Lock, Wrench, Clock, Timer, Ticket, Briefcase, Settings } from 'lucide-react';
 import { AccessoryItem, OilRig } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
 import { PixelProgressBar } from './PixelProgressBar';
-import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS, REPAIR_KITS } from '../constants';
+import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS, REPAIR_KITS, GLOVE_DETAILS } from '../constants';
 import { api } from '../services/api';
 import { MaterialIcon } from './MaterialIcon';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -205,9 +205,15 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
     const getSeriesKey = (typeIdRaw: string | null | undefined) => {
         const typeId = typeIdRaw || '';
+        // Gloves are special (don't have a prefix like hat_ but we treat them as a series)
         if (typeId.includes('glove')) return 'glove';
-        const series = Object.keys(EQUIPMENT_SERIES).find(key => typeId.startsWith(key));
+
+        // Match by exact key or prefix
+        const seriesKeys = Object.keys(EQUIPMENT_SERIES);
+        const series = seriesKeys.find(key => typeId === key || typeId.startsWith(key + '_') || typeId === key);
         if (series) return series;
+
+        // Fallbacks for legacy/generic IDs
         if (typeId.includes('shirt') || typeId.includes('uniform')) return 'uniform';
         if (typeId.includes('hat') || typeId.includes('helmet')) return 'hat';
         if (typeId.includes('tool')) return 'glove';
@@ -256,16 +262,32 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
     const getItemDisplayName = (item: any) => {
         if (!item) return '';
         const typeId = item.typeId || '';
+        const rarity = item.rarity || 'COMMON';
         const nameRaw = item.name;
 
-        // 1. Try Config-based name first (Bilingual)
+        // 1. Hardware/Software Series Name Resolution
+        const seriesKey = getSeriesKey(typeId);
+        if (seriesKey) {
+            if (seriesKey === 'glove') {
+                const gloveInfo = GLOVE_DETAILS[rarity as keyof typeof GLOVE_DETAILS];
+                if (gloveInfo) return getLocalized(gloveInfo.name);
+            } else {
+                const series = EQUIPMENT_SERIES[seriesKey as keyof typeof EQUIPMENT_SERIES];
+                if (series) {
+                    const tier = series.tiers.find(t => t.rarity === rarity);
+                    if (tier) return getLocalized(tier.name);
+                }
+            }
+        }
+
+        // 2. Fallback to generic config-based names
         if (typeId === 'chest_key' || (typeof nameRaw === 'string' && (nameRaw.includes('กุญแจ') || nameRaw.includes('Key')))) return t('items.mining_key');
         if (typeId === 'upgrade_chip' || (typeof nameRaw === 'string' && (nameRaw.includes('ชิป') || nameRaw.includes('Chip')))) return t('items.upgrade_chip');
         if (typeId === 'mixer' || (typeof nameRaw === 'string' && (nameRaw.includes('โต๊ะช่าง') || nameRaw.includes('Mixer')))) return t('items.material_mixer');
         if (typeId === 'magnifying_glass' || (typeof nameRaw === 'string' && (nameRaw.includes('แว่นขยาย') || nameRaw.includes('Search')))) return t('items.magnifying_glass');
         if (typeId === 'robot' || (typeof nameRaw === 'string' && (nameRaw.includes('หุ่นยนต์') || nameRaw.includes('Robot')))) return t('items.ai_robot');
 
-        // 2. Use localization helper
+        // 3. User localization helper or raw name
         return getLocalized(nameRaw);
     };
 
@@ -300,6 +322,13 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         else if (enName.includes('PC') || enName.includes('Computer') || thName.includes('คอม')) typeId = 'pc';
         else if (enName.includes('Time Skip Ticket') || thName.includes('ตั๋วเร่งเวลา')) typeId = 'time_skip_ticket';
         else if (enName.includes('Construction Nanobot') || thName.includes('นาโนบอทก่อสร้าง')) typeId = 'construction_nanobot';
+        else if (enName.includes('Repair Kit') || thName.includes('ชุดซ่อม')) {
+            if (enName.includes('Basic') || thName.includes('พื้นฐาน')) typeId = 'repair_kit_1';
+            else if (enName.includes('Standard') || thName.includes('มาตรฐาน')) typeId = 'repair_kit_2';
+            else if (enName.includes('Electronic') || thName.includes('อิเล็กทรอนิกส์')) typeId = 'repair_kit_3';
+            else if (enName.includes('Mechanic') || thName.includes('เครื่องจักร')) typeId = 'repair_kit_4';
+            else typeId = 'repair_kit_1';
+        }
 
         if (typeId.includes('glove')) return <InfinityGlove rarity={item.rarity} size={size} />;
 
@@ -378,6 +407,32 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                             <Zap size={10} className="animate-pulse" />
                         </div>
                         <Bot {...props} className={`${props.className} text-cyan-300 relative z-10`} />
+                    </div>
+                );
+            }
+
+            if (typeId.startsWith('repair_kit')) {
+                let glowColor = 'bg-emerald-500';
+                let IconComp = Wrench;
+
+                if (typeId === 'repair_kit_1') {
+                    glowColor = 'bg-emerald-500';
+                    IconComp = Hammer;
+                } else if (typeId === 'repair_kit_2') {
+                    glowColor = 'bg-purple-500';
+                    IconComp = Briefcase;
+                } else if (typeId === 'repair_kit_3') {
+                    glowColor = 'bg-yellow-500';
+                    IconComp = Cpu;
+                } else if (typeId === 'repair_kit_4') {
+                    glowColor = 'bg-red-600';
+                    IconComp = Settings;
+                }
+
+                return (
+                    <div className="relative flex items-center justify-center">
+                        <div className={`absolute inset-0 ${glowColor} rounded-full scale-125 blur-md opacity-20 animate-pulse`}></div>
+                        <IconComp {...props} className={`${props.className} relative z-10`} />
                     </div>
                 );
             }
@@ -559,9 +614,13 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
         if (upgradeReq) {
             if (upgradeReq.targetBonus !== undefined) {
-                // Refined Incremental Logic:
+                // Determine current target based on level
                 const currentLevel = equippedItem?.level || 1;
-                const currentTarget = UPGRADE_REQUIREMENTS[currentLevel - 1]?.targetBonus || 0;
+                // Get the series key to ensure we match correctly
+                const seriesKey = getSeriesKey(equippedItem?.typeId);
+                const config = seriesKey ? EQUIPMENT_UPGRADE_CONFIG[seriesKey] : UPGRADE_REQUIREMENTS;
+
+                const currentTarget = (config && currentLevel > 1) ? config[currentLevel - 1]?.targetBonus || 0 : 0;
                 const nextTarget = upgradeReq.targetBonus || 0;
                 const increase = nextTarget - currentTarget;
                 nextBonusValue = currentBonus + increase;
@@ -570,7 +629,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             } else {
                 const shopConfig = SHOP_ITEMS.find(s => s.id === equippedItem?.typeId);
                 const tier = shopConfig?.tier || 1;
-                const boost = tier === 3 ? 2.0 : tier === 2 ? 1.0 : 0.44;
+                const boost = tier === 3 ? 2.0 : tier === 2 ? 1.0 : 0.5;
                 nextBonusValue = currentBonus + boost;
             }
         }
@@ -597,9 +656,9 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                 <h3 className={`font-bold text-sm leading-tight ${rarityConfig.color} drop-shadow-sm`}>{getItemDisplayName(equippedItem)}</h3>
                                 <div className="text-[10px] text-stone-400 mt-0.5 uppercase tracking-wide opacity-80">{rarityConfig.label}</div>
                                 {equippedItem.level && equippedItem.level > 1 && (
-                                    <span className="inline-block mt-1 px-2 py-0.5 rounded-sm bg-stone-800 text-cyan-400 text-[9px] font-bold shadow-lg border border-cyan-500/30 font-mono tracking-widest">
-                                        LV.{equippedItem.level}
-                                    </span>
+                                    <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-sm bg-black text-cyan-400 text-xs font-bold shadow-lg border border-cyan-500/50 font-mono z-20">
+                                        +{equippedItem.level}
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -868,6 +927,11 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                             <div className="absolute inset-0 bg-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                             <div className="relative scale-75">
                                 {getAccessoryIcon(item)}
+                                {item.level && item.level > 1 && (
+                                    <div className="absolute -top-2 -right-2 z-20 px-1.5 py-0.5 rounded-sm bg-black text-cyan-400 text-[10px] font-bold border border-cyan-500/50 font-mono shadow-sm">
+                                        +{item.level}
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <div className={`text-xs font-bold ${(RARITY_SETTINGS[item.rarity] || RARITY_SETTINGS.COMMON).color} font-mono tracking-tighter`}>{getItemDisplayName(item)}</div>

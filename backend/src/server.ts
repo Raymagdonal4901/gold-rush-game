@@ -11,6 +11,7 @@ import dungeonRoutes from './routes/dungeonRoutes';
 import userRoutes from './routes/userRoutes';
 import materialRoutes from './routes/materialRoutes';
 import chatRoutes from './routes/chatRoutes';
+import upgradeRoutes from './routes/upgradeRoutes';
 // โหลด Environment Variables
 dotenv.config();
 
@@ -47,6 +48,7 @@ app.use('/api/materials', materialRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/upgrade', upgradeRoutes);
 // Health Check
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'Gold Rush Backend is running!' });

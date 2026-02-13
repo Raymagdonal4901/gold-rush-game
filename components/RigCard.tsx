@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { OilRig, AccessoryItem } from '../services/types';
 import { OilRigAnimation } from './OilRigAnimation';
-import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG } from '../constants';
-import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star } from 'lucide-react';
+import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES } from '../constants';
+import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star, Settings } from 'lucide-react';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
@@ -87,6 +87,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     const [isRepairing, setIsRepairing] = useState(false);
     const [showRestored, setShowRestored] = useState(false);
     const [showRenewed, setShowRenewed] = useState(false);
+    const [showLootTable, setShowLootTable] = useState(false);
     const lastChargedAtRef = useRef<number>(0);
 
     const lastUpdateRef = useRef<number>(Date.now());
@@ -184,10 +185,37 @@ export const RigCard: React.FC<RigCardProps> = ({
                 return <Key className={`${className} text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]`} />;
             }
 
+            if (typeId.startsWith('repair_kit')) {
+                let glowColor = 'bg-emerald-500';
+                let IconComp = Wrench;
+
+                if (typeId === 'repair_kit_1') {
+                    glowColor = 'bg-emerald-500';
+                    IconComp = Hammer;
+                } else if (typeId === 'repair_kit_2') {
+                    glowColor = 'bg-purple-500';
+                    IconComp = Briefcase;
+                } else if (typeId === 'repair_kit_3') {
+                    glowColor = 'bg-yellow-500';
+                    IconComp = Cpu;
+                } else if (typeId === 'repair_kit_4') {
+                    glowColor = 'bg-red-600';
+                    IconComp = Settings;
+                }
+
+                return (
+                    <div className="relative flex items-center justify-center">
+                        <div className={`absolute inset-0 ${glowColor} rounded-full scale-125 blur-md opacity-20 animate-pulse`}></div>
+                        <IconComp className={`${className} relative z-10`} />
+                    </div>
+                );
+            }
+
             return <InfinityGlove rarity={item.rarity} className={className} />;
         };
 
-        return getNeonIcon(item.typeId);
+        const typeId = item.typeId || '';
+        return getNeonIcon(typeId);
     };
 
     const isInfiniteDurability = preset?.specialProperties?.infiniteDurability;
@@ -831,6 +859,13 @@ export const RigCard: React.FC<RigCardProps> = ({
                                                 })()}
                                                 <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 animate-[pulse_3s_infinite] pointer-events-none rounded-lg overflow-hidden"></div>
 
+                                                {/* Level Badge (+X) */}
+                                                {item.level && item.level > 1 && (
+                                                    <div className="absolute -top-1 -right-1 z-20 px-1 py-[1px] rounded-[2px] bg-black text-cyan-400 text-[8px] font-bold border border-cyan-500/50 font-mono shadow-sm">
+                                                        +{item.level}
+                                                    </div>
+                                                )}
+
                                                 {/* Tooltip for Accessories */}
                                                 <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[100] bg-stone-900/95 text-xs text-white p-2 rounded-lg border border-stone-700 shadow-xl opacity-0 group-hover/item:opacity-100 hover:opacity-100 pointer-events-none transition-opacity min-w-[140px] backdrop-blur-sm whitespace-nowrap">
                                                     <div className="font-bold text-yellow-500 mb-1">{getLocalized(item.name)}</div>
@@ -939,7 +974,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                     )}
 
                     {!isExpired && !(preset?.specialProperties?.noGift) && (
-                        <div className="absolute bottom-3 right-3 z-20 pointer-events-auto flex items-end gap-0.5">
+                        <div className="absolute bottom-3 right-3 z-20 pointer-events-auto flex items-end gap-1">
                             {/* Key Indicator (Added Next to Gift) */}
                             <div className={`relative flex items-center justify-center w-9 h-9 transition-all duration-300 ${hasKey ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)] scale-100' : 'text-stone-700 opacity-20 scale-75'}`}>
                                 <Key size={18} strokeWidth={2.5} className="transform -rotate-45" />
@@ -951,7 +986,16 @@ export const RigCard: React.FC<RigCardProps> = ({
                             </div>
 
                             {/* Material Box (Bottom Right) */}
-                            <div className="flex items-center justify-center w-11 h-11">
+                            <div className="relative flex items-center justify-center w-11 h-11">
+                                {/* Info Button to show loot table always */}
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setShowLootTable(prev => !prev); }}
+                                    className="absolute -top-3 -right-1 z-30 p-1 bg-stone-900/80 border border-stone-700 rounded-full text-stone-500 hover:text-yellow-500 hover:border-yellow-500/50 transition-all backdrop-blur-sm shadow-lg"
+                                    title={t('loot.possible_rewards')}
+                                >
+                                    <Info size={12} />
+                                </button>
+
                                 {isGiftAvailable ? (
                                     <div onClick={handleGiftClick} className="cursor-pointer transition-transform hover:scale-110 active:scale-95">
                                         <div className="relative animate-[bounce_1s_infinite]">
@@ -962,7 +1006,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="group/gift relative">
+                                    <div onClick={() => setShowLootTable(prev => !prev)} className="group/gift relative cursor-pointer active:scale-95 transition-transform">
                                         <div className="bg-stone-800 p-1 rounded-lg border border-stone-600 shadow-inner relative flex flex-col items-center justify-center w-9 h-9 opacity-80 hover:opacity-100 transition-opacity">
                                             <span className="text-stone-500 font-bold mb-0.5 text-sm">?</span>
                                             <span className="text-[7px] font-mono text-stone-400 font-bold absolute bottom-1 leading-none tracking-tighter">{formatGiftCooldown(timeUntilGift)}</span>
@@ -976,6 +1020,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                             </div>
                         </div>
                     )}
+
                 </div>
 
 
@@ -1106,6 +1151,55 @@ export const RigCard: React.FC<RigCardProps> = ({
                     )}
                 </div>
             </div>
+
+            {/* Loot Table Overlay - Moved to cover WHOLE card */}
+            {showLootTable && preset && RIG_LOOT_TABLES[preset.id] && (
+                <div className="absolute inset-0 z-[100] bg-stone-950/98 backdrop-blur-xl rounded-xl p-4 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-200">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setShowLootTable(false); }}
+                        className="absolute top-3 right-3 p-1.5 rounded-full bg-stone-800 text-stone-400 hover:text-white transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+
+                    <div className="flex flex-col items-center mb-5">
+                        <div className="bg-yellow-500/10 p-4 rounded-full mb-3 border border-yellow-500/20">
+                            <Package className="text-yellow-500" size={32} />
+                        </div>
+                        <h4 className="text-stone-200 text-base font-bold uppercase tracking-widest">{t('loot.possible_rewards')}</h4>
+                        <p className="text-yellow-500/60 text-[10px] uppercase font-mono mt-1 border-t border-yellow-500/20 pt-1">{getLocalized(preset.name)}</p>
+                    </div>
+
+                    <div className="w-full space-y-2 max-h-[220px] overflow-y-auto px-2 custom-scrollbar">
+                        {RIG_LOOT_TABLES[preset.id].map((entry, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-stone-900/50 border border-stone-800/50 hover:bg-stone-900 transition-colors">
+                                <div className="flex flex-col">
+                                    <span className={`text-sm font-bold ${MATERIAL_CONFIG.COLORS[entry.matTier as keyof typeof MATERIAL_CONFIG.COLORS] || 'text-stone-300'}`}>
+                                        {getLocalized(MATERIAL_CONFIG.NAMES[entry.matTier])}
+                                    </span>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-[10px] text-stone-500 font-bold uppercase tracking-tighter opacity-60">{t('rig.amount')}</span>
+                                        <span className="text-xs text-white font-mono font-bold">
+                                            x{entry.minAmount === entry.maxAmount ? entry.minAmount : `${entry.minAmount}-${entry.maxAmount}`}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[9px] text-yellow-500/60 uppercase font-bold tracking-tighter">{t('loot.chance')}</span>
+                                    <span className="text-sm font-mono font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{entry.chance}%</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setShowLootTable(false); }}
+                        className="mt-6 w-full py-2.5 rounded bg-stone-800 hover:bg-stone-750 border border-stone-700 text-stone-300 text-xs font-bold uppercase tracking-widest transition-all active:scale-95"
+                    >
+                        {t('common.close')}
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

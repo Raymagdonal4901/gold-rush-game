@@ -122,9 +122,18 @@ export const REPAIR_CONFIG = {
 
 
 export const UPGRADE_CONFIG = {
-    CHIP_COST: 0.05,
-    HIGH_LEVEL_THRESHOLD: 6,
-    HIGH_RIG_PRICE_REQ: 60,
+    MAX_LEVEL: 10,
+    LEVELS: {
+        2: { successRate: 1.0, catalystCost: 1, fee: 10 },
+        3: { successRate: 0.9, catalystCost: 2, fee: 20 },
+        4: { successRate: 0.8, catalystCost: 3, fee: 40 },
+        5: { successRate: 0.7, catalystCost: 5, fee: 80 },
+        6: { successRate: 0.6, catalystCost: 8, fee: 150 },
+        7: { successRate: 0.5, catalystCost: 12, fee: 300 },
+        8: { successRate: 0.4, catalystCost: 18, fee: 500 },
+        9: { successRate: 0.3, catalystCost: 25, fee: 1000 },
+        10: { successRate: 0.2, catalystCost: 35, fee: 2000 }
+    } as Record<number, { successRate: number; catalystCost: number; fee: number }>
 };
 
 export const MATERIAL_CONFIG = {
@@ -138,11 +147,11 @@ export const MATERIAL_CONFIG = {
         3: { th: 'เหล็ก', en: 'Iron' },
         4: { th: 'ทองคำ', en: 'Gold' },
         5: { th: 'เพชร', en: 'Diamond' },
-        6: { th: 'น้ำมันดิบ', en: 'Crude Oil' },
-        7: { th: 'แร่วาเบรเนียม', en: 'Vibranium' },
+        6: { th: 'น้ำมันดิบสังเคราะห์', en: 'Synthetic Crude Oil' },
+        7: { th: 'ไวเบรเนียม', en: 'Vibranium' },
         8: { th: 'แร่ลึกลับ', en: 'Mysterious Ore' },
-        9: { th: 'แร่ในตำนาน', en: 'Legendary Ore' },
-    },
+        9: { th: 'แร่ในตำนาน', en: 'Legendary Ore' }
+    } as Record<number, { th: string; en: string }>,
     PRICES: {
         0: 0,
         1: 10, // (10 THB)
@@ -165,6 +174,63 @@ export const MATERIAL_CONFIG = {
         6: 'text-purple-500',
         7: 'text-emerald-500',
     }
+};
+
+export interface LootEntry {
+    matTier: number;
+    minAmount: number;
+    maxAmount: number;
+    chance: number;
+}
+
+export const RIG_LOOT_TABLES: Record<number, LootEntry[]> = {
+    // Tier 2: สว่านพกพา (Portable Drill)
+    2: [
+        { matTier: 0, minAmount: 3, maxAmount: 5, chance: 60 },
+        { matTier: 1, minAmount: 1, maxAmount: 1, chance: 35 },
+        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 5 },
+    ],
+    // Tier 3: เครื่องขุดถ่านหิน (Coal Excavator)
+    3: [
+        { matTier: 0, minAmount: 5, maxAmount: 8, chance: 30 },
+        { matTier: 1, minAmount: 1, maxAmount: 2, chance: 50 },
+        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 15 },
+        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 5 },
+    ],
+    // Tier 4: เครื่องขุดทองแดง (Copper Excavator)
+    4: [
+        { matTier: 1, minAmount: 2, maxAmount: 3, chance: 50 },
+        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 40 },
+        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 10 },
+    ],
+    // Tier 5: เครื่องขุดเหล็ก (Iron Excavator)
+    5: [
+        { matTier: 2, minAmount: 2, maxAmount: 2, chance: 40 },
+        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 50 },
+        { matTier: 4, minAmount: 1, maxAmount: 1, chance: 10 },
+    ],
+    // Tier 6: เครื่องขุดทองคำ (Gold Excavator)
+    6: [
+        { matTier: 3, minAmount: 2, maxAmount: 2, chance: 40 },
+        { matTier: 4, minAmount: 1, maxAmount: 1, chance: 55 },
+        { matTier: 5, minAmount: 1, maxAmount: 1, chance: 5 },
+    ],
+    // Tier 7: เครื่องขุดเพชร (Diamond Excavator)
+    7: [
+        { matTier: 4, minAmount: 2, maxAmount: 2, chance: 40 },
+        { matTier: 5, minAmount: 1, maxAmount: 1, chance: 50 },
+        { matTier: 6, minAmount: 1, maxAmount: 1, chance: 10 },
+    ],
+    // Tier 8: เครื่องขุดปฏิกรณ์ (Reactor)
+    8: [
+        { matTier: 5, minAmount: 1, maxAmount: 2, chance: 60 },
+        { matTier: 6, minAmount: 1, maxAmount: 1, chance: 35 },
+        { matTier: 7, minAmount: 1, maxAmount: 1, chance: 5 },
+    ],
+    // Tier 9: ถุงมือเน่า (Rotten Glove)
+    9: [
+        { matTier: 1, minAmount: 1, maxAmount: 1, chance: 100 },
+    ],
 };
 
 export const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, { matTier: number; matAmount: number; chance: number; chipAmount: number; cost: number; targetBonus: number; risk: string }>> = {
@@ -410,9 +476,22 @@ export const SHOP_ITEMS: ShopItemConfig[] = [
     { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Hourglass (Medium)' }, price: 20, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 2 ชั่วโมง', en: 'Speed up exploration by 2 hours' } },
     { id: 'hourglass_large', name: { th: 'นาฬิกาทราย (ใหญ่)', en: 'Hourglass (Large)' }, price: 60, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 6 ชั่วโมง', en: 'Speed up exploration by 6 hours' } },
     { id: 'time_skip_ticket', name: { th: 'ตั๋วเร่งเวลา', en: 'Time Skip Ticket' }, price: 5, icon: 'Timer', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ลดเวลาการคราฟต์ 1 ชั่วโมง (กดซ้ำได้)', en: 'Reduce crafting time by 1 hour (stackable)' } },
-    { id: 'construction_nanobot', name: { th: 'นาโนบอทก่อสร้าง', en: 'Construction Nanobot' }, price: 100, icon: 'Cpu', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'สร้างอุปกรณ์เสร็จทันที 100%', en: 'Instantly finish crafting (100%)' } },
-
-
+    {
+        id: 'construction_nanobot', name: { th: 'นาโนบอทก่อสร้าง', en: 'Construction Nanobot' }, price: 2.828571, icon: 'Cpu',
+        minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0,
+        description: { th: 'สร้างอุปกรณ์เสร็จทันที 100%', en: 'Instantly finish crafting (100%)' }
+    },
+    {
+        id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' },
+        price: 0,
+        icon: 'Search',
+        minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0,
+        description: { th: 'อุปกรณ์จำเป็นสำหรับการอัปเกรดอุปกรณ์', en: 'Essential tool for equipment upgrades' },
+        craftingRecipe: { 2: 2, 8: 5 }, // 2 Copper, 5 Dirt
+        craftingFee: 5,
+        craftDurationMinutes: 5,
+        buyable: false,
+    },
     { id: 'repair_kit', name: { th: 'ชุดบำรุงรักษาพิเศษ', en: 'Repair Kit' }, price: 50, icon: 'Tool', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ซ่อมแซมเครื่องจักรจนเต็ม 100%', en: 'Fully repairs a rig to 100%' }, buyable: false },
 
     {
@@ -460,7 +539,8 @@ export const REPAIR_KITS = [
         craftingRecipe: { 1: 2, 2: 2 } as Record<number, number>, // Coal×2, Copper×2
         craftingFee: 5,
         craftDurationMinutes: 15,
-        icon: 'Wrench'
+        icon: 'Hammer',
+        rarity: 'UNCOMMON'
     },
     {
         id: 'repair_kit_2',
@@ -471,7 +551,8 @@ export const REPAIR_KITS = [
         craftingRecipe: { 2: 3, 3: 3 } as Record<number, number>, // Copper×3, Iron×3
         craftingFee: 10,
         craftDurationMinutes: 30,
-        icon: 'Wrench'
+        icon: 'Briefcase',
+        rarity: 'SUPER_RARE'
     },
     {
         id: 'repair_kit_3',
@@ -482,7 +563,8 @@ export const REPAIR_KITS = [
         craftingRecipe: { 3: 5, 4: 2 } as Record<number, number>, // Iron×5, Gold×2
         craftingFee: 50,
         craftDurationMinutes: 60,
-        icon: 'Wrench'
+        icon: 'Cpu',
+        rarity: 'LEGENDARY'
     },
     {
         id: 'repair_kit_4',
@@ -493,7 +575,8 @@ export const REPAIR_KITS = [
         craftingRecipe: { 4: 5, 5: 1, 6: 1 } as Record<number, number>, // Gold×5, Diamond×1, Oil×1
         craftingFee: 200,
         craftDurationMinutes: 120,
-        icon: 'Wrench'
+        icon: 'Settings',
+        rarity: 'MYTHIC'
     }
 ];
 
@@ -655,4 +738,6 @@ export const DUNGEON_CONFIG: DungeonLevel[] = [
         }
     }
 ];
+
+
 

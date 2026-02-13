@@ -203,143 +203,6 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     const lastAutoRefillRef = useRef<Record<string, number>>({});  // Cooldown tracker for AI Robot refills
     const claimingRigsRef = useRef<Set<string>>(new Set()); // Lock to prevent simultaneous robot claims
 
-    // --- AI ROBOT AUTOMATION LOOP ---
-    useEffect(() => {
-        // Only start if robot is present
-        const hasRobot = inventory.some(i => i.typeId === 'robot' && (!i.expireAt || i.expireAt > Date.now()));
-        if (!hasRobot) return;
-
-        const runRobotAutomation = async () => {
-            if (skipRefreshRef.current) return;
-
-            // 1. Auto-collect Gifts & Materials
-            for (const rig of rigs) {
-                if (claimingRigsRef.current.has(rig.id)) continue;
-
-                // Gift Availability Logic
-                const giftIntervalMs = GIFT_CYCLE_DAYS * 24 * 60 * 60 * 1000;
-                const lastGiftTime = rig.lastGiftAt || rig.purchasedAt;
-                const nextGiftTime = lastGiftTime + giftIntervalMs;
-                const isGiftAvailable = Date.now() >= nextGiftTime;
-
-                if (isGiftAvailable) {
-                    console.log(`[ROBOT] Auto-collecting gift for rig: ${getLocalized(rig.name)}`);
-                    claimingRigsRef.current.add(rig.id);
-                    try {
-                        await api.claimRigGift(rig.id);
-                        // Silent refresh or manual update
-                        addNotification({
-                            id: `robot-gift-${rig.id}-${Date.now()}`,
-                            userId: user.id,
-                            message: language === 'th' ? `หุ่นยนต์เก็บของขวัญจาก ${getLocalized(rig.name)}` : `Robot collected gift from ${getLocalized(rig.name)}`,
-                            type: 'SUCCESS',
-                            read: false,
-                            timestamp: Date.now()
-                        });
-                    } catch (e) {
-                        console.error(`[ROBOT] Gift claim failed for ${rig.name}:`, e);
-                    } finally {
-                        claimingRigsRef.current.delete(rig.id);
-                    }
-                }
-
-                // Material Collection Logic
-                if ((rig.currentMaterials || 0) > 0) {
-                    console.log(`[ROBOT] Auto-collecting materials for rig: ${getLocalized(rig.name)}`);
-                    claimingRigsRef.current.add(rig.id);
-                    try {
-                        const count = rig.currentMaterials || 0;
-                        const tier = (() => {
-                            const investment = rig.investment;
-                            if (investment === 0) return 7;
-                            if (investment >= 3000) return 5;
-                            if (investment >= 2500) return 4;
-                            if (investment >= 2000) return 3;
-                            if (investment >= 1500) return 2;
-                            return 1;
-                        })();
-
-                        await api.collectMaterials(rig.id, count, tier);
-                    } catch (e) {
-                        console.error(`[ROBOT] Material collection failed for ${rig.name}:`, e);
-                    } finally {
-                        claimingRigsRef.current.delete(rig.id);
-                    }
-                }
-            }
-
-            // 1.6 Auto-refill Global Energy (System Power)
-            const currentGlobalEnergy = user.energy !== undefined ? user.energy : 100;
-            const globalRefillCost = Math.max(2.0, (100 - currentGlobalEnergy) * 0.02);
-            const lastGlobalRefill = lastAutoRefillRef.current['global'] || 0;
-            if (currentGlobalEnergy <= 1 && (Date.now() - lastGlobalRefill > 60000) && user.balance >= globalRefillCost) {
-                console.log(`[ROBOT] Auto-refilling GLOBAL energy (${currentGlobalEnergy.toFixed(1)}%)`);
-                lastAutoRefillRef.current['global'] = Date.now();
-                confirmRefillEnergy();
-            }
-
-            // 2. Auto-refill & Auto-repair
-            for (const rig of rigs) {
-                const preset = RIG_PRESETS.find(p => p.name === rig.name);
-
-                // Energy Logic
-                const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || Date.now();
-                const elapsedMs = Date.now() - lastUpdate;
-                const elapsedHours = (elapsedMs * (user.isDemo ? DEMO_SPEED_MULTIPLIER : 1)) / (1000 * 60 * 60);
-                const overclockActive = user.overclockExpiresAt ? new Date(user.overclockExpiresAt).getTime() > Date.now() : false;
-                const drainRate = overclockActive ? 8.333333333333334 : 4.166666666666667;
-                const drain = elapsedHours * drainRate;
-                const energyPercent = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
-
-                if (energyPercent <= 1 && (Date.now() - (lastAutoRefillRef.current[rig.id] || 0) > 60000)) {
-                    const rigEnergyCostPerDay = rig.energyCostPerDay || (preset ? preset.energyCostPerDay : 0);
-                    const rigRefillCost = Math.max(0.1, ((100 - energyPercent) / 100) * rigEnergyCostPerDay);
-                    if (user.balance >= rigRefillCost) {
-                        lastAutoRefillRef.current[rig.id] = Date.now();
-                        handleChargeRigEnergy(rig.id);
-                    }
-                }
-
-                // Repair Logic
-                const durabilityMs = (REPAIR_CONFIG.DURABILITY_DAYS * 24 * 60 * 60 * 1000);
-                const timeSinceRepair = Date.now() - (rig.lastRepairAt || rig.purchasedAt || Date.now());
-                const isInfiniteDurability = preset?.specialProperties?.infiniteDurability;
-                const isInfiniteContract = (rig.durationMonths >= 900) || (preset?.specialProperties?.infiniteDurability === true);
-                const healthPercent = (isInfiniteContract || isInfiniteDurability) ? 100 : Math.max(0, 100 * (1 - timeSinceRepair / durabilityMs));
-
-                if (healthPercent < 20) {
-                    handleRepair(rig.id);
-                }
-            }
-
-            // 3. Price Alerts
-            if (marketState?.trends) {
-                const trends = marketState.trends;
-                for (const [tier, data] of Object.entries(trends)) {
-                    const price = (data as any).currentPrice;
-                    const prevPrice = lastMarketPrices.current[parseInt(tier)];
-                    const lastAlert = lastMarketAlertAt.current[parseInt(tier)] || 0;
-
-                    if (prevPrice && price > prevPrice && (Date.now() - lastAlert > 60000)) {
-                        lastMarketAlertAt.current[parseInt(tier)] = Date.now();
-                        addNotification({
-                            id: `market-alert-${tier}-${Date.now()}`,
-                            userId: user.id,
-                            message: language === 'th' ? `ราคาวัตถุดิบ Tier ${tier} พุ่งสูงขึ้น! (${prevPrice} -> ${price})` : `Material Tier ${tier} price surged! (${prevPrice} -> ${price})`,
-                            type: 'INFO',
-                            read: false,
-                            timestamp: Date.now()
-                        });
-                    }
-                    lastMarketPrices.current[parseInt(tier)] = price;
-                }
-            }
-        };
-
-        const interval = setInterval(runRobotAutomation, 30000);
-        return () => clearInterval(interval);
-    }, [inventory.length, rigs.length, user.balance, user.energy, user.isDemo, user.overclockExpiresAt, marketState, language]); // Minimized dependencies
-
     const activeInventory = inventory.filter(item => {
         return (!item.expireAt || item.expireAt > Date.now());
     });
@@ -348,12 +211,12 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     const globalMultiplier = hasVibranium ? 2 : 1;
     const hasAIRobot = activeInventory.some(i => i.typeId === 'robot');
 
-    const addNotification = (notif: Notification) => {
+    const addNotification = React.useCallback((notif: Notification) => {
         setNotifications([notif]);
         setTimeout(() => {
             setNotifications(prev => prev.filter(n => n.id !== notif.id));
         }, 2000);
-    };
+    }, []);
 
     const triggerGoldRain = () => {
         setShowGoldRain(true);
@@ -441,7 +304,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         setEnergyConfirm({ isOpen: true, cost: estimatedCost });
     };
 
-    const confirmRefillEnergy = async () => {
+    const confirmRefillEnergy = React.useCallback(async () => {
         try {
             // Optimistic Update: Set to 100% immediately
             setUser(prev => ({ ...prev, energy: 100.001 }));
@@ -475,7 +338,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         } finally {
             setEnergyConfirm(null);
         }
-    };
+    }, [user, language, formatCurrency, addNotification]);
 
     // Overclock handler
     const [overclockLoading, setOverclockLoading] = useState(false);
@@ -747,7 +610,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         }
     };
 
-    const handleGiftClaim = async (rigId: string) => {
+    const handleGiftClaim = React.useCallback(async (rigId: string) => {
         try {
             if (user.isDemo) {
                 // Keep existing local logic for demo if needed, but for now we focus on Real mode.
@@ -772,11 +635,11 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             const errMsg = e.response?.data?.message || e.message;
             alert(errMsg);
         }
-    };
+    }, [user.isDemo, user.id, language, getLocalized, addNotification]);
 
 
     const handleRenew = (rigId: string) => { try { const cost = MockDB.renewRig(user.id, rigId, 0); refreshData(); addNotification({ id: Date.now().toString(), userId: user.id, message: `ต่ออายุเครื่องจักรสำเร็จ (-${formatCurrency(cost)})`, type: 'SUCCESS', read: false, timestamp: Date.now() }); } catch (e: any) { alert(e.message); } };
-    const handleRepair = async (rigId: string) => {
+    const handleRepair = React.useCallback(async (rigId: string) => {
         try {
             let cost = 0;
             if (user.isDemo) {
@@ -790,8 +653,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
         } catch (e: any) {
             alert(e.response?.data?.message || e.message);
         }
-    };
-    const handleCollectMaterials = async (rigId: string) => {
+    }, [user.isDemo, user.id, formatCurrency, addNotification]);
+    const handleCollectMaterials = React.useCallback(async (rigId: string) => {
         try {
             const rig = rigs.find(r => r.id === rigId);
             if (!rig) throw new Error('Rig not found');
@@ -802,27 +665,18 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
                 return;
             }
 
-            // Determine tier based on investment
-            const tier = (() => {
-                const investment = rig.investment;
-                if (investment === 0) return 7;
-                if (investment >= 3000) return 5;
-                if (investment >= 2500) return 4;
-                if (investment >= 2000) return 3;
-                if (investment >= 1500) return 2;
-                return 1;
-            })();
-
             if (user.isDemo) {
                 MockDB.collectRigMaterials(user.id, rigId);
             } else {
-                // Tier is now ignored by backend as it always grants keys
+                // Backend now rewards randomized Materials instead of Keys
                 const res = await api.collectMaterials(rigId, count, 0);
-                if (res.item) {
+                if (res.type === 'MATERIAL' || res.tier) {
                     addNotification({
                         id: Date.now().toString(),
                         userId: user.id,
-                        message: language === 'th' ? `ยินดีด้วย! คุณพบ "กุญแจเข้าเหมือง" x${count}` : `Congratulations! You found "Mining Key" x${count}`,
+                        message: language === 'th'
+                            ? `ยินดีด้วย! คุณพบ "${getLocalized(res.name)}" x${res.amount}`
+                            : `Congratulations! You found "${getLocalized(res.name)}" x${res.amount}`,
                         type: 'SUCCESS',
                         read: false,
                         timestamp: Date.now()
@@ -835,10 +689,10 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             console.error('[CollectMaterials] Error:', e);
             // Don't show alert for robot auto-collection failures
         }
-    };
+    }, [rigs, user.isDemo, user.id, language, addNotification]);
     const handleUpdateMaterials = (rigId: string, count: number) => { MockDB.updateRigMaterials(rigId, count); };
 
-    const handleChargeRigEnergy = async (rigId: string) => {
+    const handleChargeRigEnergy = React.useCallback(async (rigId: string) => {
         try {
             // Optimistic Update: Calculate cost and update local state immediately
             const targetRig = rigs.find(r => r.id === rigId);
@@ -908,7 +762,7 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
             refreshData(); // Revert on error
             addNotification({ id: Date.now().toString(), userId: user.id, message: e.message || 'เกิดข้อผิดพลาดในการชาร์จไฟ', type: 'ERROR', read: false, timestamp: Date.now() });
         }
-    };
+    }, [rigs, user.isDemo, user.id, user.inventory, user.overclockExpiresAt, formatCurrency, addNotification]);
 
     const handleBuyAccessory = async (itemId: string) => {
         try {
@@ -1058,7 +912,117 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ initialUser, o
     const finalBaseDaily = totalBaseDaily * totalMultiplier;
     const finalEquipmentDaily = totalEquipmentDaily * totalMultiplier;
 
+    // --- AI ROBOT AUTOMATION LOOP ---
+    useEffect(() => {
+        // Only start if robot is present
+        const hasRobot = inventory.some(i => i.typeId === 'robot' && (!i.expireAt || i.expireAt > Date.now()));
+        if (!hasRobot) return;
 
+        const runRobotAutomation = async () => {
+            if (skipRefreshRef.current) return;
+
+            // 1. Auto-collect Gifts & Materials
+            for (const rig of rigs) {
+                if (claimingRigsRef.current.has(rig.id)) continue;
+
+                // Gift Availability Logic
+                const giftIntervalMs = (GIFT_CYCLE_DAYS * 24 * 60 * 60 * 1000);
+                const lastGiftTime = rig.lastGiftAt || rig.purchasedAt;
+                const nextGiftTime = lastGiftTime + giftIntervalMs;
+                const isGiftAvailable = Date.now() >= nextGiftTime;
+
+                if (isGiftAvailable) {
+                    console.log(`[ROBOT] Auto-collecting gift for rig: ${getLocalized(rig.name)}`);
+                    claimingRigsRef.current.add(rig.id);
+                    try {
+                        await handleGiftClaim(rig.id);
+                    } catch (e) {
+                        console.error(`[ROBOT] Gift claim failed for ${rig.name}:`, e);
+                    } finally {
+                        claimingRigsRef.current.delete(rig.id);
+                    }
+                }
+
+                // Material Collection Logic
+                if ((rig.currentMaterials || 0) > 0) {
+                    console.log(`[ROBOT] Auto-collecting materials for rig: ${getLocalized(rig.name)}`);
+                    claimingRigsRef.current.add(rig.id);
+                    try {
+                        await handleCollectMaterials(rig.id);
+                    } catch (e) {
+                        console.error(`[ROBOT] Material collection failed for ${rig.name}:`, e);
+                    } finally {
+                        claimingRigsRef.current.delete(rig.id);
+                    }
+                }
+            }
+
+            // 1.6 Auto-refill Global Energy (System Power)
+            const currentGlobalEnergy = user.energy !== undefined ? user.energy : 100;
+            const lastGlobalRefill = lastAutoRefillRef.current['global'] || 0;
+            if (currentGlobalEnergy <= ROBOT_CONFIG.ENERGY_THRESHOLD && (Date.now() - lastGlobalRefill > 60000)) {
+                console.log(`[ROBOT] Auto-refilling GLOBAL energy (${currentGlobalEnergy.toFixed(1)}%)`);
+                lastAutoRefillRef.current['global'] = Date.now();
+                confirmRefillEnergy();
+            }
+
+            // 2. Auto-refill & Auto-repair
+            for (const rig of rigs) {
+                const preset = RIG_PRESETS.find(p => p.name === rig.name);
+
+                // Energy Logic
+                const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || Date.now();
+                const elapsedMs = Date.now() - lastUpdate;
+                const elapsedHours = (elapsedMs * (user.isDemo ? DEMO_SPEED_MULTIPLIER : 1)) / (1000 * 60 * 60);
+                const overclockActive = user.overclockExpiresAt ? new Date(user.overclockExpiresAt).getTime() > Date.now() : false;
+                const drainRate = overclockActive ? 8.333333333333334 : 4.166666666666667;
+                const drain = elapsedHours * drainRate;
+                const energyPercent = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
+
+                if (energyPercent <= ROBOT_CONFIG.ENERGY_THRESHOLD && (Date.now() - (lastAutoRefillRef.current[rig.id] || 0) > 60000)) {
+                    lastAutoRefillRef.current[rig.id] = Date.now();
+                    handleChargeRigEnergy(rig.id);
+                }
+
+                // Repair Logic
+                const durabilityMs = (REPAIR_CONFIG.DURABILITY_DAYS * 24 * 60 * 60 * 1000);
+                const timeSinceRepair = Date.now() - (rig.lastRepairAt || rig.purchasedAt || Date.now());
+                const isInfiniteDurability = preset?.specialProperties?.infiniteDurability;
+                const isInfiniteContract = (rig.durationMonths >= 900) || (preset?.specialProperties?.infiniteDurability === true);
+                const healthPercent = (isInfiniteContract || isInfiniteDurability) ? 100 : Math.max(0, 100 * (1 - timeSinceRepair / durabilityMs));
+
+                if (healthPercent < 20) {
+                    handleRepair(rig.id);
+                }
+            }
+
+            // 3. Price Alerts
+            if (marketState?.trends) {
+                const trends = marketState.trends;
+                for (const [tier, data] of Object.entries(trends)) {
+                    const price = (data as any).currentPrice;
+                    const prevPrice = lastMarketPrices.current[parseInt(tier)];
+                    const lastAlert = lastMarketAlertAt.current[parseInt(tier)] || 0;
+
+                    if (prevPrice && price > prevPrice && (Date.now() - lastAlert > 60000)) {
+                        lastMarketAlertAt.current[parseInt(tier)] = Date.now();
+                        addNotification({
+                            id: `market-alert-${tier}-${Date.now()}`,
+                            userId: user.id,
+                            message: language === 'th' ? `ราคาวัตถุดิบ Tier ${tier} พุ่งสูงขึ้น! (${prevPrice} -> ${price})` : `Material Tier ${tier} price surged! (${prevPrice} -> ${price})`,
+                            type: 'INFO',
+                            read: false,
+                            timestamp: Date.now()
+                        });
+                    }
+                    lastMarketPrices.current[parseInt(tier)] = price;
+                }
+            }
+        };
+
+        const interval = setInterval(runRobotAutomation, 30000);
+        return () => clearInterval(interval);
+    }, [inventory, rigs, user, marketState, language, getLocalized, handleGiftClaim, handleCollectMaterials, confirmRefillEnergy, handleChargeRigEnergy, handleRepair, addNotification]);
 
     return (
         <div className="min-h-screen font-sans pb-24 landscape:pb-16 lg:pb-20 bg-stone-950 text-stone-200">

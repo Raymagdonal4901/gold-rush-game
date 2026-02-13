@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check, TrendingUp } from 'lucide-react';
+import { Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check, TrendingUp, CreditCard, Clock } from 'lucide-react';
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
 import { User, OilRig, ClaimRequest, WithdrawalRequest, DepositRequest, Notification } from '../services/types';
@@ -646,6 +646,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                 <tr>
                                                     <th className="p-3 font-medium">ชื่อเครื่องขุด (Name)</th>
                                                     <th className="p-3 font-medium text-right">รายได้วันละ (Daily)</th>
+                                                    <th className="p-3 font-medium text-right italic text-stone-400">ค้างรับ (Pending)</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-stone-800">
@@ -654,6 +655,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                         <td className="p-3">
                                                             <div className="font-bold text-stone-200">{getLocalized(r.name)}</div>
                                                             <div className="text-[10px] text-stone-500 font-mono">ID: {r.id}</div>
+                                                            <div className={`text-[10px] font-mono mt-0.5 flex items-center gap-1 ${r.expiresAt < Date.now() ? 'text-red-500 font-bold' : 'text-stone-400'}`}>
+                                                                <Clock size={10} /> {t('rig.expires_at')}: {new Date(r.expiresAt).toLocaleString()}
+                                                            </div>
                                                         </td>
                                                         <td className="p-3 text-right">
                                                             <div className="flex items-center justify-end gap-3">
@@ -661,6 +665,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                                     <div className="font-mono font-bold text-emerald-400">+{Math.floor(r.dailyProfit + (r.bonusProfit || 0)).toLocaleString()}</div>
                                                                     <div className="text-[10px] text-stone-600">{CURRENCY}/Day</div>
                                                                 </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-3 text-right">
+                                                            {(() => {
+                                                                const lastClaim = r.lastClaimAt || r.purchasedAt;
+                                                                const secondsElapsed = Math.max(0, (Date.now() - lastClaim) / 1000);
+                                                                const dailyRate = r.dailyProfit + (r.bonusProfit || 0);
+                                                                const pending = (dailyRate / 86400) * secondsElapsed;
+                                                                return (
+                                                                    <div className="flex flex-col items-end">
+                                                                        <div className="font-mono font-bold text-yellow-500">+{pending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                                        <div className="text-[10px] text-stone-600">{CURRENCY}</div>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </td>
+                                                        <td className="p-3 text-right">
+                                                            <div className="flex items-center justify-end">
                                                                 <button
                                                                     onClick={() => handleDeleteRig(r.id)}
                                                                     className="p-1.5 text-stone-600 hover:text-red-500 hover:bg-red-900/20 rounded transition-colors opacity-0 group-hover:opacity-100"
@@ -1364,6 +1386,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                     <div className="font-bold text-white text-sm flex items-center gap-2">
                                                         {u.username}
                                                         {u.role?.includes('ADMIN') && <span className="text-[10px] bg-red-900/40 text-red-400 px-1 rounded border border-red-900/50">ADMIN</span>}
+                                                        {u.inventory?.some((i: any) => i.typeId === 'vip_withdrawal_card') && (
+                                                            <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-500 text-[10px] px-1.5 py-0.5 rounded border border-yellow-500/30 font-black shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                                                                <CreditCard size={10} />
+                                                                VIP
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div className="text-xs text-stone-500 font-mono">ID: {u.id}</div>
                                                 </div>

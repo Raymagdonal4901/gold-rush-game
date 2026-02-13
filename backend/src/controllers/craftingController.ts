@@ -262,7 +262,7 @@ export const claimCraftedItem = async (req: AuthRequest, res: Response) => {
         let isGreatSuccess = false;
 
         if (itemConfig.isRepairKit) {
-            // Repair Kit: consumable ไม่มีโบนัส ไม่มี durability
+            // Repair Kit: consumable with specific rarity
             const kitId = Math.random().toString(36).substr(2, 9);
             newItem = {
                 id: kitId,
@@ -270,7 +270,7 @@ export const claimCraftedItem = async (req: AuthRequest, res: Response) => {
                 name: itemConfig.name,
                 price: 0,
                 dailyBonus: 0,
-                rarity: 'COMMON',
+                rarity: (itemConfig as any).rarity || 'COMMON', // Use config rarity
                 purchasedAt: Date.now(),
                 isRepairKit: true,
                 repairTier: (itemConfig as any).repairTier,

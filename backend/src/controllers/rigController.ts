@@ -4,6 +4,110 @@ import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
 
+// --- Material Names ---
+const MATERIAL_NAMES: Record<number, { th: string; en: string }> = {
+    0: { th: 'เศษหิน', en: 'Stone Shards' },
+    1: { th: 'ถ่านหิน', en: 'Coal' },
+    2: { th: 'ทองแดง', en: 'Copper' },
+    3: { th: 'เหล็ก', en: 'Iron' },
+    4: { th: 'ทองคำ', en: 'Gold' },
+    5: { th: 'เพชร', en: 'Diamond' },
+    6: { th: 'น้ำมันดิบสังเคราะห์', en: 'Synthetic Crude Oil' },
+    7: { th: 'ไวเบรเนียม', en: 'Vibranium' },
+    8: { th: 'แร่ลึกลับ', en: 'Mysterious Ore' },
+    9: { th: 'แร่ในตำนาน', en: 'Legendary Ore' }
+};
+
+// --- Per-Rig Loot Tables ---
+interface LootEntry { matTier: number; minAmount: number; maxAmount: number; chance: number; }
+
+const RIG_LOOT_TABLES: Record<number, LootEntry[]> = {
+    // Tier 2: สว่านพกพา (Portable Drill)
+    2: [
+        { matTier: 0, minAmount: 3, maxAmount: 5, chance: 60 },
+        { matTier: 1, minAmount: 1, maxAmount: 1, chance: 35 },
+        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 5 },
+    ],
+    // Tier 3: เครื่องขุดถ่านหิน (Coal Excavator)
+    3: [
+        { matTier: 0, minAmount: 5, maxAmount: 8, chance: 30 },
+        { matTier: 1, minAmount: 1, maxAmount: 2, chance: 50 },
+        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 15 },
+        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 5 },
+    ],
+    // Tier 4: เครื่องขุดทองแดง (Copper Excavator)
+    4: [
+        { matTier: 1, minAmount: 2, maxAmount: 3, chance: 50 },
+        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 40 },
+        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 10 },
+    ],
+    // Tier 5: เครื่องขุดเหล็ก (Iron Excavator)
+    5: [
+        { matTier: 2, minAmount: 2, maxAmount: 2, chance: 40 },
+        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 50 },
+        { matTier: 4, minAmount: 1, maxAmount: 1, chance: 10 },
+    ],
+    // Tier 6: เครื่องขุดทองคำ (Gold Excavator)
+    6: [
+        { matTier: 3, minAmount: 2, maxAmount: 2, chance: 40 },
+        { matTier: 4, minAmount: 1, maxAmount: 1, chance: 55 },
+        { matTier: 5, minAmount: 1, maxAmount: 1, chance: 5 },
+    ],
+    // Tier 7: เครื่องขุดเพชร (Diamond Excavator)
+    7: [
+        { matTier: 4, minAmount: 2, maxAmount: 2, chance: 40 },
+        { matTier: 5, minAmount: 1, maxAmount: 1, chance: 50 },
+        { matTier: 6, minAmount: 1, maxAmount: 1, chance: 10 },
+    ],
+    // Tier 8: เครื่องขุดปฏิกรณ์ไวเบรเนียม (Vibranium Reactor)
+    8: [
+        { matTier: 5, minAmount: 1, maxAmount: 2, chance: 60 },
+        { matTier: 6, minAmount: 1, maxAmount: 1, chance: 35 },
+        { matTier: 7, minAmount: 1, maxAmount: 1, chance: 5 },
+    ],
+};
+
+// Determine rig preset ID from investment amount
+function getRigPresetId(rig: any): number {
+    const inv = rig.investment;
+    // Match by unique investment amounts from RIG_PRESETS
+    if (inv === 300) return 1;
+    if (inv === 500) return 2;
+    if (inv === 1000) return 3;
+    if (inv === 1500) return 4;
+    if (inv === 2000) return 5;
+    if (inv === 2500) return 6;
+    if (inv === 3000) return 7;
+    // Crafted rigs and free rigs: check by name
+    const name = typeof rig.name === 'string' ? rig.name : (rig.name?.th || rig.name?.en || '');
+    if (name.includes('ปฏิกรณ์') || name.includes('Vibranium')) return 8;
+    if (name.includes('ถุงมือ') || name.includes('Rotten') || name.includes('Glove')) return 9;
+    return 1; // fallback
+}
+
+// Roll loot from a rig's loot table
+function rollLoot(presetId: number): { tier: number; amount: number } {
+    const table = RIG_LOOT_TABLES[presetId];
+    if (!table) {
+        // Fallback: 1x Coal for rigs without a loot table (Tier 1, Tier 9)
+        return { tier: 1, amount: 1 };
+    }
+    const rand = Math.random() * 100;
+    let cumulative = 0;
+    for (const entry of table) {
+        cumulative += entry.chance;
+        if (rand < cumulative) {
+            const amount = entry.minAmount === entry.maxAmount
+                ? entry.minAmount
+                : Math.floor(Math.random() * (entry.maxAmount - entry.minAmount + 1)) + entry.minAmount;
+            return { tier: entry.matTier, amount };
+        }
+    }
+    // Safety fallback: return last entry
+    const last = table[table.length - 1];
+    return { tier: last.matTier, amount: last.minAmount };
+}
+
 // Get all rigs for a user
 export const getMyRigs = async (req: AuthRequest, res: Response) => {
     const start = Date.now();
@@ -455,38 +559,38 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ message: 'ยังไม่ถึงรอบเวลาการเก็บรวบรวมไอเทม' });
         }
 
-        // ALL Rigs now exclusively drop Chest Keys
-        const newKey = {
-            id: Math.random().toString(36).substr(2, 9),
-            typeId: 'chest_key',
-            name: { th: 'กุญแจเข้าเหมือง', en: 'Mining Key' },
-            price: 0,
-            dailyBonus: 0,
-            durationBonus: 0,
-            rarity: 'COMMON',
-            purchasedAt: Date.now(),
-            lifespanDays: 999,
-            expireAt: Date.now() + (999 * 24 * 60 * 60 * 1000),
-            level: 1
-        };
+        // Per-Rig Loot Drop
+        const presetId = getRigPresetId(rig);
+        const loot = rollLoot(presetId);
+        const lootTier = loot.tier;
+        const lootAmount = loot.amount;
 
-        // Atomic push to user inventory
-        await User.findByIdAndUpdate(userId, {
-            $push: { inventory: newKey }
-        });
+        if (!user.materials) user.materials = {};
+        user.materials[lootTier] = (user.materials[lootTier] || 0) + lootAmount;
+        user.markModified('materials');
+        await user.save();
+
+        const matName = MATERIAL_NAMES[lootTier] || { th: `แร่ Tier ${lootTier}`, en: `Ore Tier ${lootTier}` };
 
         // Log Transaction
-        const keyTx = new Transaction({
+        const materialTx = new Transaction({
             userId,
             type: 'GIFT_CLAIM',
             amount: 0,
             status: 'COMPLETED',
-            description: `ได้รับไอเทมจากเครื่องขุด: กุญแจเข้าเหมือง`
+            description: `ได้รับไอเทมจากเครื่องขุด: ${matName.th} x${lootAmount}`
         });
-        await keyTx.save();
+        await materialTx.save();
 
-        console.log(`[DEBUG_COLLECT] Success. User: ${userId}, Rig: ${rigId}, Item: Mining Key`);
-        return res.json({ success: true, item: newKey, rig });
+        console.log(`[DEBUG_COLLECT] Success. User: ${userId}, Rig: ${rigId}, Preset: ${presetId}, Item: ${matName.en} x${lootAmount}`);
+        return res.json({
+            success: true,
+            type: 'MATERIAL',
+            tier: lootTier,
+            amount: lootAmount,
+            name: matName,
+            rig
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -532,25 +636,18 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ message: 'ยังไม่ถึงเวลาเปิดกล่องของขวัญ' });
         }
 
-        // ALL Rig Gifts now exclusively drop Chest Keys
-        const newKey = {
-            id: Math.random().toString(36).substr(2, 9),
-            typeId: 'chest_key',
-            name: { th: 'กุญแจเข้าเหมือง', en: 'Mining Key' },
-            price: 0,
-            dailyBonus: 0,
-            durationBonus: 0,
-            rarity: 'COMMON',
-            purchasedAt: Date.now(),
-            lifespanDays: 365,
-            expireAt: Date.now() + (365 * 24 * 60 * 60 * 1000),
-            level: 1
-        };
+        // Per-Rig Loot Drop
+        const presetId = getRigPresetId(rig);
+        const loot = rollLoot(presetId);
+        const lootTier = loot.tier;
+        const lootAmount = loot.amount;
 
-        // Atomic push to user inventory
-        await User.findByIdAndUpdate(userId, {
-            $push: { inventory: newKey }
-        });
+        if (!user.materials) user.materials = {};
+        user.materials[lootTier] = (user.materials[lootTier] || 0) + lootAmount;
+        user.markModified('materials');
+        await user.save();
+
+        const matName = MATERIAL_NAMES[lootTier] || { th: `แร่ Tier ${lootTier}`, en: `Ore Tier ${lootTier}` };
 
         // Log Transaction
         const giftTx = new Transaction({
@@ -558,15 +655,17 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
             type: 'GIFT_CLAIM',
             amount: 0,
             status: 'COMPLETED',
-            description: `ได้รับของขวัญจากเครื่องขุด: กุญแจเข้าเหมือง`
+            description: `ได้รับของขวัญจากเครื่องขุด: ${matName.th} x${lootAmount}`
         });
         await giftTx.save();
 
         res.json({
-            type: 'ITEM',
-            item: newKey,
+            type: 'MATERIAL',
+            tier: lootTier,
+            amount: lootAmount,
+            name: matName,
             rig,
-            materials: user.materials // Return current state for sync
+            materials: user.materials
         });
 
     } catch (error) {

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Hourglass, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown, FileText, CreditCard, Ticket, Timer } from 'lucide-react';
+import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Hourglass, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown, FileText, CreditCard, Ticket, Timer, Settings, Wrench } from 'lucide-react';
 import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, RARITY_SETTINGS, SHOP_ITEMS, MATERIAL_RECIPES, EXCHANGE_RATE_USD_THB } from '../constants';
 import { MarketState, MarketItemData, AccessoryItem } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
@@ -217,7 +217,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         if (typeId === 'chest_key' || nameStr.includes('กุญแจ') || nameStr.includes('Key')) return t('rig.mining_key');
         if (typeId === 'upgrade_chip' || nameStr.includes('ชิป') || nameStr.includes('Chip')) return t('inventory.upgrade');
         if (typeId === 'mixer' || nameStr.includes('โต๊ะช่าง') || nameStr.includes('Mixer')) return t('warehouse.extract');
-        if (typeId === 'magnifying_glass' || nameStr.includes('แว่นขยาย') || nameStr.includes('Search')) return t('warehouse.click_stats');
+        if (typeId === 'magnifying_glass' || nameStr.includes('แว่นขยาย') || nameStr.includes('Search')) return getLocalized(item.name);
         if (typeId === 'robot' || nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) return t('dashboard.shop'); // Shop key used for Generic Icon label fallback
         if (typeId === 'time_skip_ticket' || nameStr.includes('ตั๋วเร่งเวลา')) return language === 'th' ? 'ตั๋วเร่งเวลา' : 'Time Skip Ticket';
         if (typeId === 'construction_nanobot' || nameStr.includes('นาโนบอทก่อสร้าง')) return language === 'th' ? 'นาโนบอทก่อสร้าง' : 'Construction Nanobot';
@@ -259,6 +259,13 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         else if (nameStr.includes('คอม') || nameStr.includes('PC') || nameStr.includes('Computer')) typeId = 'pc';
         else if (nameStr.includes('ตั๋วเร่งเวลา') || nameStr.includes('Time Skip Ticket')) typeId = 'time_skip_ticket';
         else if (nameStr.includes('นาโนบอทก่อสร้าง') || nameStr.includes('Construction Nanobot')) typeId = 'construction_nanobot';
+        else if (nameStr.includes('Repair Kit') || nameStr.includes('ชุดซ่อม')) {
+            if (nameStr.includes('Basic') || nameStr.includes('พื้นฐาน')) typeId = 'repair_kit_1';
+            else if (nameStr.includes('Standard') || nameStr.includes('มาตรฐาน')) typeId = 'repair_kit_2';
+            else if (nameStr.includes('Electronic') || nameStr.includes('อิเล็กทรอนิกส์')) typeId = 'repair_kit_3';
+            else if (nameStr.includes('Mechanic') || nameStr.includes('เครื่องจักร')) typeId = 'repair_kit_4';
+            else typeId = 'repair_kit_1';
+        }
 
         if (typeId === 'vip_withdrawal_card' || nameStr.includes('บัตร VIP')) {
             return (
@@ -294,6 +301,24 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         if (typeId.includes('mixer')) return <Factory className={className} />;
         if (typeId.includes('magnifying_glass') || typeId.includes('search')) return <Search className={className} />;
         if (typeId.includes('insurance_card') || typeId.includes('filetext')) return <FileText className={className} />;
+
+        if (typeId.startsWith('repair_kit')) {
+            let IconComp = Wrench;
+            if (typeId === 'repair_kit_1') IconComp = Hammer;
+            else if (typeId === 'repair_kit_2') IconComp = Briefcase;
+            else if (typeId === 'repair_kit_3') IconComp = Cpu;
+            else if (typeId === 'repair_kit_4') IconComp = Settings;
+
+            return (
+                <div className="relative flex items-center justify-center">
+                    <div className={`absolute inset-0 opacity-20 blur-md rounded-full scale-125 animate-pulse ${typeId === 'repair_kit_4' ? 'bg-red-500' :
+                        typeId === 'repair_kit_3' ? 'bg-yellow-500' :
+                            typeId === 'repair_kit_2' ? 'bg-purple-500' : 'bg-emerald-500'
+                        }`}></div>
+                    <IconComp className={`${className} relative z-10`} />
+                </div>
+            );
+        }
         if (typeId === 'FileText') return <FileText className={className} />;
         if (typeId.includes('mystery_ore')) return <Sparkles className={className} />;
         if (typeId.includes('legendary_ore')) return <Gem className={className} />;

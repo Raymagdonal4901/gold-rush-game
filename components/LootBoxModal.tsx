@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Hand, Lock, Truck, Cpu, Hourglass, Key, Factory, Search, FileText } from 'lucide-react';
+import { Sparkles, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Hand, Lock, Truck, Cpu, Hourglass, Key, Factory, Search, FileText, Briefcase, Settings, Hammer, Wrench } from 'lucide-react';
 import { Rarity } from '../services/types';
 import { RARITY_SETTINGS, CURRENCY } from '../constants';
 import { InfinityGlove } from './InfinityGlove';
@@ -34,6 +34,13 @@ const ItemIcon: React.FC<{ typeId?: string, name?: string, materialId?: number, 
     if (itemName.includes('แว่นขยาย') || itemName.includes('Magnifying')) return <Search className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
     if (itemName.includes('ใบประกัน') || itemName.includes('Insurance')) return <FileText className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />; // Import FileText if needed
     if (itemName.includes('นาฬิกาทราย') || itemName.includes('Hourglass')) return <Hourglass className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('Repair Kit') || itemName.includes('ชุดซ่อม')) {
+        if (itemName.includes('Basic') || itemName.includes('พื้นฐาน')) return <Hammer className={className} />;
+        if (itemName.includes('Standard') || itemName.includes('มาตรฐาน')) return <Briefcase className={className} />;
+        if (itemName.includes('Electronic') || itemName.includes('อิเล็กทรอนิกส์')) return <Cpu className={className} />;
+        if (itemName.includes('Mechanic') || itemName.includes('เครื่องจักร')) return <Settings className={className} />;
+        return <Wrench className={className} />;
+    }
 
     if (itemName.includes('หมวก') || itemName.includes('Helmet')) return <HardHat className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
     if (itemName.includes('แว่น') || itemName.includes('Glasses')) return <Glasses className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
@@ -63,6 +70,13 @@ const ItemIcon: React.FC<{ typeId?: string, name?: string, materialId?: number, 
     else if (typeId === 'auto_excavator') IconComp = Truck;
     else if (typeId === 'upgrade_chip') IconComp = Cpu;
     else if (typeId.startsWith('hourglass')) IconComp = Hourglass;
+    else if (typeId.startsWith('repair_kit')) {
+        if (typeId === 'repair_kit_1') IconComp = Hammer;
+        else if (typeId === 'repair_kit_2') IconComp = Briefcase;
+        else if (typeId === 'repair_kit_3') IconComp = Cpu;
+        else if (typeId === 'repair_kit_4') IconComp = Settings;
+        else IconComp = Wrench;
+    }
     else return <InfinityGlove rarity={rarity} className={className} size={100} />;
 
     return <IconComp className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;

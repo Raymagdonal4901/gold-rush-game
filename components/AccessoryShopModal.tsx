@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase, CreditCard, Ticket, Shield } from 'lucide-react';
-import { SHOP_ITEMS, CURRENCY, RARITY_SETTINGS, MATERIAL_CONFIG, EQUIPMENT_SERIES } from '../constants';
+import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase, CreditCard, Ticket, Shield, Wrench, Settings, StarHalf } from 'lucide-react';
+import { SHOP_ITEMS, CURRENCY, RARITY_SETTINGS, MATERIAL_CONFIG, EQUIPMENT_SERIES, REPAIR_KITS } from '../constants';
 import { CraftingQueueItem } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
@@ -21,8 +21,11 @@ interface AccessoryShopModalProps {
 
 export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, onClose, walletBalance, onBuy, onRefresh, addNotification, userId }) => {
     const { t, getLocalized, formatCurrency, language, formatBonus } = useTranslation();
-    const [activeTab, setActiveTab] = useState<'SHOP' | 'WORKSHOP'>('SHOP');
+    const [activeTab, setActiveTab] = useState<'SHOP' | 'WORKSHOP' | 'REPAIR' | 'UPGRADE'>('SHOP');
     const [buyingId, setBuyingId] = useState<string | null>(null);
+    const [upgradeTargetId, setUpgradeTargetId] = useState<string | null>(null);
+    const [upgradeMaterialId, setUpgradeMaterialId] = useState<string | null>(null);
+    const [isUpgrading, setIsUpgrading] = useState(false);
     const [confirmItem, setConfirmItem] = useState<{ id: string, price: number, quantity: number, name: string } | null>(null);
 
     const [craftingQueue, setCraftingQueue] = useState<CraftingQueueItem[]>([]);
@@ -314,6 +317,27 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
             );
         }
 
+        if (itemId && itemId.startsWith('repair_kit')) {
+            let glowColor = 'bg-emerald-500';
+            if (itemId?.includes('2')) glowColor = 'bg-purple-500';
+            if (itemId?.includes('3')) glowColor = 'bg-yellow-500';
+            if (itemId?.includes('4')) glowColor = 'bg-red-600';
+
+            let IconComp = Wrench;
+            if (iconName === 'Hammer') IconComp = Hammer;
+            else if (iconName === 'Briefcase') IconComp = Briefcase;
+            else if (iconName === 'Cpu') IconComp = Cpu;
+            else if (iconName === 'Settings') IconComp = Settings;
+
+            return (
+                <div className="relative flex items-center justify-center">
+                    <div className={`absolute inset-0 ${glowColor} rounded-full scale-125 blur-md opacity-20 animate-pulse`}></div>
+                    <IconComp className={`${className} relative z-10 transition-transform duration-500 group-hover:rotate-12`} />
+                </div>
+            );
+        }
+
+        if (iconName === 'Wrench') return <Wrench className={className} />;
         return <InfinityGlove className={className} />;
     };
 
@@ -338,7 +362,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         return true;
     });
     const shopEquipment = SHOP_ITEMS.filter(i => !specialIds.includes(i.id) && i.buyable !== false);
-    const craftableItems = SHOP_ITEMS.filter(i => i.craftingRecipe);
+    const craftableItems = SHOP_ITEMS.filter(i => i.craftingRecipe && i.id !== 'magnifying_glass');
 
     const renderItemCard = (item: typeof SHOP_ITEMS[0], isSpecial: boolean = false) => {
         let canAfford = walletBalance >= item.price * (buyQuantities[item.id] || 1);
@@ -611,7 +635,10 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         const canCraft = canAffordFee && hasAllMats;
 
         let rarityStyle = RARITY_SETTINGS.COMMON;
-        if (item.id === 'hat') rarityStyle = RARITY_SETTINGS.UNCOMMON;
+        if ((item as any).rarity && RARITY_SETTINGS[(item as any).rarity]) {
+            rarityStyle = RARITY_SETTINGS[(item as any).rarity];
+        }
+        else if (item.id === 'hat') rarityStyle = RARITY_SETTINGS.UNCOMMON;
         else if (item.id === 'uniform') rarityStyle = RARITY_SETTINGS.RARE;
         else if (item.id === 'bag') rarityStyle = RARITY_SETTINGS.SUPER_RARE;
         else if (item.id === 'boots') rarityStyle = RARITY_SETTINGS.EPIC;
@@ -625,6 +652,9 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
             else if (item.price >= 200) rarityStyle = RARITY_SETTINGS.RARE;
             else if (item.price >= 50) rarityStyle = RARITY_SETTINGS.UNCOMMON;
         }
+
+        const isAlreadyCrafting = craftingQueue.some(q => q.itemId === item.id);
+        const canCraftActual = canCraft && !isAlreadyCrafting;
 
         return (
             <div key={item.id} className={`bg-stone-900 border ${rarityStyle.border} rounded-xl overflow-hidden flex flex-col gap-4 relative shadow-lg`}>
@@ -648,7 +678,12 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                     )}
                                 </div>
                                 <div className="bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded text-[10px] sm:text-xs font-bold border border-blue-500/30 flex flex-col items-end leading-none gap-0.5">
-                                    <span className="flex items-center gap-1"><Clock size={10} /> {item.craftDurationMinutes ? item.craftDurationMinutes / 60 : 0} ชม.</span>
+                                    <span className="flex items-center gap-1"><Clock size={10} />
+                                        {item.craftDurationMinutes && item.craftDurationMinutes < 60
+                                            ? `${item.craftDurationMinutes} ${language === 'th' ? 'นาที' : 'mins'}`
+                                            : `${item.craftDurationMinutes ? (item.craftDurationMinutes / 60).toFixed(1).replace(/\.0$/, '') : 0} ${language === 'th' ? 'ชม.' : 'hrs'}`
+                                        }
+                                    </span>
                                 </div>
                             </div>
                             <div className="mt-1 w-full">
@@ -664,8 +699,17 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                     />
                                 ) : (
                                     <div className="flex items-center gap-1 text-xs text-stone-400">
-                                        <CalendarDays size={12} className="text-stone-500" />
-                                        <span>{language === 'th' ? 'ถาวร' : 'Permanent'}</span>
+                                        {item.id.startsWith('repair_kit') ? (
+                                            <>
+                                                <Zap size={12} className="text-yellow-500" />
+                                                <span>{language === 'th' ? 'ใช้แล้วหมดไป' : 'Consumable'}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CalendarDays size={12} className="text-stone-500" />
+                                                <span>{language === 'th' ? 'ถาวร' : 'Permanent'}</span>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -677,10 +721,12 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                         </div>
                     </div>
 
-                    <div className="bg-stone-950 px-2 py-1 rounded border border-stone-800 flex justify-between text-[10px]">
-                        <span className="text-stone-400">Success: <span className="text-white font-bold">90%</span></span>
-                        <span className="text-yellow-600">Great Success: <span className="text-yellow-400 font-bold animate-pulse">10%</span></span>
-                    </div>
+                    {!item.id.startsWith('repair_kit') && (
+                        <div className="bg-stone-950 px-2 py-1 rounded border border-stone-800 flex justify-between text-[10px]">
+                            <span className="text-stone-400">Success: <span className="text-white font-bold">90%</span></span>
+                            <span className="text-yellow-600">Great Success: <span className="text-yellow-400 font-bold animate-pulse">10%</span></span>
+                        </div>
+                    )}
 
                     <div className="bg-stone-950 p-3 rounded-lg border border-stone-800 space-y-2">
                         <div className="text-[10px] text-stone-500 uppercase font-bold tracking-wider">{t('item_shop.materials_required')}</div>
@@ -710,12 +756,16 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
 
                     <button
                         onClick={() => handleStartCraft(item.id)}
-                        disabled={!canCraft}
+                        disabled={!canCraftActual}
                         className={`w-full py-2.5 rounded font-bold text-sm flex items-center justify-center gap-2 transition-all
-                      ${canCraft ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg' : 'bg-stone-800 text-stone-600 cursor-not-allowed border border-stone-700'}
+                      ${canCraftActual ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg' : 'bg-stone-800 text-stone-600 cursor-not-allowed border border-stone-700'}
                   `}
                     >
-                        <Hammer size={16} /> {t('item_shop.start_craft')}
+                        {isAlreadyCrafting ? (
+                            <>{language === 'th' ? 'รอสักครู่' : 'Wait a moment'}</>
+                        ) : (
+                            <><Hammer size={16} /> {t('item_shop.start_craft')}</>
+                        )}
                     </button>
                 </div>
             </div>
@@ -725,106 +775,437 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
     const renderQueue = () => {
         // Defensive check: ensure craftingQueue is an array
         if (!craftingQueue || !Array.isArray(craftingQueue) || craftingQueue.length === 0) return (
-            <div className="text-center py-8 text-stone-500 text-sm border-2 border-dashed border-stone-800 rounded-xl">
+            <div className="text-center py-8 text-stone-500 text-sm border-2 border-dashed border-stone-800 rounded-xl mb-6">
                 {t('item_shop.no_active_tasks')}
             </div>
         );
 
         return (
-            <div className="space-y-3 mb-6">
-                <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">{t('item_shop.crafting_status', { count: craftingQueue.length })}</h4>
-                {craftingQueue.map(q => {
-                    const item = SHOP_ITEMS.find(i => i.id === q.itemId);
-                    if (!item) return null;
+            <div className="mb-8">
+                <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Hammer size={16} className="text-orange-500" />
+                    {t('item_shop.crafting_status', { count: craftingQueue.length })}
+                </h4>
 
-                    const now = Date.now();
-                    const totalTime = q.finishAt - q.startedAt;
-                    const elapsed = now - q.startedAt;
-                    const progress = Math.min(100, (elapsed / totalTime) * 100);
-                    const isReady = now >= q.finishAt;
-                    const timeLeft = Math.max(0, q.finishAt - now);
-                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-                    const mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {craftingQueue.map(q => {
+                        // FIX: Search in both SHOP_ITEMS and REPAIR_KITS
+                        const item = SHOP_ITEMS.find(i => i.id === q.itemId) || (REPAIR_KITS as any[]).find(i => i.id === q.itemId);
+                        if (!item) return null;
 
-                    let rarityStyle = RARITY_SETTINGS.COMMON;
-                    if (item.id === 'hat') rarityStyle = RARITY_SETTINGS.UNCOMMON;
-                    else if (item.id === 'uniform') rarityStyle = RARITY_SETTINGS.RARE;
-                    else if (item.id === 'bag') rarityStyle = RARITY_SETTINGS.SUPER_RARE;
-                    else if (item.id === 'boots') rarityStyle = RARITY_SETTINGS.EPIC;
-                    else if (item.id === 'glasses') rarityStyle = RARITY_SETTINGS.LEGENDARY;
-                    else if (item.id === 'mobile') rarityStyle = RARITY_SETTINGS.ULTRA_LEGENDARY;
-                    else if (item.id === 'pc') rarityStyle = RARITY_SETTINGS.MYTHIC;
-                    else if (item.id === 'auto_excavator') rarityStyle = RARITY_SETTINGS.MYTHIC;
+                        const now = Date.now();
+                        const totalTime = q.finishAt - q.startedAt;
+                        const elapsed = now - q.startedAt;
+                        const progress = Math.min(100, (elapsed / totalTime) * 100);
+                        const isReady = now >= q.finishAt;
+                        const timeLeft = Math.max(0, q.finishAt - now);
 
-                    return (
-                        <div key={q.id} className="bg-stone-900 border border-stone-700 p-3 rounded-lg flex items-center gap-4 relative overflow-hidden">
-                            <div className="absolute inset-0 bg-stone-800 z-0" style={{ width: `${progress}%`, transition: 'width 1s linear', opacity: 0.2 }}></div>
+                        // Format time as HH:mm:ss
+                        const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                        const mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                        const secs = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                        const timeString = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 
-                            <div className={`relative z-10 w-10 h-10 bg-stone-950 rounded flex items-center justify-center border ${rarityStyle.border}`}>
-                                {getIcon(item.icon, `w-6 h-6 ${rarityStyle.color}`, item.id)}
-                            </div>
+                        let rarityStyle = RARITY_SETTINGS.COMMON;
+                        if ((item as any).rarity && RARITY_SETTINGS[(item as any).rarity]) {
+                            rarityStyle = RARITY_SETTINGS[(item as any).rarity];
+                        }
+                        else if (item.id === 'hat') rarityStyle = RARITY_SETTINGS.UNCOMMON;
+                        else if (item.id === 'uniform') rarityStyle = RARITY_SETTINGS.RARE;
+                        else if (item.id === 'bag') rarityStyle = RARITY_SETTINGS.SUPER_RARE;
+                        else if (item.id === 'boots') rarityStyle = RARITY_SETTINGS.EPIC;
+                        else if (item.id === 'glasses') rarityStyle = RARITY_SETTINGS.LEGENDARY;
+                        else if (item.id === 'mobile') rarityStyle = RARITY_SETTINGS.ULTRA_LEGENDARY;
+                        else if (item.id === 'pc') rarityStyle = RARITY_SETTINGS.MYTHIC;
+                        else if (item.id === 'auto_excavator') rarityStyle = RARITY_SETTINGS.DIVINE;
+                        else {
+                            if (item.price >= 500) rarityStyle = RARITY_SETTINGS.LEGENDARY;
+                            else if (item.price >= 350) rarityStyle = RARITY_SETTINGS.EPIC;
+                            else if (item.price >= 120) rarityStyle = RARITY_SETTINGS.RARE;
+                        }
 
-                            <div className="relative z-10 flex-1">
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="font-bold text-stone-200 text-sm">{getItemDisplayName(item)}</span>
+                        // Determine Border Color based on state
+                        const borderColor = isReady ? 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'border-stone-700';
+
+                        return (
+                            <div key={q.id} className={`group relative bg-stone-900 border ${borderColor} rounded-xl overflow-hidden shadow-lg transition-all flex flex-col h-full`}>
+                                {/* Top Gradient Bar */}
+                                <div className={`h-1 w-full bg-gradient-to-r ${isReady ? 'from-green-400 to-emerald-600' : rarityStyle.bgGradient}`}></div>
+
+                                {/* Card Body */}
+                                <div className="p-6 flex flex-col items-center justify-center flex-1 relative min-h-[180px]">
+
+                                    {/* BACKGROUND PROGRESS FILL */}
+                                    {!isReady && (
+                                        <div className="absolute inset-0 bg-stone-800/50 z-0 flex items-end">
+                                            <div className="w-full bg-orange-600/10 transition-all duration-1000" style={{ height: `${progress}%` }}></div>
+                                        </div>
+                                    )}
+
+                                    {/* Main Icon or Animation */}
+                                    <div className="relative z-10 mb-4">
+                                        {isReady ? (
+                                            <div className="relative">
+                                                <div className={`absolute inset-0 bg-green-500 rounded-full blur-xl opacity-40 animate-pulse`}></div>
+                                                <div className={`w-20 h-20 rounded-xl bg-stone-950 border-2 border-green-500 flex items-center justify-center shadow-lg relative overflow-hidden`}>
+                                                    {getIcon(item.icon, `w-10 h-10 ${rarityStyle.color}`, item.id)}
+                                                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent animate-[shimmer_2s_infinite]"></div>
+                                                </div>
+                                                <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1 shadow-lg animate-bounce">
+                                                    <Star size={12} fill="currentColor" />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="relative">
+                                                {/* Pulsing Crafting Circle */}
+                                                <div className="w-20 h-20 rounded-full border-4 border-stone-800 border-t-orange-500 animate-spin absolute inset-0"></div>
+                                                <div className="w-20 h-20 rounded-full bg-stone-950 flex items-center justify-center shadow-inner relative overflow-hidden">
+                                                    {/* Animated Hammer Overlay */}
+                                                    <div className="absolute inset-0 bg-yellow-500/5 animate-pulse"></div>
+                                                    <Hammer size={32} className="text-orange-500 animate-bounce transition-transform duration-500" />
+                                                    <div className="absolute bottom-1 w-10 h-1 bg-stone-800 rounded-full opacity-50 blur-sm animate-pulse"></div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Item Name */}
+                                    <h3 className="text-base font-bold text-white relative z-10 text-center leading-tight mb-2">{getItemDisplayName(item)}</h3>
+
+                                    {/* Status Text / Timer */}
+                                    <div className="relative z-10">
+                                        {isReady ? (
+                                            <div className="text-green-400 font-bold uppercase tracking-widest text-sm animate-pulse">
+                                                {t('item_shop.complete')}
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center">
+                                                <div className="text-stone-400 text-[10px] uppercase tracking-wider font-bold mb-1">{language === 'th' ? 'กำลังสร้าง...' : 'Crafting...'}</div>
+                                                <div className="bg-black/40 px-3 py-1 rounded border border-stone-700/50 flex items-center gap-2">
+                                                    <Clock size={12} className="text-orange-400 animate-pulse" />
+                                                    <span className="font-mono text-lg font-bold text-orange-400">{timeString}</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Footer Actions */}
+                                <div className="p-3 bg-stone-950 border-t border-stone-800 z-10">
                                     {isReady ? (
-                                        <span className="text-green-400 text-xs font-bold animate-pulse">{t('item_shop.complete')}</span>
+                                        <button
+                                            onClick={() => handleClaimCraft(q.id)}
+                                            className="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg shadow-[0_0_15px_rgba(22,163,74,0.4)] flex items-center justify-center gap-2 transition-all hover:-translate-y-1 active:scale-95 uppercase tracking-wider text-sm"
+                                        >
+                                            <Star size={16} fill="currentColor" /> {t('item_shop.claim_item')}
+                                        </button>
                                     ) : (
-                                        <span className="text-stone-500 text-xs font-mono">{hours}h {mins}m</span>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {/* Time Skip Ticket Button */}
+                                            {(() => {
+                                                const tickets = userInventory.filter(i => i.typeId === 'time_skip_ticket');
+                                                const hasTicket = tickets.length > 0;
+                                                return (
+                                                    <button
+                                                        onClick={() => hasTicket && handleUseSkip(q.id, 'time_skip_ticket')}
+                                                        disabled={!hasTicket}
+                                                        className={`py-2 rounded-lg text-[10px] font-bold flex flex-col items-center justify-center gap-1 transition-all border
+                                                            ${hasTicket ? 'bg-blue-900/30 hover:bg-blue-800/50 text-blue-400 border-blue-800/50 hover:border-blue-500' : 'bg-stone-900 text-stone-600 border-stone-800 cursor-not-allowed opacity-50'}
+                                                        `}
+                                                        title="Skip 1 Hour"
+                                                    >
+                                                        <span className="flex items-center gap-1"><Timer size={10} /> -1h</span>
+                                                        <span className="text-[9px] opacity-70">({tickets.length})</span>
+                                                    </button>
+                                                );
+                                            })()}
+
+                                            {/* Construction Nanobot Button */}
+                                            {(() => {
+                                                const nanobots = userInventory.filter(i => i.typeId === 'construction_nanobot');
+                                                const hasBot = nanobots.length > 0;
+                                                return (
+                                                    <button
+                                                        onClick={() => hasBot && handleUseSkip(q.id, 'construction_nanobot')}
+                                                        disabled={!hasBot}
+                                                        className={`py-2 rounded-lg text-[10px] font-bold flex flex-col items-center justify-center gap-1 transition-all border
+                                                            ${hasBot ? 'bg-cyan-900/30 hover:bg-cyan-800/50 text-cyan-400 border-cyan-800/50 hover:border-cyan-500' : 'bg-stone-900 text-stone-600 border-stone-800 cursor-not-allowed opacity-50'}
+                                                        `}
+                                                        title="Instant Finish"
+                                                    >
+                                                        <span className="flex items-center gap-1"><Zap size={10} /> Instant</span>
+                                                        <span className="text-[9px] opacity-70">({nanobots.length})</span>
+                                                    </button>
+                                                );
+                                            })()}
+                                        </div>
                                     )}
                                 </div>
-                                <div className="w-full h-1.5 bg-stone-950 rounded-full overflow-hidden">
-                                    <div className={`h-full ${isReady ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${progress}%` }}></div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
+    const handleUpgrade = async () => {
+        if (!upgradeTargetId || !upgradeMaterialId) return;
+        setIsUpgrading(true);
+        try {
+            const res = await api.upgradeItem(upgradeTargetId, upgradeMaterialId);
+            if (res.success) {
+                if (addNotification) addNotification({
+                    id: Date.now().toString(),
+                    userId: userId || '',
+                    message: res.message || 'Upgrade Successful!',
+                    type: 'SUCCESS',
+                    read: false,
+                    timestamp: Date.now()
+                });
+                // Refresh data
+                const user = await api.getMe();
+                setUserInventory(user.inventory || []);
+                setUserMaterials(user.materials || {});
+                setRefreshTrigger(prev => prev + 1);
+                setUpgradeTargetId(null);
+                setUpgradeMaterialId(null);
+                if (onRefresh) onRefresh();
+            } else {
+                if (addNotification) addNotification({
+                    id: Date.now().toString(),
+                    userId: userId || '',
+                    message: res.message || 'Upgrade Failed!',
+                    type: 'ERROR',
+                    read: false,
+                    timestamp: Date.now()
+                });
+            }
+        } catch (error: any) {
+            console.error('Upgrade error:', error);
+            if (addNotification) addNotification({
+                id: Date.now().toString(),
+                userId: userId || '',
+                message: error.response?.data?.message || 'Upgrade Error',
+                type: 'ERROR',
+                read: false,
+                timestamp: Date.now()
+            });
+        } finally {
+            setIsUpgrading(false);
+        }
+    };
+
+    const renderUpgradeStation = () => {
+        // Filter eligible items for upgrade (must be upgradable type)
+        const upgradableTypes = Object.keys(EQUIPMENT_SERIES);
+
+        const inventoryItems = userInventory.filter(i => upgradableTypes.includes(i.typeId));
+
+        // Target Selection
+        const targetItem = upgradeTargetId ? userInventory.find(i => i.id === upgradeTargetId) : null;
+
+        // Material Selection (Must be same typeId, different ID, and Level 1)
+        const eligibleMaterials = targetItem
+            ? userInventory.filter(i => i.typeId === targetItem.typeId && i.id !== targetItem.id && (i.level || 1) === 1)
+            : [];
+
+        const materialItem = upgradeMaterialId ? userInventory.find(i => i.id === upgradeMaterialId) : null;
+
+        // Config for next level
+        const currentLevel = targetItem?.level || 1;
+        const nextLevel = currentLevel + 1;
+
+        // Config Lookup
+        // @ts-ignore
+        const upgradeConfig = (window as any).UPGRADE_CONFIG || { LEVELS: {} };
+        const localConfig = {
+            2: { successRate: 1.0, catalystCost: 1, fee: 10 },
+            3: { successRate: 0.9, catalystCost: 2, fee: 20 },
+            4: { successRate: 0.8, catalystCost: 3, fee: 40 },
+            5: { successRate: 0.7, catalystCost: 5, fee: 80 },
+            6: { successRate: 0.6, catalystCost: 8, fee: 150 },
+            7: { successRate: 0.5, catalystCost: 12, fee: 300 },
+            8: { successRate: 0.4, catalystCost: 18, fee: 500 },
+            9: { successRate: 0.3, catalystCost: 25, fee: 1000 },
+            10: { successRate: 0.2, catalystCost: 35, fee: 2000 }
+        } as Record<number, any>;
+
+        const config = localConfig[nextLevel];
+        const successRate = config ? Math.round(config.successRate * 100) : 0;
+        const catalystCost = config ? config.catalystCost : 0;
+
+        // Check Catalysts in inventory
+        const catalystCount = userInventory.filter(testItem => testItem.typeId === 'magnifying_glass').length || 0;
+
+        return (
+            <div className="flex flex-col h-full text-stone-300">
+                <div className="flex items-center gap-2 mb-6">
+                    <Zap className="text-purple-500" size={24} />
+                    <div>
+                        <h3 className="text-xl font-bold text-white uppercase tracking-wider">{language === 'th' ? 'สถานีอัปเกรด' : 'Upgrade Station'}</h3>
+                        <p className="text-xs text-stone-500">{language === 'th' ? 'ผสมอุปกรณ์เพื่อเพิ่มระดับและความสามารถ' : 'Fuse equipment to increase level and stats'}</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center h-full">
+                    {/* Left Slot: Base Item */}
+                    <div className="bg-stone-900/50 border border-stone-800 rounded-xl p-6 flex flex-col items-center gap-4 h-full relative">
+                        <h4 className="text-sm font-bold text-stone-400 uppercase tracking-wider">{language === 'th' ? 'อุปกรณ์หลัก' : 'Base Item'}</h4>
+                        {targetItem ? (
+                            <div className="relative group cursor-pointer" onClick={() => setUpgradeTargetId(null)}>
+                                <div className={`w-32 h-32 bg-stone-950 rounded-xl border-2 ${RARITY_SETTINGS[targetItem.rarity]?.border || 'border-stone-700'} flex items-center justify-center relative overflow-hidden`}>
+                                    {getIcon(SHOP_ITEMS.find(i => i.id === targetItem.typeId)?.icon || 'Box', `w-16 h-16 ${RARITY_SETTINGS[targetItem.rarity]?.color}`, targetItem.typeId)}
+
+                                    {/* STAR RATING SYSTEM - VERTICAL LEFT */}
+                                    <div className="absolute left-1 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 z-20">
+                                        {[...Array(5)].map((_, index) => {
+                                            // Level 1 = 0 stars
+                                            // Level 2 = 0.5 stars
+                                            // Level 3 = 1.0 stars
+                                            // ...
+                                            // Level 10 = 4.5 stars
+                                            const currentStars = ((targetItem.level || 1) - 1) / 2;
+                                            const slotIndex = 4 - index; // Render from top (4) to bottom (0)? NO. 
+                                            // User said "Start with 5 empty star slots...". Vertical.
+                                            // Usually stars go bottom to top for "filling up"? Or Top to bottom?
+                                            // "Gradient from top to bottom" implies visual.
+                                            // Let's assume standard vertical stack: Bottom is 1st star, Top is 5th?
+                                            // The user said "5 slots on the left, top to bottom 5 stars".
+                                            // "ไล่จากบนลงล่างจำนวน 5 ดวง" -> Start from Top.
+                                            // Index 0 is Top. Index 4 is Bottom.
+
+                                            const starValue = currentStars - index;
+
+                                            // Logic check:
+                                            // Lvl 1 (Stars=0). Index 0 (Top): 0 - 0 = 0. Empty.
+                                            // Lvl 2 (Stars=0.5). Index 0: 0.5 - 0 = 0.5. Half.
+                                            // Lvl 3 (Stars=1). Index 0: 1 - 0 = 1. Full.
+                                            // Lvl 4 (Stars=1.5). Index 0: 1.5 -> Full. Index 1: 1.5 - 1 = 0.5. Half.
+
+                                            return (
+                                                <div key={index} className="w-3 h-3 flex items-center justify-center">
+                                                    {starValue >= 1 ? (
+                                                        <Star size={12} className="text-yellow-400 fill-yellow-400 drop-shadow-[0_0_2px_rgba(250,204,21,0.8)]" />
+                                                    ) : starValue === 0.5 ? (
+                                                        <div className="relative">
+                                                            <StarHalf size={12} className="text-yellow-400 fill-yellow-400 drop-shadow-[0_0_2px_rgba(250,204,21,0.8)]" />
+                                                            {/* Empty background for half star? Optional but looks better */}
+                                                            <Star size={12} className="text-stone-700 absolute inset-0 -z-10" />
+                                                        </div>
+                                                    ) : (
+                                                        <Star size={12} className="text-stone-700" />
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                <div className="text-center mt-4">
+                                    <div className={`font-bold ${RARITY_SETTINGS[targetItem.rarity]?.color}`}>{getItemDisplayName(targetItem)}</div>
+                                    <div className="text-xs text-stone-500">{t('item_shop.click_to_remove')}</div>
                                 </div>
                             </div>
-
-                            <div className="relative z-10 flex items-center gap-2">
-                                {!isReady && (
-                                    <div className="flex gap-1">
-                                        {/* Time Skip Ticket Button */}
-                                        {(() => {
-                                            const tickets = userInventory.filter(i => i.typeId === 'time_skip_ticket');
-                                            if (tickets.length === 0) return null;
-                                            return (
-                                                <button
-                                                    onClick={() => handleUseSkip(q.id, 'time_skip_ticket')}
-                                                    className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded flex items-center gap-1 shadow-md transition-all active:scale-95"
-                                                    title="Skip 1 Hour"
-                                                >
-                                                    <Timer size={12} /> -1h ({tickets.length})
-                                                </button>
-                                            );
-                                        })()}
-
-                                        {/* Construction Nanobot Button */}
-                                        {(() => {
-                                            const nanobots = userInventory.filter(i => i.typeId === 'construction_nanobot');
-                                            if (nanobots.length === 0) return null;
-                                            return (
-                                                <button
-                                                    onClick={() => handleUseSkip(q.id, 'construction_nanobot')}
-                                                    className="px-2 py-1 bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold rounded flex items-center gap-1 shadow-md transition-all active:scale-95"
-                                                    title="Instant Finish"
-                                                >
-                                                    <Cpu size={12} /> Instant ({nanobots.length})
-                                                </button>
-                                            );
-                                        })()}
-                                    </div>
-                                )}
-
-                                {isReady ? (
-                                    <button onClick={() => handleClaimCraft(q.id)} className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded flex items-center gap-1 shadow-lg animate-bounce">
-                                        <Star size={12} /> {t('item_shop.claim_item')}
-                                    </button>
+                        ) : (
+                            <div className="flex-1 w-full flex flex-col gap-2 overflow-y-auto custom-scrollbar max-h-[400px]">
+                                {inventoryItems.length === 0 ? (
+                                    <div className="text-center text-stone-600 py-10">{t('item_shop.no_items')}</div>
                                 ) : (
-                                    <div className="text-xs text-stone-500 font-mono"><Clock size={14} className="animate-spin-slow" /></div>
+                                    inventoryItems.map(item => (
+                                        <div key={item.id} onClick={() => { setUpgradeTargetId(item.id); setUpgradeMaterialId(null); }}
+                                            className={`flex items-center gap-3 p-3 rounded-lg border border-stone-800 bg-stone-900/80 hover:bg-stone-800 cursor-pointer transition-all ${RARITY_SETTINGS[item.rarity]?.border ? 'hover:' + RARITY_SETTINGS[item.rarity].border : ''}`}>
+                                            <div className={`w-10 h-10 rounded bg-stone-950 flex items-center justify-center border ${RARITY_SETTINGS[item.rarity]?.border}`}>
+                                                {getIcon(SHOP_ITEMS.find(i => i.id === item.typeId)?.icon || 'Box', `w-6 h-6 ${RARITY_SETTINGS[item.rarity]?.color}`, item.typeId)}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className={`text-sm font-bold ${RARITY_SETTINGS[item.rarity]?.color}`}>{getItemDisplayName(item)}</div>
+                                                <div className="text-xs text-stone-500">Lv.{item.level || 1}</div>
+                                            </div>
+                                        </div>
+                                    ))
                                 )}
                             </div>
+                        )}
+                    </div>
 
+                    {/* Center: Info & Action */}
+                    <div className="flex flex-col items-center gap-6">
+                        <div className="flex items-center gap-4 text-stone-600">
+                            <ChevronRight size={32} />
+                            <div className="w-16 h-16 rounded-full bg-stone-900 border border-stone-700 flex items-center justify-center">
+                                <Search className="text-purple-400" size={24} />
+                            </div>
+                            <ChevronRight size={32} />
                         </div>
-                    );
-                })}
+
+                        {targetItem && nextLevel <= 10 ? (
+                            <div className="bg-stone-900/80 border border-stone-800 rounded-xl p-4 w-full text-center space-y-2">
+                                <div className="text-stone-400 text-sm">{language === 'th' ? 'โอกาสสำเร็จ' : 'Success Rate'}</div>
+                                <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-emerald-600">
+                                    {successRate}%
+                                </div>
+                                <div className="text-xs text-stone-400 border-t border-stone-800 pt-2 mt-2">
+                                    {language === 'th' ? 'ใช้แว่นขยายส่องแร่' : 'Cost'}: <span className={`${catalystCount >= catalystCost ? 'text-green-400' : 'text-red-400'} font-bold`}>{catalystCount}/{catalystCost}</span>
+                                </div>
+                            </div>
+                        ) : targetItem && nextLevel > 10 ? (
+                            <div className="text-yellow-500 font-bold text-xl uppercase tracking-widest border-2 border-yellow-500 px-6 py-2 rounded">Max Level</div>
+                        ) : null}
+
+                        <button
+                            disabled={!upgradeTargetId || !upgradeMaterialId || isUpgrading || (catalystCount < catalystCost)}
+                            onClick={handleUpgrade}
+                            className={`px-8 py-3 rounded-xl font-bold uppercase tracking-wider shadow-lg transform active:scale-95 transition-all flex items-center gap-2
+                                ${!upgradeTargetId || !upgradeMaterialId || (catalystCount < catalystCost) ? 'bg-stone-800 text-stone-600 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-500 hover:to-indigo-500 shadow-purple-500/20'}
+                            `}
+                        >
+                            {isUpgrading ? (
+                                <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div> Processing...</>
+                            ) : (
+                                <><Zap size={18} /> {language === 'th' ? 'อัปเกรด' : 'Upgrade'}</>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* Right Slot: Material Item */}
+                    <div className="bg-stone-900/50 border border-stone-800 rounded-xl p-6 flex flex-col items-center gap-4 h-full">
+                        <h4 className="text-sm font-bold text-stone-400 uppercase tracking-wider">{language === 'th' ? 'วัตถุดิบ (หายไป)' : 'Material (Consumed)'}</h4>
+                        {materialItem ? (
+                            <div className="relative group cursor-pointer" onClick={() => setUpgradeMaterialId(null)}>
+                                <div className={`w-32 h-32 bg-stone-950 rounded-xl border-2 border-stone-600 border-dashed flex items-center justify-center relative overflow-hidden opacity-80 hover:opacity-100 transition-opacity`}>
+                                    {getIcon(SHOP_ITEMS.find(i => i.id === materialItem.typeId)?.icon || 'Box', `w-16 h-16 ${RARITY_SETTINGS[materialItem.rarity]?.color} grayscale`, materialItem.typeId)}
+                                </div>
+                                <div className="text-center mt-4">
+                                    <div className={`font-bold text-stone-400`}>{getItemDisplayName(materialItem)}</div>
+                                    <div className="text-xs text-red-500">{t('item_shop.click_to_remove')}</div>
+                                </div>
+                            </div>
+                        ) : targetItem ? (
+                            <div className="flex-1 w-full flex flex-col gap-2 overflow-y-auto custom-scrollbar max-h-[400px]">
+                                {eligibleMaterials.length === 0 ? (
+                                    <div className="text-center text-stone-600 py-10">{language === 'th' ? 'ไม่มีวัตถุดิบที่ใช้ได้' : 'No eligible materials'}</div>
+                                ) : (
+                                    eligibleMaterials.map(item => (
+                                        <div key={item.id} onClick={() => setUpgradeMaterialId(item.id)}
+                                            className={`flex items-center gap-3 p-3 rounded-lg border border-stone-800 bg-stone-900/80 hover:bg-stone-800 cursor-pointer transition-all opacity-75 hover:opacity-100`}>
+                                            <div className={`w-10 h-10 rounded bg-stone-950 flex items-center justify-center border border-stone-700`}>
+                                                {getIcon(SHOP_ITEMS.find(i => i.id === item.typeId)?.icon || 'Box', `w-6 h-6 ${RARITY_SETTINGS[item.rarity]?.color}`, item.typeId)}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className={`text-sm font-bold text-stone-400`}>{getItemDisplayName(item)}</div>
+                                                <div className="text-xs text-stone-500">Lv.{item.level || 1}</div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-stone-600 text-sm text-center px-6">
+                                {language === 'th' ? 'กรุณาเลือกอุปกรณ์หลักก่อน' : 'Select Base Item First'}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         );
     };
@@ -863,6 +1244,19 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                         >
                             <Hammer size={16} /> {t('item_shop.workshop_tab')}
                         </button>
+                        <button
+                            onClick={() => setActiveTab('REPAIR')}
+                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'REPAIR' ? 'text-green-500 border-green-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
+                        >
+                            <Wrench size={16} /> {language === 'th' ? 'กล่องชุดซ่อมอุปกรณ์' : 'Repair Kit Sets'}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('UPGRADE')}
+                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'UPGRADE' ? 'text-purple-500 border-purple-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
+                        >
+                            <Zap size={16} /> {language === 'th' ? 'สถานีอัปเกรด' : 'Upgrade Station'}
+                        </button>
+
                     </div>
                 </div>
 
@@ -879,15 +1273,30 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                                 </div>
                             </div>
                         </>
-                    ) : (
+                    ) : activeTab === 'WORKSHOP' ? (
                         <div className="flex flex-col h-full">
                             {renderQueue()}
                             <div className="flex items-center gap-2 mb-4">
                                 <Hammer className="text-orange-500" size={20} />
                                 <h3 className="text-lg font-bold text-stone-200 uppercase tracking-wider">{t('item_shop.workshop_tab')}</h3>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
                                 {craftableItems.map(item => renderCraftCard(item))}
+                            </div>
+                        </div>
+                    ) : activeTab === 'UPGRADE' ? (
+                        renderUpgradeStation()
+                    ) : (
+                        <div className="flex flex-col h-full">
+                            {renderQueue()}
+                            <div className="mb-8">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Wrench className="text-green-500" size={20} />
+                                    <h3 className="text-lg font-bold text-stone-200 uppercase tracking-wider">{language === 'th' ? 'กล่องชุดซ่อมอุปกรณ์' : 'Repair Kit Sets'}</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {REPAIR_KITS.map(kit => renderCraftCard(kit as any))}
+                                </div>
                             </div>
                         </div>
                     )}
