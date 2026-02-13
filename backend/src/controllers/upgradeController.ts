@@ -2,7 +2,7 @@ import { Response } from 'express';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
-import { UPGRADE_CONFIG, SHOP_ITEMS } from '../../../constants';
+import { UPGRADE_CONFIG, SHOP_ITEMS } from '../constants';
 
 export const upgradeItem = async (req: AuthRequest, res: Response) => {
     try {

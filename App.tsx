@@ -79,65 +79,6 @@ const AppContent: React.FC = () => {
 
   // --- Routing Logic ---
 
-  // 1. If Maintenance is ON and user is NOT Admin -> show Maintenance
-  if (isSystemMaintenance && !isAdmin) {
-    // If not logged in, we must show AuthPage so they can attempt Admin login
-    if (!user) {
-      // If on landing page, stick to landing page? No, probably show maintenance if they try to login.
-      // But if site is down, maybe show maintenance immediately?
-      // For now, let's let LandingPage show, but clicking "PLAY NOW" goes to Auth which shows Maintenance?
-      // Actually, existing logic for `!user` returns AuthPage immediately.
-      // If maintenance is ON, we should probably intercept.
-      if (showLanding) {
-        return <LandingPage onPlayNow={() => setShowLanding(false)} onWhitepaper={() => { setShowLanding(false); setShowWhitepaper(true); }} />;
-      }
-      return <AuthPage onLogin={handleLogin} />;
-    }
-
-    // Is logged in as regular user -> Maintenance screen
-    return (
-      <div className="min-h-screen bg-stone-950 flex flex-col items-center justify-center p-4 text-center z-50 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-red-900/10 to-stone-950"></div>
-
-        <div className="w-24 h-24 mb-6 rounded-full bg-red-900/20 flex items-center justify-center border-4 border-red-500/30 animate-pulse relative z-10">
-          <AlertTriangle size={48} className="text-red-500" />
-        </div>
-
-        <h1 className="text-4xl font-black text-red-500 mb-6 tracking-wider uppercase drop-shadow-md relative z-10 font-display">
-          SYSTEM MAINTENANCE
-        </h1>
-
-        <div className="max-w-xl mx-auto space-y-6 relative z-10 bg-stone-900/80 p-8 rounded-2xl border border-red-500/20 backdrop-blur-sm shadow-xl">
-          <p className="text-lg text-stone-300 font-medium">
-            เนื่องจากตอนนี้เว็บไซต์ <span className="text-red-400 font-bold">โดนโจมตี</span> กำลังเจาะระบบเข้ามา
-          </p>
-          <p className="text-2xl text-yellow-400 font-bold drop-shadow-sm border-y border-yellow-500/20 py-2">
-            ผมขอปิดระบบจนถึงเวลา 20.00 น.
-          </p>
-
-          <div className="bg-red-950/40 p-4 rounded-xl border border-red-500/30 text-left space-y-2">
-            <p className="text-red-400 font-bold text-sm uppercase">
-              หมายเหตุ (Important Note)
-            </p>
-            <p className="text-stone-300 text-sm">
-              กรณีที่กำจัด Bot อาจจะต้อง <span className="text-white font-bold underline decoration-red-500">รีข้อมูลใหม่</span>
-            </p>
-            <p className="text-emerald-400 font-bold text-sm bg-emerald-900/20 p-2 rounded border border-emerald-500/20">
-              "ผู้เล่นที่เติมเงินแล้ว ผมจะคืนเป็นเงินเท่าเดิม + เงินชดเชยนะครับ"
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={handleLogout}
-          className="mt-6 text-stone-500 hover:text-white transition-colors text-sm underline z-10"
-        >
-          Logout / Switch Account
-        </button>
-      </div>
-    );
-  }
-
   // 2. Not logged in
   if (!user) {
     if (showWhitepaper) {
