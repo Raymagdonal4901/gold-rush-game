@@ -27,7 +27,7 @@ function getRigPresetId(rig: any): number {
 }
 
 // Roll loot from a rig's loot table
-function rollLoot(presetId: number): { tier: number; amount: number } {
+function rollLoot(presetId: number): { tier?: number; itemId?: string; amount: number } {
     const table = RIG_LOOT_TABLES[presetId];
     if (!table) {
         // Fallback: 1x Coal for rigs without a loot table (Tier 1, Tier 9)
@@ -41,12 +41,12 @@ function rollLoot(presetId: number): { tier: number; amount: number } {
             const amount = entry.minAmount === entry.maxAmount
                 ? entry.minAmount
                 : Math.floor(Math.random() * (entry.maxAmount - entry.minAmount + 1)) + entry.minAmount;
-            return { tier: entry.matTier, amount };
+            return { tier: entry.matTier, itemId: entry.itemId, amount };
         }
     }
     // Safety fallback: return last entry
     const last = table[table.length - 1];
-    return { tier: last.matTier, amount: last.minAmount };
+    return { tier: last.matTier, itemId: last.itemId, amount: last.minAmount };
 }
 
 // Get all rigs for a user
@@ -529,15 +529,56 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
         // Per-Rig Loot Drop
         const presetId = getRigPresetId(rig);
         const loot = rollLoot(presetId);
-        const lootTier = loot.tier;
         const lootAmount = loot.amount;
 
-        if (!user.materials) user.materials = {};
-        user.materials[lootTier] = (user.materials[lootTier] || 0) + lootAmount;
-        user.markModified('materials');
-        await user.save();
+        let rewardName = '';
+        let rewardType = 'MATERIAL';
 
-        const matName = MATERIAL_NAMES[lootTier] || { th: `แร่ Tier ${lootTier}`, en: `Ore Tier ${lootTier}` };
+        if (loot.itemId) {
+            rewardType = 'ITEM';
+            const shopItem = SHOP_ITEMS.find(s => s.id === loot.itemId);
+            if (!shopItem) {
+                console.error(`[ERROR] Item pool mismatch: ${loot.itemId} not found in SHOP_ITEMS`);
+                return res.status(500).json({ message: 'Loot error' });
+            }
+
+            const nameObj = shopItem.name;
+            rewardName = typeof nameObj === 'object' ? nameObj.th : nameObj;
+
+            // Add to Inventory
+            if (!user.inventory) user.inventory = [];
+            const lifespan = shopItem.lifespanDays || 30;
+            const bonus = (Number(shopItem.minBonus) + Number(shopItem.maxBonus)) / 2 || 0;
+
+            for (let i = 0; i < lootAmount; i++) {
+                user.inventory.push({
+                    id: Math.random().toString(36).substr(2, 9),
+                    typeId: shopItem.id,
+                    name: shopItem.name,
+                    price: shopItem.price,
+                    dailyBonus: bonus,
+                    durationBonus: shopItem.durationBonus || 0,
+                    rarity: shopItem.rarity || 'RARE',
+                    purchasedAt: Date.now(),
+                    lifespanDays: lifespan,
+                    expireAt: Date.now() + (lifespan * 24 * 60 * 60 * 1000),
+                    maxDurability: shopItem.maxDurability || (lifespan * 100),
+                    currentDurability: shopItem.maxDurability || (lifespan * 100),
+                    level: 1
+                });
+            }
+            user.markModified('inventory');
+        } else {
+            const lootTier = loot.tier ?? 1;
+            if (!user.materials) user.materials = {};
+            user.materials[lootTier] = (user.materials[lootTier] || 0) + lootAmount;
+            user.markModified('materials');
+
+            const matName = MATERIAL_NAMES[lootTier as keyof typeof MATERIAL_NAMES] || { th: `แร่ Tier ${lootTier}`, en: `Ore Tier ${lootTier}` };
+            rewardName = matName.th;
+        }
+
+        await user.save();
 
         // Log Transaction
         const materialTx = new Transaction({
@@ -545,18 +586,21 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
             type: 'GIFT_CLAIM',
             amount: 0,
             status: 'COMPLETED',
-            description: `ได้รับไอเทมจากเครื่องขุด: ${matName.th} x${lootAmount}`
+            description: `ได้รับไอเทมจากเครื่องขุด: ${rewardName} x${lootAmount}`
         });
         await materialTx.save();
 
-        console.log(`[DEBUG_COLLECT] Success. User: ${userId}, Rig: ${rigId}, Preset: ${presetId}, Item: ${matName.en} x${lootAmount}`);
+        console.log(`[DEBUG_COLLECT] Success. User: ${userId}, Rig: ${rigId}, Preset: ${presetId}, Item: ${rewardName} x${lootAmount}`);
         return res.json({
             success: true,
-            type: 'MATERIAL',
-            tier: lootTier,
+            type: rewardType,
+            tier: loot.tier,
+            itemId: loot.itemId,
             amount: lootAmount,
-            name: matName,
-            rig
+            name: rewardType === 'ITEM' ? (SHOP_ITEMS.find(s => s.id === loot.itemId)?.name) : (MATERIAL_NAMES[(loot.tier ?? 1) as keyof typeof MATERIAL_NAMES]),
+            rig,
+            materials: user.materials,
+            inventory: user.inventory
         });
     } catch (error) {
         console.error(error);
@@ -606,15 +650,56 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
         // Per-Rig Loot Drop
         const presetId = getRigPresetId(rig);
         const loot = rollLoot(presetId);
-        const lootTier = loot.tier;
         const lootAmount = loot.amount;
 
-        if (!user.materials) user.materials = {};
-        user.materials[lootTier] = (user.materials[lootTier] || 0) + lootAmount;
-        user.markModified('materials');
-        await user.save();
+        let rewardName = '';
+        let rewardType = 'MATERIAL';
 
-        const matName = MATERIAL_NAMES[lootTier] || { th: `แร่ Tier ${lootTier}`, en: `Ore Tier ${lootTier}` };
+        if (loot.itemId) {
+            rewardType = 'ITEM';
+            const shopItem = SHOP_ITEMS.find(s => s.id === loot.itemId);
+            if (!shopItem) {
+                console.error(`[ERROR] Item pool mismatch: ${loot.itemId} not found in SHOP_ITEMS`);
+                return res.status(500).json({ message: 'Loot error' });
+            }
+
+            const nameObj = shopItem.name;
+            rewardName = typeof nameObj === 'object' ? nameObj.th : nameObj;
+
+            // Add to Inventory
+            if (!user.inventory) user.inventory = [];
+            const lifespan = shopItem.lifespanDays || 30;
+            const bonus = (Number(shopItem.minBonus) + Number(shopItem.maxBonus)) / 2 || 0;
+
+            for (let i = 0; i < lootAmount; i++) {
+                user.inventory.push({
+                    id: Math.random().toString(36).substr(2, 9),
+                    typeId: shopItem.id,
+                    name: shopItem.name,
+                    price: shopItem.price,
+                    dailyBonus: bonus,
+                    durationBonus: shopItem.durationBonus || 0,
+                    rarity: shopItem.rarity || 'RARE',
+                    purchasedAt: Date.now(),
+                    lifespanDays: lifespan,
+                    expireAt: Date.now() + (lifespan * 24 * 60 * 60 * 1000),
+                    maxDurability: shopItem.maxDurability || (lifespan * 100),
+                    currentDurability: shopItem.maxDurability || (lifespan * 100),
+                    level: 1
+                });
+            }
+            user.markModified('inventory');
+        } else {
+            const lootTier = loot.tier ?? 1;
+            if (!user.materials) user.materials = {};
+            user.materials[lootTier] = (user.materials[lootTier] || 0) + lootAmount;
+            user.markModified('materials');
+
+            const matName = MATERIAL_NAMES[lootTier] || { th: `แร่ Tier ${lootTier}`, en: `Ore Tier ${lootTier}` };
+            rewardName = matName.th;
+        }
+
+        await user.save();
 
         // Log Transaction
         const giftTx = new Transaction({
@@ -622,17 +707,19 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
             type: 'GIFT_CLAIM',
             amount: 0,
             status: 'COMPLETED',
-            description: `ได้รับของขวัญจากเครื่องขุด: ${matName.th} x${lootAmount}`
+            description: `ได้รับของขวัญจากเครื่องขุด: ${rewardName} x${lootAmount}`
         });
         await giftTx.save();
 
         res.json({
-            type: 'MATERIAL',
-            tier: lootTier,
+            type: rewardType,
+            tier: loot.tier,
+            itemId: loot.itemId,
             amount: lootAmount,
-            name: matName,
+            name: rewardType === 'ITEM' ? (SHOP_ITEMS.find(s => s.id === loot.itemId)?.name) : (MATERIAL_NAMES[loot.tier ?? 1]),
             rig,
-            materials: user.materials
+            materials: user.materials,
+            inventory: user.inventory
         });
 
     } catch (error) {

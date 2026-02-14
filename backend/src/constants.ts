@@ -177,7 +177,8 @@ export const MATERIAL_CONFIG = {
 };
 
 export interface LootEntry {
-    matTier: number;
+    matTier?: number;
+    itemId?: string;
     minAmount: number;
     maxAmount: number;
     chance: number;
@@ -186,22 +187,25 @@ export interface LootEntry {
 export const RIG_LOOT_TABLES: Record<number, LootEntry[]> = {
     // Tier 2: สว่านพกพา (Portable Drill)
     2: [
-        { matTier: 0, minAmount: 3, maxAmount: 5, chance: 60 },
+        { matTier: 0, minAmount: 3, maxAmount: 5, chance: 50 },
         { matTier: 1, minAmount: 1, maxAmount: 1, chance: 35 },
-        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 5 },
+        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 10 },
+        { itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 5 },
     ],
     // Tier 3: เครื่องขุดถ่านหิน (Coal Excavator)
     3: [
-        { matTier: 0, minAmount: 5, maxAmount: 8, chance: 30 },
+        { matTier: 0, minAmount: 5, maxAmount: 8, chance: 20 },
         { matTier: 1, minAmount: 1, maxAmount: 2, chance: 50 },
         { matTier: 2, minAmount: 1, maxAmount: 1, chance: 15 },
-        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 5 },
+        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 10 },
+        { itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 5 },
     ],
     // Tier 4: เครื่องขุดทองแดง (Copper Excavator)
     4: [
         { matTier: 1, minAmount: 2, maxAmount: 3, chance: 50 },
-        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 40 },
+        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 35 },
         { matTier: 3, minAmount: 1, maxAmount: 1, chance: 10 },
+        { itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 5 },
     ],
     // Tier 5: เครื่องขุดเหล็ก (Iron Excavator)
     5: [
@@ -461,11 +465,12 @@ export interface ShopItemConfig {
     specialEffect?: { th: string; en: string };
     description?: { th: string; en: string };
     tier?: number;
+    rarity?: string;
 }
 
 export const SHOP_ITEMS: ShopItemConfig[] = [
-    { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 5, icon: 'Cpu', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้สำหรับอัปเกรดเครื่องจักรเพื่อเพิ่มกำลังการขุด', en: 'Used for upgrading rigs to increase mining power' } },
-    { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mine Key' }, price: 5, icon: 'Key', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้เปิดถ้ำสำรวจเพื่อลุ้นรับไอเทมหายาก', en: 'Used to open exploration caves for rare items' }, buyable: false },
+    { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 5, icon: 'Cpu', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, rarity: 'RARE', description: { th: 'ใช้สำหรับอัปเกรดเครื่องจักรเพื่อเพิ่มกำลังการขุด', en: 'Used for upgrading rigs to increase mining power' } },
+    { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mine Key' }, price: 5, icon: 'Key', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, rarity: 'EPIC', description: { th: 'ใช้เปิดถ้ำสำรวจเพื่อลุ้นรับไอเทมหายาก', en: 'Used to open exploration caves for rare items' }, buyable: false },
     { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 5, icon: 'Factory', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้สำหรับสกัดแร่ระดับต่ำให้เป็นแร่ระดับสูง', en: 'Used for refining low tier materials' } },
     { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 5, icon: 'Search', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้ตรวจสอบหาแร่หายากโดยอัตโนมัติ', en: 'Automatically detects rare minerals' } },
     { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 300, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ป้องกันระดับเครื่องจักรลดระดับเมื่ออัปเกรดล้มเหลว', en: 'Prevents rig downgrade upon upgrade failure' }, buyable: true },

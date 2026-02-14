@@ -519,7 +519,33 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             else if (investment >= 5000) tier = 3;
             else if (investment >= 1000) tier = 2;
 
-            await api.collectMaterials(rig.id, rig.currentMaterials, tier);
+            const res = await api.collectMaterials(rig.id, rig.currentMaterials, tier);
+
+            if (res && res.type === 'ITEM') {
+                const nameTh = typeof res.name === 'object' ? res.name.th : res.name;
+                const isKey = res.itemId === 'chest_key';
+
+                if (isKey) {
+                    setSuccessModalConfig({
+                        title: language === 'th' ? 'ได้รับกุญแจเข้าเหมือง!' : 'Key Received!',
+                        message: language === 'th' ? `คุณได้รับ ${nameTh} จำนวน ${res.amount} ดอก` : `You received ${res.amount}x ${typeof res.name === 'object' ? res.name.en : res.name}`,
+                        type: 'KEY'
+                    });
+                    setIsSuccessModalOpen(true);
+                } else {
+                    setPendingMaterial({
+                        name: res.name,
+                        tier: 999,
+                        amount: res.amount
+                    });
+                    setIsMaterialRevealOpen(true);
+                }
+            } else if (res && res.type === 'MATERIAL' && res.tier === 7) {
+                // Check if it's the old Vibranium that was confused for keys, now explicitly just material
+                // No special modal needed, just auto-collect or maybe show small toast?
+                // Current logic just refreshes data.
+            }
+
             fetchData();
         } catch (err: any) {
             console.error("Collect materials failed", err);
@@ -546,10 +572,33 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             const rigId = typeof rigInput === 'string' ? rigInput : rigInput.id;
             const res = await api.claimRigGift(rigId);
 
-            if (res && res.type === 'MATERIAL') {
-                // Show specialized SuccessModal if it's a key
+            if (res && res.type === 'ITEM') {
                 const nameTh = typeof res.name === 'object' ? res.name.th : res.name;
-                const isKey = nameTh.includes('กุญแจ') || (res.tier === 7);
+                const isKey = res.itemId === 'chest_key';
+
+                if (isKey) {
+                    setSuccessModalConfig({
+                        title: language === 'th' ? 'ได้รับกุญแจเข้าเหมือง!' : 'Key Received!',
+                        message: language === 'th' ? `คุณได้รับ ${nameTh} จำนวน ${res.amount} ดอก` : `You received ${res.amount}x ${typeof res.name === 'object' ? res.name.en : res.name}`,
+                        type: 'KEY'
+                    });
+                    setIsSuccessModalOpen(true);
+                } else {
+                    // Generic Item Reward Modal (Reuse Material Modal or Create New)
+                    setPendingMaterial({
+                        name: res.name,
+                        tier: 999, // Dummy tier for items
+                        amount: res.amount
+                    });
+                    setIsMaterialRevealOpen(true);
+                }
+                fetchData();
+            } else if (res && res.type === 'MATERIAL') {
+                // Show specialized SuccessModal if it's a key (Legacy fallback)
+                const nameTh = typeof res.name === 'object' ? res.name.th : res.name;
+                // Strict check: Only treat as key if explicitly chest_key or specifically handled legacy logic
+                // Vibranium (Tier 7) should NOT be a key anymore
+                const isKey = nameTh.includes('กุญแจ') && res.tier !== 7;
 
                 if (isKey) {
                     setSuccessModalConfig({
