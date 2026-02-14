@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import User from '../models/User';
+import Rig from '../models/Rig';
 import { AuthRequest } from '../middleware/auth';
 
 const SLOT_EXPANSION_CONFIG: Record<number, { title: string; cost: number; mats: Record<number, number>; item?: string; itemCount?: number }> = {
@@ -109,6 +110,83 @@ export const unlockSlot = async (req: AuthRequest, res: Response) => {
     }
 };
 
+export const recalculateUserIncome = async (userId: string) => {
+    try {
+        const user = await User.findById(userId);
+        if (!user) return 0;
+
+        const rigs = await Rig.find({ ownerId: userId, isDead: { $ne: true } });
+
+        let totalBaseDaily = 0;
+        let totalEquipmentDaily = 0;
+
+        // Calculate Multipliers
+        // Check for Vibranium in inventory
+        const hasVibranium = user.inventory.some((i: any) => i.typeId === 'vibranium');
+        const globalMultiplier = hasVibranium ? 2 : 1;
+
+        for (const rig of rigs) {
+            // Base Profit + Bonus Profit
+            // Handle Legacy Scale if needed (though backend should start standardizing)
+            // Mirroring frontend logic:
+
+            const rigNameStr = typeof rig.name === 'string' ? rig.name : (rig.name?.en || rig.name?.th || '');
+            const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(rigNameStr);
+            const effectiveBonusProfit = isNoBonusRig ? 0 : (Number(rig.bonusProfit) || 0);
+
+            // Legacy Scale Fallback from frontend (rig.dailyProfit < 5 -> * 35)
+            // But usually backend stores correct values. We'll trust DB value for now, 
+            // or apply same heuristic if values are suspiciously low? 
+            // Let's assume DB values are correct THB for now to avoid double scaling if fixed elsewhere.
+            // Actually, frontend says: "All amounts in system are stored as THB".
+            // So we just sum them up.
+
+            const baseDailyProfit = Number(rig.dailyProfit) || 0;
+            const bonusProfit = Number(effectiveBonusProfit) || 0;
+
+            // Equipment Bonus
+            let equippedBonus = 0;
+            if (rig.slots && rig.slots.length > 0) {
+                for (const itemId of rig.slots) {
+                    if (!itemId) continue;
+                    const item = user.inventory.find((i: any) => i.id === itemId);
+                    if (item) {
+                        equippedBonus += (Number(item.dailyBonus) || 0);
+                    }
+                }
+            }
+
+            totalBaseDaily += baseDailyProfit + bonusProfit;
+            totalEquipmentDaily += equippedBonus;
+        }
+
+        const totalDailyIncome = (totalBaseDaily + totalEquipmentDaily) * globalMultiplier;
+
+        user.totalDailyIncome = totalDailyIncome;
+        await user.save();
+
+        return totalDailyIncome;
+
+    } catch (error) {
+        console.error("Error recalculating income:", error);
+        return 0;
+    }
+};
+
+export const recalculateAllUsersIncome = async (req: Request, res: Response) => {
+    try {
+        const users = await User.find({});
+        let count = 0;
+        for (const user of users) {
+            await recalculateUserIncome((user._id as unknown) as string);
+            count++;
+        }
+        res.json({ success: true, message: `Recalculated income for ${count} users` });
+    } catch (error) {
+        res.status(500).json({ message: 'Migration failed', error });
+    }
+};
+
 export const getLeaderboard = async (req: Request, res: Response) => {
     try {
         // Fetch top 20 users by daily income (calculated or stored)
@@ -123,16 +201,17 @@ export const getLeaderboard = async (req: Request, res: Response) => {
         // Let's use 'balance' for "Richest".
         // Title says "Top 10 Mining Empire" -> "อันดับเศรษฐี".
 
-        const users = await User.find({})
-            .sort({ balance: -1 })
+        // Fetch top 20 users by totalDailyIncome
+        const users = await User.find({ totalDailyIncome: { $gt: 0 } })
+            .sort({ totalDailyIncome: -1 })
             .limit(20)
-            .select('username balance');
+            .select('username totalDailyIncome balance');
 
         // Map to format
         const leaders = users.map((u, index) => ({
             id: u._id,
             username: u.username,
-            dailyIncome: u.balance, // Using balance as proxy for "Wealth"
+            dailyIncome: u.totalDailyIncome || 0,
             rank: index + 1
         }));
 

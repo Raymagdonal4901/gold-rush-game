@@ -111,7 +111,7 @@ export const GloveRevealModal: React.FC<GloveRevealModalProps> = ({
                                 {getLocalized(gloveName)}
                             </div>
                             <div className={`text-xl font-mono mt-2 ${getRarityColor(gloveRarity)}`}>
-                                +{gloveBonus.toFixed(2)} {CURRENCY}{t('common.per_day')}
+                                +{(gloveBonus || 0).toFixed(2)} {CURRENCY}{t('common.per_day')}
                             </div>
                             <div className="text-stone-500 text-sm mt-4">
                                 {t('glove_reveal.auto_equip')}

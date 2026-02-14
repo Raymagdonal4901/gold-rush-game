@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Hand, Lock, Truck, Cpu, Hourglass, Key, Factory, Search, FileText, Briefcase, Settings, Hammer, Wrench } from 'lucide-react';
+import { Sparkles, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Hand, Lock, Truck, Cpu, Hourglass, Key, Factory, Search, FileText, Briefcase, Settings, Hammer, Wrench, TrainFront } from 'lucide-react';
 import { Rarity } from '../services/types';
 import { RARITY_SETTINGS, CURRENCY } from '../constants';
 import { InfinityGlove } from './InfinityGlove';
@@ -50,7 +50,7 @@ const ItemIcon: React.FC<{ typeId?: string, name?: string, materialId?: number, 
     if (itemName.includes('มือถือ') || itemName.includes('Mobile') || itemName.includes('Phone')) return <Smartphone className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
     if (itemName.includes('คอม') || itemName.includes('PC') || itemName.includes('Computer')) return <Monitor className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
     if (itemName.includes('หุ่นยนต์') || itemName.includes('Robot')) return <Bot className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
-    if (itemName.includes('ระบบล็อค') || itemName.includes('Lock')) return <Truck className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
+    if (itemName.includes('ระบบล็อค') || itemName.includes('Lock') || itemName.includes('รถไฟฟ้า')) return <TrainFront className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
 
     // If it's a "glove" or undefined type (default loot), show the Infinity Glove
     // But verify it's not one of the above first (implicit else)
@@ -59,15 +59,13 @@ const ItemIcon: React.FC<{ typeId?: string, name?: string, materialId?: number, 
     }
 
     let IconComp = Hand;
-    if (typeId.startsWith('hat')) IconComp = HardHat;
-    else if (typeId.startsWith('glasses')) IconComp = Glasses;
+    if (typeId.startsWith('glasses')) IconComp = Glasses;
     else if (typeId.startsWith('uniform')) IconComp = Shirt;
     else if (typeId.startsWith('bag')) IconComp = Backpack;
     else if (typeId.startsWith('boots')) IconComp = Footprints;
     else if (typeId.startsWith('mobile')) IconComp = Smartphone;
     else if (typeId.startsWith('pc')) IconComp = Monitor;
-    else if (typeId.startsWith('robot')) IconComp = Bot;
-    else if (typeId === 'auto_excavator') IconComp = Truck;
+    else if (typeId === 'auto_excavator' || typeId.startsWith('truck')) IconComp = TrainFront;
     else if (typeId === 'upgrade_chip') IconComp = Cpu;
     else if (typeId.startsWith('hourglass')) IconComp = Hourglass;
     else if (typeId.startsWith('repair_kit')) {

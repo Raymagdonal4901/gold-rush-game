@@ -1,11 +1,12 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { X, Skull, Flame, Rocket, Clock, Coins, Key, ArrowRight, Timer, CheckCircle2, AlertCircle, Sparkles, Pickaxe, Hammer, Info, Hourglass } from 'lucide-react';
+import { X, Skull, Flame, Rocket, Clock, Coins, Key, ArrowRight, Timer, CheckCircle2, AlertCircle, Sparkles, Pickaxe, Hammer, Info, Hourglass, Search, Cpu } from 'lucide-react';
 import { DUNGEON_CONFIG, CURRENCY, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
 import { MockDB } from '../services/db';
 import { User, Expedition, OilRig, AccessoryItem } from '../services/types';
 import { api } from '../services/api';
+import { MaterialIcon } from './MaterialIcon';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface DungeonModalProps {
@@ -22,7 +23,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
     const [activeExpedition, setActiveExpedition] = useState<Expedition | null>(null);
     const [selectedDungeonId, setSelectedDungeonId] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState<string>('');
-    const [claimResult, setClaimResult] = useState<{ success: boolean, reward: string, type: string } | null>(null);
+    const [claimResult, setClaimResult] = useState<{ success: boolean, reward: string, type: string, rewards?: any[] } | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
     // Selection State
@@ -40,12 +41,8 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                 setActiveExpedition(user.activeExpedition || null);
             }
 
-            const availableRigs = (rigs.length > 0 ? rigs : MockDB.getMyRigs(user.id)).filter(r => {
-                const durationMonths = r.durationMonths || 0;
-                const purchasedAt = r.purchasedAt || Date.now();
-                const baseDurationMs = durationMonths * 30 * 24 * 60 * 60 * 1000;
-                const expiryTime = purchasedAt + baseDurationMs;
-                const isExpired = Date.now() >= expiryTime;
+            const availableRigs = ((rigs && rigs.length > 0) ? rigs : MockDB.getMyRigs(user.id)).filter(r => {
+                const isExpired = r.expiresAt ? Date.now() >= r.expiresAt : false;
 
                 // Exclude rigs that are already on an expedition
                 const isExploring = user.activeExpedition && user.activeExpedition.rigId === r.id && !user.activeExpedition.isCompleted;
@@ -341,14 +338,44 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                     {t('dungeon.congrats')}
                                 </h3>
 
-                                <div className="bg-stone-900/80 backdrop-blur-sm border border-yellow-500/30 p-4 rounded-xl shadow-lg transform transition-all duration-300">
-                                    <div className="text-xs text-yellow-500/80 uppercase font-bold tracking-widest mb-1">{t('dungeon.reward_obtained')}</div>
-                                    <div className="font-bold text-white leading-relaxed drop-shadow-md whitespace-pre-line">
-                                        {(claimResult.reward || 'Unknown Reward').split('+').map((part, idx) => (
-                                            <div key={idx} className={(part || '').includes('JACKPOT') ? 'text-yellow-400 font-extrabold text-lg md:text-xl mt-1 animate-pulse' : 'text-base md:text-lg text-white'}>
-                                                {(part || '').trim() || 'N/A'}
+                                <div className="bg-stone-900/80 backdrop-blur-sm border border-yellow-500/30 p-6 rounded-2xl shadow-lg transform transition-all duration-300 w-full">
+                                    <div className="text-xs text-yellow-500/80 uppercase font-bold tracking-widest mb-4">{t('dungeon.reward_obtained')}</div>
+                                    <div className="flex flex-wrap justify-center gap-4">
+                                        {claimResult.rewards ? (
+                                            claimResult.rewards.map((r, i) => (
+                                                <div key={i} className={`flex flex-col items-center gap-2 p-3 rounded-xl bg-stone-950/50 border ${r.type === 'rare' ? 'border-yellow-500/50 shadow-[0_0_10px_rgba(234,179,8,0.2)]' : 'border-stone-800'}`}>
+                                                    <div className="relative">
+                                                        {r.tier !== undefined ? (
+                                                            <MaterialIcon id={r.tier} size="w-12 h-12" iconSize={24} />
+                                                        ) : (
+                                                            <div className="w-12 h-12 flex items-center justify-center text-yellow-400">
+                                                                {r.itemId === 'chest_key' ? <Key size={24} /> :
+                                                                    r.itemId === 'upgrade_chip' ? <Cpu size={24} /> :
+                                                                        r.itemId === 'mixer' ? <Hammer size={24} /> :
+                                                                            r.itemId === 'magnifying_glass' ? <Search size={24} /> :
+                                                                                r.itemId === 'hourglass_small' || r.itemId === 'hourglass_medium' || r.itemId === 'hourglass_large' ? <Clock size={24} /> :
+                                                                                    <Sparkles size={24} />}
+                                                            </div>
+                                                        )}
+                                                        <span className="absolute -bottom-1 -right-1 bg-stone-900 text-[10px] font-black px-1.5 py-0.5 rounded-full border border-stone-800">
+                                                            x{r.amount || 1}
+                                                        </span>
+                                                    </div>
+                                                    <span className={`text-[10px] font-bold uppercase tracking-wider ${r.type === 'rare' ? 'text-yellow-400' : 'text-stone-400'}`}>
+                                                        {r.itemId ? getLocalized(SHOP_ITEMS.find(s => s.id === r.itemId)?.name || r.itemId) :
+                                                            getLocalized(MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES])}
+                                                    </span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="font-bold text-white leading-relaxed drop-shadow-md whitespace-pre-line">
+                                                {(claimResult.reward || 'Unknown Reward').split('+').map((part, idx) => (
+                                                    <div key={idx} className={(part || '').includes('JACKPOT') ? 'text-yellow-400 font-extrabold text-lg md:text-xl mt-1 animate-pulse' : 'text-base md:text-lg text-white'}>
+                                                        {(part || '').trim() || 'N/A'}
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -419,10 +446,10 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                                 </button>
                                                 <button
                                                     onClick={() => handleStart(dungeon.id, true)}
-                                                    disabled={!selectedRigId}
-                                                    className="py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg text-[10px] md:text-sm"
+                                                    disabled={!selectedRigId || user.inventory.filter(i => i.typeId === 'chest_key').length < (dungeon.keyCost || 1)}
+                                                    className="py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-stone-800 disabled:text-stone-500 disabled:border-stone-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg text-[10px] md:text-sm transition-all"
                                                 >
-                                                    <Key size={14} /> {t('dungeon.use_key').replace('{count}', dungeon.keyCost.toString())}
+                                                    <Key size={14} /> {t('dungeon.use_key').replace('{count}', (dungeon.keyCost || 1).toString())}
                                                 </button>
                                             </div>
                                         );
@@ -455,39 +482,66 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                         </div>
                                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
                                             {/* Jackpot */}
-                                            {dungeon.id !== 1 && (
-                                                <div>
-                                                    <div className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider mb-1 flex items-center gap-1"><Sparkles size={10} /> {t('dungeon.jackpot_label')} (100%)</div>
-                                                    <ul className="text-[10px] text-yellow-100 space-y-1">
-                                                        {dungeon.rewards.rare.map((r, i) => {
-                                                            if (r.tier !== undefined) {
-                                                                const name = MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES];
-                                                                return <li key={i} className="flex justify-between"><span>• {getLocalized(name)}</span> <span>x{r.amount}</span></li>
-                                                            } else {
-                                                                const item = SHOP_ITEMS.find(s => s.id === r.itemId);
-                                                                return <li key={i} className="flex justify-between"><span>• {item ? getLocalized(item.name) : r.itemId}</span> <span>x{r.amount}</span></li>
-                                                            }
+                                            {(dungeon.id !== 1 && dungeon.rewards.rare.length > 0) || (dungeon.probabilities && dungeon.probabilities.rare > 0) ? (
+                                                <div className="bg-yellow-950/20 p-2 rounded-lg border border-yellow-500/20">
+                                                    <div className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider mb-2 flex items-center gap-1"><Sparkles size={10} /> {t('dungeon.jackpot_label')} ({dungeon.probabilities?.rare || 5}%)</div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {dungeon.rewards.rare.map((r: any, i) => {
+                                                            const isMat = r.tier !== undefined;
+                                                            const itemInfo = isMat ? null : SHOP_ITEMS.find(s => s.id === r.itemId);
+                                                            const amountDisplay = r.minAmount && r.maxAmount ? `${r.minAmount}-${r.maxAmount}` : r.amount;
+                                                            return (
+                                                                <div key={i} className="flex items-center gap-1.5 bg-stone-900/50 p-1 rounded">
+                                                                    {isMat ? (
+                                                                        <MaterialIcon id={r.tier!} size="w-4 h-4" iconSize={12} />
+                                                                    ) : (
+                                                                        <div className="text-yellow-500"><Key size={12} /></div>
+                                                                    )}
+                                                                    <div className="flex flex-col min-w-0">
+                                                                        <span className="text-[8px] text-yellow-100 truncate">{isMat ? getLocalized(MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES]) : getLocalized(itemInfo?.name || r.itemId)}</span>
+                                                                        <span className="text-[7px] text-yellow-500/70 font-bold">x{amountDisplay}</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
                                                         })}
-                                                    </ul>
+                                                    </div>
                                                 </div>
-                                            )}
+                                            ) : null}
                                             {/* Common */}
-                                            <div>
-                                                <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-1">{t('dungeon.common_label')} (80%)</div>
-                                                <ul className="text-[10px] text-stone-300 space-y-1">
-                                                    {dungeon.rewards.common.map((r, i) => (
-                                                        <li key={i} className="flex justify-between"><span>• {getLocalized(MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES])}</span> <span>x{r.amount}</span></li>
-                                                    ))}
-                                                </ul>
+                                            <div className="bg-stone-900/40 p-2 rounded-lg border border-stone-800">
+                                                <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-2">{t('dungeon.common_label')} ({dungeon.probabilities?.common || 85}%)</div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {dungeon.rewards.common.map((r, i) => {
+                                                        const amountDisplay = r.minAmount && r.maxAmount ? `${r.minAmount}-${r.maxAmount}` : r.amount;
+                                                        return (
+                                                            <div key={i} className="flex items-center gap-1.5 bg-stone-950/50 p-1 rounded">
+                                                                <MaterialIcon id={r.tier} size="w-4 h-4" iconSize={12} />
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <span className="text-[8px] text-stone-300 truncate">{getLocalized(MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES])}</span>
+                                                                    <span className="text-[7px] text-emerald-500/70 font-bold">x{amountDisplay}</span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                             {/* Salt */}
-                                            <div>
-                                                <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">{t('dungeon.salt_label')} (20%)</div>
-                                                <ul className="text-[10px] text-stone-500 space-y-1">
-                                                    {dungeon.rewards.salt.map((r, i) => (
-                                                        <li key={i} className="flex justify-between"><span>• {getLocalized(MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES])}</span> <span>x{r.amount}</span></li>
-                                                    ))}
-                                                </ul>
+                                            <div className="bg-stone-900/20 p-2 rounded-lg border border-stone-900">
+                                                <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2">{t('dungeon.salt_label')} ({dungeon.probabilities?.salt || 15}%)</div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {dungeon.rewards.salt.map((r, i) => {
+                                                        const amountDisplay = r.minAmount && r.maxAmount ? `${r.minAmount}-${r.maxAmount}` : r.amount;
+                                                        return (
+                                                            <div key={i} className="flex items-center gap-1.5 bg-stone-950/30 p-1 rounded grayscale opacity-70">
+                                                                <MaterialIcon id={r.tier} size="w-4 h-4" iconSize={12} />
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <span className="text-[8px] text-stone-500 truncate">{getLocalized(MATERIAL_CONFIG.NAMES[r.tier as keyof typeof MATERIAL_CONFIG.NAMES])}</span>
+                                                                    <span className="text-[7px] text-stone-600 font-bold">x{amountDisplay}</span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -506,11 +560,11 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                             </div>
                                             <div className="space-y-1 pt-1">
                                                 <div className="text-[10px] text-stone-500 uppercase font-bold">{t('dungeon.chances')}</div>
-                                                <div className="flex justify-between"><span>{t('dungeon.common_label')}</span><span className="text-emerald-400">80%</span></div>
-                                                <div className="flex justify-between"><span>{t('dungeon.salt_label')}</span><span className="text-stone-500">20%</span></div>
-                                                {dungeon.id !== 1 && (
-                                                    <div className="flex justify-between"><span>{t('dungeon.jackpot_label')}</span><span className="text-yellow-500">100%</span></div>
-                                                )}
+                                                <div className="flex justify-between"><span>{t('dungeon.common_label')}</span><span className="text-emerald-400">{dungeon.probabilities?.common || 85}%</span></div>
+                                                <div className="flex justify-between"><span>{t('dungeon.salt_label')}</span><span className="text-stone-500">{dungeon.probabilities?.salt || 15}%</span></div>
+                                                {(dungeon.id !== 1 && dungeon.rewards.rare.length > 0) || (dungeon.probabilities && dungeon.probabilities.rare > 0) ? (
+                                                    <div className="flex justify-between"><span>{t('dungeon.jackpot_label')}</span><span className="text-yellow-500">{dungeon.probabilities?.rare || 5}%</span></div>
+                                                ) : null}
                                             </div>
                                         </div>
 

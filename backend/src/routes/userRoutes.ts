@@ -1,6 +1,6 @@
 import express from 'express';
 import { checkIn } from '../controllers/dailyBonusController';
-import { getLeaderboard, unlockSlot, claimNotificationReward, deleteNotification } from '../controllers/userController';
+import { getLeaderboard, unlockSlot, claimNotificationReward, deleteNotification, recalculateAllUsersIncome } from '../controllers/userController';
 import { activateOverclock, deactivateOverclock } from '../controllers/overclockController';
 import { authenticate } from '../middleware/auth';
 
@@ -30,6 +30,7 @@ router.post('/profile', authenticate, async (req: any, res) => {
     }
 });
 router.get('/leaderboard', getLeaderboard);
+router.post('/admin/recalculate-income', authenticate, recalculateAllUsersIncome);
 
 export default router;
 

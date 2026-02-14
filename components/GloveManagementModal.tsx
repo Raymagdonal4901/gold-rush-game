@@ -23,7 +23,7 @@ interface GloveManagementModalProps {
 export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
     isOpen, onClose, rig, equippedGlove, inventory, userId, onEquip, onUnequip, onRefresh
 }) => {
-    const { getLocalized, t, formatCurrency } = useTranslation();
+    const { getLocalized, t, formatCurrency, language } = useTranslation();
     const [view, setView] = useState<'MANAGE' | 'SELECT'>('MANAGE');
     const [isUpgrading, setIsUpgrading] = useState(false);
     const [upgradeMsg, setUpgradeMsg] = useState<{ type: 'SUCCESS' | 'ERROR', text: string, level?: number, subtext?: string } | null>(null);
@@ -140,6 +140,12 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
 
                             <div className="relative z-10 mb-4 scale-125">
                                 <InfinityGlove rarity={equippedGlove.rarity} size={80} />
+                                {equippedGlove.isStarter && (
+                                    <div className="absolute -bottom-2 -right-2 bg-red-900 border border-red-500 text-white text-[10px] px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1">
+                                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                                        LOCKED
+                                    </div>
+                                )}
                             </div>
 
                             <div className="relative z-10 text-center px-4">
@@ -176,18 +182,28 @@ export const GloveManagementModal: React.FC<GloveManagementModalProps> = ({
                     {equippedGlove ? (
                         <div className="space-y-4">
                             <div className="flex gap-2">
-                                <button
-                                    onClick={() => setView('SELECT')}
-                                    className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg text-white font-bold text-sm shadow-lg transition-colors"
-                                >
-                                    {t('glove_management.change_manager')}
-                                </button>
-                                <button
-                                    onClick={onUnequip}
-                                    className="px-4 py-3 bg-red-900/20 hover:bg-red-900/40 border border-red-900/50 rounded-lg text-red-400 font-bold text-sm transition-colors"
-                                >
-                                    {t('glove_management.unequip')}
-                                </button>
+                                {/* Starter Glove Restriction */}
+                                {equippedGlove.isStarter ? (
+                                    <div className="w-full py-3 bg-stone-800/50 border border-stone-700/50 rounded-lg text-stone-500 font-bold text-sm text-center flex items-center justify-center gap-2 cursor-not-allowed">
+                                        <Shield size={16} />
+                                        {language === 'th' ? 'ผู้จัดการประจำเครื่อง (ไม่สามารถถอดได้)' : 'Permanent Manager (Locked)'}
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => setView('SELECT')}
+                                            className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg text-white font-bold text-sm shadow-lg transition-colors"
+                                        >
+                                            {t('glove_management.change_manager')}
+                                        </button>
+                                        <button
+                                            onClick={onUnequip}
+                                            className="px-4 py-3 bg-red-900/20 hover:bg-red-900/40 border border-red-900/50 rounded-lg text-red-400 font-bold text-sm transition-colors"
+                                        >
+                                            {t('glove_management.unequip')}
+                                        </button>
+                                    </>
+                                )}
                             </div>
 
                             {/* Upgrade Section */}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check, TrendingUp, CreditCard, Clock } from 'lucide-react';
+import { Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check, TrendingUp, CreditCard, Clock, Zap, Briefcase, Star, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu } from 'lucide-react';
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
 import { User, OilRig, ClaimRequest, WithdrawalRequest, DepositRequest, Notification } from '../services/types';
@@ -705,20 +705,98 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                             <div className={`text-[10px] font-mono mt-0.5 flex items-center gap-1 ${r.expiresAt < Date.now() ? 'text-red-500 font-bold' : 'text-stone-400'}`}>
                                                                 <Clock size={10} /> {t('rig.expires_at')}: {new Date(r.expiresAt).toLocaleString()}
                                                             </div>
+                                                            {/* Accessories */}
+                                                            {r.slots && r.slots.some(id => id) && (
+                                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                                    {r.slots.map((slotItemId, idx) => {
+                                                                        if (!slotItemId) return null;
+                                                                        const item = selectedUser.inventory?.find((i: any) => i.id === slotItemId);
+                                                                        if (!item) return null;
+
+                                                                        const typeIdLower = (item.typeId || '').toLowerCase();
+                                                                        let IconComp = Zap;
+                                                                        let colorClass = "text-yellow-400";
+
+                                                                        const nameRaw = item.name;
+                                                                        const enName = typeof nameRaw === 'object' ? (nameRaw as any).en || '' : String(nameRaw || '');
+                                                                        const thName = typeof nameRaw === 'object' ? (nameRaw as any).th || '' : String(nameRaw || '');
+
+                                                                        if (typeIdLower.startsWith('glasses') || thName.includes('แว่น') || enName.includes('Glasses')) { IconComp = Glasses; colorClass = "text-blue-400"; }
+                                                                        else if (typeIdLower.startsWith('uniform') || typeIdLower.startsWith('shirt') || thName.includes('ชุด') || enName.includes('Uniform') || enName.includes('Suit')) { IconComp = Shirt; colorClass = "text-orange-400"; }
+                                                                        else if (typeIdLower.startsWith('bag') || thName.includes('กระเป๋า') || enName.includes('Bag') || enName.includes('Backpack')) { IconComp = Backpack; colorClass = "text-purple-400"; }
+                                                                        else if (typeIdLower.startsWith('boots') || thName.includes('รองเท้า') || enName.includes('Boots')) { IconComp = Footprints; colorClass = "text-yellow-400"; }
+                                                                        else if (typeIdLower.startsWith('mobile') || thName.includes('มือถือ') || enName.includes('Mobile')) { IconComp = Smartphone; colorClass = "text-cyan-400"; }
+                                                                        else if (typeIdLower.startsWith('pc') || thName.includes('คอม') || enName.includes('PC')) { IconComp = Monitor; colorClass = "text-rose-400"; }
+
+                                                                        return (
+                                                                            <div key={idx} className={`flex items-center gap-1 px-1.5 py-0.5 rounded bg-stone-900 border border-stone-800 text-[9px] font-bold ${colorClass}`} title={getLocalized(item.name)}>
+                                                                                <IconComp size={10} />
+                                                                                {item.level > 1 && <span>+{item.level}</span>}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
                                                         </td>
                                                         <td className="p-3 text-right">
-                                                            <div className="flex items-center justify-end gap-3">
-                                                                <div>
-                                                                    <div className="font-mono font-bold text-emerald-400">+{Math.floor(r.dailyProfit + (r.bonusProfit || 0)).toLocaleString()}</div>
-                                                                    <div className="text-[10px] text-stone-600">{CURRENCY}/Day</div>
-                                                                </div>
+                                                            <div className="flex flex-col items-end">
+                                                                {(() => {
+                                                                    const nameStr = typeof r.name === 'string' ? r.name : (r.name?.en || r.name?.th || '');
+                                                                    const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
+                                                                    const baseDailyProfit = (r.dailyProfit < 5 && r.dailyProfit > 0) ? r.dailyProfit * 35 : r.dailyProfit;
+                                                                    const effectiveBonusProfit = isNoBonusRig ? 0 : (r.bonusProfit || 0);
+
+                                                                    let equippedBonus = 0;
+                                                                    if (r.slots) {
+                                                                        r.slots.forEach(slotItemId => {
+                                                                            if (slotItemId) {
+                                                                                const item = selectedUser.inventory?.find((i: any) => i.id === slotItemId);
+                                                                                if (item) {
+                                                                                    const effectiveItemBonus = (item.dailyBonus < 0.5 && item.dailyBonus > 0) ? item.dailyBonus * 35 : item.dailyBonus;
+                                                                                    equippedBonus += effectiveItemBonus;
+                                                                                }
+                                                                            }
+                                                                        });
+                                                                    }
+
+                                                                    const totalRowProfit = baseDailyProfit + effectiveBonusProfit + equippedBonus;
+
+                                                                    return (
+                                                                        <>
+                                                                            <div className="font-mono font-bold text-emerald-400">+{Math.floor(totalRowProfit).toLocaleString()}</div>
+                                                                            <div className="text-[10px] text-stone-500 flex flex-col items-end">
+                                                                                <span>{Math.floor(baseDailyProfit + effectiveBonusProfit).toLocaleString()} base</span>
+                                                                                {equippedBonus > 0 && <span className="text-blue-400">+{Math.floor(equippedBonus).toLocaleString()} bonus</span>}
+                                                                            </div>
+                                                                        </>
+                                                                    );
+                                                                })()}
                                                             </div>
                                                         </td>
                                                         <td className="p-3 text-right">
                                                             {(() => {
                                                                 const lastClaim = r.lastClaimAt || r.purchasedAt;
                                                                 const secondsElapsed = Math.max(0, (Date.now() - lastClaim) / 1000);
-                                                                const dailyRate = r.dailyProfit + (r.bonusProfit || 0);
+                                                                // Calculate daily rate including accessory bonus
+                                                                const nameStr = typeof r.name === 'string' ? r.name : (r.name?.en || r.name?.th || '');
+                                                                const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
+                                                                const baseDailyProfit = (r.dailyProfit < 5 && r.dailyProfit > 0) ? r.dailyProfit * 35 : r.dailyProfit;
+                                                                const effectiveBonusProfit = isNoBonusRig ? 0 : (r.bonusProfit || 0);
+
+                                                                let equippedBonus = 0;
+                                                                if (r.slots) {
+                                                                    r.slots.forEach(slotItemId => {
+                                                                        if (slotItemId) {
+                                                                            const item = selectedUser.inventory?.find((i: any) => i.id === slotItemId);
+                                                                            if (item) {
+                                                                                const effectiveItemBonus = (item.dailyBonus < 0.5 && item.dailyBonus > 0) ? item.dailyBonus * 35 : item.dailyBonus;
+                                                                                equippedBonus += effectiveItemBonus;
+                                                                            }
+                                                                        }
+                                                                    });
+                                                                }
+
+                                                                const dailyRate = baseDailyProfit + effectiveBonusProfit + equippedBonus;
                                                                 const pending = (dailyRate / 86400) * secondsElapsed;
                                                                 return (
                                                                     <div className="flex flex-col items-end">

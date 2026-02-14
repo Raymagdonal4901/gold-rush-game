@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase, CreditCard, Ticket, Shield, Wrench, Settings, StarHalf } from 'lucide-react';
-import { SHOP_ITEMS, CURRENCY, RARITY_SETTINGS, MATERIAL_CONFIG, EQUIPMENT_SERIES, REPAIR_KITS } from '../constants';
+import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase, CreditCard, Ticket, Shield, Wrench, Settings, StarHalf, Pickaxe, AlertCircle, TrainFront } from 'lucide-react';
+import { SHOP_ITEMS, CURRENCY, RARITY_SETTINGS, MATERIAL_CONFIG, EQUIPMENT_SERIES, REPAIR_KITS, RIG_PRESETS } from '../constants';
 import { CraftingQueueItem } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
@@ -14,14 +14,24 @@ interface AccessoryShopModalProps {
     onClose: () => void;
     walletBalance: number;
     onBuy: (itemId: string) => void;
+    onBuyRig?: (preset: any) => void;
+    onOpenRates?: () => void;
     onRefresh?: () => void;
     addNotification?: (n: any) => void;
     userId?: string;
+    currentRigCount?: number;
+    maxRigs?: number;
+    materials?: Record<number, number>;
+    inventory?: any[];
+    rigs?: any[];
 }
 
-export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, onClose, walletBalance, onBuy, onRefresh, addNotification, userId }) => {
+export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
+    isOpen, onClose, walletBalance, onBuy, onBuyRig, onOpenRates, onRefresh, addNotification, userId,
+    currentRigCount = 0, maxRigs = 6, materials = {}, inventory = [], rigs = []
+}) => {
     const { t, getLocalized, formatCurrency, language, formatBonus } = useTranslation();
-    const [activeTab, setActiveTab] = useState<'SHOP' | 'WORKSHOP' | 'REPAIR' | 'UPGRADE'>('SHOP');
+    const [activeTab, setActiveTab] = useState<'RIGS' | 'SHOP' | 'WORKSHOP' | 'REPAIR' | 'UPGRADE'>('RIGS');
     const [buyingId, setBuyingId] = useState<string | null>(null);
     const [upgradeTargetId, setUpgradeTargetId] = useState<string | null>(null);
     const [upgradeMaterialId, setUpgradeMaterialId] = useState<string | null>(null);
@@ -252,7 +262,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         if (itemId === 'auto_excavator') {
             return (
                 <div className="relative">
-                    <Zap className={className} />
+                    <TrainFront className={className} />
                     <Star size={14} className="absolute -top-1 -right-1 text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse" />
                 </div>
             );
@@ -292,27 +302,38 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         if (iconName === 'Key' || itemId === 'chest_key') return <Key className={className} />;
         if (iconName === 'Factory') return <Hammer className={className} />;
         if (iconName === 'Search') return <Search className={className} />;
-        if (iconName === 'HardHat' || (itemId && itemId.startsWith('hat'))) return <HardHat className={className} />;
+        if (iconName === 'HardHat' || (itemId && itemId.startsWith('hat'))) return null;
         if (iconName === 'Glasses' || (itemId && itemId.startsWith('glasses'))) return <Glasses className={className} />;
         if (iconName === 'Shirt' || (itemId && itemId.startsWith('uniform'))) return <Shirt className={className} />;
         if (iconName === 'Backpack' || (itemId && itemId.startsWith('bag'))) return <Backpack className={className} />;
         if (iconName === 'Footprints' || (itemId && itemId.startsWith('boots'))) return <Footprints className={className} />;
         if (iconName === 'Smartphone' || (itemId && itemId.startsWith('mobile'))) return <Smartphone className={className} />;
         if (iconName === 'Monitor' || (itemId && itemId.startsWith('pc'))) return <Monitor className={className} />;
-        if (iconName === 'Bot' || (itemId && itemId.startsWith('robot'))) return <Bot className={className} />;
-        if (iconName === 'Truck' || (itemId && itemId === 'auto_excavator')) return <Truck className={className} />;
+        if (iconName === 'Bot') return null;
+        if (iconName === 'Truck' || iconName === 'TrainFront' || (itemId && itemId === 'auto_excavator')) return <TrainFront className={className} />;
         if (iconName === 'Zap') return <Zap className={className} />;
         if (iconName === 'Cpu' || itemId === 'upgrade_chip') return <Cpu className={className} />;
         if (iconName === 'Hourglass' || (itemId && itemId.startsWith('hourglass'))) return <Hourglass className={className} />;
         if (iconName === 'Shield' || iconName === 'FileText' || itemId === 'insurance_card') return <FileText className={className} />;
-        if (iconName === 'CreditCard' || itemId === 'vip_withdrawal_card') {
+        if (iconName === 'CreditCard' || itemId === 'vip_withdrawal_card' || itemId === 'vip_card_gold') {
+            const isGold = itemId === 'vip_card_gold';
             return (
-                <div className={`relative ${className.includes('w-') ? className : 'w-full h-full'} aspect-[1.58/1] bg-gradient-to-br from-yellow-100 via-yellow-500 to-yellow-800 rounded-[4px] border border-yellow-200/50 shadow-[0_0_15px_rgba(234,179,8,0.4)] flex items-center justify-center overflow-hidden group/card`}>
+                <div className={`relative ${className.includes('w-') ? className : 'w-full h-full'} aspect-[1.58/1] ${isGold ? 'bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-600 border-2 border-yellow-300 shadow-[0_0_20px_rgba(250,204,21,0.6)]' : 'bg-gradient-to-br from-yellow-100 via-yellow-500 to-yellow-800 border border-yellow-200/50 shadow-[0_0_15px_rgba(234,179,8,0.4)]'} rounded-[4px] flex items-center justify-center overflow-hidden group/card`}>
                     <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-60"></div>
+                    {isGold && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover/card:animate-[shimmer_2s_infinite] pointer-events-none"></div>
+                    )}
                     <div className="absolute top-[20%] left-0 w-full h-[15%] bg-stone-900/40"></div>
                     <div className="absolute top-[45%] left-[10%] w-[15%] h-[20%] bg-gradient-to-br from-yellow-200 to-yellow-600 rounded-sm border border-yellow-100/30"></div>
-                    <div className="absolute bottom-[10%] right-[10%] text-[8px] font-black italic text-black/40 tracking-tighter">VIP</div>
-                    <CreditCard className="text-yellow-950 w-1/2 h-1/2 relative z-10 drop-shadow-sm opacity-60" />
+                    <div className="absolute bottom-[10%] right-[10%] text-[8px] font-black italic text-black/40 tracking-tighter">
+                        {isGold ? 'GOLD VIP' : 'VIP'}
+                    </div>
+                    <CreditCard className={`${isGold ? 'text-yellow-950/80 scale-110' : 'text-yellow-950'} w-1/2 h-1/2 relative z-10 drop-shadow-sm opacity-60`} />
+                    {isGold && (
+                        <div className="absolute top-1 right-1">
+                            <Sparkles size={12} className="text-yellow-200 animate-pulse" />
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -354,11 +375,11 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         );
     };
 
-    const specialIds = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'dungeon_ticket_magma', 'ancient_blueprint', 'insurance_card', 'vip_withdrawal_card', 'time_skip_ticket', 'construction_nanobot'];
+    const specialIds = ['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'dungeon_ticket_magma', 'ancient_blueprint', 'insurance_card', 'vip_withdrawal_card', 'vip_card_gold', 'time_skip_ticket', 'construction_nanobot'];
     const specialItems = SHOP_ITEMS.filter(i => {
         if (!specialIds.includes(i.id) || i.buyable === false) return false;
         // Hide VIP card if already owned
-        if (i.id === 'vip_withdrawal_card' && userInventory.some(inv => inv.typeId === 'vip_withdrawal_card')) return false;
+        if ((i.id === 'vip_withdrawal_card' || i.id === 'vip_card_gold') && userInventory.some(inv => inv.typeId === i.id)) return false;
         return true;
     });
     const shopEquipment = SHOP_ITEMS.filter(i => !specialIds.includes(i.id) && i.buyable !== false);
@@ -371,33 +392,11 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         // Robot Limits check
         let isCooldown = false;
         let cooldownText = '';
-        if (item.id === 'robot') {
-            const existingRobot = userInventory.find(i => i.typeId === 'robot');
-            if (existingRobot) {
-                // Check remaining time
-                if (existingRobot.expireAt) {
-                    const diff = existingRobot.expireAt - Date.now();
-                    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-                    if (days > 0) {
-                        isCooldown = true;
-                        cooldownText = t('item_shop.cooldown', { days });
-                        canAfford = false; // Disable buy
-                    }
-                } else {
-                    // Fallback: If no expireAt, assume it's active and on 30 day CD?
-                    // But typically our MockDB adds expireAt.
-                    isCooldown = true;
-                    cooldownText = t('item_shop.active'); // Or 'Active'
-                    canAfford = false;
-                }
-            }
-        }
 
         let bonusRange = '';
         if (item.id === 'chest_key') bonusRange = t('item_shop.chest_key_desc');
         else if (item.id === 'mixer') bonusRange = t('item_shop.mixer_desc');
         else if (item.id === 'magnifying_glass') bonusRange = t('item_shop.lens_desc');
-        else if (item.id === 'robot') bonusRange = t('item_shop.robot_desc');
         else if (item.id === 'upgrade_chip') bonusRange = t('item_shop.chip_desc');
         else if (item.id === 'insurance_card') bonusRange = t('item_shop.insurance_desc');
         else if (item.id === 'hourglass_small') bonusRange = '- 30 ' + t('time.minutes');
@@ -408,15 +407,13 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         let rarityStyle = RARITY_SETTINGS.COMMON;
 
         // Define Rarity based on Item ID for clear visual differentiation
-        if (item.id === 'hat') rarityStyle = RARITY_SETTINGS.UNCOMMON;
-        else if (item.id === 'uniform') rarityStyle = RARITY_SETTINGS.RARE;
+        if (item.id === 'uniform') rarityStyle = RARITY_SETTINGS.RARE;
         else if (item.id === 'bag') rarityStyle = RARITY_SETTINGS.SUPER_RARE;
         else if (item.id === 'boots') rarityStyle = RARITY_SETTINGS.EPIC;
         else if (item.id === 'glasses') rarityStyle = RARITY_SETTINGS.LEGENDARY;
         else if (item.id === 'mobile') rarityStyle = RARITY_SETTINGS.ULTRA_LEGENDARY;
         else if (item.id === 'pc') rarityStyle = RARITY_SETTINGS.MYTHIC;
         else if (item.id === 'auto_excavator') rarityStyle = RARITY_SETTINGS.DIVINE;
-        else if (item.id === 'robot') rarityStyle = RARITY_SETTINGS.MYTHIC;
         else if (item.id === 'insurance_card') rarityStyle = RARITY_SETTINGS.ULTRA_LEGENDARY;
         else if (item.id === 'upgrade_chip') rarityStyle = RARITY_SETTINGS.RARE;
         else if (item.id === 'mixer') rarityStyle = RARITY_SETTINGS.SUPER_RARE;
@@ -435,7 +432,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
             else if (item.price >= 50) rarityStyle = RARITY_SETTINGS.UNCOMMON;
         }
 
-        const isBulkItem = ['upgrade_chip', 'mixer', 'insurance_card', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'time_skip_ticket', 'construction_nanobot'].includes(item.id);
+        const isBulkItem = ['upgrade_chip', 'mixer', 'insurance_card', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'time_skip_ticket', 'construction_nanobot', 'magnifying_glass', 'chest_key'].includes(item.id);
 
         const isVipCard = item.id === 'vip_withdrawal_card';
 
@@ -457,7 +454,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                     <h3 className={`font-display font-bold text-lg mb-1 text-white`}>{getItemDisplayName(item)}</h3>
 
                     <div className="text-xs text-stone-400 mb-1 flex flex-col items-center gap-1">
-                        {item.id === 'robot' ? (
+                        {item.id === 'NOT_A_ROBOT' ? (
                             <>
                                 <span className="text-emerald-400 font-bold uppercase tracking-wider italic mb-1 flex items-center gap-1">
                                     <Bot size={14} /> Automation Active
@@ -504,10 +501,10 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                     </div>
 
                     <div className="flex flex-wrap gap-2 justify-center mb-2 mt-2">
-                        {['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'insurance_card', 'robot', 'vip_withdrawal_card', 'time_skip_ticket', 'construction_nanobot'].includes(item.id) ? (
+                        {['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'insurance_card', 'vip_withdrawal_card', 'time_skip_ticket', 'construction_nanobot'].includes(item.id) ? (
                             <div className="text-[9px] text-stone-400 flex items-center gap-1 bg-stone-800 px-2 py-0.5 rounded border border-stone-700">
-                                {['robot', 'vip_withdrawal_card'].includes(item.id) ? <Zap size={10} className="text-emerald-400" /> : <Zap size={10} className="text-yellow-500" />}
-                                {item.id === 'robot'
+                                {item.id === 'vip_withdrawal_card' ? <Zap size={10} className="text-emerald-400" /> : <Zap size={10} className="text-yellow-500" />}
+                                {item.id === 'NOT_A_ROBOT'
                                     ? t('item_shop.automation_system')
                                     : isVipCard
                                         ? (language === 'th' ? 'ปลดล็อกถาวร' : 'Permanent Unlock')
@@ -527,7 +524,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
 
                 <div className="p-4 pt-0">
                     {/* Only show quantity for special bulk items, hide for equipment and robot */}
-                    {isSpecial && item.id !== 'robot' && (
+                    {isSpecial && (
                         <div className="flex items-center justify-between mb-3 bg-stone-950 p-1 rounded-lg border border-stone-800">
                             <button onClick={() => handleQuantityChange(item.id, -1)} className="p-2 hover:bg-stone-800 rounded text-stone-400 hover:text-white transition-colors">-</button>
                             <span className="font-mono font-bold text-white text-sm">{buyQuantities[item.id] || 1}</span>
@@ -638,8 +635,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         if ((item as any).rarity && RARITY_SETTINGS[(item as any).rarity]) {
             rarityStyle = RARITY_SETTINGS[(item as any).rarity];
         }
-        else if (item.id === 'hat') rarityStyle = RARITY_SETTINGS.UNCOMMON;
-        else if (item.id === 'uniform') rarityStyle = RARITY_SETTINGS.RARE;
+        if (item.id === 'uniform') rarityStyle = RARITY_SETTINGS.RARE;
         else if (item.id === 'bag') rarityStyle = RARITY_SETTINGS.SUPER_RARE;
         else if (item.id === 'boots') rarityStyle = RARITY_SETTINGS.EPIC;
         else if (item.id === 'glasses') rarityStyle = RARITY_SETTINGS.LEGENDARY;
@@ -810,7 +806,6 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                         if ((item as any).rarity && RARITY_SETTINGS[(item as any).rarity]) {
                             rarityStyle = RARITY_SETTINGS[(item as any).rarity];
                         }
-                        else if (item.id === 'hat') rarityStyle = RARITY_SETTINGS.UNCOMMON;
                         else if (item.id === 'uniform') rarityStyle = RARITY_SETTINGS.RARE;
                         else if (item.id === 'bag') rarityStyle = RARITY_SETTINGS.SUPER_RARE;
                         else if (item.id === 'boots') rarityStyle = RARITY_SETTINGS.EPIC;
@@ -994,6 +989,184 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
         } finally {
             setIsUpgrading(false);
         }
+    };
+
+    const renderTierIcon = (id: number) => {
+        const baseClass = "relative flex items-center justify-center transition-transform group-hover:scale-110 duration-500 shrink-0 bg-white border-2";
+        const tierColors = {
+            1: 'border-stone-400',
+            2: 'border-blue-500',
+            3: 'border-stone-600',
+            4: 'border-orange-500',
+            5: 'border-slate-500',
+            6: 'border-yellow-500',
+            7: 'border-cyan-400',
+            8: 'border-purple-500'
+        };
+        const colorClass = tierColors[id as keyof typeof tierColors] || 'border-stone-200';
+        const sizeClass = id <= 2 ? "w-10 h-10" : id <= 5 ? "w-12 h-12" : "w-14 h-14";
+
+        if (id === 9) {
+            return (
+                <div className={`${baseClass} ${sizeClass} ${colorClass} rounded-lg overflow-hidden flex items-center justify-center bg-stone-900`}>
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-green-500 blur-md opacity-20 animate-pulse"></div>
+                        <div className="relative z-10 text-green-600">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
+                                <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
+                                <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
+                                <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className={`${baseClass} ${sizeClass} ${colorClass} rounded-lg overflow-hidden`}>
+                <img src={`/assets/rigs/rig_${id}.png`} alt={`Rig Tier ${id}`} className="w-full h-full object-contain p-1" />
+            </div>
+        );
+    };
+
+    const getTierStyles = (id: number) => {
+        switch (id) {
+            case 1: return { border: "border-stone-600", text: "text-stone-400", bg: "from-stone-800/50 to-stone-950/80" };
+            case 2: return { border: "border-blue-600", text: "text-blue-400", bg: "from-blue-900/20 to-stone-950/80" };
+            case 3: return { border: "border-stone-500", text: "text-stone-300", bg: "from-stone-800/50 to-stone-950/80" };
+            case 4: return { border: "border-orange-500", text: "text-orange-400", bg: "from-orange-900/20 to-stone-950/80" };
+            case 5: return { border: "border-slate-400", text: "text-slate-300", bg: "from-slate-800/50 to-stone-950/80" };
+            case 6: return { border: "border-yellow-500", text: "text-yellow-400", bg: "from-yellow-900/20 to-stone-950/80" };
+            case 7: return { border: "border-cyan-400", text: "text-cyan-300", bg: "from-cyan-900/20 to-stone-950/80" };
+            case 8: return { border: "border-purple-500", text: "text-purple-400", bg: "from-purple-900/30 to-stone-950/80" };
+            default: return { border: "border-stone-800", text: "text-stone-400", bg: "bg-stone-900" };
+        }
+    };
+
+    const renderRigShop = () => {
+        const isSlotLimitReached = currentRigCount >= maxRigs;
+
+        return (
+            <div className="flex flex-col h-full">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                        <Pickaxe className="text-yellow-500" size={24} />
+                        <div>
+                            <h3 className="text-xl font-bold text-white uppercase tracking-wider">{t('machine_shop.title')}</h3>
+                            <p className="text-xs text-stone-500">{t('machine_shop.slots_used')}: {currentRigCount}/{maxRigs}</p>
+                        </div>
+                    </div>
+                    {onOpenRates && (
+                        <button
+                            onClick={onOpenRates}
+                            className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 bg-purple-900/20 px-3 py-1.5 rounded border border-purple-900/50 transition-colors"
+                        >
+                            <Sparkles size={14} /> {t('machine_shop.bonus_chance')}
+                        </button>
+                    )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {RIG_PRESETS.map((preset) => {
+                        let isMaxReached = false;
+                        if (preset.specialProperties?.maxAllowed) {
+                            const existingCount = rigs.filter(r => {
+                                const rName = typeof r.name === 'string' ? r.name : (r.name?.th || r.name?.en);
+                                return rName === preset.name.th || rName === preset.name.en;
+                            }).length;
+                            if (existingCount >= preset.specialProperties.maxAllowed) isMaxReached = true;
+                        }
+
+                        let isAffordable = true;
+                        if (preset.craftingRecipe) {
+                            if (preset.craftingRecipe.materials) {
+                                for (const [tier, amount] of Object.entries(preset.craftingRecipe.materials)) {
+                                    if ((materials[parseInt(tier)] || 0) < amount) isAffordable = false;
+                                }
+                            }
+                            if (preset.craftingRecipe.items) {
+                                for (const [imgId, amount] of Object.entries(preset.craftingRecipe.items)) {
+                                    const count = inventory.filter(i => i.typeId === imgId).length;
+                                    if (count < amount) isAffordable = false;
+                                }
+                            }
+                        } else {
+                            isAffordable = walletBalance >= preset.price;
+                        }
+
+                        const canBuy = isAffordable && !isSlotLimitReached && !isMaxReached;
+                        const durationDays = preset.durationDays || (preset.durationMonths || 1) * 30;
+                        const netProfit = preset.bonusProfit !== undefined ? preset.bonusProfit : (preset.dailyProfit * durationDays) - preset.price;
+                        const styles = getTierStyles(preset.id);
+                        const isCrafting = !!preset.craftingRecipe;
+
+                        return (
+                            <div key={preset.id} className={`bg-stone-900/60 backdrop-blur border rounded-lg overflow-hidden flex flex-col transition-all duration-300 group relative hover:bg-stone-900 ${styles.border}`}>
+                                <div className={`p-3 flex items-center gap-3 bg-gradient-to-r ${styles.bg} border-b border-stone-800/50`}>
+                                    {renderTierIcon(preset.id)}
+                                    <div className="min-w-0">
+                                        <div className="text-xs font-black text-white uppercase tracking-widest mb-0.5">Tier {preset.id}</div>
+                                        <h3 className={`font-display font-bold text-sm leading-tight truncate ${styles.text}`}>{getLocalized(preset.name)}</h3>
+                                    </div>
+                                </div>
+                                <div className="p-3 flex-1 flex flex-col gap-2 text-xs">
+                                    <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
+                                        <span className="text-stone-500">{t('machine_shop.production')}</span>
+                                        <span className="text-yellow-500 font-bold font-mono">+{formatCurrency(preset.dailyProfit)}/{t('time.day')}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
+                                        <span className="text-stone-500">{t('machine_shop.contract')}</span>
+                                        <span className="text-stone-300 font-mono">
+                                            {preset.specialProperties?.infiniteDurability ? t('rig.permanent') : preset.durationDays ? `${preset.durationDays} ${t('time.days')}` : `${preset.durationMonths} ${t('time.months_short')}`}
+                                        </span>
+                                    </div>
+                                    {isCrafting ? (
+                                        <div className="mt-auto pt-2 border-t border-dashed border-stone-800">
+                                            <div className="text-[10px] text-stone-400 mb-1">{t('machine_shop.craft_req')}:</div>
+                                            <div className="flex flex-wrap gap-1">
+                                                {preset.craftingRecipe?.materials && Object.entries(preset.craftingRecipe.materials).map(([tierStr, amt]) => {
+                                                    const tier = parseInt(tierStr);
+                                                    const has = materials[tier] || 0;
+                                                    const enough = has >= amt;
+                                                    return (
+                                                        <div key={`mat-${tier}`} className={`flex items-center gap-1 px-1 py-0.5 rounded border ${enough ? 'bg-emerald-900/30 border-emerald-800' : 'bg-red-900/30 border-red-800'}`}>
+                                                            <MaterialIcon id={tier} size="w-4 h-4" iconSize={10} />
+                                                            <span className={`text-[9px] font-mono ${enough ? 'text-emerald-400' : 'text-red-400'}`}>{has}/{amt}</span>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded border border-emerald-900/10">
+                                            <span className="text-stone-500">{t('machine_shop.net_profit')}</span>
+                                            <span className="text-emerald-400 font-bold font-mono">+{formatCurrency(netProfit)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-3 pt-0 mt-auto">
+                                    <button
+                                        onClick={() => onBuyRig && onBuyRig(preset)}
+                                        disabled={!canBuy}
+                                        className={`w-full py-2 rounded font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all text-xs
+                                            ${!isSlotLimitReached && !isMaxReached
+                                                ? isAffordable
+                                                    ? 'bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white shadow-lg'
+                                                    : 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'
+                                                : 'bg-stone-800 text-stone-600 cursor-not-allowed border border-stone-700'
+                                            }
+                                        `}
+                                    >
+                                        {isSlotLimitReached ? t('machine_shop.space_full') : isMaxReached ? `${t('machine_shop.limit_reached')} (${preset.specialProperties?.maxAllowed})` : isCrafting ? t('shop.craft_action') : formatCurrency(preset.price)}
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
     };
 
     const renderUpgradeStation = () => {
@@ -1231,37 +1404,46 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             <button onClick={onClose} className="text-stone-500 hover:text-white bg-stone-900 p-2 rounded-full hover:bg-stone-800"><X size={24} /></button>
                         </div>
                     </div>
-                    <div className="flex px-4 gap-4">
+                    <div className="flex px-4 gap-4 overflow-x-auto custom-scrollbar no-scrollbar py-1">
+                        <button
+                            onClick={() => setActiveTab('RIGS')}
+                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 shrink-0 ${activeTab === 'RIGS' ? 'text-yellow-500 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
+                        >
+                            <Pickaxe size={16} /> {language === 'th' ? 'เครื่องขุด' : 'Mining Rigs'}
+                        </button>
                         <button
                             onClick={() => setActiveTab('SHOP')}
-                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'SHOP' ? 'text-yellow-500 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
+                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 shrink-0 ${activeTab === 'SHOP' ? 'text-yellow-500 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
                         >
                             <ShoppingBag size={16} /> {t('item_shop.items_tab')}
                         </button>
                         <button
                             onClick={() => setActiveTab('WORKSHOP')}
-                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'WORKSHOP' ? 'text-orange-500 border-orange-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
+                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 shrink-0 ${activeTab === 'WORKSHOP' ? 'text-orange-500 border-orange-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
                         >
                             <Hammer size={16} /> {t('item_shop.workshop_tab')}
                         </button>
                         <button
                             onClick={() => setActiveTab('REPAIR')}
-                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'REPAIR' ? 'text-green-500 border-green-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
+                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 shrink-0 ${activeTab === 'REPAIR' ? 'text-green-500 border-green-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
                         >
                             <Wrench size={16} /> {language === 'th' ? 'กล่องชุดซ่อมอุปกรณ์' : 'Repair Kit Sets'}
                         </button>
+                        {/* 
                         <button
                             onClick={() => setActiveTab('UPGRADE')}
-                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'UPGRADE' ? 'text-purple-500 border-purple-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
+                            className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 shrink-0 ${activeTab === 'UPGRADE' ? 'text-purple-500 border-purple-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
                         >
                             <Zap size={16} /> {language === 'th' ? 'สถานีอัปเกรด' : 'Upgrade Station'}
                         </button>
-
+                        */}
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] pb-24 sm:pb-6">
-                    {activeTab === 'SHOP' ? (
+                    {activeTab === 'RIGS' ? (
+                        renderRigShop()
+                    ) : activeTab === 'SHOP' ? (
                         <>
                             <div className="mb-8">
                                 <div className="flex items-center gap-2 mb-4">
@@ -1285,7 +1467,11 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({ isOpen, 
                             </div>
                         </div>
                     ) : activeTab === 'UPGRADE' ? (
-                        renderUpgradeStation()
+                        <div className="flex flex-col items-center justify-center h-full py-20 text-stone-500">
+                            <AlertCircle size={48} className="text-stone-700 mb-4" />
+                            <h3 className="text-xl font-bold uppercase tracking-widest">{language === 'th' ? 'ระบบปิดปรับปรุงชั่วคราว' : 'Maintenance in Progress'}</h3>
+                            <p className="mt-2 text-sm">{language === 'th' ? 'สถานีอัปเกรดปิดเพื่อปรับปรุงระบบ' : 'The upgrade station is currently closed for maintenance.'}</p>
+                        </div>
                     ) : (
                         <div className="flex flex-col h-full">
                             {renderQueue()}

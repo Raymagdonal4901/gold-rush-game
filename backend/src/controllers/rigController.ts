@@ -4,6 +4,7 @@ import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
 import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS } from '../constants';
+import { recalculateUserIncome } from './userController';
 
 const MATERIAL_NAMES = MATERIAL_CONFIG.NAMES;
 
@@ -102,6 +103,19 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ message: 'เครื่องจักรนี้ไม่สามารถผลิตได้ หรือชื่อไม่ถูกต้อง' });
         }
 
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // --- ENFORCE SLOT LIMIT ---
+        const activeRigCount = await Rig.countDocuments({ ownerId: userId, isDead: { $ne: true } });
+        const maxSlots = user.unlockedSlots || 3;
+        if (activeRigCount >= maxSlots) {
+            return res.status(403).json({
+                message: `พื้นที่ขุดเจาะเต็มแล้ว (Slot full: ${activeRigCount}/${maxSlots}). โปรดขยายพื้นที่เพิ่มก่อนคราฟต์เครื่องใหม่`,
+                code: 'SLOT_FULL'
+            });
+        }
+
         // --- ENFORCE MAX ALLOWED (ID 8: Vibranium Reactor) ---
         if (preset.id === 8) {
             const userRigs = await Rig.find({ ownerId: userId });
@@ -117,9 +131,6 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
             }
         }
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
-
         // Check Materials
         if (!user.materials) user.materials = {};
         const materialsNeeded = preset.craftingRecipe?.materials || {};
@@ -132,10 +143,7 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
             }
         }
 
-        // Check Slot Limit (Server Side)
-        const rigCount = await Rig.countDocuments({ ownerId: userId });
-        const maxSlots = user.unlockedSlots || 3;
-        if (rigCount >= maxSlots) {
+        if (activeRigCount >= maxSlots) {
             return res.status(400).json({ message: 'Mining slots are full. Please unlock more slots.' });
         }
 
@@ -196,6 +204,10 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
         });
 
         await user.save();
+
+        // Recalculate Income
+        await recalculateUserIncome(userId as string);
+
         console.log(`[CRAFT_RIG] SUCCESS: Rig created with ID: ${rig._id}, Glove ID: ${starterGlove.id}`);
         res.status(201).json({ success: true, rig, glove: starterGlove });
     } catch (error) {
@@ -215,6 +227,16 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
 
         if (user.balance < investment) {
             return res.status(400).json({ message: 'Insufficient balance' });
+        }
+
+        // --- ENFORCE SLOT LIMIT ---
+        const activeRigCount = await Rig.countDocuments({ ownerId: userId, isDead: { $ne: true } });
+        const maxSlots = user.unlockedSlots || 3;
+        if (activeRigCount >= maxSlots) {
+            return res.status(403).json({
+                message: `พื้นที่ขุดเจาะเต็มแล้ว (Slot full: ${activeRigCount}/${maxSlots}). โปรดขยายพื้นที่เพิ่มก่อนซื้อเครื่องใหม่`,
+                code: 'SLOT_FULL'
+            });
         }
 
         // --- ENFORCE MAX ALLOWED (Language Agnostic) ---
@@ -249,13 +271,13 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
         let rarity = 'COMMON';
         let bonus = 0.5; // 0.5 THB
 
-        // Updated names and bonuses based on user images
-        let gloveName: { th: string, en: string } = { th: 'พนักงานทั่วไป (STAFF)', en: 'Staff (STAFF)' }; // Default
-        if (rand < 80) { rarity = 'COMMON'; bonus = 0.5; gloveName = { th: 'พนักงานทั่วไป (STAFF)', en: 'Staff (STAFF)' }; }
-        else if (rand < 91) { rarity = 'RARE'; bonus = 1.0; gloveName = { th: 'หัวหน้างาน (SUPERVISOR)', en: 'Supervisor (SUPERVISOR)' }; }
-        else if (rand < 96) { rarity = 'SUPER_RARE'; bonus = 1.5; gloveName = { th: 'ผู้จัดการหอพัก (MANAGER)', en: 'Manager (MANAGER)' }; }
-        else if (rand < 99) { rarity = 'EPIC'; bonus = 2.0; gloveName = { th: 'ผู้บริหารอาคาร (EXECUTIVE)', en: 'Executive (EXECUTIVE)' }; }
-        else { rarity = 'LEGENDARY'; bonus = 3.0; gloveName = { th: 'หุ้นส่วนใหญ่ (PARTNER)', en: 'Partner (PARTNER)' }; }
+        // Updated names and bonuses based on user images - MINING THEME
+        let gloveName: { th: string, en: string } = { th: 'ถุงมือคนงาน (Miner Glove)', en: 'Miner Glove' }; // Default
+        if (rand < 80) { rarity = 'COMMON'; bonus = 0.5; gloveName = { th: 'ถุงมือคนงาน (Miner Glove)', en: 'Miner Glove' }; }
+        else if (rand < 91) { rarity = 'RARE'; bonus = 1.0; gloveName = { th: 'ถุงมือหัวหน้าช่าง (Foreman Glove)', en: 'Foreman Glove' }; }
+        else if (rand < 96) { rarity = 'SUPER_RARE'; bonus = 1.5; gloveName = { th: 'ถุงมือวิศวกร (Engineer Glove)', en: 'Engineer Glove' }; }
+        else if (rand < 99) { rarity = 'EPIC'; bonus = 2.0; gloveName = { th: 'ถุงมือผู้ตรวจสอบ (Inspector Glove)', en: 'Inspector Glove' }; }
+        else { rarity = 'LEGENDARY'; bonus = 3.0; gloveName = { th: 'ถุงมือเจ้าของสัมปทาน (Tycoon Glove)', en: 'Tycoon Glove' }; }
 
         const gloveId = Math.random().toString(36).substr(2, 9);
 
@@ -268,11 +290,12 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
             durationBonus: 0,
             rarity,
             purchasedAt: Date.now(),
-            lifespanDays: 9999,
-            expireAt: Date.now() + (9999 * 24 * 60 * 60 * 1000),
-            currentDurability: 999900, // HP-based (9999 days * 100)
-            maxDurability: 999900,
-            level: 1
+            lifespanDays: durationDays, // Sync with Rig
+            expireAt: Date.now() + (durationDays * 24 * 60 * 60 * 1000), // Sync with Rig
+            currentDurability: durationDays * 100, // Sync with Rig
+            maxDurability: durationDays * 100, // Sync with Rig
+            level: 1,
+            isStarter: true // NEW: Cannot unequip
         };
 
         // Add to inventory (using type casting because Mongoose arrays are tricky with Mixed)
@@ -315,6 +338,10 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
         console.log(`[BUY_RIG DEBUG] Rig created with ID: ${rig._id}`);
 
         // Return both
+
+        // Recalculate Income
+        await recalculateUserIncome(userId as string);
+
         res.status(201).json({ rig, glove: newGlove });
     } catch (error) {
         console.error(error);
@@ -628,7 +655,7 @@ export const equipAccessory = async (req: AuthRequest, res: Response) => {
         const item = user.inventory[itemIndex];
 
         // VALIDATION: Only allow actual equipment types, not utility items
-        const VALID_EQUIPMENT_TYPES = ['hat', 'uniform', 'bag', 'boots', 'glasses', 'mobile', 'pc', 'auto_excavator', 'glove'];
+        const VALID_EQUIPMENT_TYPES = ['uniform', 'bag', 'boots', 'glasses', 'mobile', 'pc', 'auto_excavator', 'glove'];
         if (!VALID_EQUIPMENT_TYPES.includes(item.typeId)) {
             return res.status(400).json({
                 message: `ไอเทมประเภท ${item.typeId} ไม่สามารถสวมใส่ได้ (Item type ${item.typeId} cannot be equipped)`
@@ -660,6 +687,9 @@ export const equipAccessory = async (req: AuthRequest, res: Response) => {
         await user.save();
         await rig.save();
 
+        // Recalculate Income
+        await recalculateUserIncome(userId as string);
+
         res.json({ success: true, rig, inventory: user.inventory });
     } catch (error) {
         console.error(error);
@@ -686,6 +716,9 @@ export const unequipAccessory = async (req: AuthRequest, res: Response) => {
             rig.markModified('slots');
             await rig.save();
         }
+
+        // Recalculate Income
+        await recalculateUserIncome(userId as string);
 
         res.json({ success: true, rig });
     } catch (error) {

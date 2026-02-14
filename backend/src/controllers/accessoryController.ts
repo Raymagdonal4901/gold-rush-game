@@ -3,6 +3,7 @@ import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
 import { SHOP_ITEMS, MATERIAL_CONFIG, EQUIPMENT_UPGRADE_CONFIG, UPGRADE_REQUIREMENTS, REPAIR_KITS } from '../constants';
+import { recalculateUserIncome } from './userController';
 
 
 
@@ -23,18 +24,6 @@ export const buyAccessory = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ message: 'Insufficient balance' });
         }
 
-        // --- AI ROBOT COOLDOWN CHECK ---
-        if (actualItemId === 'robot') {
-            const existingRobot = (user.inventory || []).find((i: any) => i.typeId === 'robot');
-            if (existingRobot) {
-                const now = Date.now();
-                if (existingRobot.expireAt && existingRobot.expireAt > now) {
-                    const diff = existingRobot.expireAt - now;
-                    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-                    return res.status(400).json({ message: `หุ่นยนต์ AI ยังทำงานอยู่ (คูลดาวน์ ${days} วัน)` });
-                }
-            }
-        }
 
         // Deduct balance
         user.balance -= price;
@@ -217,6 +206,9 @@ export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
             description: `อัปเกรดอุปกรณ์: ${typeof item.name === 'object' ? item.name.th : item.name} (ระดับ ${currentLevel} -> ${item.level})`
         });
         await upgradeTx.save();
+
+        // Recalculate Income (if equipped)
+        await recalculateUserIncome(userId as string);
 
         res.json({
             success,

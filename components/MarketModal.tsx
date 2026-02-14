@@ -104,7 +104,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
             if (action === 'SELL') {
                 // --- SAFETY ADVISOR START ---
                 const deviation = ((item.currentPrice - item.basePrice) / item.basePrice);
-                const hasRobot = userInventory.some(i => i.typeId === 'robot');
+                const hasRobot = false;
 
                 if (hasRobot && deviation < ROBOT_CONFIG.SAFE_SELL_THRESHOLD) {
                     if (!showSafetyWarning) {

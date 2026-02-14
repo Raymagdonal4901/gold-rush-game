@@ -28,9 +28,24 @@ export const startExpedition = async (req: AuthRequest, res: Response) => {
 
         // Cost validation
         if (useKey) {
-            const keyIndex = user.inventory.findIndex(i => i.typeId === 'chest_key');
-            if (keyIndex === -1) return res.status(400).json({ message: 'คุณไม่มีกุญแจสำหรับเข้าใช้งาน' });
-            user.inventory.splice(keyIndex, 1);
+            const keyCost = dungeon.keyCost || 1;
+            const keys = user.inventory.filter(i => i.typeId === 'chest_key');
+
+            if (keys.length < keyCost) {
+                return res.status(400).json({
+                    message: `คุณต้องใช้กุญแจ ${keyCost} ดอกเพื่อเข้าสำรวจ (คุณมี ${keys.length} ดอก)`
+                });
+            }
+
+            // Remove the specified number of keys
+            let removedCount = 0;
+            user.inventory = user.inventory.filter(item => {
+                if (item.typeId === 'chest_key' && removedCount < keyCost) {
+                    removedCount++;
+                    return false;
+                }
+                return true;
+            });
             user.markModified('inventory');
         } else {
             if (user.balance < dungeon.cost) {
@@ -92,29 +107,74 @@ export const claimExpedition = async (req: AuthRequest, res: Response) => {
         const dungeon = DUNGEON_CONFIG.find(d => d.id === user.activeExpedition!.dungeonId);
         if (!dungeon) return res.status(404).json({ message: 'Dungeon config not found' });
 
-        // Reward Generation Logic: 1 Normal (Common/Salt) + 1 Jackpot
+        // Reward Generation Logic
         let rewards: any[] = [];
         let rewardType = 'common';
         let rewardString = '';
 
-        // 1. Pick ONE Normal Reward (80% Common, 20% Salt) - EVERY DUNGEON GETS THIS (ID 1, 2, 3)
+        // 1. Determine Reward Tier based on probabilities
+        const probs = dungeon.probabilities || { common: 80, salt: 20, rare: 0 };
         const roll = Math.random() * 100;
-        let normalPool = roll < 20 ? dungeon.rewards.salt : dungeon.rewards.common;
-        if (normalPool.length === 0) normalPool = dungeon.rewards.common; // Fallback
 
-        if (normalPool.length > 0) {
-            const idx = Math.floor(Math.random() * normalPool.length);
-            rewards.push({ ...normalPool[idx], type: roll < 20 ? 'salt' : 'common' });
+        // Helper to pick items from a pool
+        const pickItems = (pool: any[], poolType: string) => {
+            const result: any[] = [];
+            if (!pool || pool.length === 0) return result;
+
+            const tierDropMode = dungeon.dropRules?.[poolType as 'common' | 'salt' | 'rare'] || dungeon.dropMode || 'PICK_ONE';
+
+            if (tierDropMode === 'ALL') {
+                pool.forEach(item => {
+                    let finalAmount = item.amount || 1;
+                    if (item.minAmount !== undefined && item.maxAmount !== undefined) {
+                        finalAmount = Math.floor(Math.random() * (item.maxAmount - item.minAmount + 1)) + item.minAmount;
+                    }
+                    result.push({ ...item, amount: finalAmount, type: poolType });
+                });
+            } else {
+                const idx = Math.floor(Math.random() * pool.length);
+                const item = pool[idx];
+                let finalAmount = item.amount || 1;
+                if (item.minAmount !== undefined && item.maxAmount !== undefined) {
+                    finalAmount = Math.floor(Math.random() * (item.maxAmount - item.minAmount + 1)) + item.minAmount;
+                }
+                result.push({ ...item, amount: finalAmount, type: poolType });
+            }
+            return result;
+        };
+
+        if (dungeon.probabilities) {
+            if (roll < probs.rare) {
+                // JACKPOT: Rare + Common + Salt
+                rewards.push(...pickItems(dungeon.rewards.rare, 'rare'));
+                rewards.push(...pickItems(dungeon.rewards.common, 'common'));
+                rewards.push(...pickItems(dungeon.rewards.salt, 'salt'));
+                rewardType = 'rare';
+            } else if (roll < probs.rare + probs.salt) {
+                // SALT
+                rewards.push(...pickItems(dungeon.rewards.salt, 'salt'));
+            } else {
+                // COMMON
+                rewards.push(...pickItems(dungeon.rewards.common, 'common'));
+            }
+        } else {
+            // Legacy Fallback
+            if (roll < 20) {
+                rewards.push(...pickItems(dungeon.rewards.salt, 'salt'));
+            } else {
+                rewards.push(...pickItems(dungeon.rewards.common, 'common'));
+            }
         }
 
-        // 2. Pick ONE Jackpot Reward (100% Guaranteed) - ONLY for ID 2, 3
-        if (dungeon.id !== 1 && dungeon.rewards.rare.length > 0) {
+        // 3. Legacy Jackpot Logic (Only for Dungeons without specific probabilities config, i.e., ID 2 & 3 - IF they haven't been migrated yet)
+        // Since we are migrating ID 2, we shouldn't trigger this for it anymore if probabilities are set.
+        if (!dungeon.probabilities && dungeon.id !== 1 && dungeon.rewards.rare.length > 0) {
             const idx = Math.floor(Math.random() * dungeon.rewards.rare.length);
             rewards.push({ ...dungeon.rewards.rare[idx], type: 'rare' });
-            rewardType = 'rare'; // Set type to rare for jackpot styling
+            rewardType = 'rare';
         }
 
-        // 3. Global Key Drop Chance (Configurable via Admin)
+        // 4. Global Key Drop Chance (Configurable via Admin)
         const config = await SystemConfig.findOne();
         const dropRate = config?.dropRate || 0; // percentage (0-100)
 
@@ -146,7 +206,7 @@ export const claimExpedition = async (req: AuthRequest, res: Response) => {
                 const shopItem = SHOP_ITEMS.find((s: any) => s.id === r.itemId);
                 if (shopItem) {
                     nameObj = shopItem.name;
-                    const lifespan = r.itemId === 'robot' ? 29 : (shopItem.lifespanDays || 29);
+                    const lifespan = shopItem.lifespanDays || 29;
                     const bonus = (Number(shopItem.minBonus) + Number(shopItem.maxBonus)) / 2 || 0;
 
                     user.inventory.push({

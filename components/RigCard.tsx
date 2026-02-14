@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { RigLootModal } from './RigLootModal';
 import { OilRig, AccessoryItem } from '../services/types';
 import { OilRigAnimation } from './OilRigAnimation';
 import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS } from '../constants';
-import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star, Settings } from 'lucide-react';
+import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star, Settings, TrainFront } from 'lucide-react';
 import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
@@ -15,10 +16,11 @@ interface RigCardProps {
     inventory?: AccessoryItem[];
     onClaim: (id: string, amount: number) => void;
     onClaimGift: (id: string) => void;
-    onRenew?: (id: string) => void;
+    onRenew?: (rig: any) => void;
     onRepair?: (id: string) => void;
     onSellMaterials?: (id: string) => void;
     onMaterialUpdate?: (id: string, count: number) => void;
+    onScrap?: (rig: any) => void;
     onEquipSlot?: (rigId: string, slotIndex: number) => void;
     onUnequipSlot?: (rigId: string, slotIndex: number) => void;
     onManageGlove?: (rigId: string) => void;
@@ -30,6 +32,7 @@ interface RigCardProps {
     isExploring?: boolean;
     isOverclockActive?: boolean; // Overclock boost active
     overclockMultiplier?: number; // Dynamic multiplier
+    isFurnaceActive?: boolean; // Furnace x2 Boost
     isDemo?: boolean;
     addNotification?: (n: any) => void;
 }
@@ -44,6 +47,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     onRepair,
     onSellMaterials,
     onMaterialUpdate,
+    onScrap,
     onEquipSlot,
     onUnequipSlot,
     onManageGlove,
@@ -55,6 +59,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     isExploring = false,
     isOverclockActive = false,
     overclockMultiplier = 1,
+    isFurnaceActive = false,
     isDemo = false,
     addNotification
 }) => {
@@ -81,13 +86,14 @@ export const RigCard: React.FC<RigCardProps> = ({
     const [isConfirming, setIsConfirming] = useState(false);
     const [isRenewConfirming, setIsRenewConfirming] = useState(false);
     const [isRepairConfirming, setIsRepairConfirming] = useState(false);
+    const [isScrapConfirming, setIsScrapConfirming] = useState(false);
     const [isChargeConfirming, setIsChargeConfirming] = useState(false);
     const [isJustCharged, setIsJustCharged] = useState(false);
+    const [isLootModalOpen, setIsLootModalOpen] = useState(false);
 
     const [isRepairing, setIsRepairing] = useState(false);
     const [showRestored, setShowRestored] = useState(false);
     const [showRenewed, setShowRenewed] = useState(false);
-    const [showLootTable, setShowLootTable] = useState(false);
     const lastChargedAtRef = useRef<number>(0);
 
     const lastUpdateRef = useRef<number>(Date.now());
@@ -143,6 +149,10 @@ export const RigCard: React.FC<RigCardProps> = ({
     if (isOverclockActive) {
         totalDailyProfit *= overclockMultiplier;
     }
+    // FURNACE Boost
+    if (isFurnaceActive) {
+        totalDailyProfit *= 2;
+    }
 
     const totalRatePerSecond = totalDailyProfit / 86400;
 
@@ -160,9 +170,6 @@ export const RigCard: React.FC<RigCardProps> = ({
     const getAccessoryIcon = (item: AccessoryItem, className: string) => {
         const getNeonIcon = (typeId: string) => {
             if (!typeId) return <InfinityGlove rarity={item.rarity} className={className} />;
-            if (typeId.startsWith('hat')) {
-                return <HardHat className={`${className} text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.8)]`} />;
-            }
             if (typeId.startsWith('glasses')) {
                 return <Glasses className={`${className} text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]`} />;
             }
@@ -183,9 +190,6 @@ export const RigCard: React.FC<RigCardProps> = ({
             }
             if (typeId === 'auto_excavator') { // Rig Frame
                 return <Truck className={`${className} text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]`} />;
-            }
-            if (typeId.startsWith('robot')) {
-                return <Bot className={`${className} text-yellow-500 animate-pulse drop-shadow-[0_0_8px_rgba(234,179,8,0.8)]`} />;
             }
             if (typeId === 'upgrade_chip') {
                 return <Cpu className={`${className} text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]`} />;
@@ -266,7 +270,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     const hatId = rig.slots ? rig.slots.find(id => {
         if (!id) return false;
         const item = inventory.find(i => i.id === id);
-        return item && item.typeId === 'hat';
+        return false;
     }) : null;
 
     let hatDiscountText = '';
@@ -340,24 +344,16 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     const overclockBoost = (isPowered && !isZeroEnergy && isOverclockActive) ? overclockMultiplier : (isPowered && !isZeroEnergy) ? ENERGY_CONFIG.BOX_DROP_SPEED_BOOST : 1;
     const giftIntervalMs = (GIFT_CYCLE_DAYS * 24 * 60 * 60 * 1000) / (overclockBoost);
-    const lastGiftTime = rig.lastGiftAt || rig.purchasedAt;
-    const nextGiftTime = lastGiftTime + giftIntervalMs;
+
+    // Ensure properly parsed timestamps
+    const lastGiftTimestamp = rig.lastGiftAt ? new Date(rig.lastGiftAt).getTime() : (rig.purchasedAt ? new Date(rig.purchasedAt).getTime() : Date.now());
+    const nextGiftTime = lastGiftTimestamp + giftIntervalMs;
     const isGiftAvailable = !isExpired && (now >= nextGiftTime);
     const timeUntilGift = Math.max(0, nextGiftTime - now);
-    const nextGiftProgress = Math.min(100, ((now - lastGiftTime) / giftIntervalMs) * 100);
+    const nextGiftProgress = Math.min(100, ((now - lastGiftTimestamp) / giftIntervalMs) * 100);
 
     const keyCount = inventory.filter(i => i.typeId === 'chest_key').length;
     const hasKey = keyCount > 0;
-    const aiRobotItem = (inventory || []).find(i => i.typeId === 'robot');
-    const shopRobot = SHOP_ITEMS.find(i => i.id === 'robot');
-    const defaultLifespanDays = shopRobot?.lifespanDays || 29;
-
-    const aiRobotTimeLeft = aiRobotItem
-        ? (aiRobotItem.expireAt && !isNaN(safeNumber(aiRobotItem.expireAt)) && safeNumber(aiRobotItem.expireAt) > 0
-            ? Math.max(0, safeNumber(aiRobotItem.expireAt) - Date.now())
-            : Math.max(0, safeNumber(aiRobotItem.purchasedAt || Date.now()) + (defaultLifespanDays * 24 * 60 * 60 * 1000) - Date.now())
-        )
-        : 0;
 
     const formatTimeLeft = (ms: number) => {
         const gameMs = ms;
@@ -486,7 +482,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     const confirmRenew = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (onRenew) {
-            onRenew(rig.id);
+            onRenew(rig);
             setIsRenewConfirming(false);
             setShowRenewed(true);
             setTimeout(() => setShowRenewed(false), 3000);
@@ -531,15 +527,23 @@ export const RigCard: React.FC<RigCardProps> = ({
         if (onCharge) onCharge(rig.id);
     };
 
+    const handleScrapClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsScrapConfirming(true);
+    };
+
+    const confirmScrap = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onScrap) onScrap(rig);
+        setIsScrapConfirming(false);
+    };
+
     const handleGiftClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isGiftAvailable) {
-            if (hasKey && !isOutOfEnergy) onClaimGift(rig.id);
-            else if (isOutOfEnergy) {
-                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: t('rig.out_of_energy_msg'), type: 'ERROR', read: false, timestamp: Date.now() });
-            }
+            if (!isOutOfEnergy) onClaimGift(rig.id);
             else {
-                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: t('rig.need_key_msg'), type: 'ERROR', read: false, timestamp: Date.now() });
+                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: t('rig.out_of_energy_msg'), type: 'ERROR', read: false, timestamp: Date.now() });
             }
         }
     };
@@ -571,12 +575,12 @@ export const RigCard: React.FC<RigCardProps> = ({
 
         // Solid Colors matching reference
         let barColor = 'bg-[#4ADE80]'; // Green
-        if (percent <= 20) barColor = 'bg-[#EF4444]'; // Red
-        else if (percent <= 40) barColor = 'bg-[#F97316]'; // Orange
-        else if (percent <= 60) barColor = 'bg-[#EAB308]'; // Yellow
+        if (percent <= 10) barColor = 'bg-[#EF4444]'; // Red (Critical)
+        else if (percent <= 30) barColor = 'bg-[#F97316]'; // Orange
+        else if (percent <= 50) barColor = 'bg-[#EAB308]'; // Yellow
 
         // Remove pulse animation for cleaner look unless critical
-        const isCritical = percent <= 20;
+        const isCritical = percent <= 10;
 
         return (
             <div className="flex flex-col items-center gap-1">
@@ -608,8 +612,8 @@ export const RigCard: React.FC<RigCardProps> = ({
     else if (healthPercent <= 50) healthColor = 'bg-orange-500';
 
     let energyColor = 'bg-emerald-500';
-    if (energyPercent <= 20) energyColor = 'bg-red-500 animate-[pulse_1s_infinite]';
-    else if (energyPercent <= 50) energyColor = 'bg-yellow-500';
+    if (energyPercent <= 10) energyColor = 'bg-red-500 animate-[pulse_1s_infinite]';
+    else if (energyPercent <= 30) energyColor = 'bg-yellow-500';
 
     return (
         <div className={`relative rounded-xl p-0.5 transition-all duration-300 sm:hover:-translate-y-1 group border 
@@ -685,15 +689,41 @@ export const RigCard: React.FC<RigCardProps> = ({
 
             {isChargeConfirming && (
                 <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 text-center">
-                    <div className="bg-orange-500/10 p-3 rounded-full mb-3">
-                        <Flame className="text-orange-500 animate-pulse" size={24} />
+                    <div className="bg-emerald-500/10 p-3 rounded-full mb-3">
+                        <Zap className="text-emerald-500 animate-pulse" size={24} />
                     </div>
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_refill')}</h4>
                     -{formatCurrency(((100 - energyPercent) / 100) * effectiveEnergyCostPerDay)}
                     <div className="text-xs text-stone-500 mb-4">{t('rig.refill_desc')}</div>
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
                         <button onClick={(e) => { e.stopPropagation(); setIsChargeConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">{t('common.cancel')}</button>
-                        <button onClick={confirmCharge} className="py-2.5 rounded bg-orange-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> {t('rig.refill_now')}</button>
+                        <button onClick={confirmCharge} className="py-2.5 rounded bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> {t('rig.refill_now')}</button>
+                    </div>
+                </div>
+            )}
+
+            {isScrapConfirming && (
+                <div className="absolute inset-0 z-50 bg-red-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 text-center border-2 border-red-900/50 rounded-xl">
+                    <div className="bg-red-500/20 p-4 rounded-full mb-4 animate-bounce shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+                        <Trash2 className="text-red-500" size={32} />
+                    </div>
+                    <h4 className="text-red-400 text-sm uppercase tracking-[0.2em] font-black mb-2">{t('rig.confirm_demolish') || 'CONFIRM DEMOLISH'}</h4>
+                    <p className="text-stone-300 text-xs mb-4 max-w-[200px] leading-relaxed">
+                        {language === 'th' ? 'คุณแน่ใจหรือไม่ที่จะทุบเครื่องขุดนี้ทิ้ง? การกระทำนี้ไม่สามารถย้อนกลับได้!' : 'Are you sure you want to demolish this rig? This action cannot be undone!'}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 w-full mt-2">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setIsScrapConfirming(false); }}
+                            className="py-3 rounded-lg border border-stone-600 bg-stone-800 text-stone-300 text-xs font-bold uppercase tracking-wider hover:bg-stone-700 transition-colors"
+                        >
+                            {t('common.cancel')}
+                        </button>
+                        <button
+                            onClick={confirmScrap}
+                            className="py-3 rounded-lg bg-gradient-to-r from-red-600 to-red-800 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(220,38,38,0.5)] hover:scale-105 transition-transform"
+                        >
+                            <Trash2 size={14} /> {language === 'th' ? 'ทุบทิ้ง' : 'DEMOLISH'}
+                        </button>
                     </div>
                 </div>
             )}
@@ -722,10 +752,13 @@ export const RigCard: React.FC<RigCardProps> = ({
                             {React.cloneElement(styles.icon as React.ReactElement, { size: 12 })}
                             {preset ? getLocalized(preset.name) : getLocalized(rig.name)}
                         </span>
+                        <div className="absolute top-2 right-2 flex gap-1 z-10">
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded bg-stone-900 border border-stone-800 ${rarityConfig.color} uppercase tracking-wider`}>
+                            {/* Rarity Badge Moved Here */}
+                            <div className={`px-1.5 py-0.5 rounded text-[8px] font-bold border backdrop-blur-md shadow-sm flex items-center gap-1 ${rarityConfig.color} ${rarityConfig.border} bg-black/40`}>
                                 {rarityConfig.label}
-                            </span>
+                            </div>
                             <span className="text-[9px] text-stone-600 font-mono">Lvl {currentTier}</span>
                         </div>
                         <div className={`text-[9px] flex items-center gap-1 mt-1 font-mono font-medium ${isExpired ? 'text-red-500' : daysRemaining <= 3 ? 'text-orange-400' : 'text-stone-400'}`}>
@@ -813,6 +846,13 @@ export const RigCard: React.FC<RigCardProps> = ({
                     {/* LEFT SIDEBAR: Battery & 4 Accessory Slots */}
                     <div className="flex flex-col items-center gap-3 pr-2 border-r border-stone-800/30">
                         <div className="flex flex-col items-center gap-2 mb-1 w-full max-w-[100px]">
+                            {/* TOP: x2 Charge Badge (Moved from Header) */}
+                            {isFurnaceActive && (
+                                <div className="bg-emerald-600 border border-emerald-400 text-white text-[8px] px-1.5 py-0.5 rounded shadow-lg animate-pulse flex items-center gap-1 mb-1 whitespace-nowrap">
+                                    <Zap size={10} className="fill-current" />
+                                    <span className="font-bold uppercase leading-none">x2 CHARGE</span>
+                                </div>
+                            )}
                             {/* TOP: Battery (Energy Only) */}
                             <BatteryUI percent={energyPercent} colorClass={energyColor} isEnergy={true} />
 
@@ -857,8 +897,8 @@ export const RigCard: React.FC<RigCardProps> = ({
                                             <div className="relative w-full h-full flex items-center justify-center bg-stone-800/50 rounded-lg">
                                                 {(() => {
                                                     const nameRaw = item.name;
-                                                    const enName = typeof nameRaw === 'object' ? (nameRaw as any).en || '' : String(nameRaw || '');
-                                                    const thName = typeof nameRaw === 'object' ? (nameRaw as any).th || '' : String(nameRaw || '');
+                                                    const enName = typeof nameRaw === 'object' ? (nameRaw as any)?.en || '' : String(nameRaw || '');
+                                                    const thName = typeof nameRaw === 'object' ? (nameRaw as any)?.th || '' : String(nameRaw || '');
 
                                                     const typeIdLower = (item.typeId || '').toLowerCase();
 
@@ -866,15 +906,13 @@ export const RigCard: React.FC<RigCardProps> = ({
                                                     let colorClass = "text-yellow-100 drop-shadow-sm";
 
                                                     // priority check by name
-                                                    if (typeIdLower.startsWith('hat') || thName.includes('หมวก') || enName.includes('Helmet')) { IconComp = HardHat; colorClass = "text-emerald-400"; }
-                                                    else if (typeIdLower.startsWith('glasses') || thName.includes('แว่น') || enName.includes('Glasses')) { IconComp = Glasses; colorClass = "text-blue-400"; }
+                                                    if (typeIdLower.startsWith('glasses') || thName.includes('แว่น') || enName.includes('Glasses')) { IconComp = Glasses; colorClass = "text-blue-400"; }
                                                     else if (typeIdLower.startsWith('uniform') || typeIdLower.startsWith('shirt') || thName.includes('ชุด') || enName.includes('Uniform') || enName.includes('Suit')) { IconComp = Shirt; colorClass = "text-orange-400"; }
                                                     else if (typeIdLower.startsWith('bag') || thName.includes('กระเป๋า') || enName.includes('Bag') || enName.includes('Backpack')) { IconComp = Backpack; colorClass = "text-purple-400"; }
                                                     else if (typeIdLower.startsWith('boots') || thName.includes('รองเท้า') || enName.includes('Boots')) { IconComp = Footprints; colorClass = "text-yellow-400"; }
                                                     else if (typeIdLower.startsWith('mobile') || thName.includes('มือถือ') || enName.includes('Mobile')) { IconComp = Smartphone; colorClass = "text-cyan-400"; }
                                                     else if (typeIdLower.startsWith('pc') || thName.includes('คอม') || enName.includes('PC')) { IconComp = Monitor; colorClass = "text-rose-400"; }
-                                                    else if (typeIdLower.startsWith('robot') || thName.includes('หุ่นยนต์') || enName.includes('Robot')) { IconComp = Bot; colorClass = "text-fuchsia-400"; }
-                                                    else if (typeIdLower === 'auto_excavator' || thName.includes('ระบบล็อค')) { IconComp = Zap; colorClass = "text-indigo-400"; }
+                                                    else if (typeIdLower === 'auto_excavator' || thName.includes('ระบบล็อค') || thName.includes('รถไฟฟ้า')) { IconComp = TrainFront; colorClass = "text-indigo-400"; }
                                                     else if (typeIdLower === 'upgrade_chip' || thName.includes('ชิป')) { IconComp = Cpu; colorClass = "text-blue-500"; }
                                                     else if (typeIdLower === 'mixer' || thName.includes('เครื่องผสม')) { IconComp = Factory; colorClass = "text-amber-500"; }
                                                     else if (typeIdLower === 'magnifying_glass' || thName.includes('แว่นขยาย')) { IconComp = Search; colorClass = "text-sky-400"; }
@@ -904,6 +942,25 @@ export const RigCard: React.FC<RigCardProps> = ({
                                                                 const tier = series.tiers.find(t => t.rarity === item.rarity);
                                                                 if (tier) return getLocalized(tier.name);
                                                             }
+
+                                                            // Force Mining Theme Names for Gloves/Managers
+                                                            // Force Mining Theme Names for Gloves/Managers (Check ID, Type, AMD Legacy Names)
+                                                            const isGlove =
+                                                                item.id?.startsWith('glove_') ||
+                                                                item.typeId === 'manager' ||
+                                                                item.typeId === 'glove' ||
+                                                                (typeof item.name === 'string' && (item.name.includes('(STAFF)') || item.name.includes('(SUPERVISOR)') || item.name.includes('(MANAGER)') || item.name.includes('(EXECUTIVE)') || item.name.includes('(PARTNER)'))) ||
+                                                                (typeof item.name === 'object' && ((item.name as any).en?.includes('(STAFF)') || (item.name as any).th?.includes('(STAFF)')));
+
+                                                            if (isGlove) {
+                                                                const r = (item.rarity || 'COMMON').toUpperCase();
+                                                                if (r === 'COMMON') return t('loot_rates.staff');
+                                                                if (r === 'RARE') return t('loot_rates.supervisor');
+                                                                if (r === 'SUPER_RARE') return t('loot_rates.manager');
+                                                                if (r === 'EPIC') return t('loot_rates.executive');
+                                                                if (r === 'LEGENDARY') return t('loot_rates.partner');
+                                                            }
+
                                                             return item.name || item.typeId;
                                                         })()}
                                                     </div>
@@ -945,10 +1002,8 @@ export const RigCard: React.FC<RigCardProps> = ({
 
                                         let segColor = 'bg-stone-800';
                                         if (isFilled) {
-                                            if (healthPercent > 80) segColor = 'bg-[#4ADE80] shadow-[0_0_5px_rgba(74,222,128,0.5)]'; // Green
-                                            else if (healthPercent > 60) segColor = 'bg-[#A3E635] shadow-[0_0_5px_rgba(163,230,53,0.5)]'; // Yellow-Green
-                                            else if (healthPercent > 40) segColor = 'bg-[#EAB308] shadow-[0_0_5px_rgba(234,179,8,0.5)]'; // Yellow
-                                            else if (healthPercent > 20) segColor = 'bg-[#F97316] shadow-[0_0_5px_rgba(249,115,22,0.5)]'; // Orange
+                                            if (healthPercent > 20) segColor = 'bg-[#4ADE80] shadow-[0_0_5px_rgba(74,222,128,0.5)]'; // Green
+                                            else if (healthPercent > 10) segColor = 'bg-[#F97316] shadow-[0_0_5px_rgba(249,115,22,0.5)]'; // Orange
                                             else segColor = 'bg-[#EF4444] shadow-[0_0_5px_rgba(239,68,68,0.5)] animate-pulse'; // Red
                                         }
 
@@ -960,7 +1015,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                         );
                                     })}
                                 </div>
-                                <span className={`text-[9px] font-mono leading-none ${healthPercent <= 20 ? 'text-red-400 font-bold' : 'text-stone-400'}`}>
+                                <span className={`text-[9px] font-mono leading-none ${healthPercent <= 10 ? 'text-red-500 font-bold animate-pulse' : 'text-stone-400'}`}>
                                     {Math.ceil(healthPercent)}%
                                 </span>
                             </div>
@@ -982,6 +1037,8 @@ export const RigCard: React.FC<RigCardProps> = ({
                     {!isExpired && (
                         <div className="absolute top-3 right-3 z-20 flex flex-col items-center gap-2 pointer-events-auto">
 
+
+
                             {/* REPAIR BUTTON (Aligned with Battery) */}
                             {!isInfiniteDurability && !isVibranium && (
                                 <button
@@ -995,19 +1052,6 @@ export const RigCard: React.FC<RigCardProps> = ({
                                 </button>
                             )}
 
-                            {/* AI Robot (Below Repair) */}
-                            {aiRobotItem && (
-                                <div className="group/robot relative flex flex-col items-center mt-1">
-                                    <div className="bg-gradient-to-br from-yellow-700/80 to-yellow-900/80 p-1.5 rounded-full border border-yellow-500/30 shadow-lg animate-[pulse_3s_ease-in-out_infinite] backdrop-blur-sm cursor-help">
-                                        <Bot size={16} className="text-yellow-100" />
-                                    </div>
-                                    <div className="absolute right-full top-0 mr-2 bg-stone-950/90 rounded px-2 py-1 border border-yellow-900/50 shadow-xl backdrop-blur-md opacity-0 group-hover/robot:opacity-100 transition-opacity pointer-events-none w-max">
-                                        <span className="text-[10px] text-yellow-500 font-mono font-bold flex items-center justify-center gap-1 leading-none">
-                                            <Zap size={10} className="animate-bounce" /> {formatSimpleTime(aiRobotTimeLeft)}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     )}
 
@@ -1027,9 +1071,12 @@ export const RigCard: React.FC<RigCardProps> = ({
                             <div className="relative flex items-center justify-center w-11 h-11">
                                 {/* Info Button to show loot table always */}
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); setShowLootTable(prev => !prev); }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsLootModalOpen(true);
+                                    }}
                                     className="absolute -top-3 -right-1 z-30 p-1 bg-stone-900/80 border border-stone-700 rounded-full text-stone-500 hover:text-yellow-500 hover:border-yellow-500/50 transition-all backdrop-blur-sm shadow-lg"
-                                    title={t('loot.possible_rewards')}
+                                    title={t('rig.possible_rewards') || "Possible Rewards"}
                                 >
                                     <Info size={12} />
                                 </button>
@@ -1044,7 +1091,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                         </div>
                                     </div>
                                 ) : (
-                                    <div onClick={() => setShowLootTable(prev => !prev)} className="group/gift relative cursor-pointer active:scale-95 transition-transform">
+                                    <div onClick={() => setIsLootModalOpen(true)} className="group/gift relative cursor-pointer active:scale-95 transition-transform">
                                         <div className="bg-stone-800 p-1 rounded-lg border border-stone-600 shadow-inner relative flex flex-col items-center justify-center w-9 h-9 opacity-80 hover:opacity-100 transition-opacity">
                                             <span className="text-stone-500 font-bold mb-0.5 text-sm">?</span>
                                             <span className="text-[7px] font-mono text-stone-400 font-bold absolute bottom-1 leading-none tracking-tighter">{formatGiftCooldown(timeUntilGift)}</span>
@@ -1123,22 +1170,24 @@ export const RigCard: React.FC<RigCardProps> = ({
                     {rig.isDead && (
                         <div className="mb-2">
                             {!isRenewConfirming ? (
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        onClick={handleRenewClick}
-                                        className="relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all flex items-center justify-center gap-1.5 shadow-lg border group bg-gradient-to-br from-green-600 to-green-800 text-white border-green-500 hover:from-green-500 hover:to-green-700 hover:shadow-green-500/20 active:scale-95 h-10"
-                                    >
-                                        <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] px-1.5 rounded-bl-md font-bold z-10 shadow-sm">
-                                            -{(RENEWAL_CONFIG.DISCOUNT_PERCENT * 100).toFixed(0)}%
-                                        </div>
-                                        <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 skew-x-12"></div>
-                                        <RefreshCw size={14} className="group-hover:rotate-180 transition-transform" />
-                                        {t('actions.renew')}
-                                    </button>
+                                <div className={rig.investment > 0 ? "grid grid-cols-2 gap-2" : "flex"}>
+                                    {rig.investment > 0 && (
+                                        <button
+                                            onClick={handleRenewClick}
+                                            className="relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all flex items-center justify-center gap-1.5 shadow-lg border group bg-gradient-to-br from-green-600 to-green-800 text-white border-green-500 hover:from-green-500 hover:to-green-700 hover:shadow-green-500/20 active:scale-95 h-10"
+                                        >
+                                            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] px-1.5 rounded-bl-md font-bold z-10 shadow-sm">
+                                                -{(RENEWAL_CONFIG.DISCOUNT_PERCENT * 100).toFixed(0)}%
+                                            </div>
+                                            <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 weapon-shimmer skew-x-12"></div>
+                                            <RefreshCw size={14} className="group-hover:rotate-180 transition-transform" />
+                                            {t('actions.renew')}
+                                        </button>
+                                    )}
 
                                     <button
                                         onClick={handleDestroyClick}
-                                        className="relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all flex items-center justify-center gap-1.5 shadow-lg border group bg-stone-800 text-red-500 border-stone-700 hover:bg-stone-700 hover:text-red-400 hover:border-red-900/50 hover:shadow-red-900/10 active:scale-95 h-10"
+                                        className={`relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all flex items-center justify-center gap-1.5 shadow-lg border group bg-stone-800 text-red-500 border-stone-700 hover:bg-stone-700 hover:text-red-400 hover:border-red-900/50 hover:shadow-red-900/10 active:scale-95 h-10 ${rig.investment > 0 ? '' : 'w-full'}`}
                                     >
                                         <Trash2 size={14} />
                                         {t('actions.scrap')}
@@ -1167,39 +1216,37 @@ export const RigCard: React.FC<RigCardProps> = ({
                     {!rig.isDead && (
                         <div className="mb-2">
                             {/* Standard Actions: Repair & Charge - Above Collect Button */}
-                            <div className="grid grid-cols-2 gap-2 mb-2">
-                                <button
-                                    onClick={handleRepairClick}
-                                    disabled={isRepairing || healthPercent >= 100}
-                                    className={`
-                                        relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all
-                                        flex items-center justify-center gap-1.5 shadow-lg border group h-10
-                                        ${healthPercent >= 100
-                                            ? 'bg-stone-800 text-stone-500 border-stone-700 cursor-not-allowed opacity-50'
-                                            : 'bg-gradient-to-br from-blue-600 to-blue-800 text-white border-blue-500 hover:from-blue-500 hover:to-blue-700 hover:shadow-blue-500/20 active:scale-95'
-                                        }
-                                    `}
-                                >
-                                    <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 skew-x-12"></div>
-                                    <Wrench size={14} className={isRepairing ? "animate-spin" : "group-hover:rotate-12 transition-transform"} />
-                                    {isRepairing ? t('common.processing') : t('actions.repair')}
-                                </button>
+                            <div className={rig.investment > 0 ? "grid grid-cols-2 gap-2 mb-2" : "flex mb-2"}>
+                                {rig.investment > 0 && (
+                                    <button
+                                        onClick={handleRenewClick}
+                                        className={`
+                                            relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all
+                                            flex items-center justify-center gap-1.5 shadow-lg border group h-10
+                                            bg-gradient-to-br from-blue-600 to-blue-800 text-white border-blue-500 hover:from-blue-500 hover:to-blue-700 hover:shadow-blue-500/20 active:scale-95
+                                        `}
+                                    >
+                                        <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 weapon-shimmer skew-x-12"></div>
+                                        <div className="absolute -top-1 -right-1 bg-yellow-500 text-black text-[9px] px-1.5 rounded-bl-md font-bold z-10 shadow-sm border border-white">
+                                            -5%
+                                        </div>
+                                        <RefreshCw size={14} className="group-hover:rotate-180 transition-transform" />
+                                        {language === 'th' ? 'ต่อสัญญา' : 'Renew'}
+                                    </button>
+                                )}
 
                                 <button
-                                    onClick={handleChargeClick}
-                                    disabled={rig.energy >= 100}
+                                    onClick={handleScrapClick}
                                     className={`
                                         relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all
                                         flex items-center justify-center gap-1.5 shadow-lg border group h-10
-                                        ${rig.energy >= 100
-                                            ? 'bg-stone-800 text-stone-500 border-stone-700 cursor-not-allowed opacity-50'
-                                            : 'bg-gradient-to-br from-yellow-500 to-amber-700 text-white border-yellow-500 hover:from-yellow-400 hover:to-amber-600 hover:shadow-yellow-500/20 active:scale-95'
-                                        }
+                                        bg-gradient-to-br from-red-600 to-red-800 text-white border-red-500 hover:from-red-500 hover:to-red-700 hover:shadow-red-500/20 active:scale-95
+                                        ${rig.investment > 0 ? '' : 'w-full'}
                                     `}
                                 >
                                     <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 skew-x-12"></div>
-                                    <Zap size={14} className={rig.energy < 100 ? "fill-white animate-pulse" : ""} />
-                                    {t('actions.charge')}
+                                    <Trash2 size={14} className="group-hover:scale-110 transition-transform" />
+                                    {language === 'th' ? 'ทุบทิ้ง' : 'Demolish'}
                                 </button>
                             </div>
 
@@ -1258,56 +1305,13 @@ export const RigCard: React.FC<RigCardProps> = ({
                 </div>
             </div>
 
-            {/* Loot Table Overlay - Moved to cover WHOLE card */}
-            {
-                showLootTable && preset && RIG_LOOT_TABLES[preset.id] && (
-                    <div className="absolute inset-0 z-[100] bg-stone-950/98 backdrop-blur-xl rounded-xl p-4 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-200">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setShowLootTable(false); }}
-                            className="absolute top-3 right-3 p-1.5 rounded-full bg-stone-800 text-stone-400 hover:text-white transition-colors"
-                        >
-                            <X size={20} />
-                        </button>
+            <RigLootModal
+                isOpen={isLootModalOpen}
+                onClose={() => setIsLootModalOpen(false)}
+                rig={rig}
+            />
 
-                        <div className="flex flex-col items-center mb-5">
-                            <div className="bg-yellow-500/10 p-4 rounded-full mb-3 border border-yellow-500/20">
-                                <Package className="text-yellow-500" size={32} />
-                            </div>
-                            <h4 className="text-stone-200 text-base font-bold uppercase tracking-widest">{t('loot.possible_rewards')}</h4>
-                            <p className="text-yellow-500/60 text-[10px] uppercase font-mono mt-1 border-t border-yellow-500/20 pt-1">{getLocalized(preset.name)}</p>
-                        </div>
 
-                        <div className="w-full space-y-2 max-h-[220px] overflow-y-auto px-2 custom-scrollbar">
-                            {RIG_LOOT_TABLES[preset.id].map((entry, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-stone-900/50 border border-stone-800/50 hover:bg-stone-900 transition-colors">
-                                    <div className="flex flex-col">
-                                        <span className={`text-sm font-bold ${MATERIAL_CONFIG.COLORS[entry.matTier as keyof typeof MATERIAL_CONFIG.COLORS] || 'text-stone-300'}`}>
-                                            {getLocalized(MATERIAL_CONFIG.NAMES[entry.matTier])}
-                                        </span>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-tighter opacity-60">{t('rig.amount')}</span>
-                                            <span className="text-xs text-white font-mono font-bold">
-                                                x{entry.minAmount === entry.maxAmount ? entry.minAmount : `${entry.minAmount}-${entry.maxAmount}`}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <span className="text-[9px] text-yellow-500/60 uppercase font-bold tracking-tighter">{t('loot.chance')}</span>
-                                        <span className="text-sm font-mono font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{entry.chance}%</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setShowLootTable(false); }}
-                            className="mt-6 w-full py-2.5 rounded bg-stone-800 hover:bg-stone-750 border border-stone-700 text-stone-300 text-xs font-bold uppercase tracking-widest transition-all active:scale-95"
-                        >
-                            {t('common.close')}
-                        </button>
-                    </div>
-                )
-            }
         </div >
     );
 };

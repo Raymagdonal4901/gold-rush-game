@@ -101,7 +101,7 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
             case 'energy': return <Zap size={size} className="text-yellow-400" />;
             case 'material': return <Box size={size} className="text-orange-400" />;
             case 'item': return <Box size={size} className="text-blue-400" />;
-            case 'robot': return <BotIcon size={size} className="text-purple-400" />;
+            case 'robot': return null;
             default: return <Sparkles size={size} className="text-white" />;
         }
     };

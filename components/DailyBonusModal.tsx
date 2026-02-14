@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, CalendarCheck, CheckCircle2, Gift, Sparkles, Key, Cpu, Factory, RotateCw } from 'lucide-react';
+import { X, CalendarCheck, CheckCircle2, Gift, Sparkles, Key, Cpu, Factory, RotateCw, Timer, Search, Hourglass } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
@@ -92,8 +92,13 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
             case 'material':
                 return <MaterialIcon id={reward.tier} size="w-10 h-10" iconSize={24} />;
             case 'item':
-                const Icon = reward.id === 'chest_key' ? Key : reward.id === 'upgrade_chip' ? Cpu : reward.id === 'mixer' ? Factory : Gift;
-                return <Icon size={24} className="text-stone-400" />;
+                if (reward.id === 'chest_key') return <Key size={24} className="text-yellow-400" />;
+                if (reward.id === 'upgrade_chip') return <Cpu size={24} className="text-cyan-400" />;
+                if (reward.id === 'mixer') return <Factory size={24} className="text-stone-400" />;
+                if (reward.id === 'time_skip_ticket') return <Timer size={24} className="text-orange-400" />;
+                if (reward.id === 'magnifying_glass') return <Search size={24} className="text-blue-400" />;
+                if (reward.id === 'hourglass_small') return <Hourglass size={24} className="text-amber-400" />;
+                return <Gift size={24} className="text-stone-500" />;
             case 'grand_prize':
                 return (
                     <div className="relative">

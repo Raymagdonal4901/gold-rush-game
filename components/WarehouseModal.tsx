@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Hourglass, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown, FileText, CreditCard, Ticket, Timer, Settings, Wrench } from 'lucide-react';
-import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, RARITY_SETTINGS, SHOP_ITEMS, MATERIAL_RECIPES, EXCHANGE_RATE_USD_THB } from '../constants';
+import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Hourglass, Coins, ArrowRight, Eye, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Key, Zap, Briefcase, Gem, Sparkles, CheckCircle2, AlertTriangle, Hammer, Tag, Plus, ArrowDown, FileText, CreditCard, Ticket, Timer, Settings, Wrench, ArrowUpCircle, TrainFront } from 'lucide-react';
+import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, RARITY_SETTINGS, SHOP_ITEMS, MATERIAL_RECIPES, EXCHANGE_RATE_USD_THB, UPGRADE_REQUIREMENTS } from '../constants';
 import { MarketState, MarketItemData, AccessoryItem } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
 import { InfinityGlove } from './InfinityGlove';
@@ -19,14 +19,19 @@ interface WarehouseModalProps {
     onCraft: (sourceTier: number) => any;
     onPlayGoldRain?: () => void;
     onOpenMarket?: (tier: number) => void;
+    onUpgradeEquipment?: (itemId: string, useInsurance: boolean) => Promise<any>;
+    onScrapEquipment?: (itemId: string) => Promise<any>;
 }
 
 export const WarehouseModal: React.FC<WarehouseModalProps> = ({
-    isOpen, onClose, userId, materials = {}, inventory = [], balance = 0, marketState, onSell, onCraft, onPlayGoldRain, onOpenMarket
+    isOpen, onClose, userId, materials = {}, inventory = [], balance = 0, marketState, onSell, onCraft, onPlayGoldRain, onOpenMarket,
+    onUpgradeEquipment, onScrapEquipment
 }) => {
     const { t, language, getLocalized, formatCurrency, formatBonus } = useTranslation();
     const [hasMixer, setHasMixer] = useState(false); // Deprecated state, removing logic but keeping to avoid breaking if referenced elsewhere briefly. Actually, removing it.
     const [activeTab, setActiveTab] = useState<'MATERIALS' | 'ITEMS' | 'EQUIPMENT'>('MATERIALS');
+    const [selectedEquipmentGroup, setSelectedEquipmentGroup] = useState<{ representative: AccessoryItem, count: number, originalItems: AccessoryItem[] } | null>(null);
+    const [equipmentAction, setEquipmentAction] = useState<'DETAILS' | 'UPGRADE' | 'SCRAP' | 'BUSY'>('DETAILS');
 
     const [confirmState, setConfirmState] = useState<{
         type: 'SELL' | 'CRAFT' | 'INSPECT_ORE' | 'INSPECT_OIL';
@@ -45,6 +50,8 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
             setActiveTab('MATERIALS');
             setConfirmState(null);
             setIsAnimating(false);
+            setSelectedEquipmentGroup(null);
+            setEquipmentAction('DETAILS');
         }
     }, [isOpen]);
 
@@ -72,10 +79,10 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
     };
 
     // Equipment type definitions - wearable/attachable gear
-    const equipmentTypes = ['hat', 'glasses', 'uniform', 'bag', 'boots', 'mobile', 'pc', 'auto_excavator'];
+    const equipmentTypes = ['glasses', 'uniform', 'bag', 'boots', 'mobile', 'pc', 'auto_excavator'];
 
     // Consumable/utility items (non-equipment)
-    const itemTypes = ['mixer', 'magnifying_glass', 'chest_key', 'upgrade_chip', 'insurance_card', 'robot', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'repair_kit', 'ancient_blueprint', 'time_skip_ticket', 'construction_nanobot', 'vip_withdrawal_card'];
+    const itemTypes = ['mixer', 'magnifying_glass', 'chest_key', 'upgrade_chip', 'insurance_card', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'repair_kit', 'ancient_blueprint', 'time_skip_ticket', 'construction_nanobot', 'vip_withdrawal_card', 'vip_card_gold'];
 
     const isItem = (i: AccessoryItem) => {
         if (!i.typeId && !i.name) return false;
@@ -88,7 +95,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
             nameStr = i.name;
         }
 
-        if (i.typeId === 'glove' || nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) return false;
+        if (i.typeId === 'glove') return false;
 
         // Check by typeId
         if (i.typeId && itemTypes.includes(i.typeId)) return true;
@@ -101,7 +108,16 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         if (nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) return true;
         if (nameStr.includes('นาฬิกาทราย') || nameStr.includes('Hourglass')) return true;
         if (nameStr.includes('ประกัน') || nameStr.includes('Insurance')) return true;
+        if (nameStr.includes('VIP') || nameStr.includes('บัตร')) return true;
 
+        return false;
+    };
+
+    const isBuggy = (i: AccessoryItem) => {
+        const nameStr = (typeof i.name === 'string' ? i.name : (i.name?.en || i.name?.th || '')).toLowerCase();
+        // Specifically filter out the exact "robot" and "hat" lowercase name items seen in the screenshot
+        // But keep "หุ่นยนต์ AI" or "AI Robot"
+        if (nameStr === 'robot' || nameStr === 'hat') return true;
         return false;
     };
 
@@ -109,12 +125,12 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
     // - Items: in itemTypes list or matching item names
     // - Equipment: Everything else that isn't a glove and isn't an item
     const itemsList = inventory.filter(i => {
-        if (i.typeId === 'glove') return false;
+        if (i.typeId === 'glove' || isBuggy(i)) return false;
         return isItem(i);
     });
 
     const equipmentList = inventory.filter(i => {
-        if (i.typeId === 'glove') return false;
+        if (i.typeId === 'glove' || isBuggy(i)) return false;
         return !isItem(i);
     });
 
@@ -218,7 +234,6 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         if (typeId === 'upgrade_chip' || nameStr.includes('ชิป') || nameStr.includes('Chip')) return t('inventory.upgrade');
         if (typeId === 'mixer' || nameStr.includes('โต๊ะช่าง') || nameStr.includes('Mixer')) return t('warehouse.extract');
         if (typeId === 'magnifying_glass' || nameStr.includes('แว่นขยาย') || nameStr.includes('Search')) return getLocalized(item.name);
-        if (typeId === 'robot' || nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) return t('dashboard.shop'); // Shop key used for Generic Icon label fallback
         if (typeId === 'time_skip_ticket' || nameStr.includes('ตั๋วเร่งเวลา')) return language === 'th' ? 'ตั๋วเร่งเวลา' : 'Time Skip Ticket';
         if (typeId === 'construction_nanobot' || nameStr.includes('นาโนบอทก่อสร้าง')) return language === 'th' ? 'นาโนบอทก่อสร้าง' : 'Construction Nanobot';
 
@@ -247,10 +262,10 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         else if (nameStr.includes('นาฬิกาทราย') || nameStr.includes('Hourglass')) typeId = 'hourglass_small';
         else if (nameStr.includes('วัสดุปริศนา') || nameStr.includes('Mystery Item')) typeId = 'mystery_ore';
         else if (nameStr.includes('วัสดุหายาก') || nameStr.includes('Legendary Item')) typeId = 'legendary_ore';
-        else if (nameStr.includes('รถกอล์ฟ') || nameStr.includes('Golf Cart')) typeId = 'auto_excavator';
-        else if (nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) typeId = 'robot';
+        else if (nameStr.includes('รถกอล์ฟ') || nameStr.includes('Golf Cart') || nameStr.includes('รถไฟฟ้า') || nameStr.includes('Electric Vehicle')) typeId = 'auto_excavator';
+        else if (nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) typeId = 'ai_robot';
         // Classic Equipment
-        else if (nameStr.includes('หมวก') || nameStr.includes('Helmet')) typeId = 'hat';
+        else if (nameStr.includes('หมวก') || nameStr.includes('Helmet')) typeId = null;
         else if (nameStr.includes('แว่น') || nameStr.includes('Glasses')) typeId = 'glasses';
         else if (nameStr.includes('ชุด') || nameStr.includes('Uniform') || nameStr.includes('Suit')) typeId = 'uniform';
         else if (nameStr.includes('กระเป๋า') || nameStr.includes('Bag') || nameStr.includes('Backpack')) typeId = 'bag';
@@ -293,14 +308,15 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         if (typeId.includes('boots')) return <Footprints className={className} />;
         if (typeId.includes('mobile') || typeId.includes('phone')) return <Smartphone className={className} />;
         if (typeId.includes('pc') || typeId.includes('monitor')) return <Monitor className={className} />;
-        if (typeId.includes('robot')) return <Bot className={className} />;
-        if (typeId.includes('auto_excavator') || typeId.includes('truck')) return <Truck className={className} />;
+        if (typeId.includes('auto_excavator') || typeId.includes('truck')) return <TrainFront className={className} />;
         if (typeId.includes('upgrade_chip') || typeId.includes('chip')) return <Cpu className={className} />;
         if (typeId.includes('hourglass')) return <Hourglass className={className} />;
         if (typeId.includes('chest_key') || typeId.includes('key')) return <Key className={className} />;
         if (typeId.includes('mixer')) return <Factory className={className} />;
+        if (typeId === 'ai_robot' || typeId.includes('robot')) return <Bot className={className} />;
         if (typeId.includes('magnifying_glass') || typeId.includes('search')) return <Search className={className} />;
         if (typeId.includes('insurance_card') || typeId.includes('filetext')) return <FileText className={className} />;
+        if (typeId.includes('vip') || typeId.includes('credit')) return <CreditCard className={className} />;
 
         if (typeId.startsWith('repair_kit')) {
             let IconComp = Wrench;
@@ -349,6 +365,36 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         }
 
         return <InfinityGlove rarity={rarity} className={className} />;
+    };
+
+    const handleUpgradeEquipment = async () => {
+        if (!selectedEquipmentGroup || !onUpgradeEquipment) return;
+        const item = selectedEquipmentGroup.representative;
+        setEquipmentAction('BUSY');
+        try {
+            await onUpgradeEquipment(item.id, false);
+            setSelectedEquipmentGroup(null);
+        } catch (e: any) {
+            console.error("Upgrade failed:", e);
+        } finally {
+            setEquipmentAction('DETAILS');
+        }
+    };
+
+    const handleScrapEquipment = async () => {
+        if (!selectedEquipmentGroup || !onScrapEquipment) return;
+        const item = selectedEquipmentGroup.representative;
+        if (!confirm(t('inventory.sell_confirm'))) return;
+
+        setEquipmentAction('BUSY');
+        try {
+            await onScrapEquipment(item.id);
+            setSelectedEquipmentGroup(null);
+        } catch (e: any) {
+            console.error("Scrap failed:", e);
+        } finally {
+            setEquipmentAction('DETAILS');
+        }
     };
 
     const checkRecipeAvailability = (recipe: any) => {
@@ -736,7 +782,6 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                     case 'mixer': return RARITY_SETTINGS.SUPER_RARE;
                                                     case 'magnifying_glass': return RARITY_SETTINGS.RARE;
                                                     case 'chest_key': return RARITY_SETTINGS.EPIC;
-                                                    case 'robot': return RARITY_SETTINGS.MYTHIC;
                                                     case 'insurance_card': return RARITY_SETTINGS.ULTRA_LEGENDARY;
                                                     case 'hourglass_small': return RARITY_SETTINGS.UNCOMMON;
                                                     case 'hourglass_medium': return RARITY_SETTINGS.EPIC;
@@ -745,6 +790,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                     case 'ancient_blueprint': return RARITY_SETTINGS.DIVINE;
                                                     case 'time_skip_ticket': return RARITY_SETTINGS.RARE;
                                                     case 'construction_nanobot': return RARITY_SETTINGS.EPIC;
+                                                    case 'vip_card_gold': return RARITY_SETTINGS.ULTRA_LEGENDARY;
                                                     case 'vip_withdrawal_card': return RARITY_SETTINGS.LEGENDARY;
                                                     default: return RARITY_SETTINGS[item.rarity] || RARITY_SETTINGS.COMMON;
                                                 }
@@ -773,6 +819,12 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                             <div className="text-[10px] text-stone-500 truncate">
                                                                 {item.dailyBonus > 0 ? `${formatBonus(item.dailyBonus)}/${t('time.day')}` : (item.specialEffect || (activeTab === 'ITEMS' ? t('warehouse.items_tab') : t('warehouse.equipment_tab')))}
                                                             </div>
+                                                            {getItemDisplayName(item).includes('หุ่นยนต์ AI') && (
+                                                                <div className="flex items-center gap-1 mt-0.5">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                                                                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">ใช้งานอยู่ (Active)</span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="bg-stone-800 px-3 py-1 rounded-lg text-white font-mono font-bold relative z-10 shrink-0 ml-2">
@@ -786,9 +838,176 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                             </div>
                         )}
                         {activeTab === 'EQUIPMENT' && (
-                            <div className="space-y-6">
-                                {groupedEquipment.length === 0 ? (
-                                    <div className="text-center py-20 text-stone-600 italic">{t('warehouse.no_equipment')}</div>
+                            <div className="h-full">
+                                {selectedEquipmentGroup ? (
+                                    <div className="flex flex-col md:flex-row gap-6 h-full animate-in slide-in-from-right-10 duration-300">
+                                        {/* Detail Panel */}
+                                        <div className="flex-1 space-y-6">
+                                            <div className="bg-stone-900/50 border border-stone-800 rounded-2xl p-6 relative overflow-hidden group">
+                                                <div className="absolute top-0 right-0 p-4">
+                                                    <button
+                                                        onClick={() => setSelectedEquipmentGroup(null)}
+                                                        className="p-2 hover:bg-stone-800 rounded-lg text-stone-500 hover:text-white transition-colors"
+                                                    >
+                                                        <X size={20} />
+                                                    </button>
+                                                </div>
+
+                                                <div className="flex flex-col items-center text-center mb-8">
+                                                    <div className={`w-32 h-32 rounded-3xl border-4 ${RARITY_SETTINGS[selectedEquipmentGroup.representative.rarity || 'COMMON']?.border || 'border-stone-700'} bg-stone-950 flex items-center justify-center shadow-2xl mb-4 relative group-hover:scale-105 transition-transform duration-500`}>
+                                                        {getIcon(selectedEquipmentGroup.representative, `w-20 h-20 ${RARITY_SETTINGS[selectedEquipmentGroup.representative.rarity || 'COMMON']?.color || 'text-stone-400'}`)}
+                                                        {selectedEquipmentGroup.representative.level && selectedEquipmentGroup.representative.level > 1 && (
+                                                            <div className="absolute -bottom-3 bg-yellow-600 text-white text-xs font-black px-3 py-1 rounded-full border-2 border-stone-950 shadow-lg">
+                                                                Lv. {selectedEquipmentGroup.representative.level}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <h3 className={`text-2xl font-black uppercase tracking-tight ${selectedEquipmentGroup.representative.isHandmade ? 'text-yellow-400' : 'text-white'}`}>
+                                                        {getItemDisplayName(selectedEquipmentGroup.representative)}
+                                                    </h3>
+                                                    <div className={`text-xs font-black uppercase tracking-widest mt-1 ${RARITY_SETTINGS[selectedEquipmentGroup.representative.rarity || 'COMMON']?.color || 'text-stone-400'}`}>
+                                                        {selectedEquipmentGroup.representative.rarity || 'COMMON'}
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                                                    <div className="bg-stone-950/50 border border-stone-800 rounded-xl p-4">
+                                                        <div className="text-[10px] text-stone-500 font-black uppercase tracking-widest mb-1">{t('inventory.daily_bonus')}</div>
+                                                        <div className="text-xl font-mono font-bold text-white flex items-center gap-2">
+                                                            <Coins size={16} className="text-yellow-500" />
+                                                            {formatCurrency(selectedEquipmentGroup.representative.dailyBonus || 0, { showDecimals: true })}
+                                                            <span className="text-xs text-stone-500 font-normal">/{t('time.day')}</span>
+                                                        </div>
+                                                    </div>
+                                                    {selectedEquipmentGroup.representative.specialEffect && (
+                                                        <div className="bg-stone-950/50 border border-stone-800 rounded-xl p-4">
+                                                            <div className="text-[10px] text-stone-500 font-black uppercase tracking-widest mb-1">{t('inventory.special_property')}</div>
+                                                            <div className="text-sm font-bold text-emerald-400 uppercase tracking-tight">
+                                                                {getLocalized(selectedEquipmentGroup.representative.specialEffect)}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {equipmentAction === 'UPGRADE' ? (
+                                                    <div className="bg-stone-950 rounded-2xl border border-yellow-500/30 p-6 animate-in zoom-in duration-300">
+                                                        <div className="text-center mb-6">
+                                                            <h4 className="text-yellow-500 font-black uppercase tracking-widest text-sm mb-1">{t('inventory.upgrade_req')}</h4>
+                                                            <p className="text-stone-500 text-[10px] uppercase tracking-wider">{t('inventory.upgrade_fail_penalty')}</p>
+                                                        </div>
+
+                                                        {(() => {
+                                                            const currentLevel = selectedEquipmentGroup.representative.level || 1;
+                                                            const req = UPGRADE_REQUIREMENTS[currentLevel];
+                                                            if (!req) return <div className="text-center text-stone-500 py-4 uppercase font-black tracking-widest">{t('inventory.max_level')}</div>;
+
+                                                            const matTier = req.matTier || 1;
+                                                            const matAmount = req.matAmount || 1;
+                                                            const hasChip = inventory.some(i => i.typeId === 'upgrade_chip');
+                                                            const hasMat = (materials[matTier] || 0) >= matAmount;
+
+                                                            return (
+                                                                <div className="space-y-6">
+                                                                    <div className="flex items-center justify-center gap-6">
+                                                                        <div className="flex flex-col items-center gap-2">
+                                                                            <div className={`w-14 h-14 rounded-xl border-2 flex items-center justify-center transition-all ${hasChip ? 'bg-purple-900/20 border-purple-500/50' : 'bg-stone-900 border-stone-800 grayscale'}`}>
+                                                                                <Cpu size={28} className={hasChip ? 'text-purple-400' : 'text-stone-600'} />
+                                                                            </div>
+                                                                            <span className={`text-[10px] font-bold uppercase ${hasChip ? 'text-purple-400' : 'text-stone-600'}`}>1 CPU</span>
+                                                                        </div>
+                                                                        <Plus size={16} className="text-stone-800" />
+                                                                        <div className="flex flex-col items-center gap-2">
+                                                                            <div className={`w-14 h-14 rounded-xl border-2 flex items-center justify-center transition-all ${hasMat ? 'bg-stone-800 border-emerald-500/50' : 'bg-stone-900 border-stone-800 grayscale'}`}>
+                                                                                <MaterialIcon id={matTier} size="w-10 h-10" iconSize={20} />
+                                                                                <span className={`absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-black border-2 border-stone-950 shadow-lg ${hasMat ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
+                                                                                    x{matAmount}
+                                                                                </span>
+                                                                            </div>
+                                                                            <span className={`text-[10px] font-bold uppercase truncate max-w-[60px] ${hasMat ? 'text-stone-300' : 'text-stone-600'}`}>
+                                                                                {getLocalized(MATERIAL_CONFIG.NAMES[matTier as keyof typeof MATERIAL_CONFIG.NAMES])}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-stone-500 px-4">
+                                                                        <span>{t('inventory.upgrade_chance')}</span>
+                                                                        <span className="text-yellow-500">{(req.chance * 100).toFixed(0)}%</span>
+                                                                    </div>
+
+                                                                    <div className="flex gap-3 mt-4">
+                                                                        <button
+                                                                            onClick={() => setEquipmentAction('DETAILS')}
+                                                                            className="flex-1 py-3 bg-stone-800 hover:bg-stone-700 text-stone-400 font-bold rounded-xl transition-all uppercase tracking-widest text-xs"
+                                                                        >
+                                                                            {t('common.cancel')}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={handleUpgradeEquipment}
+                                                                            disabled={true}
+                                                                            className="flex-1 py-3 bg-stone-800 text-stone-600 font-black rounded-xl shadow-lg transition-all uppercase tracking-widest text-xs flex flex-col items-center justify-center gap-1 cursor-not-allowed opacity-75"
+                                                                        >
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Hammer size={16} /> {t('inventory.upgrade')}
+                                                                            </div>
+                                                                            <span className="text-[9px] text-red-500 font-bold">ระบบตีบวกปิดปรับปรุงชั่วคราว</span>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-wrap gap-4 justify-center">
+                                                        <button
+                                                            onClick={() => setSelectedEquipmentGroup(null)}
+                                                            className="px-6 py-3 bg-stone-800 hover:bg-stone-700 text-stone-400 font-bold rounded-xl transition-all uppercase tracking-widest text-xs flex items-center gap-2"
+                                                        >
+                                                            <ArrowRight className="rotate-180" size={16} /> {t('common.cancel')}
+                                                        </button>
+                                                        <button
+                                                            onClick={handleScrapEquipment}
+                                                            disabled={equipmentAction === 'BUSY'}
+                                                            className="px-6 py-3 bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 text-red-400 font-bold rounded-xl transition-all uppercase tracking-widest text-xs flex items-center gap-2"
+                                                        >
+                                                            <Hammer size={16} className="rotate-180" /> {t('rig.destroy')}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => { }}
+                                                            disabled={true}
+                                                            className="px-8 py-3 bg-stone-800 text-stone-600 font-black rounded-xl shadow-lg transition-all uppercase tracking-widest text-xs flex flex-col items-center justify-center gap-1 cursor-not-allowed opacity-75"
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <ArrowUpCircle size={16} /> {t('inventory.upgrade')}
+                                                            </div>
+                                                            <span className="text-[8px] text-red-500 font-bold">ระบบตีบวกปิดปรับปรุงชั่วคราว</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Group Info Sidebar */}
+                                        <div className="w-full md:w-64 space-y-4">
+                                            <div className="bg-stone-900/80 border border-stone-800 rounded-2xl p-4">
+                                                <div className="text-[10px] text-stone-500 font-black uppercase tracking-widest mb-3">{t('inventory.remaining_count').replace('{count}', selectedEquipmentGroup.count.toString())}</div>
+                                                <div className="space-y-2">
+                                                    {selectedEquipmentGroup.originalItems.map((item, i) => {
+                                                        const isSelected = selectedEquipmentGroup.representative.id === item.id;
+                                                        return (
+                                                            <div
+                                                                key={i}
+                                                                onClick={() => setSelectedEquipmentGroup({ ...selectedEquipmentGroup, representative: item })}
+                                                                className={`flex items-center justify-between text-[10px] p-2 rounded-lg border transition-all cursor-pointer ${isSelected ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'bg-stone-950 border-stone-800 text-stone-400 hover:bg-stone-800 hover:border-stone-700'}`}
+                                                            >
+                                                                <span className="font-mono">ID: {item.id.slice(-6)}</span>
+                                                                <span className={isSelected ? "font-black" : "font-bold opacity-50"}>{isSelected ? t('common.selected') : t('inventory.status')}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 ) : (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                         {groupedEquipment.map((group, idx) => {
@@ -797,9 +1016,13 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                             let containerClass = `bg-stone-900/80 border ${RARITY_SETTINGS[safeRarity].border}`;
 
                                             return (
-                                                <div key={idx} className={`${containerClass} rounded-xl p-4 flex items-center justify-between relative overflow-hidden group hover:border-emerald-500/50 transition-all`}>
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => setSelectedEquipmentGroup(group)}
+                                                    className={`${containerClass} rounded-xl p-4 flex items-center justify-between relative overflow-hidden group hover:border-emerald-500/50 transition-all cursor-pointer hover:bg-stone-800/80`}
+                                                >
                                                     <div className="flex items-center gap-3 relative z-10 min-w-0 flex-1">
-                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 bg-stone-950 border-stone-800`}>
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 bg-stone-950 border-stone-800 group-hover:scale-110 transition-transform`}>
                                                             {getIcon(item, `w-6 h-6 ${RARITY_SETTINGS[safeRarity].color}`)}
                                                         </div>
                                                         <div className="min-w-0">

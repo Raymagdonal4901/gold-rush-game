@@ -211,18 +211,18 @@ export const MockDB = {
         let rewardType = 'common';
         let rewardString = '';
 
-        // 1. Pick ONE Normal Reward (80% Common, 20% Salt)
+        // 1. Pick ONE Normal Reward (85% Common, 15% Salt)
         const roll = Math.random() * 100;
-        let normalPool = roll < 20 ? dungeon.rewards.salt : dungeon.rewards.common;
+        let normalPool = roll < 15 ? dungeon.rewards.salt : dungeon.rewards.common;
         if (normalPool.length === 0) normalPool = dungeon.rewards.common; // Fallback
 
         if (normalPool.length > 0) {
             const idx = Math.floor(Math.random() * normalPool.length);
-            rewards.push({ ...normalPool[idx], type: roll < 20 ? 'salt' : 'common' });
+            rewards.push({ ...normalPool[idx], type: roll < 15 ? 'salt' : 'common' });
         }
 
-        // 2. Pick ONE Jackpot Reward - ONLY for ID 2, 3
-        if (dungeon.id !== 1 && dungeon.rewards.rare.length > 0) {
+        // 2. Pick ONE Jackpot Reward - ONLY for ID 2, 3 (5% Chance)
+        if (dungeon.id !== 1 && dungeon.rewards.rare.length > 0 && Math.random() < 0.05) {
             const idx = Math.floor(Math.random() * dungeon.rewards.rare.length);
             rewards.push({ ...dungeon.rewards.rare[idx], type: 'rare' });
             rewardType = 'rare';
@@ -239,12 +239,12 @@ export const MockDB = {
 
         // Apply Rewards
         for (const r of rewards) {
-            let name = '';
+            let displayName = '';
             if (r.itemId) {
                 const shopItem = SHOP_ITEMS.find(s => s.id === r.itemId);
                 if (shopItem) {
                     if (!user.inventory) user.inventory = [];
-                    const lifespan = r.itemId === 'robot' ? 30 : (shopItem.lifespanDays || 30);
+                    const lifespan = shopItem.lifespanDays || 30;
                     const newItem: AccessoryItem = {
                         id: Math.random().toString(36).substr(2, 9),
                         typeId: shopItem.id,
@@ -259,23 +259,25 @@ export const MockDB = {
                         level: 1
                     };
                     user.inventory.push(newItem);
-                    name = shopItem.name;
+                    // Use fallback logic for name if it's localized object
+                    displayName = typeof shopItem.name === 'string' ? shopItem.name : (shopItem.name.th || shopItem.name.en);
                 }
             } else if (r.tier !== undefined) {
                 if (!user.materials) user.materials = {};
                 user.materials[r.tier] = (user.materials[r.tier] || 0) + (r.amount || 1);
-                name = materialNames[r.tier] || `Unknown Ore (${r.tier})`;
+                const matName = materialNames[r.tier];
+                displayName = matName ? (typeof matName === 'string' ? matName : (matName.th || matName.en)) : `Unknown Ore (${r.tier})`;
             }
 
             const label = r.type === 'rare' ? '[JACKPOT] ' : '';
-            rewardString += `${rewardString ? ' + ' : ''}${label}${name} x${r.amount || 1}`;
+            rewardString += `${rewardString ? ' + ' : ''}${label}${displayName} x${r.amount || 1}`;
         }
 
         user.activeExpedition = null;
         setStore(STORAGE_KEYS.USERS, users);
         syncSession(user);
 
-        return { success: true, reward: rewardString, type: rewardType };
+        return { success: true, reward: rewardString, type: rewardType, rewards: rewards };
     },
 
     skipExpeditionTime: (userId: string, itemId: string) => {

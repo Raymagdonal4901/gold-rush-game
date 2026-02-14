@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Sparkles, XCircle, Hammer, Backpack, Glasses, Monitor, Smartphone, Truck, Footprints, Zap, TrendingUp, Rocket, Flame, CloudFog, Anvil, FileText, HardHat, Shirt, Bot, Key, Factory, Search, Hourglass, Gem, Lock, Wrench, Clock, Timer, Ticket, Briefcase, Settings } from 'lucide-react';
+import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Sparkles, XCircle, Hammer, Backpack, Glasses, Monitor, Smartphone, Truck, Footprints, Zap, TrendingUp, Rocket, Flame, CloudFog, Anvil, FileText, HardHat, Shirt, Bot, Key, Factory, Search, Hourglass, Gem, Lock, Wrench, Clock, Timer, Ticket, Briefcase, Settings, TrainFront } from 'lucide-react';
 import { AccessoryItem, OilRig } from '../services/types';
 import { InfinityGlove } from './InfinityGlove';
 import { PixelProgressBar } from './PixelProgressBar';
@@ -215,7 +215,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
         // Fallbacks for legacy/generic IDs
         if (typeId.includes('shirt') || typeId.includes('uniform')) return 'uniform';
-        if (typeId.includes('hat') || typeId.includes('helmet')) return 'hat';
+        if (typeId.includes('helmet')) return 'hat';
         if (typeId.includes('tool')) return 'glove';
         return null;
     };
@@ -228,8 +228,8 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
         // 2. Fallback: Check by Name
         const nameRaw = item.name;
-        const enName = typeof nameRaw === 'object' ? (nameRaw as any).en || '' : String(nameRaw || '');
-        const thName = typeof nameRaw === 'object' ? (nameRaw as any).th || '' : String(nameRaw || '');
+        const enName = typeof nameRaw === 'object' ? (nameRaw as any)?.en || '' : String(nameRaw || '');
+        const thName = typeof nameRaw === 'object' ? (nameRaw as any)?.th || '' : String(nameRaw || '');
 
         if (thName.includes('หมวก') || enName.includes('Helmet')) return true;
         if (thName.includes('แว่นขยาย') || enName.includes('Magnifying')) return false; // Auto-activate tool
@@ -239,7 +239,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         if (thName.includes('รองเท้า') || enName.includes('Boots')) return true;
         if (thName.includes('มือถือ') || enName.includes('Mobile') || enName.includes('Phone')) return true;
         if (thName.includes('คอม') || enName.includes('PC') || enName.includes('Computer')) return true;
-        if (thName.includes('รถขุด') || enName.includes('Excavator')) return true;
+        if (thName.includes('รถขุด') || thName.includes('รถไฟฟ้า') || enName.includes('Excavator') || enName.includes('Electric Vehicle')) return true;
 
         return false;
     };
@@ -285,7 +285,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         if (typeId === 'upgrade_chip' || (typeof nameRaw === 'string' && (nameRaw.includes('ชิป') || nameRaw.includes('Chip')))) return t('items.upgrade_chip');
         if (typeId === 'mixer' || (typeof nameRaw === 'string' && (nameRaw.includes('โต๊ะช่าง') || nameRaw.includes('Mixer')))) return t('items.material_mixer');
         if (typeId === 'magnifying_glass' || (typeof nameRaw === 'string' && (nameRaw.includes('แว่นขยาย') || nameRaw.includes('Search')))) return t('items.magnifying_glass');
-        if (typeId === 'robot' || (typeof nameRaw === 'string' && (nameRaw.includes('หุ่นยนต์') || nameRaw.includes('Robot')))) return t('items.ai_robot');
+        if (typeId === 'robot') return null;
 
         // 3. User localization helper or raw name
         return getLocalized(nameRaw);
@@ -298,8 +298,8 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         let typeId = item.typeId || '';
         const nameRaw = item.name;
         // Safely extract string for .includes() check
-        const enName = typeof nameRaw === 'object' ? (nameRaw as any).en || '' : String(nameRaw || '');
-        const thName = typeof nameRaw === 'object' ? (nameRaw as any).th || '' : String(nameRaw || '');
+        const enName = typeof nameRaw === 'object' ? (nameRaw as any)?.en || '' : String(nameRaw || '');
+        const thName = typeof nameRaw === 'object' ? (nameRaw as any)?.th || '' : String(nameRaw || '');
 
         // Name-based overrides to fix "Glove" icon issue
         if (enName.includes('Chip') || thName.includes('ชิป')) typeId = 'upgrade_chip';
@@ -310,8 +310,8 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         else if (enName.includes('Hourglass') || thName.includes('นาฬิกาทราย')) typeId = 'hourglass_small';
         else if (enName.includes('Mystery Ore') || thName.includes('แร่ปริศนา')) typeId = 'mystery_ore';
         else if (enName.includes('Legendary Ore') || thName.includes('แร่ในตำนาน')) typeId = 'legendary_ore';
-        else if (enName.includes('Excavator') || thName.includes('รถขุด')) typeId = 'auto_excavator';
-        else if (enName.includes('Robot') || thName.includes('หุ่นยนต์')) typeId = 'robot';
+        else if (enName.includes('Excavator') || thName.includes('รถขุด') || thName.includes('รถไฟฟ้า') || enName.includes('Electric Vehicle')) typeId = 'auto_excavator';
+        else if (enName.includes('Robot') || thName.includes('หุ่นยนต์')) typeId = 'ai_robot';
         // Classic Equipment Fallbacks
         else if (enName.includes('Helmet') || thName.includes('หมวก')) typeId = 'hat';
         else if (enName.includes('Glasses') || thName.includes('แว่น')) typeId = 'glasses'; // Note: Magnifying Glass handled above
@@ -336,9 +336,6 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             if (!typeId) return <InfinityGlove size={size} />;
             const props = { size, className: "relative z-10" };
 
-            if (typeId.startsWith('hat')) {
-                return <HardHat {...props} className={`${props.className} text-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,0.8)]`} />;
-            }
             if (typeId.startsWith('glasses')) {
                 return <Glasses {...props} className={`${props.className} text-blue-400 drop-shadow-[0_0_12px_rgba(96,165,250,0.8)]`} />;
             }
@@ -358,10 +355,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 return <Monitor {...props} className={`${props.className} text-rose-400 drop-shadow-[0_0_12px_rgba(251,113,133,0.8)]`} />;
             }
             if (typeId === 'auto_excavator' || typeId.startsWith('truck')) {
-                return <Truck {...props} className={`${props.className} text-amber-500 drop-shadow-[0_0_12px_rgba(245,158,11,0.8)]`} />;
-            }
-            if (typeId.startsWith('robot')) {
-                return <Bot {...props} className={`${props.className} text-yellow-500 animate-pulse drop-shadow-[0_0_12px_rgba(234,179,8,0.8)]`} />;
+                return <TrainFront {...props} className={`${props.className} text-amber-500 drop-shadow-[0_0_12px_rgba(245,158,11,0.8)]`} />;
             }
             if (typeId === 'upgrade_chip' || typeId.startsWith('chip')) {
                 return <Cpu {...props} className={`${props.className} text-blue-500 drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]`} />;
@@ -407,6 +401,14 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                             <Zap size={10} className="animate-pulse" />
                         </div>
                         <Bot {...props} className={`${props.className} text-cyan-300 relative z-10`} />
+                    </div>
+                );
+            }
+            if (typeId === 'ai_robot' || typeId.includes('robot')) {
+                return (
+                    <div className="relative flex items-center justify-center">
+                        <div className="absolute inset-0 bg-purple-500/20 rounded-full scale-125 blur-md animate-pulse"></div>
+                        <Bot {...props} className={`${props.className} text-purple-400 relative z-10`} />
                     </div>
                 );
             }
@@ -609,7 +611,12 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
         const matName = upgradeReq ? getLocalized(MATERIAL_CONFIG.NAMES[upgradeReq.matTier as keyof typeof MATERIAL_CONFIG.NAMES]) : '';
 
-        const currentBonus = equippedItem?.dailyBonus || 0;
+        const safeBonus = (val: any) => {
+            const n = Number(val);
+            return isNaN(n) ? 0 : n;
+        };
+
+        const currentBonus = safeBonus(equippedItem?.dailyBonus);
         let nextBonusValue = currentBonus;
 
         if (upgradeReq) {
@@ -958,7 +965,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                             {getItemDisplayName(item)}
                                         </div>
                                         <div className="text-xs font-mono text-emerald-400 font-bold whitespace-nowrap bg-emerald-950/30 px-1.5 py-0.5 rounded border border-emerald-900/50">
-                                            +{formatCurrency(item.dailyBonus || 0)}/d
+                                            +{formatCurrency(isNaN(Number(item.dailyBonus)) ? 0 : Number(item.dailyBonus))}/d
                                         </div>
                                     </div>
 

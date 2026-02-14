@@ -36,6 +36,7 @@ export interface IUser extends Document {
 
     createdAt: Date;
     lastEnergyUpdate: Date;
+    totalDailyIncome?: number;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -74,7 +75,8 @@ const UserSchema = new Schema<IUser>({
     referralCount: { type: Number, default: 0 },
 
     createdAt: { type: Date, default: Date.now },
-    lastEnergyUpdate: { type: Date, default: Date.now }
+    lastEnergyUpdate: { type: Date, default: Date.now },
+    totalDailyIncome: { type: Number, default: 0 }
 });
 
 export default mongoose.model<IUser>('User', UserSchema);

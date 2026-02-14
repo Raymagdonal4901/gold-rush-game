@@ -72,19 +72,17 @@ export const register = async (req: Request, res: Response) => {
         if (referredBy) {
             // Reward: Standard Safety Helmet (Manual Claim)
             const welcomeItem = {
-                typeId: 'hat',
-                name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Helmet' },
-                rarity: 'COMMON',
-                lifespanDays: 10,
-                dailyBonus: 0.03125, // 1 THB / 32
-                isHandmade: false
+                typeId: 'chest_key',
+                name: { th: 'กุญแจหีบสมบัติ', en: 'Chest Key' },
+                rarity: 'EPIC',
+                amount: 1
             };
 
             notifications.push({
                 id: `welcome_${Date.now()}`,
                 userId: '', // Shared subdoc logic
                 title: 'ยินดีต้อนรับสู่เหมือง Gold Rush!',
-                message: 'คุณได้รับ หมวกนิรภัยมาตรฐาน จากการลงทะเบียนผ่านรหัสแนะนำ! กรุณากดปุ่มเพื่อรับอุปกรณ์ของคุณ',
+                message: 'คุณได้รับ กุญแจหีบสมบัติ จากการลงทะเบียนผ่านรหัสแนะนำ! กรุณากดปุ่มเพื่อรับอุปกรณ์ของคุณ',
                 type: 'REWARD',
                 read: false,
                 timestamp: Date.now(),
@@ -260,20 +258,31 @@ export const refillEnergy = async (req: any, res: Response) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
+        const { type } = req.body;
         const currentEnergy = user.energy ?? 100;
-        const needed = Math.max(0, 100 - currentEnergy);
 
-        // Flat rate: 0.02 Baht per 1% (matching ENERGY_CONFIG.COST_PER_UNIT in frontend)
-        // Costs are defined in THB but balance is in USD
-        const EXCHANGE_RATE = 1;
-        const COST_PER_UNIT_THB = 0.02;
-        const MIN_REFILL_FEE_THB = 2.0;
+        let costThb = 0;
+        let isOverclock = false;
 
-        let costThb = needed * COST_PER_UNIT_THB;
-        if (costThb < MIN_REFILL_FEE_THB) {
-            costThb = MIN_REFILL_FEE_THB;
+        // --- 1. OVERCLOCK REFILL (50 THB -> 100% Energy + 48h x2 Boost) ---
+        if (type === 'overclock') {
+            costThb = 50; // Fixed 50 THB price
+            isOverclock = true;
+        }
+        // --- 2. STANDARD REFILL (2 THB/100%) ---
+        else {
+            const needed = Math.max(0, 100 - currentEnergy);
+            // Flat rate: 0.02 Baht per 1% (matching ENERGY_CONFIG.COST_PER_UNIT in frontend)
+            const COST_PER_UNIT_THB = 0.02;
+            const MIN_REFILL_FEE_THB = 2.0;
+
+            costThb = needed * COST_PER_UNIT_THB;
+            if (costThb < MIN_REFILL_FEE_THB) {
+                costThb = MIN_REFILL_FEE_THB;
+            }
         }
 
+        const EXCHANGE_RATE = 1;
         const cost = costThb / EXCHANGE_RATE; // Convert to USD for balance deduction
 
         if (user.balance < cost) {
@@ -284,6 +293,15 @@ export const refillEnergy = async (req: any, res: Response) => {
         user.energy = 100;
         // Buffer: Set last update 5 seconds in future so it stays 100% for a bit
         user.lastEnergyUpdate = new Date(Date.now() + 5000);
+
+        // Apply Overclock if purchased
+        if (isOverclock) {
+            const durationMs = 48 * 60 * 60 * 1000; // 48 Hours
+            user.isOverclockActive = true;
+            user.overclockExpiresAt = new Date(Date.now() + durationMs);
+            user.overclockRemainingMs = durationMs;
+        }
+
         await user.save();
 
         res.json({

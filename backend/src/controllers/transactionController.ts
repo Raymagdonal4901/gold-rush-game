@@ -233,21 +233,31 @@ export const claimReward = async (req: AuthRequest, res: Response) => {
         const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
         if (!rig) return res.status(404).json({ message: 'Rig not found or not owned' });
 
+        // --- SECURITY VALIDATION: Prevent claiming arbitrary amounts ---
+        const now = new Date();
+        const lastClaim = rig.lastClaimAt || rig.purchaseDate || now;
+
+        const timeElapsedMs = now.getTime() - lastClaim.getTime();
+        const dailyRate = Number(rig.dailyProfit || 0) + Number(rig.bonusProfit || 0);
+
+        // Calculate max possible profit (dailyProfit is per 24 hours)
+        const maxClaimable = (timeElapsedMs / (24 * 60 * 60 * 1000)) * dailyRate;
+
+        // Allow 5% buffer + 1 unit for floating point/timing safety
+        const buffer = (maxClaimable * 0.05) + 1;
+
+        if (amount > maxClaimable + buffer) {
+            console.warn(`[SECURITY] Exploit attempt blocked! User: ${user.username}, Rig: ${rig.name}, Requested: ${amount}, MaxAllowed: ${maxClaimable.toFixed(2)}`);
+            return res.status(403).json({
+                message: 'ยอดเงินที่ขอเคลมไม่ถูกต้อง หรือรอนานไม่พอ (Invalid claim amount)',
+                reason: 'Amount requested exceeds the maximum possible profit for the time elapsed since last claim.'
+            });
+        }
+
         user.balance += amount;
-        await user.save();
+        rig.lastClaimAt = now;
 
-        // Update Rig (Use Mongoose 'set' or direct assignment if Rig model allows)
-        // Rig.ts doesn't explicitly show `lastClaimAt` in interface/schema in the VIEWED file.
-        // Step 3702 showed `Rig.ts` content. 
-        // `IRig` has: ownerId, name, image, investment, dailyProfit, purchaseDate, expiresAt, rarity, level, slots, status.
-        // IT DOES NOT HAVE `lastClaimAt`.
-        // This is a discrepancy. `PlayerDashboard` uses `lastClaimAt`.
-        // `MockDB` had `lastClaimAt`.
-        // If I want to persist it, I must ADD it to the Schema.
-
-        // I will add `lastClaimAt` to Rig Schema first, OR just ignore it in backend for now (stateless claim?).
-        // But preventing double claim needs `lastClaimAt`.
-        // I should add it to Rig.ts.
+        await Promise.all([user.save(), rig.save()]);
 
         const claim = await ClaimRequest.create({
             userId,

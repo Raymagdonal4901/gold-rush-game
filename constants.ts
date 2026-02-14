@@ -100,11 +100,11 @@ export const EQUIPMENT_SERIES: Record<string, { title: { th: string; en: string 
 };
 
 export const GLOVE_DETAILS: Record<string, { name: { th: string; en: string } }> = {
-    COMMON: { name: { th: 'พนักงานทั่วไป (STAFF)', en: 'Staff (STAFF)' } },
-    RARE: { name: { th: 'หัวหน้างาน (SUPERVISOR)', en: 'Supervisor (SUPERVISOR)' } },
-    SUPER_RARE: { name: { th: 'ผู้จัดการหอพัก (MANAGER)', en: 'Manager (MANAGER)' } },
-    EPIC: { name: { th: 'ผู้บริหารอาคาร (EXECUTIVE)', en: 'Executive (EXECUTIVE)' } },
-    LEGENDARY: { name: { th: 'หุ้นส่วนใหญ่ (PARTNER)', en: 'Partner (PARTNER)' } },
+    COMMON: { name: { th: 'ถุงมือคนงาน (Miner Glove)', en: 'Miner Glove' } },
+    RARE: { name: { th: 'ถุงมือหัวหน้าช่าง (Foreman Glove)', en: 'Foreman Glove' } },
+    SUPER_RARE: { name: { th: 'ถุงมือวิศวกร (Engineer Glove)', en: 'Engineer Glove' } },
+    EPIC: { name: { th: 'ถุงมือผู้ตรวจสอบ (Inspector Glove)', en: 'Inspector Glove' } },
+    LEGENDARY: { name: { th: 'ถุงมือเจ้าของสัมปทาน (Tycoon Glove)', en: 'Tycoon Glove' } },
 };
 
 export const GIFT_CYCLE_DAYS = 1;
@@ -139,7 +139,7 @@ export const UPGRADE_CONFIG = {
 export const MATERIAL_CONFIG = {
     MAX_CAPACITY: 1,
     DROP_CHANCE: 1.0, // Guaranteed drop when interval hits
-    DROP_INTERVAL_MS: 86400000, // 24 Hours (24 * 60 * 60 * 1000)
+    DROP_INTERVAL_MS: 14400000, // 4 Hours (4 * 60 * 60 * 1000)
     NAMES: {
         0: { th: 'เศษหิน', en: 'Stone Shards' },
         1: { th: 'ถ่านหิน', en: 'Coal' },
@@ -332,7 +332,7 @@ export interface RigPreset {
 }
 
 export const RIG_PRESETS: RigPreset[] = [
-    { id: 1, name: { th: 'พลั่วสนิมเขรอะ', en: 'Rusty Shovel' }, price: 300, dailyProfit: 50, bonusProfit: 30, durationDays: 7, repairCost: 0, energyCostPerDay: 1, specialProperties: { infiniteDurability: false, noGift: true } },
+    { id: 1, name: { th: 'พลั่วสนิมเขรอะ', en: 'Rusty Shovel' }, price: 300, dailyProfit: 50, bonusProfit: 30, durationDays: 7, repairCost: 0, energyCostPerDay: 1, specialProperties: { infiniteDurability: false, noGift: true }, type: 'COMMON' },
     { id: 2, name: { th: 'สว่านพกพา', en: 'Portable Drill' }, price: 500, dailyProfit: 40, bonusProfit: 70, durationDays: 15, repairCost: 0, energyCostPerDay: 2, image: '/images/rooms/fan_room.png', description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'UNCOMMON', specialProperties: { infiniteDurability: false } },
     { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Coal Excavator' }, price: 1000, dailyProfit: 45, durationMonths: 1, repairCost: 63, energyCostPerDay: 3, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' } },
     { id: 4, name: { th: 'เครื่องขุดทองแดง', en: 'Copper Excavator' }, price: 1500, dailyProfit: 56, durationMonths: 2, repairCost: 122, energyCostPerDay: 6, image: '/images/rooms/aircon_deluxe.png', description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'SUPER_RARE' },
@@ -468,16 +468,16 @@ export const SHOP_ITEMS: ShopItemConfig[] = [
     { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mine Key' }, price: 5, icon: 'Key', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้เปิดถ้ำสำรวจเพื่อลุ้นรับไอเทมหายาก', en: 'Used to open exploration caves for rare items' }, buyable: false },
     { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 5, icon: 'Factory', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้สำหรับสกัดแร่ระดับต่ำให้เป็นแร่ระดับสูง', en: 'Used for refining low tier materials' } },
     { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 5, icon: 'Search', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้ตรวจสอบหาแร่หายากโดยอัตโนมัติ', en: 'Automatically detects rare minerals' } },
-    { id: 'robot', name: { th: 'หุ่นยนต์ AI', en: 'AI Robot' }, price: 100, icon: 'Bot', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 29, description: { th: 'หุ่นยนต์อัจฉริยะ: เก็บของขวัญอัตโนมัติ, เติมพลังงาน/ซ่อมแซมอัตโนมัติ, แจ้งเตือนราคาตลาด', en: 'Smart Robot: Auto-collect gifts, Auto-repair/refill, Market alerts' } },
     { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 300, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ป้องกันระดับเครื่องจักรลดระดับเมื่ออัปเกรดล้มเหลว', en: 'Prevents rig downgrade upon upgrade failure' }, buyable: true },
     { id: 'vip_withdrawal_card', name: { th: 'บัตร VIP ปลดล็อกถอนเงิน', en: 'VIP Withdrawal Card' }, price: 200, icon: 'CreditCard', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ใช้สำหรับปลดล็อกการถอนเงินถาวร', en: 'Unlocks permanent withdrawals' } },
+    { id: 'vip_card_gold', name: { th: 'บัตร VIP ทองคำสุดหรู', en: 'Luxury Gold VIP Card' }, price: 199, icon: 'CreditCard', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 9999, description: { th: 'ปลดล็อกฟีเจอร์ถอนเงินถาวร พร้อมเอฟเฟกต์สีทองสุดพิเศษ', en: 'Permanently unlock withdrawal feature with exclusive gold effects' }, buyable: true },
     { id: 'ancient_blueprint', name: { th: 'แผนที่ขุดทองโบราณ', en: 'Ancient Blueprint' }, price: 10000, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้แทนวัสดุหายากในการสร้างแท่นขุดระดับสูง', en: 'Substitute for rare materials in crafting high-tier rigs' }, buyable: false },
     { id: 'hourglass_small', name: { th: 'นาฬิกาทราย (เล็ก)', en: 'Hourglass (Small)' }, price: 5, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 30 นาที', en: 'Speed up exploration by 30 mins' } },
     { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Hourglass (Medium)' }, price: 20, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 2 ชั่วโมง', en: 'Speed up exploration by 2 hours' } },
     { id: 'hourglass_large', name: { th: 'นาฬิกาทราย (ใหญ่)', en: 'Hourglass (Large)' }, price: 60, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 6 ชั่วโมง', en: 'Speed up exploration by 6 hours' } },
     { id: 'time_skip_ticket', name: { th: 'ตั๋วเร่งเวลา', en: 'Time Skip Ticket' }, price: 5, icon: 'Timer', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ลดเวลาการคราฟต์ 1 ชั่วโมง (กดซ้ำได้)', en: 'Reduce crafting time by 1 hour (stackable)' } },
     {
-        id: 'construction_nanobot', name: { th: 'นาโนบอทก่อสร้าง', en: 'Construction Nanobot' }, price: 2.828571, icon: 'Cpu',
+        id: 'construction_nanobot', name: { th: 'นาโนบอทก่อสร้าง', en: 'Construction Nanobot' }, price: 199, icon: 'Cpu',
         minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0,
         description: { th: 'สร้างอุปกรณ์เสร็จทันที 100%', en: 'Instantly finish crafting (100%)' }
     },
@@ -494,10 +494,6 @@ export const SHOP_ITEMS: ShopItemConfig[] = [
     },
     { id: 'repair_kit', name: { th: 'ชุดบำรุงรักษาพิเศษ', en: 'Repair Kit' }, price: 50, icon: 'Tool', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ซ่อมแซมเครื่องจักรจนเต็ม 100%', en: 'Fully repairs a rig to 100%' }, buyable: false },
 
-    {
-        id: 'hat', name: { th: 'หมวกนิรภัยมาตรฐาน', en: 'Standard Helmet' }, price: 50, icon: 'HardHat', minBonus: 0.5, maxBonus: 1.0, durationBonus: 1, lifespanDays: 30, maxDurability: 3000, tier: 1, // 0.5 - 1.0 THB | 30d = 3000 HP
-        craftingRecipe: { 1: 3 }, craftingFee: 10, craftDurationMinutes: 30, buyable: false, specialEffect: { th: 'ลดค่าดูแล -5%', en: 'Maintenance cost -5%' }
-    },
     {
         id: 'uniform', name: { th: 'ชุดป้องกัน', en: 'Safety Uniform' }, price: 120, icon: 'Shirt', minBonus: 1.0, maxBonus: 2.0, durationBonus: 3, lifespanDays: 30, maxDurability: 3000, tier: 1, // 1.0 - 2.0 THB | 30d = 3000 HP
         craftingRecipe: { 1: 4, 2: 3 }, craftingFee: 20, craftDurationMinutes: 60, buyable: false, specialEffect: { th: 'ลดค่าชาร์จแบต 5%', en: 'Reduce charging cost 5%' }
@@ -535,7 +531,7 @@ export const REPAIR_KITS = [
         name: { th: 'ชุดซ่อมพื้นฐาน', en: 'Basic Repair Kit' },
         repairTier: 1,
         repairValue: 3000, // +3,000 HP
-        targetEquipment: ['hat', 'uniform'],
+        targetEquipment: ['uniform'],
         craftingRecipe: { 1: 2, 2: 2 } as Record<number, number>, // Coal×2, Copper×2
         craftingFee: 5,
         craftDurationMinutes: 15,
@@ -588,29 +584,29 @@ export const DAILY_CHECKIN_REWARDS = [
     { day: 5, reward: 'money', amount: 20, label: { th: '20 ฿', en: '20 THB' } },
     { day: 6, reward: 'item', id: 'chest_key', amount: 1, label: { th: 'กุญแจเข้าเหมือง x1', en: 'Mine Key x1' } },
     { day: 7, reward: 'item', id: 'chest_key', amount: 3, label: { th: 'กุญแจเข้าเหมือง x3', en: 'Mine Key x3' }, highlight: true },
-    { day: 8, reward: 'money', amount: 25, label: { th: '25 ฿', en: '25 THB' } },
-    { day: 9, reward: 'material', tier: 2, amount: 2, label: { th: 'ทองแดง x2', en: 'Copper x2' } },
-    { day: 10, reward: 'money', amount: 30, label: { th: '30 ฿', en: '30 THB' } },
-    { day: 11, reward: 'material', tier: 3, amount: 1, label: { th: 'เหล็ก x1', en: 'Iron x1' } },
-    { day: 12, reward: 'money', amount: 35, label: { th: '35 ฿', en: '35 THB' } },
-    { day: 13, reward: 'item', id: 'upgrade_chip', amount: 2, label: { th: 'ชิปอัปเกรด x2', en: 'Upgrade Chip x2' } },
-    { day: 14, reward: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' }, highlight: true },
-    { day: 15, reward: 'money', amount: 40, label: { th: '40 ฿', en: '40 THB' } },
-    { day: 16, reward: 'material', tier: 3, amount: 2, label: { th: 'เหล็ก x2', en: 'Iron x2' } },
-    { day: 17, reward: 'material', tier: 2, amount: 5, label: { th: 'ทองแดง x5', en: 'Copper x5' } },
-    { day: 18, reward: 'money', amount: 45, label: { th: '45 ฿', en: '45 THB' } },
-    { day: 19, reward: 'material', tier: 3, amount: 2, label: { th: 'เหล็ก x2', en: 'Iron x2' } },
-    { day: 20, reward: 'item', id: 'upgrade_chip', amount: 5, label: { th: 'ชิปอัปเกรด x5', en: 'Upgrade Chip x5' } },
-    { day: 21, reward: 'item', id: 'upgrade_chip', amount: 15, label: { th: 'ชิปอัปเกรด x15', en: 'Upgrade Chip x15' }, highlight: true },
-    { day: 22, reward: 'money', amount: 50, label: { th: '50 ฿', en: '50 THB' } },
-    { day: 23, reward: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' } },
-    { day: 24, reward: 'item', id: 'chest_key', amount: 5, label: { th: 'กุญแจเข้าเหมือง x5', en: 'Mine Key x5' } },
-    { day: 25, reward: 'money', amount: 60, label: { th: '60 ฿', en: '60 THB' } },
-    { day: 26, reward: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' } },
-    { day: 27, reward: 'item', id: 'mixer', amount: 1, label: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' } },
-    { day: 28, reward: 'money', amount: 100, label: { th: 'Jackpot 100 ฿', en: 'Jackpot 100 THB' }, highlight: true },
-    { day: 29, reward: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' } },
-    { day: 30, reward: 'grand_prize', label: { th: 'ใบประกันความเสี่ยง + แท่นขุดเจาะพิเศษ', en: 'Insurance Card + Master Wing' }, highlight: true, special: true },
+    { day: 8, reward: 'item', id: 'upgrade_chip', amount: 2, label: { th: 'ชิปอัปเกรด x2', en: 'Upgrade Chip x2' } },
+    { day: 9, reward: 'item', id: 'chest_key', amount: 2, label: { th: 'กุญแจเข้าเหมือง x2', en: 'Mine Key x2' } },
+    { day: 10, reward: 'item', id: 'time_skip_ticket', amount: 2, label: { th: 'ตั๋วเร่งเวลา x2', en: 'Time Skip Ticket x2' } },
+    { day: 11, reward: 'item', id: 'magnifying_glass', amount: 2, label: { th: 'แว่นขยาย x2', en: 'Magnifying Glass x2' } },
+    { day: 12, reward: 'item', id: 'hourglass_small', amount: 2, label: { th: 'นาฬิกาทราย (เล็ก) x2', en: 'Hourglass (S) x2' } },
+    { day: 13, reward: 'item', id: 'mixer', amount: 2, label: { th: 'โต๊ะช่าง x2', en: 'Crafting Table x2' } },
+    { day: 14, reward: 'item', id: 'upgrade_chip', amount: 3, label: { th: 'ชิปอัปเกรด x3', en: 'Upgrade Chip x3' }, highlight: true },
+    { day: 15, reward: 'item', id: 'chest_key', amount: 3, label: { th: 'กุญแจเข้าเหมือง x3', en: 'Mine Key x3' } },
+    { day: 16, reward: 'item', id: 'time_skip_ticket', amount: 3, label: { th: 'ตั๋วเร่งเวลา x3', en: 'Time Skip Ticket x3' } },
+    { day: 17, reward: 'item', id: 'magnifying_glass', amount: 3, label: { th: 'แว่นขยาย x3', en: 'Magnifying Glass x3' } },
+    { day: 18, reward: 'item', id: 'hourglass_small', amount: 3, label: { th: 'นาฬิกาทราย (เล็ก) x3', en: 'Hourglass (S) x3' } },
+    { day: 19, reward: 'item', id: 'mixer', amount: 3, label: { th: 'โต๊ะช่าง x3', en: 'Crafting Table x3' } },
+    { day: 20, reward: 'item', id: 'upgrade_chip', amount: 3, label: { th: 'ชิปอัปเกรด x3', en: 'Upgrade Chip x3' } },
+    { day: 21, reward: 'item', id: 'chest_key', amount: 3, label: { th: 'กุญแจเข้าเหมือง x3', en: 'Mine Key x3' }, highlight: true },
+    { day: 22, reward: 'item', id: 'time_skip_ticket', amount: 3, label: { th: 'ตั๋วเร่งเวลา x3', en: 'Time Skip Ticket x3' } },
+    { day: 23, reward: 'item', id: 'magnifying_glass', amount: 3, label: { th: 'แว่นขยาย x3', en: 'Magnifying Glass x3' } },
+    { day: 24, reward: 'item', id: 'hourglass_small', amount: 3, label: { th: 'นาฬิกาทราย (เล็ก) x3', en: 'Hourglass (S) x3' } },
+    { day: 25, reward: 'item', id: 'mixer', amount: 3, label: { th: 'โต๊ะช่าง x3', en: 'Crafting Table x3' } },
+    { day: 26, reward: 'item', id: 'upgrade_chip', amount: 3, label: { th: 'ชิปอัปเกรด x3', en: 'Upgrade Chip x3' } },
+    { day: 27, reward: 'item', id: 'chest_key', amount: 3, label: { th: 'กุญแจเข้าเหมือง x3', en: 'Mine Key x3' } },
+    { day: 28, reward: 'item', id: 'time_skip_ticket', amount: 3, label: { th: 'ตั๋วเร่งเวลา x3', en: 'Time Skip Ticket x3' }, highlight: true },
+    { day: 29, reward: 'item', id: 'magnifying_glass', amount: 3, label: { th: 'แว่นขยาย x3', en: 'Magnifying Glass x3' } },
+    { day: 30, reward: 'material', tier: 5, amount: 1, label: { th: 'เพชร x1', en: 'Diamond x1' }, highlight: true, special: true },
 ];
 
 export const VIP_TIERS = [
@@ -634,7 +630,7 @@ export const QUESTS = [
 export const MINING_RANKS = [
     { id: 'bronze', label: { th: 'นักขุดระดับบรอนซ์', en: 'Bronze Miner' }, points: 100, rewardId: 'chest_key', amount: 5, buff: '', desc: { th: 'รับกุญแจเข้าเหมือง x5', en: 'Get Mine Key x5' } },
     { id: 'silver', label: { th: 'นักขุดระดับซิลเวอร์', en: 'Silver Miner' }, points: 300, rewardId: null, amount: 0, buff: { th: 'ค่าซ่อมบำรุง -5%', en: 'Repair Cost -5%' }, desc: { th: 'ลดค่าซ่อมบำรุงเครื่องจักร 5% (30 วัน)', en: 'Reduce repair cost 5% (30 days)' } },
-    { id: 'gold', label: { th: 'นักขุดระดับโกลด์', en: 'Gold Miner' }, points: 600, rewardId: 'robot', amount: 1, buff: '', desc: { th: 'หุ่นยนต์ AI (29 วัน)', en: 'AI Robot (29 days)' } },
+    { id: 'gold', label: { th: 'นักขุดระดับโกลด์', en: 'Gold Miner' }, points: 600, rewardId: 'chest_key', amount: 3, buff: '', desc: { th: 'กุญแจเข้าเหมือง x3', en: 'Mine Key x3' } },
     { id: 'platinum', label: { th: 'นักขุดระดับแพลตตินัม', en: 'Platinum Miner' }, points: 1000, rewardId: null, amount: 0, buff: { th: 'ภาษีตลาด 3%', en: 'Market Tax 3%' }, desc: { th: 'ลดภาษีขายแร่ 3% (30 วัน)', en: 'Reduce sell tax 3% (30 days)' } },
     { id: 'diamond', label: { th: 'นักขุดระดับแชมป์', en: 'Champion Miner' }, points: 1500, rewardId: null, amount: 0, buff: { th: 'Craft Great Success +5%', en: 'Craft Great Success +5%' }, desc: { th: 'เพิ่มโอกาสสกัดแร่สำเร็จ +5% (30 วัน)', en: 'Increase craft success +5% (30 days)' } },
 ];
@@ -651,8 +647,7 @@ export const LUCKY_DRAW_CONFIG = {
         { type: 'money', amount: 5, chance: 41, label: { th: 'เงิน 5 ฿', en: '5 THB Cash' } },
         { type: 'material', chance: 15, label: { th: 'วัสดุสุ่ม (ถ่านหิน/ทองแดง/เหล็ก)', en: 'Random Material (Coal/Copper/Iron)' } },
         { type: 'energy', amount: 50, chance: 30, label: { th: 'พลังงานเครื่องจักร +50%', en: 'Machine Energy +50%' } },
-        { type: 'item', chance: 13, label: { th: 'ไอเทมสุ่ม (กุญแจเข้าเหมือง/ชิป/โต๊ะช่าง)', en: 'Random Item (Key/Chip/Crafting Table)' } },
-        { type: 'robot', id: 'robot', chance: 1, label: { th: 'หุ่นยนต์ AI', en: 'AI Robot' } },
+        { type: 'item', chance: 14, label: { th: 'ไอเทมสุ่ม (กุญแจเข้าเหมือง/ชิป/โต๊ะช่าง)', en: 'Random Item (Key/Chip/Crafting Table)' } },
     ]
 };
 
@@ -663,10 +658,13 @@ export interface DungeonLevel {
     cost: number;
     keyCost?: number;
     durationHours: number;
+    probabilities?: { common: number; salt: number; rare: number }; // Custom drop rates
+    dropMode?: 'PICK_ONE' | 'ALL'; // 'ALL' = Drop everything in the tier (for common/salt)
+    dropRules?: { common?: 'PICK_ONE' | 'ALL'; salt?: 'PICK_ONE' | 'ALL'; rare?: 'PICK_ONE' | 'ALL' };
     rewards: {
-        common: { tier: number, amount: number, chance: number }[];
-        salt: { tier: number, amount: number, chance: number }[];
-        rare: { itemId?: string, tier?: number, amount: number, chance: number }[];
+        common: { tier: number; amount?: number; minAmount?: number; maxAmount?: number; chance: number }[];
+        salt: { tier: number; amount?: number; minAmount?: number; maxAmount?: number; chance: number }[];
+        rare: { itemId?: string; tier?: number; amount?: number; minAmount?: number; maxAmount?: number; chance: number }[];
     }
 }
 
@@ -676,20 +674,21 @@ export const DUNGEON_CONFIG: DungeonLevel[] = [
         name: { th: 'หุบเขาเหมืองร้าง (The Abandoned Canyon)', en: 'The Abandoned Canyon' },
         description: { th: 'ค้นหาเศษแร่ที่หลงเหลือในเหมืองร้าง', en: 'Search for leftover ore fragments in the abandoned mine.' },
         cost: 100,
-        keyCost: 2,
+        keyCost: 5,
         durationHours: 2,
+        probabilities: { common: 80, salt: 15, rare: 5 },
+        dropMode: 'PICK_ONE',
+        dropRules: { common: 'PICK_ONE', salt: 'PICK_ONE', rare: 'PICK_ONE' },
         rewards: {
             common: [
-                { tier: 1, amount: 10, chance: 50 }, // ถ่านหิน x10
-                { tier: 2, amount: 5, chance: 50 }   // ทองแดง x5
+                { tier: 1, minAmount: 8, maxAmount: 15, chance: 100 }, // ถ่านหิน (Coal) 8-15
+                { tier: 2, minAmount: 3, maxAmount: 8, chance: 100 }   // ทองแดง (Copper) 3-8
             ],
             salt: [
-                { tier: 1, amount: 5, chance: 100 } // ถ่านหิน x5
+                { tier: 1, minAmount: 3, maxAmount: 5, chance: 100 } // ถ่านหิน (Coal) 3-5 (Salt)
             ],
             rare: [
-                { itemId: 'chest_key', amount: 1, chance: 1 },
-                { itemId: 'hourglass_small', amount: 1, chance: 1 },
-                { itemId: 'upgrade_chip', amount: 1, chance: 1 }
+                { itemId: 'hourglass_medium', amount: 1, chance: 100 } // Jackpot: Hourglass Medium
             ]
         }
     },
@@ -698,22 +697,20 @@ export const DUNGEON_CONFIG: DungeonLevel[] = [
         name: { th: 'นครทองคำที่สาบสูญ (Lost City of Gold)', en: 'Lost City of Gold' },
         description: { th: 'ปฏิบัติการเจาะทะลุชั้นหินแข็ง เพื่อค้นหาทรัพยากรล้ำค่าที่ซ่อนอยู่', en: 'Drilling through hard rock layers to find hidden precious resources.' },
         cost: 300,
-        keyCost: 10,
         durationHours: 6,
+        probabilities: { common: 80, salt: 15, rare: 5 },
+        dropRules: { common: 'PICK_ONE', salt: 'PICK_ONE', rare: 'PICK_ONE' },
         rewards: {
             common: [
-                { tier: 3, amount: 10, chance: 50 }, // เหล็ก x10
-                { tier: 4, amount: 5, chance: 50 }   // ทองคำ x5
+                { tier: 3, minAmount: 10, maxAmount: 15, chance: 100 }, // เหล็ก x10-15
+                { tier: 4, minAmount: 5, maxAmount: 7, chance: 100 }   // ทองคำ x5-7
             ],
             salt: [
-                { tier: 3, amount: 5, chance: 50 }, // เหล็ก x5
-                { tier: 1, amount: 5, chance: 50 }  // ถ่านหิน x5
+                { tier: 2, minAmount: 10, maxAmount: 15, chance: 100 } // ทองแดง x10-15
             ],
             rare: [
-                { itemId: 'upgrade_chip', amount: 1, chance: 1 },
-                { itemId: 'mixer', amount: 1, chance: 1 },
-                { itemId: 'magnifying_glass', amount: 1, chance: 1 },
-                { itemId: 'hourglass_medium', amount: 1, chance: 1 }
+                { itemId: 'construction_nanobot', amount: 1, chance: 50 },
+                { itemId: 'hourglass_large', amount: 3, chance: 50 }
             ]
         }
     },
@@ -723,17 +720,20 @@ export const DUNGEON_CONFIG: DungeonLevel[] = [
         description: { th: 'เดินทางสู่ดินแดนต้องห้าม ที่เล่าขานว่ามีขุมทรัพย์ระดับตำนานหลับใหลอยู่', en: 'Journey to forbidden lands where legendary treasures are said to lie.' },
         cost: 1000,
         durationHours: 12,
+        probabilities: { common: 80, salt: 15, rare: 5 },
+        dropRules: { common: 'PICK_ONE', salt: 'PICK_ONE', rare: 'PICK_ONE' },
         rewards: {
             common: [
-                { tier: 5, amount: 15, chance: 50 }, // เพชร x15
-                { tier: 6, amount: 5, chance: 50 }   // น้ำมันดิบ x5
+                { tier: 5, minAmount: 7, maxAmount: 12, chance: 100 }, // เพชร 7-12
+                { tier: 6, minAmount: 3, maxAmount: 5, chance: 100 }   // น้ำมันดิบ 3-5
             ],
             salt: [
-                { tier: 5, amount: 5, chance: 100 } // เพชร x5
+                { tier: 4, minAmount: 10, maxAmount: 15, chance: 100 } // ทองคำ 10-15
             ],
             rare: [
-                { tier: 9, amount: 1, chance: 1 }, // แร่ในตำนาน
-                { tier: 8, amount: 1, chance: 1 }  // แร่ลึกลับ
+                { tier: 9, amount: 1, chance: 33 }, // แร่ในตำนาน
+                { tier: 8, amount: 1, chance: 33 }, // แร่ลึกลับ
+                { tier: 7, amount: 1, chance: 33 } // ไวเบรเนียม
             ]
         }
     }

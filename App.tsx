@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthPage } from './components/AuthPage';
 import { AdminDashboard } from './components/AdminDashboard';
-import { PlayerDashboard } from './components/PlayerDashboard';
+import PlayerDashboard from './components/PlayerDashboard';
 import { AnnouncementModal } from './components/AnnouncementModal'; // Import Modal
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { User } from './services/types';
@@ -97,13 +97,15 @@ const AppContent: React.FC = () => {
   }
 
   // 4. Regular user (No maintenance) -> Player Dashboard
-  return <PlayerDashboard initialUser={user} onLogout={handleLogout} />;
+  return <PlayerDashboard user={user} onLogout={handleLogout} />;
 };
 
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <AppContent />
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
     </ErrorBoundary>
   );
 };

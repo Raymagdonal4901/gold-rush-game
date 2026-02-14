@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { X, Backpack, DollarSign, ArrowUpCircle, Cpu, Hammer, HardHat, Glasses, Shirt, Footprints, Smartphone, Monitor, Bot, Truck, ShoppingBag, Sparkles, AlertTriangle, Hourglass, Search, Factory, Key, FileText, Timer, Shield, Gem, Star, TrendingUp, TrendingDown, Ticket, Zap } from 'lucide-react';
+import { X, Backpack, DollarSign, ArrowUpCircle, Cpu, Hammer, HardHat, Glasses, Shirt, Footprints, Smartphone, Monitor, Bot, Truck, ShoppingBag, Sparkles, AlertTriangle, Hourglass, Search, Factory, Key, FileText, Timer, Shield, Gem, Star, TrendingUp, TrendingDown, Ticket, Zap, TrainFront, CreditCard } from 'lucide-react';
 import { AccessoryItem } from '../services/types';
 import { CURRENCY, RARITY_SETTINGS, UPGRADE_REQUIREMENTS, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
 import { InfinityGlove } from './InfinityGlove';
@@ -40,22 +40,24 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         }
     }, [isOpen]);
 
-    if (!isOpen) return null;
-
     // rigs is now a state
     const equippedIds = new Set<string>();
     rigs.forEach(r => r.slots?.forEach((s: any) => { if (s) equippedIds.add(s); }));
 
     // Group items by typeId
     const groupedInventory = React.useMemo(() => {
-        const groups: Record<string, { representative: AccessoryItem, count: number, allIds: string[] }> = {};
+        const groups: Record<string, { representative: AccessoryItem, count: number, allIds: string[], items: AccessoryItem[] }> = {};
         inventory.forEach(item => {
+            const nameStr = (typeof item.name === 'string' ? item.name : (item.name?.en || item.name?.th || '')).toLowerCase();
+            if (nameStr === 'robot' || nameStr === 'hat') return;
+
             const key = `${item.typeId}_${item.level || 1}_${item.rarity}`;
             if (!groups[key]) {
-                groups[key] = { representative: item, count: 0, allIds: [] };
+                groups[key] = { representative: item, count: 0, allIds: [], items: [] };
             }
             groups[key].count++;
             groups[key].allIds.push(item.id);
+            groups[key].items.push(item);
         });
         return Object.values(groups);
     }, [inventory]);
@@ -105,7 +107,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         else if (nameToCheck.includes('Mystery Material')) typeId = 'mystery_ore';
         else if (nameToCheck.includes('Legendary Material')) typeId = 'legendary_ore';
         else if (nameToCheck.includes('Auto Lock')) typeId = 'auto_excavator';
-        else if (nameToCheck.includes('Robot')) typeId = 'robot';
+        else if (nameToCheck.includes('Robot')) typeId = 'ai_robot';
         // Classic Equipment Fallbacks
         else if (nameToCheck.includes('Helmet')) typeId = 'hat';
         else if (nameToCheck.includes('Glasses')) typeId = 'glasses';
@@ -116,6 +118,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         else if (nameToCheck.includes('PC') || nameToCheck.includes('Computer')) typeId = 'pc';
         else if (nameToCheck.includes('Time Skip Ticket') || nameToCheck.includes('ตั๋วเร่งเวลา')) typeId = 'time_skip_ticket';
         else if (nameToCheck.includes('Construction Nanobot') || nameToCheck.includes('นาโนบอทก่อสร้าง')) typeId = 'construction_nanobot';
+        else if (nameToCheck.includes('VIP')) typeId = 'vip_card_gold';
 
         // Also check Thai if English check failed and we have it (for legacy or direct string)
         if (!typeId && typeof item.name === 'string') {
@@ -128,7 +131,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
             else if (item.name.includes('วัสดุปริศนา')) typeId = 'mystery_ore';
             else if (item.name.includes('วัสดุในตำนาน')) typeId = 'legendary_ore';
             else if (item.name.includes('ระบบล็อค')) typeId = 'auto_excavator';
-            else if (item.name.includes('หุ่นยนต์')) typeId = 'robot';
+            else if (item.name.includes('หุ่นยนต์')) typeId = 'ai_robot';
             else if (item.name.includes('หมวก')) typeId = 'hat';
             else if (item.name.includes('แว่น')) typeId = 'glasses';
             else if (item.name.includes('ชุด')) typeId = 'uniform';
@@ -150,9 +153,10 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         if (typeId.startsWith('bag')) return <Backpack className={className} />;
         if (typeId.startsWith('boots')) return <Footprints className={className} />;
         if (typeId.startsWith('mobile')) return <Smartphone className={className} />;
+        if (typeId === 'ai_robot' || typeId.includes('robot')) return <Bot className={className} />;
         if (typeId.startsWith('pc')) return <Monitor className={className} />;
-        if (typeId.startsWith('robot')) return <Bot className={className} />;
-        if (typeId === 'auto_excavator' || typeId.startsWith('truck')) return <Truck className={className} />;
+        if (typeId.startsWith('robot')) return null;
+        if (typeId === 'auto_excavator' || typeId.startsWith('truck')) return <TrainFront className={className} />;
         if (typeId === 'upgrade_chip' || typeId.startsWith('chip')) return <Cpu className={className} />;
         if (typeId.startsWith('hourglass')) return <Hourglass className={className} />;
         if (typeId === 'chest_key' || typeId.startsWith('key')) return <Key className={className} />;
@@ -162,6 +166,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         if (typeId === 'FileText') return <FileText className={className} />;
         if (typeId === 'mystery_ore') return <Sparkles className={className} />;
         if (typeId === 'legendary_ore') return <Gem className={className} />;
+        if (typeId.includes('vip') || typeId.includes('credit')) return <CreditCard className={className} />;
 
         if (typeId === 'time_skip_ticket') {
             return (
@@ -265,12 +270,14 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
 
     const matName = getLocalized(MATERIAL_CONFIG.NAMES[matTier as keyof typeof MATERIAL_CONFIG.NAMES]);
 
+    if (!isOpen) return null;
+
     const renderDetailView = () => {
         if (!selectedItem) return <div className="text-stone-500 text-center mt-10">{t('inventory.select_item')}</div>;
 
         const isEquipped = equippedIds.has(selectedItem.id);
         const isChip = selectedItem.typeId === 'upgrade_chip';
-        const isSpecial = ['chest_key', 'mixer', 'magnifying_glass', 'robot', 'hourglass_small', 'hourglass_medium', 'hourglass_large'].includes(selectedItem.typeId);
+        const isSpecial = ['chest_key', 'mixer', 'magnifying_glass', 'hourglass_small', 'hourglass_medium', 'hourglass_large'].includes(selectedItem.typeId);
         const isGlove = selectedItem.typeId === 'glove';
 
         return (
@@ -294,7 +301,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                     {selectedItem.specialEffect && (
                         <div className="flex justify-between">
                             <span>{t('inventory.special_property')}</span>
-                            <span className="text-emerald-400 font-bold">{selectedItem.specialEffect}</span>
+                            <span className="text-emerald-400 font-bold">{getLocalized(selectedItem.specialEffect)}</span>
                         </div>
                     )}
                     <div className="flex justify-between">
@@ -306,6 +313,36 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                         <span className="text-emerald-400 font-mono">{formatCurrency(selectedItem.price * 0.5)}</span>
                     </div>
                 </div>
+
+                {/* Duplicate Instances Selection */}
+                {(() => {
+                    const group = groupedInventory.find(g => g.allIds.includes(selectedItem.id));
+                    if (!group || group.count <= 1) return null;
+                    return (
+                        <div className="mb-6 p-3 bg-stone-950/50 rounded-xl border border-stone-800 relative z-10">
+                            <div className="text-[10px] text-stone-500 font-black uppercase tracking-widest mb-2 flex items-center justify-between">
+                                <span>{t('inventory.remaining_count').replace('{count}', group.count.toString())}</span>
+                                <span className="text-yellow-500/50">{t('common.select')}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {group.items.map((it, idx) => {
+                                    const isTarget = it.id === selectedItem.id;
+                                    const itEquipped = equippedIds.has(it.id);
+                                    return (
+                                        <button
+                                            key={it.id}
+                                            onClick={() => setSelectedItem(it)}
+                                            className={`px-2 py-1.5 rounded-lg border text-[10px] font-mono transition-all flex items-center gap-1 ${isTarget ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'bg-stone-900 border-stone-800 text-stone-500 hover:border-stone-700'}`}
+                                        >
+                                            ID:{it.id.slice(-4)}
+                                            {itEquipped && <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse"></div>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {msg && <div className="mb-4 p-2 bg-blue-900/30 text-blue-200 text-xs text-center rounded relative z-10">{msg}</div>}
 
@@ -319,11 +356,14 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                             <DollarSign size={16} /> {t('inventory.sell_back')}
                         </button>
                         <button
-                            onClick={() => setAction('UPGRADE')}
-                            disabled={isEquipped || isChip || isSpecial || !isGlove} // Only gloves upgradeable
-                            className="py-2 bg-yellow-900/20 border border-yellow-900/50 text-yellow-400 rounded hover:bg-yellow-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            onClick={() => { }}
+                            disabled={true}
+                            className="py-2 bg-stone-800 text-stone-600 rounded cursor-not-allowed opacity-75 flex flex-col items-center justify-center gap-0.5"
                         >
-                            <ArrowUpCircle size={16} /> {t('inventory.upgrade')}
+                            <div className="flex items-center justify-center gap-2">
+                                <ArrowUpCircle size={16} /> {t('inventory.upgrade')}
+                            </div>
+                            <span className="text-[8px] text-red-500 font-bold">ระบบตีบวกปิดปรับปรุงชั่วคราว</span>
                         </button>
                     </div>
                 )}
@@ -369,7 +409,16 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
 
                         <div className="flex gap-2">
                             <button onClick={() => setAction('DETAILS')} className="flex-1 py-2 bg-stone-800 rounded text-stone-300">{t('common.cancel')}</button>
-                            <button onClick={handleUpgrade} disabled={isMaxLevel} className="flex-1 py-2 bg-yellow-600 hover:bg-yellow-500 rounded text-black font-bold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(234,179,8,0.3)] disabled:opacity-50"><Hammer size={14} /> {t('inventory.upgrade')}</button>
+                            <button
+                                onClick={handleUpgrade}
+                                disabled={true}
+                                className="flex-1 py-2 bg-stone-800 text-stone-600 rounded font-bold flex flex-col items-center justify-center gap-0.5 shadow-lg border border-stone-700 cursor-not-allowed opacity-75"
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <Hammer size={14} /> {t('inventory.upgrade')}
+                                </div>
+                                <span className="text-[10px] text-red-500 font-bold">ระบบตีบวกปิดปรับปรุงชั่วคราว</span>
+                            </button>
                         </div>
                     </div>
                 )}
@@ -518,10 +567,10 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                                 {group.count > 1 && <div className="text-stone-400 text-[9px] mb-1 italic">{t('inventory.remaining_count').replace('{count}', group.count.toString())}</div>}
                                                 {item.specialEffect && (
                                                     <div className="text-[9px] text-emerald-400 mb-1 font-bold">
-                                                        {item.specialEffect}
+                                                        {getLocalized(item.specialEffect)}
                                                     </div>
                                                 )}
-                                                {item.typeId !== 'robot' && (
+                                                {true && (
                                                     <div className="text-[10px] text-stone-400 flex items-center gap-1">
                                                         <Star size={10} className="text-yellow-500" />
                                                         <span className="font-mono text-yellow-500">{t('inventory.bonus_per_day').replace('{bonus}', formatBonus(item.dailyBonus || 0, item.typeId))}</span>

@@ -51,6 +51,7 @@ export interface AccessoryItem {
   level?: number; // Upgrade Level (Default 1)
   statsMultiplier?: number; // Stats Multiplier (Default 1.0)
   isHandmade?: boolean; // New: Great Success flag
+  isStarter?: boolean; // New: Flag for initial auto-assigned manager
   specialEffect?: string; // New: Description of the specific effect
 }
 

@@ -15,7 +15,7 @@ import { User, OilRig, AccessoryItem, ClaimRequest, WithdrawalRequest, DepositRe
 const isProd = (import.meta as any).env.PROD;
 const API_URL = (import.meta as any).env.VITE_API_URL ||
     (import.meta as any).env.NEXT_PUBLIC_API_URL ||
-    (isProd ? '/api' : 'http://localhost:5001/api');
+    (isProd ? '/api' : 'http://localhost:5002/api');
 
 const client = axios.create({
     baseURL: API_URL,
@@ -100,8 +100,8 @@ export const api = {
         } as User;
     },
 
-    refillEnergy: async (): Promise<{ cost: number, balance: number, energy: number }> => {
-        const res = await client.post('/auth/refill-energy');
+    refillEnergy: async (type?: 'overclock'): Promise<{ cost: number, balance: number, energy: number }> => {
+        const res = await client.post('/auth/refill-energy', { type });
         return res.data;
     },
 
@@ -520,7 +520,7 @@ const mapBackendGloveToFrontend = (backendGlove: any): AccessoryItem => {
         typeId: backendGlove.typeId || backendGlove.type || (
             backendGlove.name.includes('ชิป') ? 'upgrade_chip' :
                 backendGlove.name.includes('กุญแจ') ? 'chest_key' :
-                    backendGlove.name.includes('หุ่นยนต์') ? 'robot' :
+                    backendGlove.name.includes('หุ่นยนต์') ? null :
                         backendGlove.name.includes('ถุงมือ') ? 'glove' : 'unknown'
         ),
         name: backendGlove.name,

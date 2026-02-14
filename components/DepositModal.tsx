@@ -23,7 +23,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
     const [slipPreview, setSlipPreview] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [method, setMethod] = useState<'BANK' | 'USDT'>('BANK');
-    const [walletAddress, setWalletAddress] = useState(user.walletAddress || '');
+    const [walletAddress, setWalletAddress] = useState(user?.walletAddress || '');
     const [isSavingWallet, setIsSavingWallet] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
