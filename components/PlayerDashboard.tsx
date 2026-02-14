@@ -454,19 +454,22 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
         }
     };
 
-    const handleRenew = async (rig: any) => {
+    const handleRenew = async (rigInput: any) => {
         try {
-            await api.renewRig(rig.id); // Assuming backend knows cost logic
-            fetchData();
-        } catch (err) {
+            const rigId = typeof rigInput === 'string' ? rigInput : rigInput.id;
+            const res = await api.renewRig(rigId);
+            if (res.success) {
+                fetchData();
+            }
+        } catch (err: any) {
             console.error("Renew failed", err);
-            alert("Renew failed");
         }
     };
 
-    const handleRepair = async (rig: any) => {
+    const handleRepair = async (rigInput: any) => {
         try {
-            await api.repairRig(rig.id);
+            const rigId = typeof rigInput === 'string' ? rigInput : rigInput.id;
+            const res = await api.repairRig(rigId);
             fetchData();
         } catch (err) {
             console.error("Repair failed", err);
@@ -496,8 +499,18 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
         }
     };
 
-    const handleCollectMaterials = async (rig: any) => {
+    const handleCollectMaterials = async (rigInput: any) => {
         try {
+            // Resolve rig from ID if needed
+            const rig = typeof rigInput === 'string'
+                ? rigs.find((r: any) => r.id === rigInput)
+                : rigInput;
+
+            if (!rig) {
+                console.error("Rig not found for collection:", rigInput);
+                return;
+            }
+
             // Logic duplicated from auto-collect to determine tier
             const investment = rig.investment || 0;
             let tier = 1;
@@ -515,19 +528,22 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
         }
     };
 
-    const handleScrap = async (rig: any) => {
+    const handleScrap = async (rigInput: any) => {
         // Confirmation is handled in RigCard UI now
         try {
-            await api.destroyRig(rig.id);
-            fetchData();
-        } catch (err) {
-            console.error("Scrap failed", err);
-            alert("Scrap failed");
+            const rigId = typeof rigInput === 'string' ? rigInput : rigInput.id;
+            const res = await api.destroyRig(rigId);
+            if (res.success) {
+                fetchData();
+            }
+        } catch (err: any) {
+            console.error("Scrap rig failed", err);
         }
     };
 
-    const handleClaimGift = async (rigId: string) => {
+    const handleClaimGift = async (rigInput: any) => {
         try {
+            const rigId = typeof rigInput === 'string' ? rigInput : rigInput.id;
             const res = await api.claimRigGift(rigId);
 
             if (res && res.type === 'MATERIAL') {
