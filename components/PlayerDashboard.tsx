@@ -4,7 +4,7 @@ import { api } from '../services/api';
 // import { MockDB } from '../services/db'; // Not using MockDB directly for now unless needed
 import { useLanguage } from '../contexts/LanguageContext';
 import { translations } from '../services/translations';
-import { ROBOT_CONFIG, SHOP_ITEMS, MATERIAL_CONFIG, REPAIR_CONFIG } from '../constants';
+import { ROBOT_CONFIG, SHOP_ITEMS, MATERIAL_CONFIG, REPAIR_CONFIG, ENERGY_CONFIG } from '../constants';
 import { MaterialIcon } from './MaterialIcon';
 
 // Utility functions moved here since utils folder is missing
@@ -508,9 +508,10 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
 
             await api.collectMaterials(rig.id, rig.currentMaterials, tier);
             fetchData();
-        } catch (err) {
+        } catch (err: any) {
             console.error("Collect materials failed", err);
-            alert("Collect failed");
+            const errMsg = err.response?.data?.message || "Collect failed";
+            alert(errMsg);
         }
     };
 
@@ -1197,6 +1198,8 @@ h-full rounded-full transition-all duration-1000 relative overflow-hidden
                                         botCooldown={botCooldownRemaining}
                                         botWorkTimeLeft={botWorkTimeRemaining}
                                         onToggleBotPause={toggleBotPause}
+                                        isOverclockActive={user?.isOverclockActive && new Date(user?.overclockExpiresAt).getTime() > Date.now()}
+                                        overclockMultiplier={ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST || 2}
                                     />
                                 );
                             }

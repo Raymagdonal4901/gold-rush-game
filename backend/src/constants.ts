@@ -139,7 +139,7 @@ export const UPGRADE_CONFIG = {
 export const MATERIAL_CONFIG = {
     MAX_CAPACITY: 1,
     DROP_CHANCE: 1.0, // Guaranteed drop when interval hits
-    DROP_INTERVAL_MS: 86400000, // 24 Hours (24 * 60 * 60 * 1000)
+    DROP_INTERVAL_MS: 14400000, // 4 Hours (matching frontend)
     NAMES: {
         0: { th: 'เศษหิน', en: 'Stone Shards' },
         1: { th: 'ถ่านหิน', en: 'Coal' },

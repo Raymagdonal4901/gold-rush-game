@@ -3,7 +3,7 @@ import Rig from '../models/Rig';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
-import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS } from '../constants';
+import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS, ENERGY_CONFIG } from '../constants';
 import { recalculateUserIncome } from './userController';
 
 const MATERIAL_NAMES = MATERIAL_CONFIG.NAMES;
@@ -496,7 +496,14 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
 
         // Server-side validation: Check if enough time has passed
         const now = new Date();
-        const DROP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 Hours
+        let effectiveInterval = MATERIAL_CONFIG.DROP_INTERVAL_MS || 14400000;
+
+        // Apply Overclock Boost if active
+        // NOTE: Frontend uses `overclockBoost` variable which is 2x if active
+        if (user.isOverclockActive && user.overclockExpiresAt && new Date(user.overclockExpiresAt) > now) {
+            const multiplier = ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST || 2;
+            effectiveInterval = effectiveInterval / multiplier;
+        }
 
         // Use atomic findOneAndUpdate with cooldown condition
         const rig = await Rig.findOneAndUpdate(
@@ -505,7 +512,7 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
                 ownerId: userId,
                 $or: [
                     { lastCollectionAt: { $exists: false } },
-                    { lastCollectionAt: { $lte: new Date(now.getTime() - DROP_INTERVAL_MS) } }
+                    { lastCollectionAt: { $lte: new Date(now.getTime() - effectiveInterval) } }
                 ]
             },
             { $set: { lastCollectionAt: now } },
