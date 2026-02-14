@@ -245,25 +245,64 @@ export const claimNotificationReward = async (req: AuthRequest, res: Response) =
             user.balance += amount;
             rewardMessage = `ได้รับเงินจำนวน ${amount.toLocaleString()} เรียบร้อย!`;
         } else if (notification.rewardType === 'ITEM') {
-            // Handle Array of Items or Single Item
+            // Handle Array of Items, Single Item Object, or Item ID String
             const rewards = Array.isArray(notification.rewardValue)
                 ? notification.rewardValue
                 : [notification.rewardValue];
 
             let addedCount = 0;
-            for (const itemData of rewards) {
-                if (itemData && typeof itemData === 'object') {
-                    user.inventory.push({
-                        ...itemData,
-                        id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                        purchasedAt: Date.now()
-                    });
+            const { SHOP_ITEMS } = require('../constants'); // Local import to avoid circular dependency if any
+
+            for (const rewardData of rewards) {
+                if (!rewardData) continue;
+
+                let itemToPush = null;
+
+                if (typeof rewardData === 'string') {
+                    // It's an Item ID (e.g. 'chest_key')
+                    const shopItem = SHOP_ITEMS.find((s: any) => s.id === rewardData);
+                    if (shopItem) {
+                        const lifespan = shopItem.lifespanDays || 30;
+                        itemToPush = {
+                            id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                            typeId: shopItem.id,
+                            name: shopItem.name,
+                            price: shopItem.price,
+                            dailyBonus: (Number(shopItem.minBonus) + Number(shopItem.maxBonus)) / 2 || 0,
+                            durationBonus: shopItem.durationBonus || 0,
+                            rarity: shopItem.rarity || 'RARE',
+                            purchasedAt: Date.now(),
+                            lifespanDays: lifespan,
+                            expireAt: Date.now() + (lifespan * 24 * 60 * 60 * 1000),
+                            maxDurability: shopItem.maxDurability || (lifespan * 100),
+                            currentDurability: shopItem.maxDurability || (lifespan * 100),
+                            level: 1
+                        };
+                    }
+                } else if (typeof rewardData === 'object') {
+                    // It's already an item object
+                    itemToPush = {
+                        ...rewardData,
+                        id: rewardData.id || `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        purchasedAt: rewardData.purchasedAt || Date.now()
+                    };
+                }
+
+                if (itemToPush) {
+                    user.inventory.push(itemToPush);
                     addedCount++;
                 }
             }
 
             if (addedCount > 0) {
-                const firstItemName = rewards[0]?.name?.th || rewards[0]?.name || 'Item';
+                const firstReward = rewards[0];
+                let firstItemName = 'Item';
+                if (typeof firstReward === 'string') {
+                    const si = SHOP_ITEMS.find((s: any) => s.id === firstReward);
+                    firstItemName = si?.name?.th || si?.name || firstReward;
+                } else {
+                    firstItemName = firstReward?.name?.th || firstReward?.name || 'Item';
+                }
                 rewardMessage = addedCount > 1
                     ? `ได้รับ ${addedCount} ไอเทม เรียบร้อย!`
                     : `ได้รับ ${firstItemName} เรียบร้อย!`;

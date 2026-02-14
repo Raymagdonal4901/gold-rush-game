@@ -227,9 +227,10 @@ export const RIG_LOOT_TABLES: Record<number, LootEntry[]> = {
     ],
     // Tier 8: เครื่องขุดปฏิกรณ์ (Reactor)
     8: [
-        { matTier: 5, minAmount: 1, maxAmount: 2, chance: 60 },
-        { matTier: 6, minAmount: 1, maxAmount: 1, chance: 35 },
+        { matTier: 5, minAmount: 1, maxAmount: 2, chance: 55 },
+        { matTier: 6, minAmount: 1, maxAmount: 1, chance: 30 },
         { matTier: 7, minAmount: 1, maxAmount: 1, chance: 5 },
+        { itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 10 },
     ],
     // Tier 9: ถุงมือเน่า (Rotten Glove)
     9: [

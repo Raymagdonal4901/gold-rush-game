@@ -87,28 +87,24 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
     const isItem = (i: AccessoryItem) => {
         if (!i.typeId && !i.name) return false;
 
-        // Safely extract name string for internal mapping
         let nameStr = '';
         if (i.name && typeof i.name === 'object') {
-            nameStr = (i.name as any).en || '';
+            nameStr = (i.name as any).en || (i.name as any).th || '';
         } else if (typeof i.name === 'string') {
             nameStr = i.name;
         }
+        nameStr = nameStr.toLowerCase();
 
-        if (i.typeId === 'glove') return false;
+        const typeId = i.typeId?.toLowerCase() || '';
+        if (itemTypes.includes(typeId as any) || typeId.includes('key')) return true;
 
-        // Check by typeId
-        if (i.typeId && itemTypes.includes(i.typeId)) return true;
-
-        // Fallback check by name (Crucial for mismatched records)
-        if (nameStr.includes('ชิป') || nameStr.includes('Chip')) return true;
-        if (nameStr.includes('กุญแจ') || nameStr.includes('Key')) return true;
-        if (nameStr.includes('ผสม') || nameStr.includes('Mixer')) return true;
-        if (nameStr.includes('แว่นขยาย') || nameStr.includes('Magnifying')) return true;
-        if (nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) return true;
-        if (nameStr.includes('นาฬิกาทราย') || nameStr.includes('Hourglass')) return true;
+        if (nameStr.includes('key') || nameStr.includes('กุญแจ')) return true;
+        if (nameStr.includes('chip') || nameStr.includes('ชิป')) return true;
+        if (nameStr.includes('mixer') || nameStr.includes('โต๊ะช่าง')) return true;
+        if (nameStr.includes('magnifying') || nameStr.includes('แว่นขยาย')) return true;
+        if (nameStr.includes('hourglass') || nameStr.includes('นาฬิกาทราย')) return true;
         if (nameStr.includes('ประกัน') || nameStr.includes('Insurance')) return true;
-        if (nameStr.includes('VIP') || nameStr.includes('บัตร')) return true;
+        if (nameStr.includes('vip') || nameStr.includes('บัตร')) return true;
 
         return false;
     };
