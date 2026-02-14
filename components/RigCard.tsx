@@ -24,7 +24,7 @@ interface RigCardProps {
     onClaimGift: (id: string) => void;
     onRenew?: (rig: any) => void;
     onRepair?: (id: string) => void;
-    onSellMaterials?: (id: string) => void;
+    onCollect?: (id: string) => void;
     onMaterialUpdate?: (id: string, count: number) => void;
     onScrap?: (rig: any) => void;
     onEquipSlot?: (rigId: string, slotIndex: number) => void;
@@ -51,7 +51,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     onClaimGift,
     onRenew,
     onRepair,
-    onSellMaterials,
+    onCollect,
     onMaterialUpdate,
     onScrap,
     onEquipSlot,
@@ -118,7 +118,10 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     // Find preset first to get static data like type/rarity
     const nameStr = typeof rig.name === 'string' ? rig.name : (rig.name?.en || rig.name?.th || '');
-    const preset = RIG_PRESETS.find(p => p.name.en === nameStr || p.name.th === nameStr) || RIG_PRESETS.find(p => p.price === rig.investment);
+    const preset = RIG_PRESETS.find(p =>
+        (p.name.en && p.name.en === nameStr) ||
+        (p.name.th && p.name.th === nameStr)
+    ) || RIG_PRESETS.find(p => p.price === rig.investment && rig.investment > 0);
 
     // Rarity Logic: Prefer preset.type (from constants), then rig.rarity (from DB), then default
     const rarityKey = (preset?.type?.toUpperCase() || rig.rarity || 'COMMON') as keyof typeof RARITY_SETTINGS;
@@ -359,7 +362,8 @@ export const RigCard: React.FC<RigCardProps> = ({
     // Ensure properly parsed timestamps
     const lastGiftTimestamp = rig.lastGiftAt ? new Date(rig.lastGiftAt).getTime() : (rig.purchasedAt ? new Date(rig.purchasedAt).getTime() : Date.now());
     const nextGiftTime = lastGiftTimestamp + giftIntervalMs;
-    const isGiftAvailable = !isExpired && (now >= nextGiftTime);
+    const noGift = preset?.specialProperties?.noGift === true;
+    const isGiftAvailable = !isExpired && (now >= nextGiftTime) && !noGift;
     const timeUntilGift = Math.max(0, nextGiftTime - now);
     const nextGiftProgress = Math.min(100, ((now - lastGiftTimestamp) / giftIntervalMs) * 100);
 
@@ -561,8 +565,8 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     const handleCollectMaterialsClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (onSellMaterials && currentMaterials > 0) {
-            onSellMaterials(rig.id);
+        if (onCollect && currentMaterials > 0) {
+            onCollect(rig.id);
             setCurrentMaterials(0);
         }
     };
@@ -1105,26 +1109,30 @@ export const RigCard: React.FC<RigCardProps> = ({
                                     <Info size={12} />
                                 </button>
 
-                                {isGiftAvailable ? (
-                                    <div onClick={handleGiftClick} className="cursor-pointer transition-transform hover:scale-110 active:scale-95">
-                                        <div className="relative animate-[bounce_1s_infinite]">
-                                            <div className="absolute inset-0 bg-yellow-400/50 rounded-full blur-lg animate-pulse"></div>
-                                            <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-1 rounded-lg border border-white shadow-lg relative h-9 w-9 flex items-center justify-center">
-                                                <div className="text-white font-extrabold text-xl drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">?</div>
+                                {!noGift && (
+                                    <>
+                                        {isGiftAvailable ? (
+                                            <div onClick={handleGiftClick} className="cursor-pointer transition-transform hover:scale-110 active:scale-95">
+                                                <div className="relative animate-[bounce_1s_infinite]">
+                                                    <div className="absolute inset-0 bg-yellow-400/50 rounded-full blur-lg animate-pulse"></div>
+                                                    <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-1 rounded-lg border border-white shadow-lg relative h-9 w-9 flex items-center justify-center">
+                                                        <div className="text-white font-extrabold text-xl drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">?</div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div onClick={() => setIsLootModalOpen(true)} className="group/gift relative cursor-pointer active:scale-95 transition-transform">
-                                        <div className="bg-stone-800 p-1 rounded-lg border border-stone-600 shadow-inner relative flex flex-col items-center justify-center w-9 h-9 opacity-80 hover:opacity-100 transition-opacity">
-                                            <span className="text-stone-500 font-bold mb-0.5 text-sm">?</span>
-                                            <span className="text-[7px] font-mono text-stone-400 font-bold absolute bottom-1 leading-none tracking-tighter">{formatGiftCooldown(timeUntilGift)}</span>
-                                        </div>
-                                        <svg className="absolute -inset-1 w-[44px] h-[44px] -rotate-90 pointer-events-none">
-                                            <circle cx="22" cy="22" r="18" fill="none" className="stroke-stone-800/50" strokeWidth="2" />
-                                            <circle cx="22" cy="22" r="18" fill="none" className="stroke-emerald-500/30 transition-all duration-1000" strokeWidth="2" strokeDasharray="113" strokeDashoffset={113 - (113 * nextGiftProgress / 100)} strokeLinecap="round" />
-                                        </svg>
-                                    </div>
+                                        ) : (
+                                            <div onClick={() => setIsLootModalOpen(true)} className="group/gift relative cursor-pointer active:scale-95 transition-transform">
+                                                <div className="bg-stone-800 p-1 rounded-lg border border-stone-600 shadow-inner relative flex flex-col items-center justify-center w-9 h-9 opacity-80 hover:opacity-100 transition-opacity">
+                                                    <span className="text-stone-500 font-bold mb-0.5 text-sm">?</span>
+                                                    <span className="text-[7px] font-mono text-stone-400 font-bold absolute bottom-1 leading-none tracking-tighter">{formatGiftCooldown(timeUntilGift)}</span>
+                                                </div>
+                                                <svg className="absolute -inset-1 w-[44px] h-[44px] -rotate-90 pointer-events-none">
+                                                    <circle cx="22" cy="22" r="18" fill="none" className="stroke-stone-800/50" strokeWidth="2" />
+                                                    <circle cx="22" cy="22" r="18" fill="none" className="stroke-emerald-500/30 transition-all duration-1000" strokeWidth="2" strokeDasharray="113" strokeDashoffset={113 - (113 * nextGiftProgress / 100)} strokeLinecap="round" />
+                                                </svg>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>

@@ -100,12 +100,12 @@ export const api = {
         } as User;
     },
 
-    refillEnergy: async (type?: 'overclock'): Promise<{ cost: number, balance: number, energy: number }> => {
+    refillEnergy: async (type?: 'overclock'): Promise<{ success: boolean; message?: string; cost: number; balance: number; energy: number }> => {
         const res = await client.post('/auth/refill-energy', { type });
         return res.data;
     },
 
-    refillRigEnergy: async (rigId: string): Promise<{ cost: number, balance: number, energy: number }> => {
+    refillRigEnergy: async (rigId: string): Promise<{ success: boolean; message?: string; cost: number; balance: number; energy: number }> => {
         const res = await client.post(`/rigs/${rigId}/refill`);
         return res.data;
     },

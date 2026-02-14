@@ -160,15 +160,26 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const handleRefillEnergy = () => {
         setIsConfirmRefillOpen(false);
         api.refillEnergy('overclock').then(res => {
-            setUser((prev: any) => ({ ...prev, balance: res.balance, energy: res.energy }));
-            setIsFurnaceActive(true);
-            addNotification({
-                title: language === 'th' ? 'เติมพลังงานสำเร็จ!' : 'Refill Successful!',
-                message: language === 'th' ? 'เติมพลังงานเตาหลอมเรียบร้อยแล้ว' : 'Furnace energy has been refilled.',
-                type: 'success'
-            });
+            if (res.success) {
+                setUser((prev: any) => ({ ...prev, balance: res.balance, energy: res.energy }));
+                setIsFurnaceActive(true);
+                if (addNotification) {
+                    addNotification({
+                        id: Date.now().toString(),
+                        title: language === 'th' ? 'เติมพลังงานสำเร็จ!' : 'Refill Successful!',
+                        message: language === 'th' ? 'เติมพลังงานเตาหลอมเรียบร้อยแล้ว' : 'Furnace energy has been refilled.',
+                        type: 'SUCCESS',
+                        read: false,
+                        timestamp: Date.now()
+                    });
+                }
+            } else {
+                alert(res.message || 'Refill failed');
+            }
         }).catch(err => {
-            alert(err.response?.data?.message || 'Refill failed');
+            console.error("Refill failed", err);
+            const errMsg = err.response?.data?.message || err.message || 'Refill failed';
+            alert(`Error: ${errMsg}`);
         });
     };
 
@@ -281,7 +292,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             // --- 2. FURNACE ENERGY DRAIN SIMULATION ---
             if (currentIsFurnaceActive && currentRigs.length > 0) {
                 const extraDrainPercent = currentRigs.length * 0.10; // 0.10 to 0.60
-                const baseDrainPerSecond = 0.001; // Tiny base
+                const baseDrainPerSecond = 0.0007; // Adjusted to match backend (total with 6 rigs ~0.0011)
                 const totalDrain = baseDrainPerSecond * (1 + extraDrainPercent);
 
                 setUser((prev: any) => {
@@ -458,11 +469,26 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
 
     const handleChargeRigEnergy = async (rig: any) => {
         try {
-            await api.refillRigEnergy(rig.id);
-            fetchData();
-        } catch (err) {
+            const rigId = typeof rig === 'string' ? rig : rig.id;
+            const res = await api.refillRigEnergy(rigId);
+            if (res.success) {
+                fetchData();
+                if (addNotification) {
+                    addNotification({
+                        id: Date.now().toString(),
+                        message: language === 'th' ? 'เติมพลังงานเครื่องขุดสำเร็จ!' : 'Rig energy refilled!',
+                        type: 'SUCCESS',
+                        read: false,
+                        timestamp: Date.now()
+                    });
+                }
+            } else {
+                alert(res.message || "Refill failed");
+            }
+        } catch (err: any) {
             console.error("Refill energy failed", err);
-            alert("Refill failed");
+            const errMsg = err.response?.data?.message || err.message || "Refill failed";
+            alert(`Refill failed: ${errMsg}`);
         }
     };
 
@@ -987,12 +1013,7 @@ h-full rounded-full transition-all duration-1000 relative overflow-hidden
                                 <Flame size={28} className="text-red-500 animate-bounce mb-2" />
                                 <span className="text-red-500 font-bold text-xs mb-2">{language === 'th' ? '⚠️ พลังงานหมด!' : '⚠️ ENERGY DEPLETED!'}</span>
                                 <button
-                                    onClick={() => {
-                                        api.refillEnergy('overclock').then(res => {
-                                            setUser((prev: any) => ({ ...prev, balance: res.balance, energy: res.energy }));
-                                            setIsFurnaceActive(true);
-                                        }).catch(err => alert(err.response?.data?.message || 'Refill failed'));
-                                    }}
+                                    onClick={handleRefillEnergy}
                                     className="bg-gradient-to-r from-orange-500 to-red-600 text-white text-xs font-bold py-2 px-5 rounded-full hover:from-orange-400 hover:to-red-500 animate-pulse shadow-[0_0_15px_rgba(249,115,22,0.6)] transition-all"
                                 >
                                     {language === 'th' ? '🔥 เติมพลัง 50 ฿' : '🔥 REFILL 50 ฿'}

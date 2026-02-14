@@ -286,7 +286,7 @@ export const refillEnergy = async (req: any, res: Response) => {
         const cost = costThb / EXCHANGE_RATE; // Convert to USD for balance deduction
 
         if (user.balance < cost) {
-            return res.status(400).json({ message: 'ยอดเงินในวอลเลทไม่เพียงพอสำหรับเติมพลังงาน' });
+            return res.status(400).json({ success: false, message: 'ยอดเงินในวอลเลทไม่เพียงพอสำหรับเติมพลังงาน' });
         }
 
         user.balance -= cost;
@@ -305,13 +305,15 @@ export const refillEnergy = async (req: any, res: Response) => {
         await user.save();
 
         res.json({
+            success: true,
             message: 'Refill successful',
             cost,
             balance: user.balance,
             energy: user.energy
         });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error });
+        console.error('[REFILL_ENERGY_ERROR]', error);
+        res.status(500).json({ success: false, message: 'Server error', error: (error as any).message });
     }
 };
 

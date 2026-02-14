@@ -448,7 +448,7 @@ export const refillRigEnergy = async (req: AuthRequest, res: Response) => {
         if (cost < 0.1) cost = 0.1; // Minimum fee
 
         if (user.balance < cost) {
-            return res.status(400).json({ message: 'ยอดเงินในวอลเลทไม่เพียงพอ' });
+            return res.status(400).json({ success: false, message: 'ยอดเงินในวอลเลทไม่เพียงพอ' });
         }
 
         // Deduct balance and update rig
@@ -470,14 +470,15 @@ export const refillRigEnergy = async (req: AuthRequest, res: Response) => {
         await energyTx.save();
 
         res.json({
+            success: true,
             message: 'Rig energy refilled',
             cost,
             balance: user.balance,
             energy: rig.energy
         });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+    } catch (error: any) {
+        console.error('[REFILL_RIG_ENERGY_ERROR]', error);
+        res.status(500).json({ success: false, message: 'Server error', error: (error as any).message });
     }
 };
 

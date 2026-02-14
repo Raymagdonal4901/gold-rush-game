@@ -673,7 +673,7 @@ export const DUNGEON_CONFIG: DungeonLevel[] = [
         name: { th: 'หุบเขาเหมืองร้าง (The Abandoned Canyon)', en: 'The Abandoned Canyon' },
         description: { th: 'ค้นหาเศษแร่ที่หลงเหลือในเหมืองร้าง', en: 'Search for leftover ore fragments in the abandoned mine.' },
         cost: 100,
-        keyCost: 5,
+        keyCost: 10,
         durationHours: 2,
         probabilities: { common: 80, salt: 15, rare: 5 },
         dropMode: 'PICK_ONE',
