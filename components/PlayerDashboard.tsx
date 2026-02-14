@@ -49,6 +49,7 @@ import { HistoryModal } from './HistoryModal';
 import { WithdrawModal } from './WithdrawModal';
 import { DepositModal } from './DepositModal';
 import { TransactionConfirmModal } from './TransactionConfirmModal';
+import { ClaimResultModal } from './ClaimResultModal';
 
 interface PlayerDashboardProps {
     user: any;
@@ -86,6 +87,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const [isLootRatesOpen, setIsLootRatesOpen] = useState(false);
     const [isGloveRevealOpen, setIsGloveRevealOpen] = useState(false);
     const [isMaterialRevealOpen, setIsMaterialRevealOpen] = useState(false);
+    const [isClaimResultOpen, setIsClaimResultOpen] = useState(false);
     const [isMailOpen, setIsMailOpen] = useState(false);
     const [isReferralOpen, setIsReferralOpen] = useState(false);
     const [isDevToolsOpen, setIsDevToolsOpen] = useState(false);
@@ -97,6 +99,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const [isDepositOpen, setIsDepositOpen] = useState(false);
     const [pendingGlove, setPendingGlove] = useState<any>(null);
     const [pendingMaterial, setPendingMaterial] = useState<any>(null);
+    const [claimedAmount, setClaimedAmount] = useState<number>(0);
     const [isFurnaceActive, setIsFurnaceActive] = useState(true); // Default true for now
     const [nextCollectMs, setNextCollectMs] = useState<number | null>(null);
     const [isConfirmRefillOpen, setIsConfirmRefillOpen] = useState(false);
@@ -128,15 +131,31 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const lastAutoBatteryRefillRef = useRef<number>(0);
     const lastAutoRepairRef = useRef<Record<string, number>>({});
 
+    // --- ROBOT STATE ---
+    const [botStatus, setBotStatus] = useState<'WORKING' | 'COOLDOWN' | 'PAUSED'>('WORKING');
+    const [botCooldownRemaining, setBotCooldownRemaining] = useState<number>(0);
+    const [botWorkTimeRemaining, setBotWorkTimeRemaining] = useState<number>(0);
+    const BOT_COOLDOWN_DURATION = 10000; // 10 seconds cooldown cycle
+    const BOT_WORK_DURATION = 20000; // 20 seconds work cycle
+    const lastBotActionRef = useRef<number>(Date.now());
+
+    // Toggle Pause
+    const toggleBotPause = () => {
+        setBotStatus(prev => prev === 'PAUSED' ? (botCooldownRemaining > 0 ? 'COOLDOWN' : 'WORKING') : 'PAUSED');
+    };
+
     const userRef = useRef(user);
     const rigsRef = useRef(rigs);
     const isFurnaceActiveRef = useRef(isFurnaceActive);
+    const botStatusRef = useRef(botStatus);
+    const botCooldownRef = useRef(botCooldownRemaining);
 
     // Update refs
     useEffect(() => { userRef.current = user; }, [user]);
     useEffect(() => { rigsRef.current = rigs; }, [rigs]);
-    useEffect(() => { rigsRef.current = rigs; }, [rigs]);
     useEffect(() => { isFurnaceActiveRef.current = isFurnaceActive; }, [isFurnaceActive]);
+    useEffect(() => { botStatusRef.current = botStatus; }, [botStatus]);
+    useEffect(() => { botCooldownRef.current = botCooldownRemaining; }, [botCooldownRemaining]);
 
     const handleRefillEnergy = () => {
         setIsConfirmRefillOpen(false);
@@ -195,8 +214,39 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             const currentUser = userRef.current;
             const currentRigs = rigsRef.current;
             const currentIsFurnaceActive = isFurnaceActiveRef.current;
+            const currentBotStatus = botStatusRef.current;
+            let currentCooldown = botCooldownRef.current;
 
-            // --- 1. AUTOMATION LOGIC (AI ROBOT) ---
+            // --- 0. BOT CYCLE LOGIC ---
+            if (currentBotStatus === 'PAUSED') {
+                return; // Do nothing if paused
+            }
+
+            if (currentBotStatus === 'COOLDOWN') {
+                if (currentCooldown > 0) {
+                    const newCooldown = Math.max(0, currentCooldown - 1000);
+                    setBotCooldownRemaining(newCooldown);
+                    if (newCooldown <= 0) {
+                        setBotStatus('WORKING');
+                        lastBotActionRef.current = Date.now(); // Reset work timer
+                    }
+                }
+                return; // In cooldown, no work
+            }
+
+
+            // --- 1. AUTOMATION LOGIC (AI ROBOT - WORKING STATE) ---
+            const workDone = Date.now() - lastBotActionRef.current;
+            const timeLeft = Math.max(0, BOT_WORK_DURATION - workDone);
+            setBotWorkTimeRemaining(timeLeft);
+
+            // Check if we should switch to cooldown (simulate work cycle)
+            if (timeLeft <= 0) {
+                setBotStatus('COOLDOWN');
+                setBotCooldownRemaining(BOT_COOLDOWN_DURATION);
+                return;
+            }
+
             // Auto Repair
             for (const rig of currentRigs) {
                 // Calculate durability based on repairCost and Rigs Config? 
@@ -252,21 +302,36 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
 
 
     // Handlers
-    const handleClaim = async (rig: any) => {
-        try {
-            const now = Date.now();
-            const elapsedSeconds = (now - rig.lastClaimAt) / 1000;
-            const profit = elapsedSeconds * rig.ratePerSecond;
+    const handleClaim = async (rigId: string, amount: number) => {
+        const rig = rigs.find(r => r.id === rigId);
+        if (!rig) return;
 
-            if (profit <= 0) return;
+        try {
+            if (!amount || amount <= 0 || isNaN(amount)) {
+                console.warn('Invalid profit calculation:', amount);
+                return;
+            }
 
             // In api.ts, claimReward takes (rigId, amount). 
-            // Ideally backend verifies amount, but we pass calculated amount.
-            await api.claimReward(rig.id, profit);
-            fetchData();
+            const res = await api.claimReward(rigId, amount);
+
+            // Optimistic update from backend response (faster & safer than refetch)
+            if (res.success) {
+                setUser((prev: any) => ({ ...prev, balance: res.balance }));
+                setRigs((prevRigs: any[]) => prevRigs.map((r: any) =>
+                    r.id === rigId ? { ...r, lastClaimAt: new Date(res.lastClaimAt).getTime() } : r
+                ));
+
+                // Show Claim Result Popup
+                setClaimedAmount(amount);
+                setIsClaimResultOpen(true);
+            } else {
+                fetchData(); // Fallback if no specific data returned
+            }
         } catch (err) {
             console.error("Claim failed", err);
-            alert(t('common.error'));
+            const errMsg = err?.response?.data?.message || err?.message || t('common.error');
+            alert(`${t('common.error')}: ${errMsg}`);
         }
     };
 
@@ -658,7 +723,8 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             </nav>
 
             {/* Main Content Area */}
-            <AIHelpBot
+            {/* AI Robot Mascot removed */}
+            {/* <AIHelpBot
                 tutorialStep={tutorialStep}
                 onTutorialNext={handleTutorialNext}
                 onTutorialClose={handleTutorialClose}
@@ -668,9 +734,8 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                 onOpenWarehouse={() => setIsWarehouseOpen(true)}
                 onOpenMarket={() => setIsMarketOpen(true)}
                 onOpenDungeon={() => setIsDungeonOpen(true)}
-            />
-            {/* Automated Bot Overlay - Always visible if user has the feature (for now always valid) */}
-            <AutomatedBotOverlay />
+            /> */}
+
 
             <main className="pt-20 pb-24 lg:pb-8 px-4 max-w-7xl mx-auto min-h-screen flex flex-col gap-6">
 
@@ -1079,7 +1144,7 @@ h-full rounded-full transition-all duration-1000 relative overflow-hidden
                                     <RigCard
                                         key={rig.id}
                                         rig={rig}
-                                        onClaim={(r) => handleClaim(r)}
+                                        onClaim={(id, amount) => handleClaim(id, amount)}
                                         onClaimGift={(r) => handleClaimGift(r)}
                                         onManageAccessory={(rigId, slotIndex) => handleOpenAccessoryManager(rig, slotIndex)}
                                         onUnlockSlot={(slotIndex) => handleUnlockSlot(rig, slotIndex)}
@@ -1090,6 +1155,10 @@ h-full rounded-full transition-all duration-1000 relative overflow-hidden
                                         onScrap={(r) => handleScrap(r)}
                                         inventory={user?.inventory || []}
                                         isFurnaceActive={isFurnaceActive}
+                                        botStatus={botStatus}
+                                        botCooldown={botCooldownRemaining}
+                                        botWorkTimeLeft={botWorkTimeRemaining}
+                                        onToggleBotPause={toggleBotPause}
                                     />
                                 );
                             }
@@ -1097,7 +1166,7 @@ h-full rounded-full transition-all duration-1000 relative overflow-hidden
                             if (isLocked) {
                                 return (
                                     <div
-                                        key={`locked - ${index} `}
+                                        key={`locked-${index}`}
                                         onClick={() => {
                                             setUnlockTargetSlot(slotNumber);
                                             setIsSlotUnlockOpen(true);
@@ -1109,7 +1178,7 @@ h-full rounded-full transition-all duration-1000 relative overflow-hidden
                                         </div>
                                         <div>
                                             <h3 className="text-lg font-bold text-stone-500 group-hover:text-yellow-500">
-                                                {language === 'th' ? `พื้นที่ขุดที่ ${slotNumber} ` : `Mining Slot ${slotNumber} `}
+                                                {language === 'th' ? `พื้นที่ขุดที่ ${slotNumber}` : `Mining Slot ${slotNumber}`}
                                             </h3>
                                             <p className="text-stone-600 text-xs mt-1">
                                                 {language === 'th' ? 'ต้องปลดล็อกเพื่อใช้งาน' : 'Required expansion to use'}
@@ -1124,7 +1193,7 @@ h-full rounded-full transition-all duration-1000 relative overflow-hidden
 
                             return (
                                 <div
-                                    key={`empty - ${index} `}
+                                    key={`empty-${index}`}
                                     onClick={handleAddRig}
                                     className="bg-stone-900/50 border-2 border-dashed border-stone-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-3 cursor-pointer group hover:border-yellow-600/50 transition-all min-h-[300px]"
                                 >
@@ -1144,7 +1213,7 @@ h-full rounded-full transition-all duration-1000 relative overflow-hidden
                         })}
                     </div>
                 </div>
-            </main >
+            </main>
 
             {/* Mobile Menu Overlay */}
             {
@@ -1181,7 +1250,6 @@ h-full rounded-full transition-all duration-1000 relative overflow-hidden
             }
 
             {/* Modals */}
-
             <LeaderboardModal
                 isOpen={isLeaderboardOpen}
                 onClose={() => setIsLeaderboardOpen(false)}
@@ -1312,6 +1380,12 @@ h-full rounded-full transition-all duration-1000 relative overflow-hidden
                 amount={pendingMaterial?.amount || 1}
             />
 
+            <ClaimResultModal
+                isOpen={isClaimResultOpen}
+                onClose={() => setIsClaimResultOpen(false)}
+                amount={claimedAmount}
+            />
+
             <MailModal
                 isOpen={isMailOpen}
                 onClose={() => setIsMailOpen(false)}
@@ -1389,7 +1463,7 @@ h-full rounded-full transition-all duration-1000 relative overflow-hidden
                 cancelText={language === 'th' ? 'ยกเลิก' : 'Cancel'}
                 type="furnace"
             />
-        </div >
+        </div>
     );
 };
 

@@ -8,12 +8,18 @@ import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
+import { AutomatedBotOverlay } from './AutomatedBotOverlay';
 
 interface RigCardProps {
     rig: OilRig;
     accessoryBonus?: number;
     durationBonusDays?: number;
     inventory?: AccessoryItem[];
+    // Bot Props
+    botStatus?: 'WORKING' | 'COOLDOWN' | 'PAUSED';
+    botCooldown?: number;
+    botWorkTimeLeft?: number;
+    onToggleBotPause?: () => void;
     onClaim: (id: string, amount: number) => void;
     onClaimGift: (id: string) => void;
     onRenew?: (rig: any) => void;
@@ -61,9 +67,14 @@ export const RigCard: React.FC<RigCardProps> = ({
     overclockMultiplier = 1,
     isFurnaceActive = false,
     isDemo = false,
-    addNotification
+    addNotification,
+    botStatus,
+    botCooldown,
+    botWorkTimeLeft,
+    onToggleBotPause
 }) => {
     const { t, language, getLocalized, formatCurrency, formatBonus } = useTranslation();
+    const isRottenGlove = rig.name && ((typeof rig.name === 'string' && (rig.name.includes('Rotten') || rig.name.includes('ถุงมือเน่า'))) || (rig.name.en?.includes('Rotten') || rig.name.th?.includes('ถุงมือเน่า')));
     const handleDestroyClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isExploring) return;
@@ -745,7 +756,20 @@ export const RigCard: React.FC<RigCardProps> = ({
 
             <div className="relative rounded-[10px] h-full flex flex-col">
 
-                {/* Header Info */}
+                {/* --- AI ROBOT OVERLAY (For Rotten Glove Only) --- */}
+                {isRottenGlove && botStatus && (
+                    <AutomatedBotOverlay
+                        status={botStatus}
+                        cooldown={botCooldown || 0}
+                        workTimeLeft={botWorkTimeLeft}
+                        onTogglePause={onToggleBotPause || (() => { })}
+                        isFixed={false}
+                        className="z-50 scale-90 lg:scale-100 transform origin-bottom transition-all"
+                        style={{ bottom: 'auto', top: '-60px' }} // Position centered on top
+                    />
+                )}
+
+                {/* Header / Meta */}
                 <div className={`flex justify-between items-start z-10 p-2 border-b ${(globalMultiplier > 1 || reactorMultiplier > 1) ? 'border-purple-500/50 bg-gradient-to-r from-purple-900/30 to-stone-900' : 'border-stone-800 ' + styles.headerBg} pb-3 relative`}>
                     <div className="flex flex-col">
                         <span className={`text-xs font-display font-bold uppercase tracking-widest flex items-center gap-1.5 drop-shadow-sm ${(globalMultiplier > 1 || reactorMultiplier > 1) ? 'text-white' : styles.accentColor}`}>

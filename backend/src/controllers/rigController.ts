@@ -367,10 +367,12 @@ export const claimRigProfit = async (req: AuthRequest, res: Response) => {
         // Actually, to prevent cheating, we SHOULD calculate it on backend too.
         // For now, let's just implement the persistence part.
 
+        console.log(`[CLAIM_DEBUG] User ${userId} claiming ${amount} from rig ${rigId}. Old Balance: ${user.balance}`);
         user.balance += amount;
         rig.lastClaimAt = new Date(); // Reset timer on backend
 
         await user.save();
+        console.log(`[CLAIM_DEBUG] New Balance saved: ${user.balance}`);
         await rig.save();
 
         // Log Transaction for Mining Claim
@@ -389,8 +391,8 @@ export const claimRigProfit = async (req: AuthRequest, res: Response) => {
             lastClaimAt: rig.lastClaimAt
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('[CLAIM_ERROR]', error);
+        res.status(500).json({ message: `Server error: ${(error as any).message}` });
     }
 };
 

@@ -138,7 +138,7 @@ export const AIHelpBot: React.FC<AIHelpBotProps> = ({
         return (
             <button
                 onClick={toggleHide}
-                className="fixed bottom-24 lg:bottom-4 right-0 z-[190] bg-yellow-600 hover:bg-yellow-500 text-stone-900 font-bold p-2 pl-3 rounded-l-full shadow-lg border border-yellow-400 transition-all hover:translate-x-0 translate-x-1 pointer-events-auto group"
+                className="fixed top-24 right-0 z-[90] bg-yellow-600 hover:bg-yellow-500 text-stone-900 font-bold p-2 pl-3 rounded-l-full shadow-lg border border-yellow-400 transition-all hover:translate-x-0 translate-x-1 pointer-events-auto group"
                 title="Gold Rush Guide"
             >
                 <Bot size={20} className="group-hover:scale-110 transition-transform" />
@@ -147,7 +147,7 @@ export const AIHelpBot: React.FC<AIHelpBotProps> = ({
     }
 
     return (
-        <div className="fixed bottom-24 lg:bottom-4 right-6 z-[200] flex flex-col items-end pointer-events-none">
+        <div className="fixed top-24 right-6 z-[100] flex flex-col items-end pointer-events-none">
             {/* Main Robot Icon */}
             {!isOpen && (
                 <div
