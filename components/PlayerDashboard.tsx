@@ -50,6 +50,7 @@ import { WithdrawModal } from './WithdrawModal';
 import { DepositModal } from './DepositModal';
 import { TransactionConfirmModal } from './TransactionConfirmModal';
 import { ClaimResultModal } from './ClaimResultModal';
+import { SuccessModal } from './SuccessModal';
 
 interface PlayerDashboardProps {
     user: any;
@@ -97,6 +98,12 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const [isAccessoryShopOpen, setIsAccessoryShopOpen] = useState(false);
     const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
     const [isDepositOpen, setIsDepositOpen] = useState(false);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [successModalConfig, setSuccessModalConfig] = useState<{ title: string; message: string; type: 'SUCCESS' | 'KEY' | 'BATTERY' }>({
+        title: '',
+        message: '',
+        type: 'SUCCESS'
+    });
     const [pendingGlove, setPendingGlove] = useState<any>(null);
     const [pendingMaterial, setPendingMaterial] = useState<any>(null);
     const [claimedAmount, setClaimedAmount] = useState<number>(0);
@@ -473,15 +480,12 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             const res = await api.refillRigEnergy(rigId);
             if (res.success) {
                 fetchData();
-                if (addNotification) {
-                    addNotification({
-                        id: Date.now().toString(),
-                        message: language === 'th' ? 'เติมพลังงานเครื่องขุดสำเร็จ!' : 'Rig energy refilled!',
-                        type: 'SUCCESS',
-                        read: false,
-                        timestamp: Date.now()
-                    });
-                }
+                setSuccessModalConfig({
+                    title: language === 'th' ? 'พลังงานเต็มแล้ว!' : 'Refill Successful!',
+                    message: language === 'th' ? 'เครื่องขุดชาร์จแบตเตอรี่เต็ม 100% พร้อมทำงานต่อ!' : 'Rig battery is now 100% and ready to mine!',
+                    type: 'BATTERY'
+                });
+                setIsSuccessModalOpen(true);
             } else {
                 alert(res.message || "Refill failed");
             }
@@ -526,12 +530,25 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             const res = await api.claimRigGift(rigId);
 
             if (res && res.type === 'MATERIAL') {
-                setPendingMaterial({
-                    name: res.name,
-                    tier: res.tier,
-                    amount: res.amount
-                });
-                setIsMaterialRevealOpen(true);
+                // Show specialized SuccessModal if it's a key
+                const nameTh = typeof res.name === 'object' ? res.name.th : res.name;
+                const isKey = nameTh.includes('กุญแจ') || (res.tier === 7);
+
+                if (isKey) {
+                    setSuccessModalConfig({
+                        title: language === 'th' ? 'ได้รับกุญแจเข้าเหมือง!' : 'Key Received!',
+                        message: language === 'th' ? `คุณได้รับ ${nameTh} จำนวน ${res.amount} ดอก` : `You received ${res.amount}x ${typeof res.name === 'object' ? res.name.en : res.name}`,
+                        type: 'KEY'
+                    });
+                    setIsSuccessModalOpen(true);
+                } else {
+                    setPendingMaterial({
+                        name: res.name,
+                        tier: res.tier,
+                        amount: res.amount
+                    });
+                    setIsMaterialRevealOpen(true);
+                }
                 fetchData();
             } else if (res && res.glove) {
                 setPendingGlove(res.glove);
@@ -1407,6 +1424,15 @@ h-full rounded-full transition-all duration-1000 relative overflow-hidden
                 amount={claimedAmount}
             />
 
+            <SuccessModal
+                isOpen={isSuccessModalOpen}
+                onClose={() => setIsSuccessModalOpen(false)}
+                title={successModalConfig.title}
+                message={successModalConfig.message}
+                type={successModalConfig.type}
+            />
+
+            {/* AI Help Bot */}
             <MailModal
                 isOpen={isMailOpen}
                 onClose={() => setIsMailOpen(false)}
