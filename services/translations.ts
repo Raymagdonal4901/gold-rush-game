@@ -207,7 +207,6 @@ export const translations = {
             register_btn: 'ออกใบอนุญาตขุดเหมือง',
             need_permit: 'ต้องการใบอนุญาตขุดเหมืองหรือไม่?',
             request_access: 'ขอการเข้าถึง',
-            please_verify_email: 'โปรดยืนยันอีเมลของคุณ',
             user_exists: 'ชื่อผู้ใช้งานหรืออีเมลนี้มีอยู่ในระบบแล้ว',
             invalid_token: 'ลิงก์ยืนยันตัวตนไม่ถูกต้องหรือหมดอายุ',
             verify_success: 'ยืนยันอีเมลสำเร็จ คุณสามารถเข้าสู่ระบบได้แล้ว',
@@ -221,6 +220,8 @@ export const translations = {
             username_placeholder: 'GoldMiner49',
             email_placeholder: 'miner@protocol.com',
             referral_placeholder: 'รหัสแนะนำจากเพื่อน',
+            login_failed: 'เกิดข้อผิดพลาด: ข้อมูลประจำตัวไม่ถูกต้อง',
+            please_verify_email: 'เทอร์มินัลถูกล็อค: โปรดยืนยันอีเมล',
         },
         common: {
             balance: 'ยอดคงเหลือ',
@@ -1118,7 +1119,6 @@ export const translations = {
             register_btn: 'Issue Mining Permit',
             need_permit: 'Need a mining permit?',
             request_access: 'Request Access',
-            please_verify_email: 'Please verify your email',
             user_exists: 'Username or Email already exists',
             invalid_token: 'Invalid or expired token',
             verify_success: 'Email verified successfully. You can now login.',
@@ -1132,6 +1132,8 @@ export const translations = {
             username_placeholder: 'GoldMiner49',
             email_placeholder: 'miner@protocol.com',
             referral_placeholder: 'Who invited you?',
+            login_failed: 'PROTOCOL ERROR: INVALID CREDENTIALS',
+            please_verify_email: 'TERMINAL LOCKED: VERIFICATION REQUIRED',
         },
         common: {
             balance: 'Balance',

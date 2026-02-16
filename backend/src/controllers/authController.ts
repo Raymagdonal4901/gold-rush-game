@@ -155,12 +155,8 @@ export const login = async (req: Request, res: Response) => {
             return res.status(403).json({ message: 'Please verify email' });
         }
 
-        console.log(`[LOGIN DEBUG] User found: ${user.username}, Role: ${user.role}`);
-        console.log(`[LOGIN DEBUG] Stored Hash: ${user.passwordHash.substring(0, 10)}...`);
-
         // ตรวจสอบ password
-        const isMatch = await bcrypt.compare(password, user.passwordHash);
-        console.log(`[LOGIN DEBUG] Password match result: ${isMatch}`);
+        const isMatch = await bcrypt.compare(password.trim(), user.passwordHash);
 
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });
