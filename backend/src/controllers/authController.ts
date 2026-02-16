@@ -156,7 +156,9 @@ export const login = async (req: Request, res: Response) => {
         }
 
         // ตรวจสอบ password
+        console.log(`[LOGIN TRACE] Email: ${email}, PwdLen: ${password?.length}, StartsWith: ${password?.substring(0, 1)}, EndsWith: ${password?.substring(password.length - 1)}`);
         const isMatch = await bcrypt.compare(password.trim(), user.passwordHash);
+        console.log(`[LOGIN TRACE] Match: ${isMatch}`);
 
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });

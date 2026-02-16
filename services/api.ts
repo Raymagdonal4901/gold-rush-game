@@ -24,6 +24,8 @@ const client = axios.create({
     },
 });
 
+console.log('[DEBUG] API_URL resolved to:', API_URL);
+
 // Interceptor to add token
 client.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');

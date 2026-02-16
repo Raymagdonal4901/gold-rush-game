@@ -28,7 +28,7 @@ async function checkUser() {
         console.log('Email:', user.email);
         console.log('Role:', user.role);
         console.log('Verified:', user.isEmailVerified);
-        console.log('Password Hash (prefix):', user.passwordHash?.substring(0, 10) + '...');
+        console.log('Password Hash:', user.passwordHash);
     } else {
         console.log('❌ User NOT found:', email);
     }
