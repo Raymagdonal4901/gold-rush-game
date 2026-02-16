@@ -30,7 +30,7 @@ export interface OilRig {
   energyCostPerDay: number;
   energy: number;
   lastEnergyUpdate?: number;
-  slots?: (string | null)[]; // Index 0 is reserved for Glove
+  slots?: (string | null)[];
   explorationEnd?: number; // Timestamp when dungeon exploration ends
 }
 
@@ -53,6 +53,7 @@ export interface AccessoryItem {
   isHandmade?: boolean; // New: Great Success flag
   isStarter?: boolean; // New: Flag for initial auto-assigned manager
   specialEffect?: string; // New: Description of the specific effect
+  category?: 'REPAIR_KIT' | 'EQUIPMENT' | 'CONSUMABLE';
 }
 
 export interface CraftingQueueItem {
@@ -96,7 +97,9 @@ export interface Expedition {
 export interface User {
   id: string;
   username: string;
-  password: string;
+  email: string;
+  passwordHash?: string;
+  isEmailVerified?: boolean;
   pin: string;
   role: UserRole;
   balance: number;
@@ -139,8 +142,11 @@ export interface User {
 
   // Social
   referralCode?: string;
-  referredBy?: string;
-  referralEarnings?: number;
+  referrerId?: string;
+  referralStats?: {
+    totalInvited: number;
+    totalEarned: number;
+  };
   vipExp?: number;
   notifications: Notification[];
 
@@ -165,6 +171,8 @@ export interface User {
   // Overclock
   overclockExpiresAt?: number;
   walletAddress?: string; // BSC Wallet Address for USDT
+  miningSlots: number;
+  warehouseCapacity: number;
 }
 
 export interface ClaimRequest {
@@ -188,6 +196,24 @@ export interface DepositRequest {
   timestamp: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   transactionId?: string;
+}
+
+export interface Withdrawal {
+  id: string;
+  userId: string;
+  amount: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  bankDetails: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+  };
+  adminNote?: string;
+  createdAt: number;
+  user?: {
+    username: string;
+    email: string;
+  };
 }
 
 export interface WithdrawalRequest {
@@ -218,7 +244,7 @@ export interface Notification {
   rewardValue?: number | string; // Amount or Item ID
 }
 
-export type TransactionType = 'DEPOSIT' | 'WITHDRAWAL' | 'MINING_CLAIM' | 'ASSET_PURCHASE' | 'REFUND' | 'ACCESSORY_PURCHASE' | 'ACCESSORY_SELL' | 'ACCESSORY_UPGRADE' | 'ACCESSORY_CRAFT' | 'EQUIPMENT_CLAIM' | 'RIG_RENEWAL' | 'REPAIR' | 'MATERIAL_SELL' | 'MATERIAL_BUY' | 'MATERIAL_CRAFT' | 'ENERGY_REFILL' | 'REFERRAL_BONUS' | 'DAILY_BONUS' | 'QUEST_REWARD' | 'LUCKY_DRAW' | 'SLOT_EXPANSION' | 'DUNGEON_ENTRY' | 'DUNGEON_REWARD' | 'RANK_REWARD' | 'GIFT_CLAIM' | 'MINING_REVENUE' | 'COMPENSATION' | 'MARKET_TAX' | 'MATERIAL_MINED';
+export type TransactionType = 'DEPOSIT' | 'WITHDRAWAL' | 'MINING_CLAIM' | 'ASSET_PURCHASE' | 'REFUND' | 'ACCESSORY_PURCHASE' | 'ACCESSORY_SELL' | 'ACCESSORY_UPGRADE' | 'ACCESSORY_CRAFT' | 'EQUIPMENT_CLAIM' | 'RIG_RENEWAL' | 'REPAIR' | 'MATERIAL_SELL' | 'MATERIAL_BUY' | 'MATERIAL_CRAFT' | 'ENERGY_REFILL' | 'REFERRAL_BONUS' | 'REFERRAL_BONUS_BUY' | 'REFERRAL_BONUS_YIELD' | 'DAILY_BONUS' | 'QUEST_REWARD' | 'LUCKY_DRAW' | 'SLOT_EXPANSION' | 'DUNGEON_ENTRY' | 'DUNGEON_REWARD' | 'RANK_REWARD' | 'GIFT_CLAIM' | 'MINING_REVENUE' | 'COMPENSATION' | 'MARKET_TAX' | 'MATERIAL_MINED';
 
 export interface Transaction {
   id: string;
@@ -227,8 +253,9 @@ export interface Transaction {
   amount: number;
   balanceAfter: number;
   timestamp: number;
-  status: 'PENDING' | 'COMPLETED' | 'REJECTED';
+  status: 'PENDING' | 'COMPLETED' | 'REJECTED' | 'FAILED';
   description: string;
+  refId?: string;
 }
 
 export interface SystemConfig {

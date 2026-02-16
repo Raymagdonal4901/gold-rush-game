@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import { RigLootModal } from './RigLootModal';
+import { RigMergeModal } from './RigMergeModal';
 import { OilRig, AccessoryItem } from '../services/types';
 import { OilRigAnimation } from './OilRigAnimation';
-import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS } from '../constants';
-import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star, Settings, TrainFront } from 'lucide-react';
-import { InfinityGlove } from './InfinityGlove';
+import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, MINING_VOLATILITY_CONFIG } from '../constants';
+import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star, Settings, TrainFront, Clover } from 'lucide-react';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -12,15 +12,17 @@ import { AutomatedBotOverlay } from './AutomatedBotOverlay';
 
 interface RigCardProps {
     rig: OilRig;
+    availableRigs?: OilRig[];
+    onMerge?: (newRig: OilRig) => void;
     accessoryBonus?: number;
     durationBonusDays?: number;
     inventory?: AccessoryItem[];
-    // Bot Props
     botStatus?: 'WORKING' | 'COOLDOWN' | 'PAUSED';
     botCooldown?: number;
     botWorkTimeLeft?: number;
+    userLastClaimedAt?: string | number | Date;
     onToggleBotPause?: () => void;
-    onClaim: (id: string, amount: number) => void;
+    onClaim: (id: string, amount: number) => Promise<any> | void;
     onClaimGift: (id: string) => void;
     onRenew?: (rig: any) => void;
     onRepair?: (id: string) => void;
@@ -29,22 +31,23 @@ interface RigCardProps {
     onScrap?: (rig: any) => void;
     onEquipSlot?: (rigId: string, slotIndex: number) => void;
     onUnequipSlot?: (rigId: string, slotIndex: number) => void;
-    onManageGlove?: (rigId: string) => void;
     onManageAccessory?: (rigId: string, slotIndex: number) => void;
     onCharge?: (id: string) => void;
     globalMultiplier?: number;
     reactorMultiplier?: number;
     isPowered?: boolean;
     isExploring?: boolean;
-    isOverclockActive?: boolean; // Overclock boost active
-    overclockMultiplier?: number; // Dynamic multiplier
-    isFurnaceActive?: boolean; // Furnace x2 Boost
+    isOverclockActive?: boolean;
+    overclockMultiplier?: number;
+    isFurnaceActive?: boolean;
     isDemo?: boolean;
     addNotification?: (n: any) => void;
 }
 
 export const RigCard: React.FC<RigCardProps> = ({
     rig,
+    availableRigs = [],
+    onMerge,
     durationBonusDays = 0,
     inventory = [],
     onClaim,
@@ -56,7 +59,6 @@ export const RigCard: React.FC<RigCardProps> = ({
     onScrap,
     onEquipSlot,
     onUnequipSlot,
-    onManageGlove,
     onManageAccessory,
     onCharge,
     globalMultiplier = 1,
@@ -71,10 +73,10 @@ export const RigCard: React.FC<RigCardProps> = ({
     botStatus,
     botCooldown,
     botWorkTimeLeft,
+    userLastClaimedAt,
     onToggleBotPause
 }) => {
     const { t, language, getLocalized, formatCurrency, formatBonus } = useTranslation();
-    const isRottenGlove = rig.name && ((typeof rig.name === 'string' && (rig.name.includes('Rotten') || rig.name.includes('ถุงมือเน่า'))) || (rig.name.en?.includes('Rotten') || rig.name.th?.includes('ถุงมือเน่า')));
     const handleDestroyClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isExploring) return;
@@ -92,9 +94,42 @@ export const RigCard: React.FC<RigCardProps> = ({
         }
     };
     const [currentAmount, setCurrentAmount] = useState(BASE_CLAIM_AMOUNT);
+    const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
     const [currentMaterials, setCurrentMaterials] = useState(rig.currentMaterials || 0);
+    const [pendingMaterial, setPendingMaterial] = useState<{ name: any; tier: number; amount: number } | null>(null);
+    const [globalCooldownSeconds, setGlobalCooldownSeconds] = useState(0);
+
+    // --- GLOBAL CLAIM COOLDOWN LOGIC (24H) ---
+    useEffect(() => {
+        if (!userLastClaimedAt) {
+            setGlobalCooldownSeconds(0);
+            return;
+        }
+
+        const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+        const updateCooldown = () => {
+            const lastClaimTime = new Date(userLastClaimedAt).getTime();
+            const now = Date.now();
+            const elapsed = now - lastClaimTime;
+            const remaining = Math.max(0, COOLDOWN_MS - elapsed);
+            setGlobalCooldownSeconds(Math.floor(remaining / 1000));
+        };
+
+        updateCooldown();
+        const interval = setInterval(updateCooldown, 1000);
+        return () => clearInterval(interval);
+    }, [userLastClaimedAt]);
+
+    const formatGlobalCooldown = (totalSeconds: number) => {
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        const s = totalSeconds % 60;
+        if (h > 0) return `${h}h ${m}m`;
+        return `${m}m ${s}s`;
+    };
     const [currentEnergyPercent, setCurrentEnergyPercent] = useState(rig.energy ?? 100);
     const [isConfirming, setIsConfirming] = useState(false);
+    const [isRolling, setIsRolling] = useState(false);
     const [isRenewConfirming, setIsRenewConfirming] = useState(false);
     const [isRepairConfirming, setIsRepairConfirming] = useState(false);
     const [isScrapConfirming, setIsScrapConfirming] = useState(false);
@@ -111,23 +146,18 @@ export const RigCard: React.FC<RigCardProps> = ({
     const requestRef = useRef<number | null>(null);
     const materialIntervalRef = useRef<number | null>(null);
 
+    const [displayAmount, setDisplayAmount] = useState<string | number>('???');
+    const [isIdleRolling, setIsIdleRolling] = useState(false);
 
-    useEffect(() => {
-        console.log(`[RigCard DEBUG] ${getLocalized(rig.name)} (${rig.id}) - ClaimAt: ${rig.lastClaimAt}, Mat: ${rig.currentMaterials}, CollectAt: ${rig.lastCollectionAt}`);
-    }, [rig]);
-
-    // Find preset first to get static data like type/rarity
     const nameStr = typeof rig.name === 'string' ? rig.name : (rig.name?.en || rig.name?.th || '');
     const preset = RIG_PRESETS.find(p =>
         (p.name.en && p.name.en === nameStr) ||
         (p.name.th && p.name.th === nameStr)
     ) || RIG_PRESETS.find(p => p.price === rig.investment && rig.investment > 0);
 
-    // Rarity Logic: Prefer preset.type (from constants), then rig.rarity (from DB), then default
     const rarityKey = (preset?.type?.toUpperCase() || rig.rarity || 'COMMON') as keyof typeof RARITY_SETTINGS;
     const rarityConfig = RARITY_SETTINGS[rarityKey] || RARITY_SETTINGS['COMMON'];
 
-    // --- STABILITY HELPERS ---
     const safeNumber = (val: any) => {
         const n = Number(val);
         return isNaN(n) ? 0 : n;
@@ -138,40 +168,36 @@ export const RigCard: React.FC<RigCardProps> = ({
         if (!itemId) return null;
         const item = inventory.find(i => i.id === itemId);
         if (item) {
-            // Legacy Scale Fallback: If bonus is tiny, it's likely old USD scale
             const effectiveItemBonus = (item.dailyBonus < 0.5 && item.dailyBonus > 0) ? item.dailyBonus * 35 : item.dailyBonus;
             equippedBonus += effectiveItemBonus;
         }
         return item;
     });
 
-    const gloveItem = equippedItems[0];
-
-    const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
+    const isNoBonusRig = [t('rig.rusty_shovel'), t('rig.portable_drill'), 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
     const effectiveBonusProfit = isNoBonusRig ? 0 : safeNumber(rig.bonusProfit);
 
-    // Override base profit for specific rigs (Balance Patch)
-    // Legacy Scale Fallback: If profit is tiny (< 5), it's likely old USD scale
-    // --- PROFIT CALCULATION GUARDS ---
-    // Fallback to preset if DB dailyProfit is missing/0 (e.g. Rotten Glove starter)
     const rawProfit = safeNumber(rig.dailyProfit) || safeNumber(preset?.dailyProfit);
     const baseDailyProfit = (rawProfit < 5 && rawProfit > 0) ? rawProfit * 35 : rawProfit;
 
     let totalDailyProfit = safeNumber(baseDailyProfit + effectiveBonusProfit + equippedBonus) * safeNumber(globalMultiplier) * safeNumber(reactorMultiplier);
 
-    // OVERCLOCK Dynamic Boost
     if (isOverclockActive) {
         totalDailyProfit *= overclockMultiplier;
     }
-    // FURNACE Boost
     if (isFurnaceActive) {
         totalDailyProfit *= 2;
     }
 
     const totalRatePerSecond = totalDailyProfit / 86400;
 
+    const volConfig = MINING_VOLATILITY_CONFIG[preset?.id || 1];
+    const hashrateText = volConfig ? `${volConfig.hashrateMin} - ${volConfig.hashrateMax} MH/s` : '??? MH/s';
+    const stabilityStars = volConfig?.stabilityStars || 0;
+    const stabilityLabel = volConfig?.stabilityLabel || '';
+
     const tier = (investment: number) => {
-        if (investment === 0) return 7; // Special Tier (Vibranium)
+        if (investment === 0) return 7;
         if (investment >= 3000) return 5;
         if (investment >= 2500) return 4;
         if (investment >= 2000) return 3;
@@ -180,56 +206,27 @@ export const RigCard: React.FC<RigCardProps> = ({
     };
     const currentTier = tier(rig.investment);
 
-
     const getAccessoryIcon = (item: AccessoryItem, className: string) => {
         const getNeonIcon = (typeId: string) => {
-            if (!typeId) return <InfinityGlove rarity={item.rarity} className={className} />;
-            if (typeId.startsWith('glasses')) {
-                return <Glasses className={`${className} text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]`} />;
-            }
-            if (typeId.startsWith('uniform') || typeId.startsWith('shirt')) {
-                return <Shirt className={`${className} text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]`} />;
-            }
-            if (typeId.startsWith('bag')) {
-                return <Backpack className={`${className} text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]`} />;
-            }
-            if (typeId.startsWith('boots')) {
-                return <Footprints className={`${className} text-orange-400 drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]`} />;
-            }
-            if (typeId.startsWith('mobile')) { // Communication
-                return <Smartphone className={`${className} text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]`} />;
-            }
-            if (typeId.startsWith('pc')) { // Control Board
-                return <Monitor className={`${className} text-rose-400 drop-shadow-[0_0_8px_rgba(251,113,133,0.8)]`} />;
-            }
-            if (typeId === 'auto_excavator') { // Rig Frame
-                return <Truck className={`${className} text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]`} />;
-            }
-            if (typeId === 'upgrade_chip') {
-                return <Cpu className={`${className} text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]`} />;
-            }
-            if (typeId === 'chest_key') {
-                return <Key className={`${className} text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]`} />;
-            }
+            if (!typeId) return <Briefcase className={className} />;
+            if (typeId.startsWith('hat')) return <HardHat className={`${className} text-yellow-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]`} />;
+            if (typeId.startsWith('glasses')) return <Glasses className={`${className} text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]`} />;
+            if (typeId.startsWith('uniform') || typeId.startsWith('shirt')) return <Shirt className={`${className} text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]`} />;
+            if (typeId.startsWith('bag')) return <Backpack className={`${className} text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]`} />;
+            if (typeId.startsWith('boots')) return <Footprints className={`${className} text-orange-400 drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]`} />;
+            if (typeId.startsWith('mobile')) return <Smartphone className={`${className} text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]`} />;
+            if (typeId.startsWith('pc')) return <Monitor className={`${className} text-rose-400 drop-shadow-[0_0_8px_rgba(251,113,133,0.8)]`} />;
+            if (typeId === 'auto_excavator') return <Truck className={`${className} text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]`} />;
+            if (typeId === 'upgrade_chip') return <Cpu className={`${className} text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]`} />;
+            if (typeId === 'chest_key') return <Key className={`${className} text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]`} />;
 
             if (typeId.startsWith('repair_kit')) {
                 let glowColor = 'bg-emerald-500';
                 let IconComp = Wrench;
-
-                if (typeId === 'repair_kit_1') {
-                    glowColor = 'bg-emerald-500';
-                    IconComp = Hammer;
-                } else if (typeId === 'repair_kit_2') {
-                    glowColor = 'bg-purple-500';
-                    IconComp = Briefcase;
-                } else if (typeId === 'repair_kit_3') {
-                    glowColor = 'bg-yellow-500';
-                    IconComp = Cpu;
-                } else if (typeId === 'repair_kit_4') {
-                    glowColor = 'bg-red-600';
-                    IconComp = Settings;
-                }
-
+                if (typeId === 'repair_kit_1') { glowColor = 'bg-emerald-500'; IconComp = Hammer; }
+                else if (typeId === 'repair_kit_2') { glowColor = 'bg-purple-500'; IconComp = Briefcase; }
+                else if (typeId === 'repair_kit_3') { glowColor = 'bg-yellow-500'; IconComp = Cpu; }
+                else if (typeId === 'repair_kit_4') { glowColor = 'bg-red-600'; IconComp = Settings; }
                 return (
                     <div className="relative flex items-center justify-center">
                         <div className={`absolute inset-0 ${glowColor} rounded-full scale-125 blur-md opacity-20 animate-pulse`}></div>
@@ -237,26 +234,20 @@ export const RigCard: React.FC<RigCardProps> = ({
                     </div>
                 );
             }
-
-            return <InfinityGlove rarity={item.rarity} className={className} />;
+            return <Briefcase className={className} />;
         };
-
-        const typeId = item.typeId || '';
-        return getNeonIcon(typeId);
+        return getNeonIcon(item.typeId || '');
     };
 
     const isInfiniteDurability = preset?.specialProperties?.infiniteDurability;
     const isZeroEnergy = preset?.specialProperties?.zeroEnergy;
 
-    // Calculate duration based on Days or Months
     const durationDaysTotal = rig.durationDays || (rig.durationMonths ? rig.durationMonths * 30 : 0) || (preset?.durationDays || (preset?.durationMonths || 0) * 30);
     const baseDurationMs = (durationDaysTotal * 24 * 60 * 60 * 1000);
-    // If Infinite Durability (999 months), show as infinite
     const isInfiniteContract = (rig.durationMonths >= 900) || (preset?.specialProperties?.infiniteDurability === true);
 
     const now = Date.now();
     const bonusDurationMs = (safeNumber(rig.renewalCount)) * (RENEWAL_CONFIG.WINDOW_DAYS * 24 * 60 * 60 * 1000);
-
 
     const expiryTime = safeNumber(rig.expiresAt) + bonusDurationMs;
     const timeLeftMs = Math.max(0, expiryTime - now);
@@ -268,98 +259,72 @@ export const RigCard: React.FC<RigCardProps> = ({
     const isBroken = healthPercent <= 0;
 
     let baseRepairCost = isInfiniteDurability ? 0 : (safeNumber(rig.repairCost) || (preset ? safeNumber(preset.repairCost) : Math.floor(safeNumber(rig.investment) * 0.06)));
-    // Legacy Scale Fallback for Costs
     if (baseRepairCost > 0 && baseRepairCost < 1) baseRepairCost *= 35;
 
     let energyCostPerDay = safeNumber(rig.energyCostPerDay) || (preset ? safeNumber(preset.energyCostPerDay) : 0);
     if (energyCostPerDay > 0 && energyCostPerDay < 1) energyCostPerDay *= 35;
 
-    const currentUser = rig.ownerId ? null : null; // MockDB usage replaced by null (will be hydrated by props/refresh if needed)
-    const hasSilverBuff = safeNumber(currentUser?.masteryPoints) >= 300;
-
-    // --- Hat Discount Logic ---
+    const hasSilverBuff = false; // Mock
     let discountMultiplier = 0;
     if (hasSilverBuff) discountMultiplier += 0.05;
 
-    const hatId = rig.slots ? rig.slots.find(id => {
+    const hatId = (rig.slots || []).find(id => {
         if (!id) return false;
         const item = inventory.find(i => i.id === id);
-        return false;
-    }) : null;
-
-    let hatDiscountText = '';
+        return item && (item.typeId === 'hat' || item.typeId.startsWith('hat'));
+    });
+    let hatDiscountPercent = 0;
     if (hatId) {
-        const hatItem = inventory.find(i => i.id === hatId);
-        if (hatItem) {
-            const series = EQUIPMENT_SERIES.hat.tiers.find(t => t.rarity === hatItem.rarity);
-            const rawStat = series?.stat ? getLocalized(series.stat) : '';
-            if (rawStat && typeof rawStat === 'string') {
-                const match = rawStat.match(/-(\d+)%/);
-                if (match) {
-                    const p = parseInt(match[1]);
-                    discountMultiplier += (p / 100);
-                    hatDiscountText = `(${t('rig.maintenance_fee')} -${p}%)`;
-                }
-            }
+        const item = inventory.find(i => i.id === hatId);
+        if (item) {
+            if (item.rarity === 'COMMON') hatDiscountPercent = 0.05;
+            else if (item.rarity === 'RARE') hatDiscountPercent = 0.10;
+            else if (item.rarity === 'EPIC') hatDiscountPercent = 0.15;
+            else if (item.rarity === 'LEGENDARY') hatDiscountPercent = 0.20;
         }
     }
 
     const isVibranium = rig.investment === 0 || (rig.name && (typeof rig.name === 'string' ? rig.name.includes('Vibranium') : (rig.name.en?.includes('Vibranium') || rig.name.th?.includes('Vibranium'))));
-    const repairCost = isVibranium ? 0 : Math.floor(baseRepairCost * (1 - safeNumber(discountMultiplier)));
+    const totalDiscount = safeNumber(discountMultiplier) + hatDiscountPercent;
+    const repairCost = isVibranium ? 0 : Math.floor(baseRepairCost * (1 - safeNumber(totalDiscount)));
 
-    // --- Uniform Energy Discount ---
-    const uniformId = rig.slots ? rig.slots.find(id => {
+    const uniformId = (rig.slots || []).find(id => {
         if (!id) return false;
         const item = inventory.find(i => i.id === id);
         return item && (item.typeId === 'uniform' || item.typeId.startsWith('uniform'));
-    }) : null;
+    });
     const energyDiscount = uniformId ? 0.05 : 0;
     const effectiveEnergyCostPerDay = energyCostPerDay * (1 - safeNumber(energyDiscount));
 
     const lastUpdate = Number(rig.lastEnergyUpdate) || Number(rig.purchasedAt) || Date.now();
     const elapsedMs = now - lastUpdate;
-
-    // Use speed multiplier (Demo only)
     const speedMultiplier = isDemo ? DEMO_SPEED_MULTIPLIER : 1;
-
-    // BASE Energy Drain: 100% in 24 hours (4.166% per hour)
     let drainRatePerHour = 4.166666666666667;
-
-    // OVERCLOCK: Accelerated time means faster drain matching the multiplier
-    if (isOverclockActive) {
-        drainRatePerHour *= overclockMultiplier;
-    }
+    if (isOverclockActive) drainRatePerHour *= overclockMultiplier;
 
     const elapsedHours = (elapsedMs * speedMultiplier) / (1000 * 60 * 60);
     const drain = elapsedHours * drainRatePerHour;
-
-    const calculatedEnergyPercent = isZeroEnergy ? 100 : Math.max(0, Math.min(100, safeNumber(rig.energy) - drain));
-    const energyPercent = calculatedEnergyPercent;
+    const energyPercent = isZeroEnergy ? 100 : Math.max(0, Math.min(100, safeNumber(rig.energy) - drain));
     const isOutOfEnergy = energyPercent <= 0;
 
-    const daysRemaining = (timeLeftMs / (1000 * 60 * 60 * 24)); // Display as normal days
+    const daysRemaining = (timeLeftMs / (1000 * 60 * 60 * 24));
     const isRenewable = !isInfiniteContract && daysRemaining <= RENEWAL_CONFIG.WINDOW_DAYS && safeNumber(rig.renewalCount) < RENEWAL_CONFIG.MAX_RENEWALS;
-    const renewalDiscount = RENEWAL_CONFIG.DISCOUNT_PERCENT;
-    const renewalCost = safeNumber(rig.investment) * (1 - renewalDiscount);
+    const renewalCost = safeNumber(rig.investment) * (1 - RENEWAL_CONFIG.DISCOUNT_PERCENT);
 
-    // Override IsPowered
     const effectiveIsPowered = isPowered || !!isZeroEnergy;
 
-    // Calculate Material Tier for Gift Box display
     let matTier = -1;
     if (preset) {
-        if (preset.id === 3) matTier = 1;      // Coal
-        else if (preset.id === 4) matTier = 2; // Copper
-        else if (preset.id === 5) matTier = 3; // Iron
-        else if (preset.id === 6) matTier = 4; // Gold
-        else if (preset.id === 7) matTier = 5; // Diamond
-        else if (preset.id === 8) matTier = 6; // Vibranium
+        if (preset.id === 3) matTier = 1;
+        else if (preset.id === 4) matTier = 2;
+        else if (preset.id === 5) matTier = 3;
+        else if (preset.id === 6) matTier = 4;
+        else if (preset.id === 7) matTier = 5;
+        else if (preset.id === 8) matTier = 6;
     }
 
     const overclockBoost = (isPowered && !isZeroEnergy && isOverclockActive) ? overclockMultiplier : (isPowered && !isZeroEnergy) ? ENERGY_CONFIG.BOX_DROP_SPEED_BOOST : 1;
     const giftIntervalMs = (GIFT_CYCLE_DAYS * 24 * 60 * 60 * 1000) / (overclockBoost);
-
-    // Ensure properly parsed timestamps
     const lastGiftTimestamp = rig.lastGiftAt ? new Date(rig.lastGiftAt).getTime() : (rig.purchasedAt ? new Date(rig.purchasedAt).getTime() : Date.now());
     const nextGiftTime = lastGiftTimestamp + giftIntervalMs;
     const noGift = preset?.specialProperties?.noGift === true;
@@ -371,35 +336,44 @@ export const RigCard: React.FC<RigCardProps> = ({
     const hasKey = keyCount > 0;
 
     const formatTimeLeft = (ms: number) => {
-        const gameMs = ms;
-
         if (isInfiniteContract) return t('rig.permanent');
-        if (gameMs <= 0) return t('rig.contract_expired');
-        const days = Math.floor(gameMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((gameMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((gameMs % (1000 * 60 * 60)) / (1000 * 60));
-
+        if (ms <= 0) return t('rig.contract_expired');
+        const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
         if (days > 0) return `${days}${t('time.days')} ${hours}${t('time.hours')}`;
-        return `${hours}:${minutes.toString().padStart(2, '0')}:${Math.floor((gameMs % (1000 * 60)) / 1000).toString().padStart(2, '0')}`;
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${Math.floor((ms % (1000 * 60)) / 1000).toString().padStart(2, '0')}`;
     };
 
     const formatGiftCooldown = (ms: number) => {
-        const gameMs = ms;
-        const days = Math.floor(gameMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((gameMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         if (days > 0) return `${days}${t('time.days')}`;
         if (hours > 0) return `${hours}${t('time.hours')}`;
-        const minutes = Math.floor((gameMs % (1000 * 60 * 60)) / (1000 * 60));
+        const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
         return `${minutes}${t('time.minutes')}`;
     };
 
-    const formatSimpleTime = (ms: number) => {
-        const gameMs = ms;
-        const days = Math.floor(gameMs / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((gameMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        if (days > 0) return `${days}${t('time.days')}`;
-        return `${hours}${t('time.hours')}`;
-    }
+    useEffect(() => {
+        if (isExpired || isBroken || !effectiveIsPowered || isExploring || isRolling) return;
+        const cycleInterval = setInterval(() => {
+            setIsIdleRolling(true);
+            setTimeout(() => setIsIdleRolling(false), 1000);
+        }, 3000 + Math.random() * 1000);
+        return () => clearInterval(cycleInterval);
+    }, [isExpired, isBroken, effectiveIsPowered, isExploring, isRolling]);
+
+    useEffect(() => {
+        if (!isIdleRolling && !isRolling) {
+            if (!isRolling) setDisplayAmount('???');
+            return;
+        }
+        const interval = setInterval(() => {
+            const randomVal = (Math.random() * 99).toFixed(2);
+            setDisplayAmount(randomVal);
+        }, 50);
+        return () => clearInterval(interval);
+    }, [isIdleRolling, isRolling]);
 
     const animate = () => {
         const now = Date.now();
@@ -407,62 +381,43 @@ export const RigCard: React.FC<RigCardProps> = ({
         const timeElapsedSeconds = ((now - lastClaimAt) / 1000);
         if (!isExpired && !isBroken && effectiveIsPowered && !isExploring && !isOutOfEnergy) {
             const minedValue = timeElapsedSeconds * totalRatePerSecond;
-            const total = BASE_CLAIM_AMOUNT + minedValue;
-            setCurrentAmount(total);
+            setCurrentAmount(BASE_CLAIM_AMOUNT + minedValue);
         }
-        lastUpdateRef.current = now;
         requestRef.current = requestAnimationFrame(animate);
     };
 
     useEffect(() => {
         requestRef.current = requestAnimationFrame(animate);
-        return () => {
-            if (requestRef.current) cancelAnimationFrame(requestRef.current);
-        };
+        return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); };
     }, [rig.lastClaimAt, totalRatePerSecond, isExpired, isBroken, isPowered, isExploring]);
 
-    // Energy Depletion Animation
     useEffect(() => {
-        const rigNameStr = typeof rig.name === 'string' ? rig.name : (rig.name?.th || rig.name?.en || '');
-        const preset = RIG_PRESETS.find(p => p.name.th === rigNameStr || p.name.en === rigNameStr);
         if (preset?.specialProperties?.zeroEnergy) {
             setCurrentEnergyPercent(100);
             return;
         }
-
         const updateEnergy = () => {
-            if (isJustCharged) {
-                setCurrentEnergyPercent(100);
-                return;
-            }
+            if (isJustCharged) { setCurrentEnergyPercent(100); return; }
             const now = Date.now();
-
             const lastUpdate = safeNumber(rig.lastEnergyUpdate) || safeNumber(rig.purchasedAt) || now;
             const elapsedMs = now - lastUpdate;
-            // Apply speed multiplier for Demo mode (720x faster drain)
-            const elapsedHours = (elapsedMs) / (1000 * 60 * 60);
-            const drainRate = isOverclockActive ? (safeNumber(drainRatePerHour) * safeNumber(overclockMultiplier)) : safeNumber(drainRatePerHour);
+            const elapsedHours = elapsedMs / (1000 * 60 * 60);
+            const drainRate = isOverclockActive ? (drainRatePerHour * overclockMultiplier) : drainRatePerHour;
             const drain = elapsedHours * drainRate;
-            const calculatedEnergy = Math.max(0, Math.min(100, safeNumber(rig.energy ?? 100) - drain));
-            setCurrentEnergyPercent(calculatedEnergy);
+            setCurrentEnergyPercent(Math.max(0, Math.min(100, safeNumber(rig.energy ?? 100) - drain)));
         };
-
         updateEnergy();
-        const interval = setInterval(updateEnergy, 1000); // Update every second
-
+        const interval = setInterval(updateEnergy, 1000);
         return () => clearInterval(interval);
     }, [rig.energy, rig.lastEnergyUpdate, rig.purchasedAt, rig.name, isJustCharged]);
 
     useEffect(() => {
-        if (rig.currentMaterials !== undefined) {
-            setCurrentMaterials(rig.currentMaterials);
-        }
+        if (rig.currentMaterials !== undefined) setCurrentMaterials(rig.currentMaterials);
         if (!isExpired && !isBroken && !isExploring && !isOutOfEnergy) {
             materialIntervalRef.current = window.setInterval(() => {
                 setCurrentMaterials(prev => {
                     if (prev < 1) {
-                        const roll = Math.random();
-                        if (roll < MATERIAL_CONFIG.DROP_CHANCE) {
+                        if (Math.random() < MATERIAL_CONFIG.DROP_CHANCE) {
                             const newCount = prev + 1;
                             if (onMaterialUpdate) onMaterialUpdate(rig.id, newCount);
                             return newCount;
@@ -472,9 +427,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                 });
             }, MATERIAL_CONFIG.DROP_INTERVAL_MS / overclockBoost);
         }
-        return () => {
-            if (materialIntervalRef.current) clearInterval(materialIntervalRef.current);
-        };
+        return () => { if (materialIntervalRef.current) clearInterval(materialIntervalRef.current); };
     }, [isExpired, isBroken, effectiveIsPowered, rig.id, rig.currentMaterials, isExploring, isOutOfEnergy]);
 
     const handleClaimClick = () => {
@@ -482,18 +435,25 @@ export const RigCard: React.FC<RigCardProps> = ({
         setIsConfirming(true);
     };
 
-    const confirmClaim = (e: React.MouseEvent) => {
+    const confirmClaim = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        onClaim(rig.id, currentAmount);
-        setCurrentAmount(BASE_CLAIM_AMOUNT);
         setIsConfirming(false);
+        setIsRolling(true);
+        try {
+            const result = await onClaim(rig.id, 0);
+            if (result && result.success && result.amount !== undefined) {
+                setIsRolling(false);
+                setDisplayAmount(Number(result.amount).toFixed(2));
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        } catch (err) { console.error(err); } finally {
+            setIsRolling(false);
+            setCurrentAmount(0);
+            setDisplayAmount('???');
+        }
     };
 
-    const handleRenewClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsRenewConfirming(true);
-    };
-
+    const handleRenewClick = (e: React.MouseEvent) => { e.stopPropagation(); setIsRenewConfirming(true); };
     const confirmRenew = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (onRenew) {
@@ -504,16 +464,7 @@ export const RigCard: React.FC<RigCardProps> = ({
         }
     };
 
-    const cancelRenew = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsRenewConfirming(false);
-    };
-
-    const handleRepairClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsRepairConfirming(true);
-    };
-
+    const handleRepairClick = (e: React.MouseEvent) => { e.stopPropagation(); setIsRepairConfirming(true); };
     const confirmRepair = (e: React.MouseEvent) => {
         e.stopPropagation();
         setIsRepairConfirming(false);
@@ -526,40 +477,24 @@ export const RigCard: React.FC<RigCardProps> = ({
         }, 2000);
     };
 
-    const handleChargeClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (isExploring) return;
-        setIsChargeConfirming(true);
-    };
-
+    const handleChargeClick = (e: React.MouseEvent) => { e.stopPropagation(); if (isExploring) return; setIsChargeConfirming(true); };
     const confirmCharge = (e: React.MouseEvent) => {
         e.stopPropagation();
         setIsChargeConfirming(false);
-        // Immediately update UI to show full battery
         setIsJustCharged(true);
         setCurrentEnergyPercent(100);
         setTimeout(() => setIsJustCharged(false), 2000);
         if (onCharge) onCharge(rig.id);
     };
 
-    const handleScrapClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsScrapConfirming(true);
-    };
-
-    const confirmScrap = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (onScrap) onScrap(rig);
-        setIsScrapConfirming(false);
-    };
+    const handleScrapClick = (e: React.MouseEvent) => { e.stopPropagation(); setIsScrapConfirming(true); };
+    const confirmScrap = (e: React.MouseEvent) => { e.stopPropagation(); if (onScrap) onScrap(rig); setIsScrapConfirming(false); };
 
     const handleGiftClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isGiftAvailable) {
             if (!isOutOfEnergy) onClaimGift(rig.id);
-            else {
-                if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: t('rig.out_of_energy_msg'), type: 'ERROR', read: false, timestamp: Date.now() });
-            }
+            else if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: t('rig.out_of_energy_msg'), type: 'ERROR', read: false, timestamp: Date.now() });
         }
     };
 
@@ -587,33 +522,20 @@ export const RigCard: React.FC<RigCardProps> = ({
     const BatteryUI = ({ percent, colorClass, isEnergy = false }: { percent: number; colorClass: string, isEnergy?: boolean }) => {
         const segments = 5;
         const filledSegments = Math.ceil((percent / 100) * segments);
-
-        // Solid Colors matching reference
-        let barColor = 'bg-[#4ADE80]'; // Green
-        if (percent <= 10) barColor = 'bg-[#EF4444]'; // Red (Critical)
-        else if (percent <= 30) barColor = 'bg-[#F97316]'; // Orange
-        else if (percent <= 50) barColor = 'bg-[#EAB308]'; // Yellow
-
-        // Remove pulse animation for cleaner look unless critical
-        const isCritical = percent <= 10;
+        let barColor = 'bg-[#4ADE80]';
+        if (percent <= 10) barColor = 'bg-[#EF4444]';
+        else if (percent <= 30) barColor = 'bg-[#F97316]';
+        else if (percent <= 50) barColor = 'bg-[#EAB308]';
 
         return (
             <div className="flex flex-col items-center gap-1">
-                {/* Battery Container */}
                 <div className="relative w-8 h-12 border-2 border-stone-400 rounded-md p-0.5 flex flex-col justify-end bg-stone-900/50">
-                    {/* Battery Tip */}
                     <div className="absolute -top-[5px] left-1/2 -translate-x-1/2 w-4 h-[3px] bg-stone-400 rounded-t-sm" />
-
-                    {/* Segments Container */}
                     <div className="flex flex-col-reverse w-full h-full gap-[1px]">
                         {Array.from({ length: segments }).map((_, i) => (
-                            <div
-                                key={i}
-                                className={`w-full h-[18%] rounded-[1px] ${i < filledSegments ? barColor : 'bg-transparent'} ${isCritical && i < filledSegments ? 'animate-pulse' : ''}`}
-                            />
+                            <div key={i} className={`w-full h-[18%] rounded-[1px] ${i < filledSegments ? barColor : 'bg-transparent'} ${percent <= 10 && i < filledSegments ? 'animate-pulse' : ''}`} />
                         ))}
                     </div>
-
                     <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                         <span className="text-[10px] font-bold text-black">{percent.toFixed(0)}%</span>
                     </div>
@@ -622,728 +544,299 @@ export const RigCard: React.FC<RigCardProps> = ({
         );
     };
 
-    let healthColor = 'bg-cyan-500';
-    if (healthPercent <= 20) healthColor = 'bg-red-500 animate-pulse';
-    else if (healthPercent <= 50) healthColor = 'bg-orange-500';
-
-    let energyColor = 'bg-emerald-500';
-    if (energyPercent <= 10) energyColor = 'bg-red-500 animate-[pulse_1s_infinite]';
-    else if (energyPercent <= 30) energyColor = 'bg-yellow-500';
-
     return (
         <div className={`relative rounded-xl p-0.5 transition-all duration-300 sm:hover:-translate-y-1 group border 
-        ${((globalMultiplier || 1) > 1 || (reactorMultiplier || 1) > 1) ? 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]' : (styles?.container || '').replace('bg-stone-950', '').replace('shadow-', '') + ' ' + (styles?.container || '')}
-    `}>
-
+            ${((globalMultiplier || 1) > 1 || (reactorMultiplier || 1) > 1) ? 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]' : (styles.container || '').replace('bg-stone-950', '').replace('shadow-', '') + ' ' + (styles.container || '')}
+        `}>
             <div className={`absolute inset-0 bg-stone-950`}></div>
             <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-[40px] opacity-20 
-          ${(globalMultiplier || 1) > 1 ? 'bg-purple-500 opacity-40 animate-pulse' :
-                    currentTier >= 5 ? 'bg-yellow-500' : currentTier === 4 ? 'bg-orange-500' : currentTier === 3 ? 'bg-sky-500' : currentTier === 2 ? 'bg-emerald-500' : 'bg-stone-700'}
-      `}></div>
+                ${(globalMultiplier || 1) > 1 ? 'bg-purple-500 opacity-40 animate-pulse' : currentTier >= 5 ? 'bg-yellow-500' : 'bg-stone-700'}
+            `}></div>
 
-            {/* Confirmation Overlays */}
             {isConfirming && (
-                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 text-center">
-                    <div className="bg-yellow-500/10 p-3 rounded-full mb-3">
-                        <Coins className="text-yellow-500 animate-pulse" size={24} />
-                    </div>
+                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                    <Coins className="text-yellow-500 animate-pulse mb-3" size={24} />
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_claim')}</h4>
-                    <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">{formatCurrency(currentAmount, { showDecimals: true })}</div>
+                    {(() => {
+                        const furnaceMult = isFurnaceActive ? 2 : 1;
+                        const overclockMultActual = isOverclockActive ? overclockMultiplier : 1;
+                        const commonMult = safeNumber(globalMultiplier) * safeNumber(reactorMultiplier);
+
+                        const minYield = (safeNumber(volConfig?.baseValue || 0) + effectiveBonusProfit + equippedBonus) * commonMult * overclockMultActual * furnaceMult;
+                        const maxYield = (safeNumber(volConfig?.baseValue || 0) + safeNumber(volConfig?.maxRandom || 0) + effectiveBonusProfit + equippedBonus) * commonMult * overclockMultActual * furnaceMult;
+
+                        return (
+                            <div className="text-2xl font-mono font-bold text-white mb-1">
+                                {formatCurrency(minYield, { hideSymbol: true })} - {formatCurrency(maxYield, { showDecimals: true })}
+                            </div>
+                        );
+                    })()}
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
-                        <button onClick={(e) => { e.stopPropagation(); setIsConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">{t('common.cancel')}</button>
-                        <button onClick={confirmClaim} className="py-2.5 rounded bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> {t('common.confirm')}</button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsConfirming(false); }} className="py-2.5 rounded border border-stone-700 text-stone-400 text-xs font-bold uppercase">{t('common.cancel')}</button>
+                        <button onClick={confirmClaim} className="py-2.5 rounded bg-emerald-600 text-white text-xs font-bold uppercase flex items-center justify-center gap-1"><Check size={14} /> {t('common.confirm')}</button>
                     </div>
                 </div>
             )}
+
             {isExploring && (
-                <div className="absolute inset-0 z-50 bg-purple-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 text-center">
-                    <div className="bg-purple-500/20 p-4 rounded-full mb-4 animate-[pulse_2s_infinite]">
-                        <Skull className="text-purple-400" size={32} />
-                    </div>
+                <div className="absolute inset-0 z-50 bg-purple-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                    <Skull className="text-purple-400 animate-pulse mb-4" size={32} />
                     <h4 className="text-purple-300 font-bold text-lg uppercase tracking-wider mb-2">{t('dungeon.exploring')}</h4>
                     <p className="text-purple-200/60 text-xs px-4">{t('rig.exploring_desc')}</p>
                 </div>
             )}
 
             {isRenewConfirming && (
-                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 text-center">
-                    <div className="bg-blue-500/10 p-3 rounded-full mb-3">
-                        <RefreshCw className="text-blue-500 animate-spin-slow" size={24} />
-                    </div>
+                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                    <RefreshCw className="text-blue-500 animate-spin-slow mb-3" size={24} />
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_renew')}</h4>
-                    <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">-{formatCurrency(renewalCost)}</div>
+                    <div className="text-2xl font-mono font-bold text-white mb-1">-{formatCurrency(renewalCost)}</div>
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
-                        <button onClick={(e) => { e.stopPropagation(); setIsRenewConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">{t('common.cancel')}</button>
-                        <button onClick={confirmRenew} className="py-2.5 rounded bg-blue-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> {t('rig.pay')}</button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsRenewConfirming(false); }} className="py-2.5 rounded border border-stone-700 text-stone-400 text-xs font-bold uppercase">{t('common.cancel')}</button>
+                        <button onClick={confirmRenew} className="py-2.5 rounded bg-blue-600 text-white text-xs font-bold uppercase flex items-center justify-center gap-1"><Check size={14} /> {t('rig.pay')}</button>
                     </div>
                 </div>
             )}
 
             {isRepairConfirming && (
-                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 text-center">
-                    <div className="bg-red-500/10 p-3 rounded-full mb-3">
-                        <Wrench className="text-red-500 animate-bounce" size={24} />
-                    </div>
+                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                    <Wrench className="text-red-500 animate-bounce mb-3" size={24} />
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_repair')}</h4>
-                    <div className="text-2xl font-mono font-bold text-white mb-1 tabular-nums">-{formatCurrency(repairCost)}</div>
-                    {hasSilverBuff && <div className="text-xs text-stone-500">({t('rig.silver_owner_discount')})</div>}
-                    {hatDiscountText && <div className="text-xs text-emerald-400">{hatDiscountText}</div>}
+                    <div className="text-2xl font-mono font-bold text-white mb-1">-{formatCurrency(repairCost)}</div>
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
-                        <button onClick={(e) => { e.stopPropagation(); setIsRepairConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">{t('common.cancel')}</button>
-                        <button onClick={confirmRepair} className="py-2.5 rounded bg-red-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> {t('rig.repair_now')}</button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsRepairConfirming(false); }} className="py-2.5 rounded border border-stone-700 text-stone-400 text-xs font-bold uppercase">{t('common.cancel')}</button>
+                        <button onClick={confirmRepair} className="py-2.5 rounded bg-red-600 text-white text-xs font-bold uppercase flex items-center justify-center gap-1"><Check size={14} /> {t('rig.repair_now')}</button>
                     </div>
                 </div>
             )}
 
             {isRepairing && (
-                <div className="absolute inset-0 z-50 bg-stone-950/90 flex flex-col items-center justify-center animate-in fade-in">
+                <div className="absolute inset-0 z-50 bg-stone-950/90 flex flex-col items-center justify-center">
                     <Wrench className="text-orange-500 animate-spin mb-4" size={48} />
-                    <div className="text-orange-400 font-bold uppercase tracking-widest animate-pulse">{t('rig.repairing')}</div>
+                    <div className="text-orange-400 font-bold uppercase tracking-widest">{t('rig.repairing')}</div>
                 </div>
             )}
 
             {isChargeConfirming && (
-                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 text-center">
-                    <div className="bg-emerald-500/10 p-3 rounded-full mb-3">
-                        <Zap className="text-emerald-500 animate-pulse" size={24} />
-                    </div>
+                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                    <Zap className="text-emerald-500 animate-pulse mb-3" size={24} />
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_refill')}</h4>
-                    -{formatCurrency(((100 - energyPercent) / 100) * effectiveEnergyCostPerDay)}
-                    <div className="text-xs text-stone-500 mb-4">{t('rig.refill_desc')}</div>
+                    <div className="text-xl font-mono text-white mb-4">-{formatCurrency(((100 - energyPercent) / 100) * effectiveEnergyCostPerDay)}</div>
                     <div className="grid grid-cols-2 gap-3 w-full mt-4">
-                        <button onClick={(e) => { e.stopPropagation(); setIsChargeConfirming(false); }} className="py-2.5 rounded border border-stone-700 bg-stone-900 text-stone-400 text-xs font-bold uppercase tracking-wider">{t('common.cancel')}</button>
-                        <button onClick={confirmCharge} className="py-2.5 rounded bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1"><Check size={14} /> {t('rig.refill_now')}</button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsChargeConfirming(false); }} className="py-2.5 rounded border border-stone-700 text-stone-400 text-xs font-bold uppercase">{t('common.cancel')}</button>
+                        <button onClick={confirmCharge} className="py-2.5 rounded bg-emerald-600 text-white text-xs font-bold uppercase flex items-center justify-center gap-1"><Check size={14} /> {t('rig.refill_now')}</button>
                     </div>
                 </div>
             )}
 
             {isScrapConfirming && (
-                <div className="absolute inset-0 z-50 bg-red-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-200 text-center border-2 border-red-900/50 rounded-xl">
-                    <div className="bg-red-500/20 p-4 rounded-full mb-4 animate-bounce shadow-[0_0_20px_rgba(239,68,68,0.4)]">
-                        <Trash2 className="text-red-500" size={32} />
-                    </div>
-                    <h4 className="text-red-400 text-sm uppercase tracking-[0.2em] font-black mb-2">{t('rig.confirm_demolish') || 'CONFIRM DEMOLISH'}</h4>
-                    <p className="text-stone-300 text-xs mb-4 max-w-[200px] leading-relaxed">
-                        {language === 'th' ? 'คุณแน่ใจหรือไม่ที่จะทุบเครื่องขุดนี้ทิ้ง? การกระทำนี้ไม่สามารถย้อนกลับได้!' : 'Are you sure you want to demolish this rig? This action cannot be undone!'}
+                <div className="absolute inset-0 z-50 bg-red-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center border-2 border-red-900/50 rounded-xl">
+                    <Trash2 className="text-red-500 animate-bounce mb-4" size={32} />
+                    <h4 className="text-red-400 text-sm uppercase tracking-[0.2em] font-black mb-2">{t('rig.confirm_demolish')}</h4>
+                    <p className="text-stone-300 text-xs mb-4 leading-relaxed">
+                        {language === 'th' ? 'คุณแน่ใจหรือไม่ที่จะหลอมเครื่องขุดนี้? เครื่องขุดจะถูกทำลายและคุณจะได้รับวัตถุดิบบางส่วนคืน' : 'Are you sure you want to melt this rig? It will be destroyed and you will receive some materials back.'}
                     </p>
                     <div className="grid grid-cols-2 gap-3 w-full mt-2">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setIsScrapConfirming(false); }}
-                            className="py-3 rounded-lg border border-stone-600 bg-stone-800 text-stone-300 text-xs font-bold uppercase tracking-wider hover:bg-stone-700 transition-colors"
-                        >
-                            {t('common.cancel')}
-                        </button>
-                        <button
-                            onClick={confirmScrap}
-                            className="py-3 rounded-lg bg-gradient-to-r from-red-600 to-red-800 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(220,38,38,0.5)] hover:scale-105 transition-transform"
-                        >
-                            <Trash2 size={14} /> {language === 'th' ? 'ทุบทิ้ง' : 'DEMOLISH'}
-                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsScrapConfirming(false); }} className="py-3 rounded-lg border border-stone-600 text-stone-300 text-xs font-bold uppercase">{t('common.cancel')}</button>
+                        <button onClick={confirmScrap} className="py-3 rounded-lg bg-red-600 text-white text-xs font-bold uppercase flex items-center justify-center gap-2"><Trash2 size={14} /> {t('rig.destroy')}</button>
                     </div>
                 </div>
             )}
 
             {showRestored && (
-                <div className="absolute inset-0 z-50 bg-emerald-950/90 flex flex-col items-center justify-center animate-in zoom-in">
+                <div className="absolute inset-0 z-50 bg-emerald-950/90 flex flex-col items-center justify-center zoom-in">
                     <CheckCircle2 className="text-emerald-500 mb-4" size={48} />
                     <div className="text-emerald-400 font-bold uppercase tracking-widest">{t('rig.repair_complete')}</div>
                 </div>
             )}
 
             {showRenewed && (
-                <div className="absolute inset-0 z-50 bg-blue-950/90 flex flex-col items-center justify-center animate-in zoom-in backdrop-blur-sm">
+                <div className="absolute inset-0 z-50 bg-blue-950/90 flex flex-col items-center justify-center zoom-in">
                     <CalendarClock className="text-blue-400 mb-4 animate-bounce" size={48} />
-                    <div className="text-blue-300 font-bold text-2xl mb-1">+{rig.durationMonths * 30} {t('time.days')}</div>
                     <div className="text-blue-500 text-xs uppercase tracking-widest">{t('rig.renew_complete')}</div>
                 </div>
             )}
 
             <div className="relative rounded-[10px] h-full flex flex-col">
-
-                {/* --- AI ROBOT OVERLAY (For Rotten Glove Only) --- */}
-                {isRottenGlove && botStatus && (
-                    <AutomatedBotOverlay
-                        status={botStatus}
-                        cooldown={botCooldown || 0}
-                        workTimeLeft={botWorkTimeLeft}
-                        onTogglePause={onToggleBotPause || (() => { })}
-                        isFixed={false}
-                        className="z-50 scale-90 lg:scale-100 transform origin-bottom transition-all"
-                        style={{ bottom: 'auto', top: '-60px' }} // Position centered on top
-                    />
-                )}
-
-                {/* Header / Meta */}
-                <div className={`flex justify-between items-start z-10 p-2 border-b ${(globalMultiplier > 1 || reactorMultiplier > 1) ? 'border-purple-500/50 bg-gradient-to-r from-purple-900/30 to-stone-900' : 'border-stone-800 ' + styles.headerBg} pb-3 relative`}>
+                <div className={`flex justify-between items-start z-10 p-2 border-b ${styles.headerBg} pb-3 relative`}>
                     <div className="flex flex-col">
-                        <span className={`text-xs font-display font-bold uppercase tracking-widest flex items-center gap-1.5 drop-shadow-sm ${(globalMultiplier > 1 || reactorMultiplier > 1) ? 'text-white' : styles.accentColor}`}>
+                        <span className={`text-xs font-display font-bold uppercase tracking-widest flex items-center gap-1.5 ${styles.accentColor}`}>
                             {React.cloneElement(styles.icon as React.ReactElement, { size: 12 })}
                             {preset ? getLocalized(preset.name) : getLocalized(rig.name)}
                         </span>
-                        <div className="absolute top-2 right-2 flex gap-1 z-10">
-                        </div>
                         <div className="flex items-center gap-2 mt-1">
-                            {/* Rarity Badge Moved Here */}
-                            <div className={`px-1.5 py-0.5 rounded text-[8px] font-bold border backdrop-blur-md shadow-sm flex items-center gap-1 ${rarityConfig.color} ${rarityConfig.border} bg-black/40`}>
-                                {rarityConfig.label}
-                            </div>
+                            <div className={`px-1.5 py-0.5 rounded text-[8px] font-bold border ${rarityConfig.color} ${rarityConfig.border} bg-black/40`}>{rarityConfig.label}</div>
                             <span className="text-[9px] text-stone-600 font-mono">Lvl {currentTier}</span>
                         </div>
-                        <div className={`text-[9px] flex items-center gap-1 mt-1 font-mono font-medium ${isExpired ? 'text-red-500' : daysRemaining <= 3 ? 'text-orange-400' : 'text-stone-400'}`}>
-                            <Timer size={10} />
-                            <span>{formatTimeLeft(timeLeftMs)}</span>
+                        <div className={`text-[9px] flex items-center gap-1 mt-1 font-mono ${isExpired ? 'text-red-500' : 'text-stone-400'}`}>
+                            <Timer size={10} /> <span>{formatTimeLeft(timeLeftMs)}</span>
                         </div>
                     </div>
-
                     <div className="flex flex-col items-end gap-1">
-                        <div className={`px-1.5 py-0.5 rounded border text-[9px] flex items-center gap-1 shadow-sm ${isOverclockActive ? 'bg-emerald-900/50 border-emerald-500 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : (globalMultiplier > 1 || reactorMultiplier > 1) ? 'bg-purple-900/30 border-purple-500 text-purple-300' : 'bg-emerald-950/30 border-emerald-900/50 text-emerald-400'}`}>
-                            <Clock size={10} />
-                            <span className={isOverclockActive ? 'text-emerald-300 font-bold' : ''}>+{formatCurrency(totalDailyProfit)}/{t('time.day')}</span>
-                            {isOverclockActive && <Zap size={10} className="text-yellow-400 animate-pulse" />}
-                        </div>
-                        {isOverclockActive && (
-                            <div className="text-[9px] text-emerald-400 flex items-center gap-1 font-extrabold bg-emerald-950 border border-emerald-500 px-2 py-0.5 rounded animate-[pulse_1s_infinite] shadow-[0_0_15px_rgba(16,185,129,0.5)]">
-                                <Zap size={10} className="text-yellow-400 fill-yellow-400" />
-                                ⚡ {t('rig.overclock_active')}
+                        {volConfig && (
+                            <div className={`px-1.5 py-0.5 rounded border text-[9px] flex items-center gap-1 bg-stone-900/40 ${volConfig.type === 'Chaos' ? 'text-red-300 border-red-500' : 'text-cyan-400 border-cyan-900/50'}`}>
+                                <Zap size={10} />
+                                <span className="font-mono font-bold">{volConfig.hashrateMin}-{volConfig.hashrateMax} MH/s</span>
                             </div>
                         )}
-                        <div className="flex flex-col items-end mb-1">
-                            {rig.bonusProfit > 0 && !['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr) && (
-                                <div className={`text-[9px] ${rarityConfig.color} flex items-center gap-1 font-bold`}>
-                                    <Zap size={8} />
-                                    {t('shop.bonus')} +{formatCurrency(rig.bonusProfit)}
-                                </div>
-                            )}
-                            {equippedBonus > 0 && (
-                                <div className="text-[9px] text-blue-400 flex items-center gap-1 font-bold">
-                                    <Briefcase size={8} />
-                                    {t('rig.equipment_bonus')} +{formatCurrency(equippedBonus)}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* GLOVE SLOT (Index 0) - Back in Header */}
-                        <div
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (isExploring) return;
-                                if (onManageAccessory) onManageAccessory(rig.id, 0);
-                                else if (onManageGlove) onManageGlove(rig.id);
-                            }}
-                            className={`group/glove w-10 h-10 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-all relative shadow-lg
-                        ${gloveItem
-                                    ? 'border-yellow-400 bg-stone-800 shadow-[0_0_12px_rgba(234,179,8,0.4)]'
-                                    : 'border-yellow-900/30 border-dashed bg-stone-950/20 hover:border-yellow-600/50'
-                                }`}
-                        >
-                            {gloveItem ? (
-                                <div className="relative w-full h-full flex items-center justify-center">
-                                    {(() => {
-                                        const safeRarity = gloveItem.rarity && RARITY_SETTINGS[gloveItem.rarity] ? gloveItem.rarity : 'COMMON';
-                                        return (
-                                            <>
-                                                <div className={`absolute inset-0 bg-gradient-to-br ${RARITY_SETTINGS[safeRarity].bgGradient} opacity-30`}></div>
-                                                <InfinityGlove rarity={safeRarity} size={24} className="relative z-10 drop-shadow-md" />
-                                            </>
-                                        );
-                                    })()}
-                                    {gloveItem.level && gloveItem.level > 1 && (
-                                        <span className="absolute -bottom-0.5 right-0 text-[8px] font-bold bg-black/80 text-yellow-500 px-1 rounded-tl-md">+{gloveItem.level}</span>
-                                    )}
-
-                                    {/* Tooltip */}
-                                    <div className="absolute right-full top-0 mr-2 z-[60] bg-stone-900/95 text-xs text-white p-2 rounded-lg border border-yellow-500/30 shadow-xl opacity-0 hover:opacity-100 group-hover/glove:opacity-100 pointer-events-none transition-opacity min-w-[120px] backdrop-blur-sm">
-                                        <div className="font-bold text-yellow-500 mb-1">{getLocalized(gloveItem.name)}</div>
-                                        <div className="text-[10px] text-yellow-400 flex items-center gap-1">
-                                            <Star size={10} />
-                                            {t('shop.bonus')}: {formatBonus(gloveItem.dailyBonus, gloveItem.typeId)} / {t('time.day')}
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <InfinityGlove rarity="COMMON" size={20} className="grayscale opacity-20 text-stone-500" />
-                            )}
-                            {gloveItem && <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 animate-[pulse_2s_infinite] pointer-events-none"></div>}
+                        <div className="flex items-center gap-0.5">
+                            {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={8} className={i < volConfig.stabilityStars ? 'text-yellow-400 fill-yellow-400' : 'text-stone-700'} />)}
                         </div>
                     </div>
                 </div>
 
-                {/* Content Area */}
-                <div className={`flex z-10 flex-1 ${isExpired || isBroken || !isPowered || isExploring ? 'opacity-50 grayscale' : ''} relative p-3 gap-3`}>
-
-                    {/* LEFT SIDEBAR: Battery & 4 Accessory Slots */}
+                <div className={`flex z-10 flex-1 ${isExpired || isBroken || !isPowered ? 'opacity-50 grayscale' : ''} relative p-3 gap-3`}>
                     <div className="flex flex-col items-center gap-3 pr-2 border-r border-stone-800/30">
-                        <div className="flex flex-col items-center gap-2 mb-1 w-full max-w-[100px]">
-                            {/* TOP: x2 Charge Badge (Moved from Header) */}
-                            {isFurnaceActive && (
-                                <div className="bg-emerald-600 border border-emerald-400 text-white text-[8px] px-1.5 py-0.5 rounded shadow-lg animate-pulse flex items-center gap-1 mb-1 whitespace-nowrap">
-                                    <Zap size={10} className="fill-current" />
-                                    <span className="font-bold uppercase leading-none">x2 CHARGE</span>
-                                </div>
-                            )}
-                            {/* TOP: Battery (Energy Only) */}
-                            <BatteryUI percent={energyPercent} colorClass={energyColor} isEnergy={true} />
-
-                            {/* CHARGE BUTTON - Next to Battery */}
-                            {!isZeroEnergy && (
-                                <button
-                                    onClick={handleChargeClick}
-                                    disabled={isExploring || energyPercent >= 100}
-                                    className={`w-11 h-11 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center hover:bg-stone-800 transition-all group/charge relative shadow-lg backdrop-blur-sm ${isOutOfEnergy ? 'animate-bounce border-emerald-500' : ''} disabled:opacity-30`}
-                                    title={`${t('rig.refill')}: ${formatCurrency(effectiveEnergyCostPerDay)}/${t('time.day')} ${uniformId ? '(-5%)' : ''}`}
-                                >
-                                    <Zap size={18} className={`text-emerald-400 transition-transform group-hover/charge:scale-110 ${isOutOfEnergy ? 'animate-pulse' : ''}`} />
-                                    {isOutOfEnergy && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full animate-pulse border-2 border-black" />}
-                                </button>
-                            )}
-                        </div>
-                        {/* Action Buttons */}
-                        {/* Action Buttons - MOVED TO BOTTOM */}
+                        <BatteryUI percent={energyPercent} colorClass="" isEnergy={true} />
+                        {!isZeroEnergy && (
+                            <button onClick={handleChargeClick} disabled={isExploring || energyPercent >= 100} className="w-11 h-11 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center hover:bg-stone-800 group relative">
+                                <Zap size={18} className="text-emerald-400 group-hover:scale-110" />
+                                {isOutOfEnergy && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full animate-pulse border-2 border-black" />}
+                            </button>
+                        )}
                         <div className="flex flex-col gap-2.5 mt-4">
-                            {equippedItems.slice(1, 5).map((item, index) => {
-                                const actualIndex = index + 1;
-                                return (
-                                    <div
-                                        key={actualIndex}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (isExploring) return;
-                                            if (onManageAccessory) {
-                                                onManageAccessory(rig.id, actualIndex);
-                                            } else {
-                                                if (item && onUnequipSlot) onUnequipSlot(rig.id, actualIndex);
-                                                else if (!item && onEquipSlot) onEquipSlot(rig.id, actualIndex);
-                                            }
-                                        }}
-                                        className={`group/item w-10 h-10 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-all relative
-                                        ${item
-                                                ? 'border-yellow-400 bg-stone-800 shadow-[0_0_15px_rgba(234,179,8,0.5)] hover:border-red-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]'
-                                                : 'border-white/10 border-dashed bg-black/40 hover:border-white/30 hover:shadow-[0_0_12px_rgba(255,255,255,0.2)]'
-                                            }`}
-                                    >
-                                        {item ? (
-                                            <div className="relative w-full h-full flex items-center justify-center bg-stone-800/50 rounded-lg">
-                                                {(() => {
-                                                    const nameRaw = item.name;
-                                                    const enName = typeof nameRaw === 'object' ? (nameRaw as any)?.en || '' : String(nameRaw || '');
-                                                    const thName = typeof nameRaw === 'object' ? (nameRaw as any)?.th || '' : String(nameRaw || '');
-
-                                                    const typeIdLower = (item.typeId || '').toLowerCase();
-
-                                                    let IconComp = InfinityGlove;
-                                                    let colorClass = "text-yellow-100 drop-shadow-sm";
-
-                                                    // priority check by name
-                                                    if (typeIdLower.startsWith('glasses') || thName.includes('แว่น') || enName.includes('Glasses')) { IconComp = Glasses; colorClass = "text-blue-400"; }
-                                                    else if (typeIdLower.startsWith('uniform') || typeIdLower.startsWith('shirt') || thName.includes('ชุด') || enName.includes('Uniform') || enName.includes('Suit')) { IconComp = Shirt; colorClass = "text-orange-400"; }
-                                                    else if (typeIdLower.startsWith('bag') || thName.includes('กระเป๋า') || enName.includes('Bag') || enName.includes('Backpack')) { IconComp = Backpack; colorClass = "text-purple-400"; }
-                                                    else if (typeIdLower.startsWith('boots') || thName.includes('รองเท้า') || enName.includes('Boots')) { IconComp = Footprints; colorClass = "text-yellow-400"; }
-                                                    else if (typeIdLower.startsWith('mobile') || thName.includes('มือถือ') || enName.includes('Mobile')) { IconComp = Smartphone; colorClass = "text-cyan-400"; }
-                                                    else if (typeIdLower.startsWith('pc') || thName.includes('คอม') || enName.includes('PC')) { IconComp = Monitor; colorClass = "text-rose-400"; }
-                                                    else if (typeIdLower === 'auto_excavator' || thName.includes('ระบบล็อค') || thName.includes('รถไฟฟ้า')) { IconComp = TrainFront; colorClass = "text-indigo-400"; }
-                                                    else if (typeIdLower === 'upgrade_chip' || thName.includes('ชิป')) { IconComp = Cpu; colorClass = "text-blue-500"; }
-                                                    else if (typeIdLower === 'mixer' || thName.includes('เครื่องผสม')) { IconComp = Factory; colorClass = "text-amber-500"; }
-                                                    else if (typeIdLower === 'magnifying_glass' || thName.includes('แว่นขยาย')) { IconComp = Search; colorClass = "text-sky-400"; }
-
-                                                    if (IconComp === InfinityGlove) {
-                                                        return <InfinityGlove size={22} rarity={item.rarity} />;
-                                                    }
-                                                    return <IconComp size={20} className={colorClass} />;
-                                                })()}
-                                                <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 animate-[pulse_3s_infinite] pointer-events-none rounded-lg overflow-hidden"></div>
-
-                                                {/* Level Badge (+X) */}
-                                                {item.level && item.level > 1 && (
-                                                    <div className="absolute -top-1 -right-1 z-20 px-1 py-[1px] rounded-[2px] bg-black text-cyan-400 text-[8px] font-bold border border-cyan-500/50 font-mono shadow-sm">
-                                                        +{item.level}
-                                                    </div>
-                                                )}
-
-                                                {/* Tooltip for Accessories */}
-                                                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[100] bg-stone-900/95 text-xs text-white p-2 rounded-lg border border-stone-700 shadow-xl opacity-0 group-hover/item:opacity-100 hover:opacity-100 pointer-events-none transition-opacity min-w-[140px] backdrop-blur-sm whitespace-nowrap">
-                                                    <div className="font-bold text-yellow-500 mb-1 text-xs capitalize">
-                                                        {(() => {
-                                                            if (!item) return t('rig.empty_slot');
-                                                            // Try to resolve localized name from EQUIPMENT_SERIES
-                                                            const series = EQUIPMENT_SERIES[item.typeId as keyof typeof EQUIPMENT_SERIES];
-                                                            if (series) {
-                                                                const tier = series.tiers.find(t => t.rarity === item.rarity);
-                                                                if (tier) return getLocalized(tier.name);
-                                                            }
-
-                                                            // Force Mining Theme Names for Gloves/Managers
-                                                            // Force Mining Theme Names for Gloves/Managers (Check ID, Type, AMD Legacy Names)
-                                                            const isGlove =
-                                                                item.id?.startsWith('glove_') ||
-                                                                item.typeId === 'manager' ||
-                                                                item.typeId === 'glove' ||
-                                                                (typeof item.name === 'string' && (item.name.includes('(STAFF)') || item.name.includes('(SUPERVISOR)') || item.name.includes('(MANAGER)') || item.name.includes('(EXECUTIVE)') || item.name.includes('(PARTNER)'))) ||
-                                                                (typeof item.name === 'object' && ((item.name as any).en?.includes('(STAFF)') || (item.name as any).th?.includes('(STAFF)')));
-
-                                                            if (isGlove) {
-                                                                const r = (item.rarity || 'COMMON').toUpperCase();
-                                                                if (r === 'COMMON') return t('loot_rates.staff');
-                                                                if (r === 'RARE') return t('loot_rates.supervisor');
-                                                                if (r === 'SUPER_RARE') return t('loot_rates.manager');
-                                                                if (r === 'EPIC') return t('loot_rates.executive');
-                                                                if (r === 'LEGENDARY') return t('loot_rates.partner');
-                                                            }
-
-                                                            return item.name || item.typeId;
-                                                        })()}
-                                                    </div>
-                                                    {item.specialEffect && (
-                                                        <div className="text-[9px] text-emerald-400 mb-1 font-bold">
-                                                            {item.specialEffect}
-                                                        </div>
-                                                    )}
-                                                    <div className="text-[10px] text-yellow-400 flex items-center gap-1">
-                                                        <Star size={10} />
-                                                        <span className="font-mono">
-                                                            {t('rig.bonus')}: {formatBonus(item.dailyBonus, item.typeId)} / {t('time.day')}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <Plus size={12} className="text-white/10 group-hover/item:text-white/30 transition-colors" />
-                                        )}
-                                        {/* Glowing edge effect (Matching Battery) */}
-                                        <div className={`absolute inset-[-2px] rounded-lg -z-10 blur-[10px] opacity-0 group-hover/item:opacity-70 transition-opacity ${item ? 'bg-yellow-500/50' : 'bg-white/20'}`}></div>
-                                    </div>
-                                );
-                            })}
+                            {equippedItems.slice(1, 5).map((item, index) => (
+                                <div key={index} onClick={(e) => { e.stopPropagation(); if (!isExploring && onManageAccessory) onManageAccessory(rig.id, index + 1); }} className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-all ${item ? 'border-yellow-400 bg-stone-800' : 'border-white/10 border-dashed bg-black/40'}`}>
+                                    {item ? (
+                                        (() => {
+                                            const thName = getLocalized(item.name);
+                                            let IconComp = Briefcase;
+                                            if (thName.includes('หมวก') || thName.includes('HardHat')) IconComp = HardHat;
+                                            else if (thName.includes('แว่น')) IconComp = Glasses;
+                                            else if (thName.includes('ชุด')) IconComp = Shirt;
+                                            else if (thName.includes('กระเป๋า')) IconComp = Backpack;
+                                            else if (thName.includes('รองเท้า')) IconComp = Footprints;
+                                            else if (thName.includes('มือซื้อ')) IconComp = Smartphone;
+                                            else if (thName.includes('คอม')) IconComp = Monitor;
+                                            return <IconComp size={20} className="text-yellow-100" />;
+                                        })()
+                                    ) : <Plus size={12} className="text-white/10" />}
+                                </div>
+                            ))}
                         </div>
                     </div>
 
                     <div className="flex-1 flex flex-col relative min-h-[160px]">
-
-                        {/* Center-Top Status Bar (Health/Durability) */}
-                        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1 group/health">
-                            <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/5 shadow-lg">
-                                <Wrench size={10} className={`${healthPercent <= 20 ? 'text-red-500 animate-pulse' : 'text-stone-300'} drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]`} />
-
-                                <div className="flex gap-[2px] items-center">
-                                    {Array.from({ length: 10 }).map((_, i) => {
-                                        const segmentThreshold = (i + 1) * 10;
-                                        const isFilled = healthPercent >= segmentThreshold;
-
-                                        let segColor = 'bg-stone-800';
-                                        if (isFilled) {
-                                            if (healthPercent > 20) segColor = 'bg-[#4ADE80] shadow-[0_0_5px_rgba(74,222,128,0.5)]'; // Green
-                                            else if (healthPercent > 10) segColor = 'bg-[#F97316] shadow-[0_0_5px_rgba(249,115,22,0.5)]'; // Orange
-                                            else segColor = 'bg-[#EF4444] shadow-[0_0_5px_rgba(239,68,68,0.5)] animate-pulse'; // Red
-                                        }
-
-                                        return (
-                                            <div
-                                                key={i}
-                                                className={`h-1.5 w-2 sm:w-2.5 rounded-[1px] transition-all duration-500 ${segColor}`}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                                <span className={`text-[9px] font-mono leading-none ${healthPercent <= 10 ? 'text-red-500 font-bold animate-pulse' : 'text-stone-400'}`}>
-                                    {Math.ceil(healthPercent)}%
-                                </span>
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 bg-black/60 px-2 py-0.5 rounded-full border border-white/5 flex items-center gap-1.5">
+                            <Wrench size={10} className={healthPercent <= 20 ? 'text-red-500' : 'text-stone-300'} />
+                            <div className="flex gap-[2px]">
+                                {Array.from({ length: 10 }).map((_, i) => <div key={i} className={`h-1.5 w-2 rounded-[1px] ${healthPercent >= (i + 1) * 10 ? (healthPercent > 20 ? 'bg-green-500' : 'bg-red-500 animate-pulse') : 'bg-stone-800'}`} />)}
                             </div>
+                            <span className="text-[9px] text-stone-400 font-mono">{Math.ceil(healthPercent)}%</span>
                         </div>
-
-                        {/* Animation (Centered) */}
                         <div className="flex-1 flex items-center justify-center">
-                            <OilRigAnimation
-                                isActive={!isExpired && !isBroken && !isExploring && !isOutOfEnergy}
-                                rarity={rig.rarity}
-                                tier={currentTier}
-                                rigName={getLocalized(rig.name)}
-                                isOverclockActive={isOverclockActive}
-                            />
-
+                            <OilRigAnimation isActive={!isExpired && !isBroken && !isExploring && !isOutOfEnergy} rarity={rig.rarity} tier={currentTier} rigName={getLocalized(rig.name)} isOverclockActive={isOverclockActive} />
                         </div>
                     </div>
 
                     {!isExpired && (
-                        <div className="absolute top-3 right-3 z-20 flex flex-col items-center gap-2 pointer-events-auto">
-
-
-
-                            {/* REPAIR BUTTON (Aligned with Battery) */}
+                        <div className="absolute top-3 right-3 z-20 flex flex-col gap-2">
                             {!isInfiniteDurability && !isVibranium && (
-                                <button
-                                    onClick={handleRepairClick}
-                                    disabled={isExploring}
-                                    className={`guide-repair-btn w-11 h-11 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center hover:bg-stone-800 transition-all group/repair relative shadow-lg backdrop-blur-sm ${isBroken ? 'animate-bounce border-red-500' : ''}`}
-                                    title={`${t('rig.repair_now')}: ${formatCurrency(repairCost)}`}
-                                >
-                                    <Wrench size={18} className={`${styles.wrench} transition-transform group-hover/repair:rotate-45`} />
+                                <button onClick={handleRepairClick} disabled={isExploring} className={`w-11 h-11 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center hover:bg-stone-800 group relative ${isBroken ? 'animate-bounce border-red-500' : ''}`}>
+                                    <Wrench size={18} className="text-stone-300 group-hover:rotate-45" />
                                     {isBroken && <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-black" />}
                                 </button>
                             )}
-
                         </div>
                     )}
-
-                    {!isExpired && !(preset?.specialProperties?.noGift) && (
-                        <div className="absolute bottom-3 right-3 z-20 pointer-events-auto flex items-end gap-1">
-                            {/* Key Indicator (Added Next to Gift) */}
-                            <div className={`relative flex items-center justify-center w-9 h-9 transition-all duration-300 ${hasKey ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)] scale-100' : 'text-stone-700 opacity-20 scale-75'}`}>
-                                <Key size={18} strokeWidth={2.5} className="transform -rotate-45" />
-                                {keyCount > 0 && (
-                                    <div className="absolute -top-1 -right-0.5 bg-stone-900 text-yellow-500 text-[10px] font-bold px-1 rounded-full border border-yellow-500/30 min-w-[16px] text-center shadow-md leading-3">
-                                        {keyCount}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Material Box (Bottom Right) */}
-                            <div className="relative flex items-center justify-center w-11 h-11">
-                                {/* Info Button to show loot table always */}
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIsLootModalOpen(true);
-                                    }}
-                                    className="absolute -top-3 -right-1 z-30 p-1 bg-stone-900/80 border border-stone-700 rounded-full text-stone-500 hover:text-yellow-500 hover:border-yellow-500/50 transition-all backdrop-blur-sm shadow-lg"
-                                    title={t('rig.possible_rewards') || "Possible Rewards"}
-                                >
-                                    <Info size={12} />
-                                </button>
-
-                                {!noGift && (
-                                    <>
-                                        {isGiftAvailable ? (
-                                            <div onClick={handleGiftClick} className="cursor-pointer transition-transform hover:scale-110 active:scale-95">
-                                                <div className="relative animate-[bounce_1s_infinite]">
-                                                    <div className="absolute inset-0 bg-yellow-400/50 rounded-full blur-lg animate-pulse"></div>
-                                                    <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-1 rounded-lg border border-white shadow-lg relative h-9 w-9 flex items-center justify-center">
-                                                        <div className="text-white font-extrabold text-xl drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">?</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div onClick={() => setIsLootModalOpen(true)} className="group/gift relative cursor-pointer active:scale-95 transition-transform">
-                                                <div className="bg-stone-800 p-1 rounded-lg border border-stone-600 shadow-inner relative flex flex-col items-center justify-center w-9 h-9 opacity-80 hover:opacity-100 transition-opacity">
-                                                    <span className="text-stone-500 font-bold mb-0.5 text-sm">?</span>
-                                                    <span className="text-[7px] font-mono text-stone-400 font-bold absolute bottom-1 leading-none tracking-tighter">{formatGiftCooldown(timeUntilGift)}</span>
-                                                </div>
-                                                <svg className="absolute -inset-1 w-[44px] h-[44px] -rotate-90 pointer-events-none">
-                                                    <circle cx="22" cy="22" r="18" fill="none" className="stroke-stone-800/50" strokeWidth="2" />
-                                                    <circle cx="22" cy="22" r="18" fill="none" className="stroke-emerald-500/30 transition-all duration-1000" strokeWidth="2" strokeDasharray="113" strokeDashoffset={113 - (113 * nextGiftProgress / 100)} strokeLinecap="round" />
-                                                </svg>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
                 </div>
 
-
                 {isBroken && !isExpired && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 backdrop-blur-[1px]">
-                        <div className="bg-red-900/80 px-3 py-1.5 rounded border border-red-500 text-red-100 text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-xl animate-pulse">
-                            <AlertTriangle size={14} /> {t('rig.broken')}
-                        </div>
-                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20"><div className="bg-red-900 px-3 py-1.5 rounded border border-red-500 text-white text-xs font-bold uppercase animate-pulse"><AlertTriangle size={14} /> {t('rig.broken')}</div></div>
                 )}
 
-                {/* Ticker & Action */}
                 <div className="mt-auto z-10 p-3 pt-0 space-y-2.5">
-
                     {!isExpired && (
-                        <div className={`mb-2 flex items-center justify-between p-1.5 rounded-lg border-2 transition-all ${currentMaterials > 0 ? 'bg-stone-950 border-yellow-600/80 shadow-[0_4px_12px_rgba(234,179,8,0.1)]' : 'bg-stone-950/30 border-stone-800/50'}`}>
+                        <div className={`mb-2 flex items-center justify-between p-1.5 rounded-lg border-2 ${currentMaterials > 0 ? 'bg-stone-950 border-yellow-600' : 'bg-stone-950/30 border-stone-800'}`}>
                             <div className="flex items-center gap-2">
-                                <div className={`relative w-10 h-10 rounded-lg border-2 flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)] ${currentMaterials > 0 ? 'bg-stone-900 border-yellow-500' : 'bg-stone-950 border-stone-800'}`}>
-                                    {currentMaterials > 0 ? (
-                                        <Key size={18} className="text-yellow-400 drop-shadow-[0_0_8px_gold]" />
-                                    ) : (
-                                        <Key size={18} className="text-stone-800" />
-                                    )}
-                                    {currentMaterials > 0 && (
-                                        <div className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-stone-900 shadow-md animate-bounce">
-                                            1
-                                        </div>
-                                    )}
+                                <div className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center ${currentMaterials > 0 ? 'border-yellow-500 bg-stone-900' : 'border-stone-800 bg-stone-950'}`}>
+                                    <Key size={18} className={currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-800'} />
                                 </div>
-
                                 <div className="flex flex-col">
-                                    <span className={`text-[10px] font-bold uppercase tracking-wide ${currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-400'}`}>
-                                        {currentMaterials > 0 ? t('rig.mining_key') : t('rig.waiting_discovery')}
-                                    </span>
-                                    <div className="flex gap-2 text-[10px] items-center mt-0.5">
-                                        {currentMaterials > 0 ? <span className="text-red-500 font-extrabold tracking-wider bg-red-950/30 px-1 rounded">{language === 'th' ? 'เต็ม (FULL)' : 'FULL'}</span> : <span className="text-stone-600">{t('rig.capacity')} 1</span>}
-                                    </div>
+                                    <span className={`text-[10px] font-bold uppercase ${currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-400'}`}>{currentMaterials > 0 ? t('rig.mining_key') : t('rig.waiting_discovery')}</span>
+                                    <div className="text-[10px] mt-0.5">{currentMaterials > 0 ? <span className="text-red-500 font-extrabold">{language === 'th' ? 'เต็ม (FULL)' : 'FULL'}</span> : <span className="text-stone-500">{t('rig.capacity')} 1</span>}</div>
                                 </div>
                             </div>
-
                             {currentMaterials > 0 && !isExploring && (
-                                <button
-                                    onClick={handleCollectMaterialsClick}
-                                    className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-3 py-1.5 rounded shadow-lg transition-all active:scale-95 flex items-center gap-1"
-                                >
-                                    <ArrowDownToLine size={14} /> {t('rig.collect')}
-                                </button>
+                                <button onClick={handleCollectMaterialsClick} className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1"><ArrowDownToLine size={14} /> {t('rig.collect')}</button>
                             )}
                         </div>
                     )}
 
-                    <div className="flex justify-between items-end px-1 border-t border-stone-800/50 pt-3">
+                    <div className="flex justify-between items-end px-1 border-t border-stone-800 pt-3">
                         <div className="text-right w-full">
-                            <div className={`text-xl font-mono font-bold tabular-nums flex items-center justify-end gap-1 text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.1)]`}>
-                                {isOverclockActive && <span className="text-emerald-400 text-xs mr-0.5 animate-pulse">x2</span>}
-                                {formatCurrency(currentAmount, { showDecimals: true, precision: 4 })} <Sparkles size={12} className={!isExpired && !isBroken && isPowered && !isExploring ? "text-yellow-500" : "hidden"} />
+                            <div className="text-xl font-mono font-bold text-white flex items-center justify-end gap-1">
+                                {isOverclockActive && <span className="text-emerald-400 text-xs animate-pulse">x1.5</span>}
+                                <span className="text-yellow-400 tracking-widest">{displayAmount}</span>
+                                <Sparkles size={12} className={!isExpired && !isBroken && isPowered && !isExploring && (isRolling || isIdleRolling) ? "text-yellow-500 animate-spin" : "hidden"} />
                             </div>
                         </div>
                     </div>
 
-                    {/* Dead State Actions (Renew / Scrap) */}
                     {rig.isDead && (
                         <div className="mb-2">
                             {!isRenewConfirming ? (
-                                <div className={rig.investment > 0 ? "grid grid-cols-2 gap-2" : "flex"}>
+                                <div className="grid grid-cols-2 gap-2">
                                     {rig.investment > 0 && (
-                                        <button
-                                            onClick={handleRenewClick}
-                                            className="relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all flex items-center justify-center gap-1.5 shadow-lg border group bg-gradient-to-br from-green-600 to-green-800 text-white border-green-500 hover:from-green-500 hover:to-green-700 hover:shadow-green-500/20 active:scale-95 h-10"
-                                        >
-                                            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] px-1.5 rounded-bl-md font-bold z-10 shadow-sm">
-                                                -{(RENEWAL_CONFIG.DISCOUNT_PERCENT * 100).toFixed(0)}%
-                                            </div>
-                                            <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 weapon-shimmer skew-x-12"></div>
-                                            <RefreshCw size={14} className="group-hover:rotate-180 transition-transform" />
-                                            {t('actions.renew')}
-                                        </button>
+                                        <button onClick={handleRenewClick} className="px-3 py-2 rounded-lg font-bold uppercase text-[12px] flex items-center justify-center gap-1.5 bg-stone-800 text-stone-200 border border-stone-700 hover:bg-stone-700 h-10"><RefreshCw size={14} /> {t('actions.renew')}</button>
                                     )}
-
-                                    <button
-                                        onClick={handleDestroyClick}
-                                        className={`relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all flex items-center justify-center gap-1.5 shadow-lg border group bg-stone-800 text-red-500 border-stone-700 hover:bg-stone-700 hover:text-red-400 hover:border-red-900/50 hover:shadow-red-900/10 active:scale-95 h-10 ${rig.investment > 0 ? '' : 'w-full'}`}
-                                    >
-                                        <Trash2 size={14} />
-                                        {t('actions.scrap')}
-                                    </button>
+                                    <button onClick={handleDestroyClick} className="px-3 py-2 rounded-lg font-bold uppercase text-[12px] flex items-center justify-center gap-1.5 bg-red-600 text-white border border-red-500 hover:bg-red-500 h-10"><Trash2 size={14} /> {t('rig.destroy')}</button>
                                 </div>
-                            ) : (
-                                <div className="flex gap-2 animate-fadeIn h-10">
-                                    <button
-                                        onClick={confirmRenew}
-                                        className="flex-1 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg border border-green-400 active:scale-95 transition-all"
-                                    >
-                                        <Check size={18} /> {t('actions.confirm')}
-                                    </button>
-                                    <button
-                                        onClick={cancelRenew}
-                                        className="flex-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-lg border border-red-400 active:scale-95 transition-all"
-                                    >
-                                        <X size={18} /> {t('actions.cancel')}
-                                    </button>
-                                </div>
-                            )}
+                            ) : null}
                         </div>
                     )}
 
-                    {/* Alive State Actions (Repair / Charge / Claim) */}
                     {!rig.isDead && (
                         <div className="mb-2">
-                            {/* Standard Actions: Repair & Charge - Above Collect Button */}
-                            <div className={rig.investment > 0 ? "grid grid-cols-2 gap-2 mb-2" : "flex mb-2"}>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
                                 {rig.investment > 0 && (
-                                    <button
-                                        onClick={handleRenewClick}
-                                        className={`
-                                            relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all
-                                            flex items-center justify-center gap-1.5 shadow-lg border group h-10
-                                            bg-gradient-to-br from-blue-600 to-blue-800 text-white border-blue-500 hover:from-blue-500 hover:to-blue-700 hover:shadow-blue-500/20 active:scale-95
-                                        `}
-                                    >
-                                        <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 weapon-shimmer skew-x-12"></div>
-                                        <div className="absolute -top-1 -right-1 bg-yellow-500 text-black text-[9px] px-1.5 rounded-bl-md font-bold z-10 shadow-sm border border-white">
-                                            -5%
-                                        </div>
-                                        <RefreshCw size={14} className="group-hover:rotate-180 transition-transform" />
-                                        {language === 'th' ? 'ต่อสัญญา' : 'Renew'}
-                                    </button>
+                                    <button onClick={handleRenewClick} disabled={!isExpired} className={`px-3 py-2 rounded-lg font-bold uppercase text-[12px] flex items-center justify-center gap-1.5 border h-10 ${!isExpired ? 'bg-stone-800 text-stone-600 border-stone-700' : 'bg-blue-600 text-white border-blue-500 hover:bg-blue-500'}`}><RefreshCw size={14} /> {language === 'th' ? 'ต่อสัญญา' : 'Renew'}</button>
                                 )}
-
-                                <button
-                                    onClick={handleScrapClick}
-                                    className={`
-                                        relative overflow-hidden px-3 py-2 rounded-lg font-bold uppercase tracking-wider text-[12px] transition-all
-                                        flex items-center justify-center gap-1.5 shadow-lg border group h-10
-                                        bg-gradient-to-br from-red-600 to-red-800 text-white border-red-500 hover:from-red-500 hover:to-red-700 hover:shadow-red-500/20 active:scale-95
-                                        ${rig.investment > 0 ? '' : 'w-full'}
-                                    `}
-                                >
-                                    <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 skew-x-12"></div>
-                                    <Trash2 size={14} className="group-hover:scale-110 transition-transform" />
-                                    {language === 'th' ? 'ทุบทิ้ง' : 'Demolish'}
-                                </button>
+                                <button onClick={handleScrapClick} className={`px-3 py-2 rounded-lg font-bold uppercase text-[12px] flex items-center justify-center gap-1.5 bg-red-600 text-white border border-red-500 hover:bg-red-500 h-10 ${(rig.investment <= 0 || preset?.id === 9) && !onMerge ? 'col-span-2' : (preset?.id === 9 ? 'col-span-2' : '')}`}><Trash2 size={14} /> {t('rig.destroy')}</button>
                             </div>
 
-                            {/* Collect Button (Full Width) */}
+                            {!isExpired && !isBroken && !isExploring && onMerge && !preset?.specialProperties?.cannotMerge && (
+                                <button
+                                    onClick={() => setIsMergeModalOpen(true)}
+                                    className="w-full mb-2 bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white font-bold py-2 rounded border border-yellow-500/50 flex items-center justify-center gap-2 h-10 shadow-lg shadow-yellow-900/20"
+                                >
+                                    <Sparkles size={16} className="text-yellow-200 animate-pulse" />
+                                    <span className="uppercase text-xs tracking-wider">Merge / Evolve</span>
+                                </button>
+                            )}
+
                             <button
-                                onClick={(e) => {
-                                    if (isExploring) return;
-                                    handleClaimClick();
-                                }}
-                                disabled={(isExpired || (!isBroken && !effectiveIsPowered) || isExploring) && currentAmount <= 0}
-                                className={`w-full font-bold py-2 rounded border transition-all active:scale-[0.98] flex items-center justify-center gap-2 font-display uppercase tracking-wider h-10
-                                    ${isExpired
-                                        ? 'bg-stone-800 text-stone-600 border-stone-700 cursor-not-allowed'
-                                        : isExploring
-                                            ? 'bg-purple-900/20 text-purple-500 border-purple-900/50 cursor-not-allowed'
-                                            : isBroken
-                                                ? 'bg-red-600 hover:bg-red-500 text-white border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.4)] cursor-pointer'
-                                                : !effectiveIsPowered
-                                                    ? 'bg-orange-900/20 text-orange-500 border-orange-900/50 cursor-not-allowed'
-                                                    : currentTier === 7
-                                                        ? 'bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600 text-white border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:shadow-[0_0_30px_rgba(168,85,247,0.7)]'
-                                                        : currentTier >= 5
-                                                            ? 'bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 text-black border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)] hover:shadow-[0_0_25px_rgba(234,179,8,0.6)]'
-                                                            : currentTier === 4
-                                                                ? 'bg-gradient-to-r from-orange-700 to-orange-600 text-white border-orange-500 hover:brightness-110'
-                                                                : currentTier === 3
-                                                                    ? 'bg-gradient-to-r from-sky-700 to-sky-600 text-white border-sky-500 hover:brightness-110 shadow-[0_0_15px_rgba(2,132,199,0.3)]'
-                                                                    : currentTier === 2
-                                                                        ? 'bg-gradient-to-r from-emerald-700 to-emerald-600 text-white border-emerald-500 hover:brightness-110 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                                                                        : 'bg-stone-800 hover:bg-stone-700 text-stone-200 border-stone-600'
-                                    }
-                                `}
+                                onClick={handleClaimClick}
+                                disabled={(isExpired || !effectiveIsPowered || isExploring || globalCooldownSeconds > 0) && currentAmount <= 0}
+                                className={`w-full font-bold py-2 rounded border flex items-center justify-center gap-2 h-10 transition-all
+                                    ${(isExpired || !effectiveIsPowered || isExploring || globalCooldownSeconds > 0)
+                                        ? 'bg-stone-800 text-stone-500 border-stone-700 cursor-not-allowed'
+                                        : (currentTier >= 5 && preset?.id !== 9) ? 'bg-yellow-600 text-white border-yellow-500 hover:bg-yellow-500' : 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-500'
+                                    }`}
                             >
                                 {isExploring ? (
                                     <><Skull size={18} /> {language === 'th' ? 'กำลังสำรวจ...' : 'Exploring...'}</>
-                                ) : isBroken && !isExpired && !isVibranium ? (
-                                    <><Wrench size={18} /> {t('rig.repair_now')} ({formatCurrency(baseRepairCost)})</>
-                                ) : !effectiveIsPowered && !isExpired ? (
-                                    <><ZapOff size={18} /> {t('rig.out_of_energy')}</>
+                                ) : globalCooldownSeconds > 0 ? (
+                                    <><Timer size={18} className="text-orange-400" /> <span className="text-orange-400 font-mono text-xs">{language === 'th' ? 'รับได้อีกใน:' : 'Next Claim:'} {formatGlobalCooldown(globalCooldownSeconds)}</span></>
                                 ) : (
-                                    <><Coins size={18} strokeWidth={2.5} /> {isExpired ? t('rig.expired') : t('rig.claim_rent')}</>
+                                    <><Coins size={18} className={isRolling ? "animate-spin" : "animate-pulse"} /> {isExpired ? t('rig.expired') : t('rig.claim_rent')}</>
                                 )}
                             </button>
                         </div>
                     )}
-
-                    {/* Legacy Destroy Button (Only shown if expired but NOT dead, which shouldn't happen often properly, but as fallback) */}
-                    {isExpired && !rig.isDead && (
-                        <button
-                            onClick={handleDestroyClick}
-                            className="w-full font-bold py-2 rounded border border-red-500 bg-red-900/20 hover:bg-red-500 text-red-500 hover:text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-wider"
-                        >
-                            <Trash2 size={18} /> {t('rig.destroy')}
-                        </button>
-                    )}
                 </div>
             </div>
-
-            <RigLootModal
-                isOpen={isLootModalOpen}
-                onClose={() => setIsLootModalOpen(false)}
-                rig={rig}
+            <RigLootModal isOpen={isLootModalOpen} onClose={() => setIsLootModalOpen(false)} rig={rig} />
+            <RigMergeModal
+                isOpen={isMergeModalOpen}
+                onClose={() => setIsMergeModalOpen(false)}
+                baseRig={rig}
+                availableRigs={availableRigs}
+                onMergeSuccess={(newRig) => {
+                    if (onMerge) onMerge(newRig);
+                    setIsMergeModalOpen(false);
+                }}
             />
-
-
-        </div >
+        </div>
     );
 };

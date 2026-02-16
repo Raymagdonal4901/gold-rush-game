@@ -182,18 +182,23 @@ export const sellMaterial = async (req: AuthRequest, res: Response) => {
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         const currentMats = user.materials || {};
-        if (!user.materials) user.materials = {};
-        const userAmount = (user.materials[tier.toString()] || 0);
+        const matTier = Number(tier);
+        const matAmount = Number(amount);
 
-        if (parseInt(tier) === 0) {
+        console.log(`[SELL] User: ${user.username}, Tier: ${matTier}, Amount: ${matAmount}`);
+
+        if (!user.materials) user.materials = {};
+        const userAmount = (user.materials[matTier.toString()] || 0);
+
+        if (matTier === 0) {
             return res.status(400).json({ message: 'เศษหินไม่สามารถขายได้' });
         }
 
-        if (parseInt(tier) === 7) {
+        if (matTier === 7) {
             return res.status(400).json({ message: 'การขายแร่วาเบรเนียมถูกระงับชั่วคราว' });
         }
 
-        if (userAmount < amount) {
+        if (userAmount < matAmount) {
             return res.status(400).json({ message: 'จำนวนวัตถุดิบไม่เพียงพอสำหรับการขาย' });
         }
 
@@ -208,7 +213,7 @@ export const sellMaterial = async (req: AuthRequest, res: Response) => {
         const totalEarned = subTotal - tax;
 
         const newMaterials = { ...user.materials };
-        newMaterials[tier.toString()] = userAmount - amount;
+        newMaterials[matTier.toString()] = userAmount - matAmount;
         user.materials = newMaterials;
         user.markModified('materials');
 
@@ -222,17 +227,17 @@ export const sellMaterial = async (req: AuthRequest, res: Response) => {
             type: 'MATERIAL_SELL',
             amount: totalEarned,
             status: 'COMPLETED',
-            description: `ขายแร่: ${MATERIAL_CONFIG.NAMES[tier].th} (${amount} ชิ้น)`
+            description: `ขายแร่: ${MATERIAL_CONFIG.NAMES[matTier].th} (${matAmount} ชิ้น)`
         });
         await sellTx.save();
 
         // Log Transaction (System Tax side)
         const taxTx = new Transaction({
             userId,
-            type: 'MARKET_TAX',
+            type: 'MARKET_FEE',
             amount: tax,
             status: 'COMPLETED',
-            description: `ภาษีตลาดจากการขาย: ${MATERIAL_CONFIG.NAMES[tier].th} (${amount} ชิ้น)`
+            description: `ค่าธรรมเนียมตลาดจากการขาย: ${MATERIAL_CONFIG.NAMES[matTier].th} (${matAmount} ชิ้น)`
         });
         await taxTx.save();
 
@@ -256,17 +261,22 @@ export const buyMaterial = async (req: AuthRequest, res: Response) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
+        const matTier = Number(tier);
+        const matAmount = Number(amount);
+
+        console.log(`[BUY] User: ${user.username}, Tier: ${matTier}, Amount: ${matAmount}`);
+
         // Get Current Market Price
         const market = getMarketPrices();
-        const item = market[tier];
+        const item = market[matTier];
         if (!item) return res.status(400).json({ message: 'Invalid material tier' });
 
-        if (parseInt(tier) === 7) {
+        if (matTier === 7) {
             return res.status(400).json({ message: 'การซื้อแร่วาเบรเนียมถูกระงับชั่วคราว' });
         }
 
         const unitPrice = item.currentPrice;
-        const subTotal = unitPrice * amount;
+        const subTotal = unitPrice * matAmount;
 
         // Calculate Spread/Markup (Market Fee) - 15% for regular, 12% for Platinum
         // Mastery discount if points >= 1000
@@ -283,7 +293,7 @@ export const buyMaterial = async (req: AuthRequest, res: Response) => {
 
         // Update Materials
         const newMaterials = { ...user.materials };
-        newMaterials[tier.toString()] = (newMaterials[tier.toString()] || 0) + amount;
+        newMaterials[matTier.toString()] = (newMaterials[matTier.toString()] || 0) + matAmount;
         user.materials = newMaterials;
         user.markModified('materials');
 
@@ -306,17 +316,17 @@ export const buyMaterial = async (req: AuthRequest, res: Response) => {
             type: 'MATERIAL_BUY',
             amount: totalCost,
             status: 'COMPLETED',
-            description: `ซื้อแร่: ${MATERIAL_CONFIG.NAMES[tier].th} (${amount} ชิ้น)`
+            description: `ซื้อแร่: ${MATERIAL_CONFIG.NAMES[matTier].th} (${matAmount} ชิ้น)`
         });
         await buyTx.save();
 
         // Log Transaction (System Tax side)
         const taxTx = new Transaction({
             userId,
-            type: 'MARKET_TAX',
+            type: 'MARKET_FEE',
             amount: tax,
             status: 'COMPLETED',
-            description: `ค่าธรรมเนียม/ภาษีตลาดจากการซื้อ: ${MATERIAL_CONFIG.NAMES[tier].th} (${amount} ชิ้น)`
+            description: `ค่าธรรมเนียมตลาดจากการซื้อ: ${MATERIAL_CONFIG.NAMES[matTier].th} (${matAmount} ชิ้น)`
         });
         await taxTx.save();
 

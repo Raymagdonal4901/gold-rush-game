@@ -3,13 +3,13 @@ import Rig from '../models/Rig';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
-import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS, ENERGY_CONFIG } from '../constants';
+import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS, ENERGY_CONFIG, MINING_VOLATILITY_CONFIG, SALVAGE_CONFIG } from '../constants';
 import { recalculateUserIncome } from './userController';
 
 const MATERIAL_NAMES = MATERIAL_CONFIG.NAMES;
 
 // Determine rig preset ID from investment amount
-function getRigPresetId(rig: any): number {
+export function getRigPresetId(rig: any): number {
     const inv = rig.investment;
     // Match by unique investment amounts from RIG_PRESETS
     if (inv === 300) return 1;
@@ -22,18 +22,66 @@ function getRigPresetId(rig: any): number {
     // Crafted rigs and free rigs: check by name
     const name = typeof rig.name === 'string' ? rig.name : (rig.name?.th || rig.name?.en || '');
     if (name.includes('ปฏิกรณ์') || name.includes('Vibranium')) return 8;
-    if (name.includes('ถุงมือ') || name.includes('Rotten') || name.includes('Glove')) return 9;
-    return 1; // fallback
+    if (name.includes('เน่า') || name.includes('Rotten')) return 9;
+    return 9; // fallback to Tier 9 (Free)
+}
+
+// Helper to aggregate accessory buffs
+export function getRigBuffs(rig: any, user: any) {
+    const buffs = {
+        repairDiscount: 0,
+        decayReduction: 0,
+        dropRateBoost: 0,
+        critChance: 0,
+        claimCooldownMultiplier: 1.0, // Multiplier: 1.0 = base, 0.9 = -10% cooldown
+        hashrateBoost: 1.0 // Multiplier: 1.0 = base, 1.1 = +10% hashrate
+    };
+
+    if (rig.slots && rig.slots.length > 0) {
+        for (const itemId of rig.slots) {
+            if (!itemId) continue;
+            const item = user.inventory.find((i: any) => (i.id === itemId || i._id === itemId));
+            if (item) {
+                // Find config to get buffs
+                const config = SHOP_ITEMS.find(s => s.id === item.typeId);
+                if (config && config.buffs) {
+                    if (config.buffs.repairDiscount) buffs.repairDiscount += config.buffs.repairDiscount;
+                    if (config.buffs.decayReduction) buffs.decayReduction += config.buffs.decayReduction;
+                    if (config.buffs.dropRateBoost) buffs.dropRateBoost += config.buffs.dropRateBoost;
+                    if (config.buffs.critChance) buffs.critChance += config.buffs.critChance;
+
+                    // Additive stacking for multipliers: Final = 1 + (bonus1) + (bonus2)
+                    if (config.buffs.claimCooldownMultiplier) {
+                        // cooldown: 0.9 means -10% -> (0.9 - 1) = -0.1
+                        buffs.claimCooldownMultiplier += (config.buffs.claimCooldownMultiplier - 1);
+                    }
+                    if (config.buffs.hashrateBoost) {
+                        // hashrate: 1.03 means +3% -> (1.03 - 1) = +0.03
+                        buffs.hashrateBoost += (config.buffs.hashrateBoost - 1);
+                    }
+                }
+            }
+        }
+    }
+
+    // Clamp values to prevent extreme edge cases
+    buffs.claimCooldownMultiplier = Math.max(0.5, buffs.claimCooldownMultiplier); // Max 50% faster
+    buffs.hashrateBoost = Math.max(1.0, buffs.hashrateBoost);
+
+    return buffs;
 }
 
 // Roll loot from a rig's loot table
-function rollLoot(presetId: number): { tier?: number; itemId?: string; amount: number } {
+function rollLoot(presetId: number, buffs: any = {}): { tier?: number; itemId?: string; amount: number } {
     const table = RIG_LOOT_TABLES[presetId];
     if (!table) {
         // Fallback: 1x Coal for rigs without a loot table (Tier 1, Tier 9)
         return { tier: 1, amount: 1 };
     }
-    const rand = Math.random() * 100;
+    // Apply Drop Rate Boost: Effectively reduces the 'nothing' chance or shifts range
+    // Logic: rand = Math.random() * (100 - boost)
+    const boostPercent = (buffs.dropRateBoost || 0) * 100;
+    const rand = Math.random() * Math.max(1, 100 - boostPercent);
     let cumulative = 0;
     for (const entry of table) {
         cumulative += entry.chance;
@@ -49,11 +97,57 @@ function rollLoot(presetId: number): { tier?: number; itemId?: string; amount: n
     return { tier: last.matTier, itemId: last.itemId, amount: last.minAmount };
 }
 
+// === Dynamic Volatility: คำนวณ yield ต่อครั้ง ===
+// สุ่ม baseValue + Random(0~maxRandom) แล้วลุ้น Jackpot (Critical Hit)
+export function calculateDailyYield(presetId: number, isOverclocked: boolean = false, multiplier: number = 1.5, buffs: any = {}): { amount: number; isJackpot: boolean } {
+    const config = MINING_VOLATILITY_CONFIG[presetId];
+    if (!config) {
+        console.warn(`[YIELD] No volatility config for preset ${presetId}, fallback to 0`);
+        return { amount: 0, isJackpot: false };
+    }
+
+    // Calculate Raw Yield = Base + Math.floor(Math.random() * (MaxRandom + 1))
+    const randomBonus = Math.floor(Math.random() * (config.maxRandom + 1));
+    const rawYield = config.baseValue + randomBonus;
+
+    let isJackpot = false;
+
+    // --- Additive Stacking Implementation ---
+    // Final Multiplier = 1 + (OC Bonus) + (Item Bonus)
+    let totalMultiplier = 1.0;
+    const ocBonus = isOverclocked ? (multiplier - 1.0) : 0;
+    const itemBonus = (buffs.hashrateBoost && buffs.hashrateBoost > 1.0) ? (buffs.hashrateBoost - 1.0) : 0;
+
+    totalMultiplier += ocBonus + itemBonus;
+
+    let finalYield = rawYield * totalMultiplier;
+
+    // Log breakdown for sanity check
+    console.log(`[YIELD_FIX] Tier ${presetId} | Base: ${rawYield} | OC_Bonus: ${ocBonus.toFixed(2)} | Item_Bonus: ${itemBonus.toFixed(2)} | Total_Mult: ${totalMultiplier.toFixed(2)} | Final: ${finalYield.toFixed(2)}`);
+
+    // Roll for Jackpot: if (Math.random() < JackpotChance)
+    // Overclock adds flat 0.02 (2%) to jackpot chance
+    // Buffs add flat chance
+    let effectiveJackpotChance = isOverclocked ? (config.jackpotChance + 0.02) : config.jackpotChance;
+    if (buffs.critChance) {
+        effectiveJackpotChance += buffs.critChance;
+    }
+
+    if (effectiveJackpotChance > 0 && Math.random() < effectiveJackpotChance) {
+        const jackpotBonus = finalYield * (config.jackpotMultiplier - 1);
+        finalYield += jackpotBonus;
+        isJackpot = true;
+        console.log(`[JACKPOT] ⚡ Tier ${presetId}: ${Math.floor(finalYield)} THB (${config.jackpotMultiplier}x Bonus!${isOverclocked ? ' + Overclock' : ''})`);
+    }
+
+    return { amount: Math.floor(finalYield), isJackpot };
+}
+
 // Get all rigs for a user
 export const getMyRigs = async (req: AuthRequest, res: Response) => {
     const start = Date.now();
     try {
-        const rigs = await Rig.find({ ownerId: req.userId });
+        const rigs = await Rig.find({ ownerId: req.user?._id });
 
         // Calculate currentMaterials dynamically based on time
         const DROP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 Hours
@@ -103,32 +197,30 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ message: 'เครื่องจักรนี้ไม่สามารถผลิตได้ หรือชื่อไม่ถูกต้อง' });
         }
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-        // --- ENFORCE SLOT LIMIT ---
-        const activeRigCount = await Rig.countDocuments({ ownerId: userId, isDead: { $ne: true } });
-        const maxSlots = user.unlockedSlots || 3;
-        if (activeRigCount >= maxSlots) {
+        // --- ENFORCE GLOBAL WAREHOUSE CAPACITY ---
+        const totalOwnedRigs = await Rig.countDocuments({ ownerId: user._id, status: 'ACTIVE' });
+        const warehouseCapacity = user.miningSlots || 3;
+        if (totalOwnedRigs >= warehouseCapacity) {
             return res.status(403).json({
-                message: `พื้นที่ขุดเจาะเต็มแล้ว (Slot full: ${activeRigCount}/${maxSlots}). โปรดขยายพื้นที่เพิ่มก่อนคราฟต์เครื่องใหม่`,
-                code: 'SLOT_FULL'
+                message: `โกดังเต็มแล้ว! (เต็มความจุ: ${totalOwnedRigs}/${warehouseCapacity}) โปรดขยายพื้นที่โกดังก่อน`,
+                code: 'WAREHOUSE_FULL'
             });
         }
 
-        // --- ENFORCE MAX ALLOWED (ID 8: Vibranium Reactor) ---
-        if (preset.id === 8) {
-            const userRigs = await Rig.find({ ownerId: userId });
-            const alreadyOwned = userRigs.some(r => {
-                const rName = typeof r.name === 'string' ? r.name : (r.name?.th || r.name?.en);
-                return rName === preset.name.th || rName === preset.name.en ||
-                    rName === 'เครื่องขุดปฏิกรณ์ไวเบรเนียม' || rName === 'Vibranium Reactor Rig' ||
-                    rName === 'Vibranium Reactor';
-            });
+        // --- ENFORCE TIER ownership LIMIT ---
+        const tierPresetId = preset.id;
+        const volConfig = MINING_VOLATILITY_CONFIG[tierPresetId];
+        const maxTierQuantity = volConfig?.maxQuantity || 50;
+        const currentTierCount = await Rig.countDocuments({ ownerId: user._id, tierId: tierPresetId, status: 'ACTIVE' });
 
-            if (alreadyOwned) {
-                return res.status(400).json({ message: 'จำกัดการครอบครองเครื่องปฏิกรณ์เพียง 1 เครื่องต่อไอดี (Limited to 1 Reactor per account)' });
-            }
+        if (currentTierCount >= maxTierQuantity) {
+            return res.status(403).json({
+                message: `คุณมีเครื่งขุดรุ่นนี้ครบตามขีดจำกัดแล้ว (Limit: ${maxTierQuantity})`,
+                code: 'TIER_LIMIT_REACHED'
+            });
         }
 
         // Check Materials
@@ -143,9 +235,6 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
             }
         }
 
-        if (activeRigCount >= maxSlots) {
-            return res.status(400).json({ message: 'Mining slots are full. Please unlock more slots.' });
-        }
 
         // Deduct Materials
         for (const [tier, amount] of Object.entries(materialsNeeded)) {
@@ -155,7 +244,7 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
 
         // Log Transaction
         const craftTx = new Transaction({
-            userId,
+            userId: user._id,
             type: 'ASSET_PURCHASE',
             amount: 0,
             status: 'COMPLETED',
@@ -165,37 +254,18 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
 
         const lifespanDays = preset.durationMonths ? (preset.durationMonths * 30) : (preset.durationDays || 365);
 
-        const starterGlove = {
-            id: Math.random().toString(36).substr(2, 9),
-            typeId: 'glove',
-            name: { th: 'ถุงมือไวเบรเนียม (Starter)', en: 'Vibranium Glove (Starter)' },
-            price: 0,
-            dailyBonus: 20, // High bonus for T8
-            durationBonus: 0,
-            rarity: 'RARE',
-            purchasedAt: Date.now(),
-            lifespanDays: lifespanDays,
-            expireAt: Date.now() + (lifespanDays * 24 * 60 * 60 * 1000),
-            currentDurability: lifespanDays * 100, // HP-based
-            maxDurability: lifespanDays * 100,
-            level: 1,
-            isHandmade: true
-        };
-
-        if (!user.inventory) user.inventory = [];
-        user.inventory.push(starterGlove);
 
         // Create Rig
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + lifespanDays);
 
         const rig = await Rig.create({
-            ownerId: userId,
+            ownerId: user._id,
             name, // Keep string for DB consistency if model hasn't changed
             investment: 0,
             dailyProfit: preset.dailyProfit,
             expiresAt,
-            slots: [starterGlove.id, null, null, null, null], // Set starter glove
+            slots: [null, null, null, null, null], // Empty slots
             rarity: preset.type || 'ULTRA_LEGENDARY',
             repairCost: 0,
             energyCostPerDay: preset.energyCostPerDay,
@@ -206,10 +276,10 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
         await user.save();
 
         // Recalculate Income
-        await recalculateUserIncome(userId as string);
+        await recalculateUserIncome(user._id.toString());
 
-        console.log(`[CRAFT_RIG] SUCCESS: Rig created with ID: ${rig._id}, Glove ID: ${starterGlove.id}`);
-        res.status(201).json({ success: true, rig, glove: starterGlove });
+        console.log(`[CRAFT_RIG] SUCCESS: Rig created with ID: ${rig._id}`);
+        res.status(201).json({ success: true, rig });
     } catch (error) {
         console.error(`[CRAFT_RIG] ERROR:`, error);
         res.status(500).json({ message: 'Server error' });
@@ -222,89 +292,45 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
         const { name, investment, dailyProfit, durationDays, repairCost, energyCostPerDay, bonusProfit } = req.body;
         const userId = req.userId;
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
         if (user.balance < investment) {
             return res.status(400).json({ message: 'Insufficient balance' });
         }
 
-        // --- ENFORCE SLOT LIMIT ---
-        const activeRigCount = await Rig.countDocuments({ ownerId: userId, isDead: { $ne: true } });
-        const maxSlots = user.unlockedSlots || 3;
-        if (activeRigCount >= maxSlots) {
+        // --- ENFORCE GLOBAL WAREHOUSE CAPACITY ---
+        const totalOwnedRigs = await Rig.countDocuments({ ownerId: user._id, status: 'ACTIVE' });
+        const warehouseCapacity = user.miningSlots || 3;
+        if (totalOwnedRigs >= warehouseCapacity) {
             return res.status(403).json({
-                message: `พื้นที่ขุดเจาะเต็มแล้ว (Slot full: ${activeRigCount}/${maxSlots}). โปรดขยายพื้นที่เพิ่มก่อนซื้อเครื่องใหม่`,
-                code: 'SLOT_FULL'
+                message: `โกดังเต็มแล้ว! (เต็มความจุ: ${totalOwnedRigs}/${warehouseCapacity}) โปรดขยายพื้นที่โกดังก่อน`,
+                code: 'WAREHOUSE_FULL'
             });
         }
 
-        // --- ENFORCE MAX ALLOWED (Language Agnostic) ---
-        // Restricted names for rigs that should only be bought once (ID 9: Rotten Glove)
-        const restrictedPresets = [
-            { th: 'ถุงมือเน่า', en: 'Rotten Glove' },
-            { th: 'ถุงมือเก่ากึ๊ก (ROTTEN GLOVE)', en: 'Rotten Glove (ROTTEN GLOVE)' } // Legacy/Alternative
-        ];
+        // --- ENFORCE TIER ownership LIMIT ---
+        const presetId = getRigPresetId({ investment, name });
+        const volConfig = MINING_VOLATILITY_CONFIG[presetId];
+        const maxTierQuantity = volConfig?.maxQuantity || 50;
+        const currentTierCount = await Rig.countDocuments({ ownerId: user._id, tierId: presetId, status: 'ACTIVE' });
 
-        const isRestricted = restrictedPresets.some(p =>
-            (typeof name === 'string' && (name === p.th || name === p.en)) ||
-            (typeof name === 'object' && (name.th === p.th || name.en === p.en))
-        );
-
-        if (isRestricted) {
-            const userRigs = await Rig.find({ ownerId: userId });
-            const alreadyOwned = userRigs.some(r => {
-                const rName = typeof r.name === 'string' ? r.name : (r.name?.th || r.name?.en);
-                return restrictedPresets.some(p => rName === p.th || rName === p.en);
+        if (currentTierCount >= maxTierQuantity) {
+            return res.status(403).json({
+                message: `คุณมีเครื่องขุดรุ่นนี้ครบตามขีดจำกัดแล้ว (Limit: ${maxTierQuantity})`,
+                code: 'TIER_LIMIT_REACHED'
             });
-
-            if (alreadyOwned) {
-                return res.status(400).json({ message: 'จำกัดการครอบครองเพียง 1 เครื่องต่อไอดี (Limited to 1 unit per account)' });
-            }
         }
+
 
         // Deduct balance
         user.balance -= investment;
 
-        // --- GLOVE GENERATION (Free Starter Glove) ---
-        const rand = Math.random() * 100;
-        let rarity = 'COMMON';
-        let bonus = 0.5; // 0.5 THB
-
-        // Updated names and bonuses based on user images - MINING THEME
-        let gloveName: { th: string, en: string } = { th: 'ถุงมือคนงาน (Miner Glove)', en: 'Miner Glove' }; // Default
-        if (rand < 80) { rarity = 'COMMON'; bonus = 0.5; gloveName = { th: 'ถุงมือคนงาน (Miner Glove)', en: 'Miner Glove' }; }
-        else if (rand < 91) { rarity = 'RARE'; bonus = 1.0; gloveName = { th: 'ถุงมือหัวหน้าช่าง (Foreman Glove)', en: 'Foreman Glove' }; }
-        else if (rand < 96) { rarity = 'SUPER_RARE'; bonus = 1.5; gloveName = { th: 'ถุงมือวิศวกร (Engineer Glove)', en: 'Engineer Glove' }; }
-        else if (rand < 99) { rarity = 'EPIC'; bonus = 2.0; gloveName = { th: 'ถุงมือผู้ตรวจสอบ (Inspector Glove)', en: 'Inspector Glove' }; }
-        else { rarity = 'LEGENDARY'; bonus = 3.0; gloveName = { th: 'ถุงมือเจ้าของสัมปทาน (Tycoon Glove)', en: 'Tycoon Glove' }; }
-
-        const gloveId = Math.random().toString(36).substr(2, 9);
-
-        const newGlove = {
-            id: gloveId,
-            typeId: 'glove',
-            name: gloveName,
-            price: 0,
-            dailyBonus: bonus,
-            durationBonus: 0,
-            rarity,
-            purchasedAt: Date.now(),
-            lifespanDays: durationDays, // Sync with Rig
-            expireAt: Date.now() + (durationDays * 24 * 60 * 60 * 1000), // Sync with Rig
-            currentDurability: durationDays * 100, // Sync with Rig
-            maxDurability: durationDays * 100, // Sync with Rig
-            level: 1,
-            isStarter: true // NEW: Cannot unequip
-        };
-
-        // Add to inventory (using type casting because Mongoose arrays are tricky with Mixed)
-        user.inventory.push(newGlove);
         await user.save();
 
         // Log Transaction for Rig Purchase
         const rigPurchaseTx = new Transaction({
-            userId,
+            userId: user._id,
             type: 'ASSET_PURCHASE',
             amount: investment,
             status: 'COMPLETED',
@@ -312,83 +338,244 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
         });
         await rigPurchaseTx.save();
 
-        // Create Rig with Glove Equipped in Slot 0
+        // Create Rig
+        const preset = RIG_PRESETS.find(p => p.id === presetId);
+        const lifespanDays = preset ? (preset.durationMonths ? (preset.durationMonths * 30) : (preset.durationDays || 365)) : (durationDays || 30);
+
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + durationDays);
+        expiresAt.setDate(expiresAt.getDate() + lifespanDays);
 
         // Calculate rig rarity based on investment (USD scale: ~3000 -> 85, ~2000 -> 57, ~1000 -> 28)
         const rigRarity = investment >= 85 ? 'LEGENDARY' : investment >= 57 ? 'EPIC' : investment >= 28 ? 'RARE' : 'COMMON';
 
-        console.log(`[BUY_RIG DEBUG] Creating rig for user: ${userId}, name: ${name}, rarity: ${rigRarity}`);
+        console.log(`[BUY_RIG DEBUG] Creating rig for user: ${userId}, name: ${typeof name === 'object' ? JSON.stringify(name) : name}, rarity: ${rigRarity}`);
 
         const rig = await Rig.create({
-            ownerId: userId,
+            ownerId: user._id,
             name,
             investment,
             dailyProfit,
             expiresAt,
-            slots: [gloveId, null, null, null, null], // Equip glove
+            slots: [null, null, null, null, null], // Empty slots
             rarity: rigRarity,
             repairCost: repairCost || 0,
             energyCostPerDay: energyCostPerDay || 0,
             bonusProfit: bonusProfit || 0,
-            lastClaimAt: new Date() // Initialize locally
+            lastClaimAt: new Date(), // Initialize locally
+            // Dynamic Volatility Fields
+            tierId: getRigPresetId({ investment, name }), // Helper function needs object with investment/name
+            currentDurability: MINING_VOLATILITY_CONFIG[getRigPresetId({ investment, name })]?.durabilityMax || 3000,
+            status: 'ACTIVE',
+            totalMined: 0
         });
+
+        // === REFERRAL BONUS (3% of Purchase Price) ===
+        if (user.referrerId) {
+            try {
+                const referrer = await User.findById(user.referrerId);
+                if (referrer) {
+                    const commission = Math.floor(investment * 0.03); // 3%
+                    if (commission > 0) {
+                        referrer.balance += commission;
+                        // Update Referral Stats
+                        if (!referrer.referralStats) {
+                            referrer.referralStats = { totalInvited: 0, totalEarned: 0 };
+                        }
+                        referrer.referralStats.totalEarned += commission;
+                        referrer.markModified('referralStats');
+
+                        await referrer.save();
+
+                        // Log Transaction
+                        const refTx = new Transaction({
+                            userId: referrer._id,
+                            type: 'REFERRAL_BONUS_BUY',
+                            amount: commission,
+                            status: 'COMPLETED',
+                            description: `ค่าคอมมิชชั่น 3% จากการซื้อเครื่องขุดของ ${user.username}`,
+                            details: { fromUser: user._id.toString() }
+                        });
+                        await refTx.save();
+                        console.log(`[REFERRAL_BUY] Paid ${commission} THB to ${referrer.username} for purchase by ${user.username}`);
+                    }
+                }
+            } catch (err) {
+                console.error('[REFERRAL_BUY_ERROR] Failed to pay bonus:', err);
+            }
+        }
 
         console.log(`[BUY_RIG DEBUG] Rig created with ID: ${rig._id}`);
 
         // Return both
 
         // Recalculate Income
-        await recalculateUserIncome(userId as string);
+        await recalculateUserIncome(user._id.toString());
 
-        res.status(201).json({ rig, glove: newGlove });
+        res.status(201).json({ rig });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 };
 
-// Claim profit from a rig
+// Claim profit from a rig — Dynamic Volatility Model
+// คำนวณ yield ฝั่ง server ด้วย calculateDailyYield() แทนที่จะเชื่อค่าจาก frontend
 export const claimRigProfit = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.userId;
         const { id: rigId } = req.params;
-        const { amount } = req.body; // Amount calculated by frontend for display/sync
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-        const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
+        const rig = await Rig.findOne({ _id: rigId, ownerId: user._id });
         if (!rig) return res.status(404).json({ message: 'Rig not found' });
 
-        // Backend side calculation to verify amount if possible, 
-        // but for now we trust the amount or just update lastClaimAt.
-        // Actually, to prevent cheating, we SHOULD calculate it on backend too.
-        // For now, let's just implement the persistence part.
+        // === 24-HOUR GLOBAL COOLDOWN CHECK ===
+        const baseCooldownMs = 24 * 60 * 60 * 1000;
+        const buffs = getRigBuffs(rig, user);
+        const cooldownMs = baseCooldownMs * buffs.claimCooldownMultiplier;
+        const now = new Date();
 
-        console.log(`[CLAIM_DEBUG] User ${userId} claiming ${amount} from rig ${rigId}. Old Balance: ${user.balance}`);
+        if (user.lastClaimedAt) {
+            const timeSinceLastClaim = now.getTime() - new Date(user.lastClaimedAt).getTime();
+            if (timeSinceLastClaim < cooldownMs) {
+                const remainingMs = cooldownMs - timeSinceLastClaim;
+                const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+                const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+
+                return res.status(400).json({
+                    message: `คุณสามารถรับรายได้ได้อีกครั้งในอีก ${hours} ชม. ${minutes} นาที (You can claim again in ${hours}h ${minutes}m)`,
+                    code: 'CLAIM_COOLDOWN',
+                    remainingMs
+                });
+            }
+        }
+
+        // หา Preset ID ของเครื่องขุด
+        const presetId = getRigPresetId(rig);
+
+        // Save tierId if missing (migration)
+        if (!rig.tierId) {
+            rig.tierId = presetId;
+        }
+
+        const volConfig = MINING_VOLATILITY_CONFIG[presetId];
+        let durabilityDecay = volConfig?.durabilityDecay || 100;
+
+        // === Check Overclock Status ===
+        const isOverclocked = user.overclockExpiresAt && user.overclockExpiresAt.getTime() > now.getTime();
+        const overclockMultiplier = user.overclockMultiplier || 1.5;
+
+        if (isOverclocked) {
+            const ocPenalty = (ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST || 1.5);
+            durabilityDecay *= ocPenalty; // Standardized Decay during Overclock
+            console.log(`[OVERCLOCK] Active for ${user.username} | Boost: ${overclockMultiplier}x | Decay: ${durabilityDecay}`);
+        }
+
+        // Apply Decay Reduction Buff
+        if (buffs.decayReduction > 0) {
+            durabilityDecay *= (1 - buffs.decayReduction);
+            console.log(`[BUFF] Decay Reduction: ${buffs.decayReduction * 100}% | New Decay: ${durabilityDecay}`);
+        }
+
+        // === CHECK DURABILITY ===
+        if (rig.status === 'BROKEN' || (rig.currentDurability !== undefined && rig.currentDurability <= 0)) {
+            return res.status(400).json({
+                message: 'เครื่องขุดเสียหาย! โปรดซ่อมแซมก่อนใช้งาน (Rig is BROKEN! Please repair first)',
+                code: 'RIG_BROKEN'
+            });
+        }
+
+        // === Dynamic Volatility: คำนวณ yield ===
+        const { amount, isJackpot } = calculateDailyYield(presetId, isOverclocked, overclockMultiplier, buffs);
+
+        const rigNameStr = typeof rig.name === 'object' ? (rig.name.th || rig.name.en) : rig.name;
+        console.log(`[CLAIM] User ${userId} | Rig: ${rigNameStr} (Preset ${presetId}) | Yield: ${amount} THB ${isJackpot ? '⚡ CRITICAL HIT!' : ''} | Old Balance: ${user.balance}`);
+
         user.balance += amount;
-        rig.lastClaimAt = new Date(); // Reset timer on backend
+        user.lastClaimedAt = now;
+
+        // Update Rig State
+        rig.lastClaimAt = now;
+        rig.totalMined = (rig.totalMined || 0) + amount;
+
+        // Apply Durability Decay
+        if (rig.currentDurability === undefined) rig.currentDurability = volConfig?.durabilityMax || 3000;
+        rig.currentDurability = Math.max(0, rig.currentDurability - durabilityDecay);
+
+        if (rig.currentDurability <= 0) {
+            rig.status = 'BROKEN';
+            console.log(`[RIG_FAIL] Rig ${rig._id} is now BROKEN (Durability 0)`);
+        }
 
         await user.save();
-        console.log(`[CLAIM_DEBUG] New Balance saved: ${user.balance}`);
+        console.log(`[CLAIM] New Balance: ${user.balance}`);
         await rig.save();
 
-        // Log Transaction for Mining Claim
+        // === REFERRAL BONUS (1% of Yield - System Pays) ===
+        if (user.referrerId) {
+            // Process async to not block response
+            (async () => {
+                try {
+                    const referrer = await User.findById(user.referrerId);
+                    if (referrer) {
+                        const commission = Math.floor(amount * 0.01); // 1%
+                        if (commission > 0) {
+                            referrer.balance += commission;
+                            // Update Referral Stats
+                            if (!referrer.referralStats) {
+                                referrer.referralStats = { totalInvited: 0, totalEarned: 0 };
+                            }
+                            referrer.referralStats.totalEarned += commission;
+                            referrer.markModified('referralStats');
+
+                            await referrer.save();
+
+                            const refTx = new Transaction({
+                                userId: referrer._id,
+                                type: 'REFERRAL_BONUS_YIELD',
+                                amount: commission,
+                                status: 'COMPLETED',
+                                description: `ค่าคอมมิชชั่น 1% จากการขุดของ ${user.username}`,
+                                details: { fromUser: user._id.toString(), rigId: rig._id.toString() }
+                            });
+                            await refTx.save();
+                            console.log(`[REFERRAL_YIELD] Paid ${commission} THB to ${referrer.username} for mining by ${user.username}`);
+                        }
+                    }
+                } catch (err) {
+                    console.error('[REFERRAL_YIELD_ERROR]', err);
+                }
+            })();
+        }
+
+        // Log Transaction
+        const description = isJackpot
+            ? `⚡ CRITICAL HIT! เก็บผลผลิตจากเครื่องขุด: ${rigNameStr} (${amount} THB)`
+            : `เก็บผลผลิตจากเครื่องขุด: ${rigNameStr} (${amount} THB)`;
+
         const claimTx = new Transaction({
             userId,
-            type: 'MINING_CLAIM',
+            type: 'CLAIM_YIELD', // Changed from MINING_CLAIM to match spec
             amount: amount,
             status: 'COMPLETED',
-            description: `เก็บผลผลิตจากเครื่องขุด: ${typeof rig.name === 'object' ? rig.name.th : rig.name}`
+            description,
+            details: {
+                rigId: rig._id.toString(),
+                isJackpot
+            }
         });
         await claimTx.save();
 
         res.json({
             success: true,
+            amount,
+            isJackpot,
             balance: user.balance,
-            lastClaimAt: rig.lastClaimAt
+            lastClaimAt: rig.lastClaimAt,
+            currentDurability: rig.currentDurability,
+            status: rig.status
         });
     } catch (error) {
         console.error('[CLAIM_ERROR]', error);
@@ -402,10 +589,10 @@ export const refillRigEnergy = async (req: AuthRequest, res: Response) => {
         const userId = req.userId;
         const { id: rigId } = req.params;
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-        const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
+        const rig = await Rig.findOne({ _id: rigId, ownerId: user._id });
         if (!rig) return res.status(404).json({ message: 'Rig not found' });
 
         // Calculate needed energy (simplified drain logic matching frontend/MockDB for consistency)
@@ -426,15 +613,9 @@ export const refillRigEnergy = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ message: 'Energy is already full' });
         }
 
-        // Check for "Safety Uniform" (id: 'uniform') in slots for 5% discount
-        let discountMultiplier = 1.0;
-        if (rig.slots && rig.slots.length > 0) {
-            const equippedItems = user.inventory.filter((i: any) => rig.slots.includes(i.id || i._id));
-            const hasUniform = equippedItems.some((i: any) => i.typeId === 'uniform');
-            if (hasUniform) {
-                discountMultiplier = 0.95; // 5% discount
-            }
-        }
+        // Check for Buffs in slots
+        const buffs = getRigBuffs(rig, user);
+        const discountMultiplier = 1.0 - buffs.repairDiscount;
 
         // Cost is proportional to needed energy
         const baseCost = rig.energyCostPerDay || 0;
@@ -491,8 +672,8 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
 
         console.log(`[DEBUG_COLLECT] User: ${userId}, Rig: ${rigId}, Amount: ${amount}, Tier: ${tier}`);
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
         // Server-side validation: Check if enough time has passed
         const now = new Date();
@@ -501,7 +682,7 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
         // Apply Overclock Boost if active
         // NOTE: Frontend uses `overclockBoost` variable which is 2x if active
         if (user.isOverclockActive && user.overclockExpiresAt && new Date(user.overclockExpiresAt) > now) {
-            const multiplier = ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST || 2;
+            const multiplier = ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST || 1.5;
             effectiveInterval = effectiveInterval / multiplier;
         }
 
@@ -509,7 +690,7 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
         const rig = await Rig.findOneAndUpdate(
             {
                 _id: rigId,
-                ownerId: userId,
+                ownerId: user._id,
                 $or: [
                     { lastCollectionAt: { $exists: false } },
                     { lastCollectionAt: { $lte: new Date(now.getTime() - effectiveInterval) } }
@@ -521,14 +702,15 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
 
         if (!rig) {
             // Either rig not found or cooldown not met
-            const existingRig = await Rig.findOne({ _id: rigId, ownerId: userId });
+            const existingRig = await Rig.findOne({ _id: rigId, ownerId: user._id });
             if (!existingRig) return res.status(404).json({ message: 'Rig not found' });
             return res.status(400).json({ message: 'ยังไม่ถึงรอบเวลาการเก็บรวบรวมไอเทม' });
         }
 
         // Per-Rig Loot Drop
         const presetId = getRigPresetId(rig);
-        const loot = rollLoot(presetId);
+        const buffs = getRigBuffs(rig, user);
+        const loot = rollLoot(presetId, buffs);
         const lootAmount = loot.amount;
 
         let rewardName = '';
@@ -582,7 +764,7 @@ export const collectMaterials = async (req: AuthRequest, res: Response) => {
 
         // Log Transaction
         const materialTx = new Transaction({
-            userId,
+            userId: user._id,
             type: 'GIFT_CLAIM',
             amount: 0,
             status: 'COMPLETED',
@@ -613,8 +795,8 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
         const userId = req.userId;
         const { id: rigId } = req.params;
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
         // Server-side validation: Check gift cycle (default 1 day)
         const GIFT_CYCLE_DAYS = 1;
@@ -631,7 +813,7 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
         const rig = await Rig.findOneAndUpdate(
             {
                 _id: rigId,
-                ownerId: userId,
+                ownerId: user._id,
                 $or: [
                     { lastGiftAt: { $exists: false } },
                     { lastGiftAt: { $lte: new Date(now.getTime() - giftIntervalMs) } }
@@ -642,14 +824,15 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
         );
 
         if (!rig) {
-            const existingRig = await Rig.findOne({ _id: rigId, ownerId: userId });
+            const existingRig = await Rig.findOne({ _id: rigId, ownerId: user._id });
             if (!existingRig) return res.status(404).json({ message: 'Rig not found' });
             return res.status(400).json({ message: 'ยังไม่ถึงเวลาเปิดกล่องของขวัญ' });
         }
 
         // Per-Rig Loot Drop
         const presetId = getRigPresetId(rig);
-        const loot = rollLoot(presetId);
+        const buffs = getRigBuffs(rig, user);
+        const loot = rollLoot(presetId, buffs);
         const lootAmount = loot.amount;
 
         let rewardName = '';
@@ -703,7 +886,7 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
 
         // Log Transaction
         const giftTx = new Transaction({
-            userId,
+            userId: user._id,
             type: 'GIFT_CLAIM',
             amount: 0,
             status: 'COMPLETED',
@@ -739,10 +922,10 @@ export const equipAccessory = async (req: AuthRequest, res: Response) => {
             return res.status(403).json({ message: 'ไม่สามารถเปลี่ยนถุงมือได้ (เป็นอุปกรณ์ถาวร)' });
         }
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-        const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
+        const rig = await Rig.findOne({ _id: rigId, ownerId: user._id });
         if (!rig) return res.status(404).json({ message: 'Rig not found' });
 
         // Ensure item exists in inventory
@@ -766,7 +949,7 @@ export const equipAccessory = async (req: AuthRequest, res: Response) => {
         // No longer sync expireAt to rig expiry
 
         // Check if item is already equipped elsewhere
-        const otherRigs = await Rig.find({ ownerId: userId, _id: { $ne: rigId } });
+        const otherRigs = await Rig.find({ ownerId: user._id, _id: { $ne: rigId } });
         for (const otherRig of otherRigs) {
             if (otherRig.slots && otherRig.slots.includes(itemId)) {
                 const idx = otherRig.slots.indexOf(itemId);
@@ -785,7 +968,7 @@ export const equipAccessory = async (req: AuthRequest, res: Response) => {
         await rig.save();
 
         // Recalculate Income
-        await recalculateUserIncome(userId as string);
+        await recalculateUserIncome(user._id.toString());
 
         res.json({ success: true, rig, inventory: user.inventory });
     } catch (error) {
@@ -805,7 +988,10 @@ export const unequipAccessory = async (req: AuthRequest, res: Response) => {
             return res.status(403).json({ message: 'ไม่สามารถถอดถุงมือได้ (เป็นอุปกรณ์ถาวร)' });
         }
 
-        const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+        const rig = await Rig.findOne({ _id: rigId, ownerId: user._id });
         if (!rig) return res.status(404).json({ message: 'Rig not found' });
 
         if (rig.slots && rig.slots[slotIndex]) {
@@ -815,11 +1001,158 @@ export const unequipAccessory = async (req: AuthRequest, res: Response) => {
         }
 
         // Recalculate Income
-        await recalculateUserIncome(userId as string);
+        await recalculateUserIncome(user._id.toString());
 
         res.json({ success: true, rig });
     } catch (error) {
         console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Merge two identical rigs into a higher star level rig
+export const mergeRigs = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.userId;
+        const { rigId1, rigId2 } = req.body;
+
+        if (!rigId1 || !rigId2 || rigId1 === rigId2) {
+            return res.status(400).json({ message: 'Invalid rig selection' });
+        }
+
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+        // Fetch both rigs
+        const [rig1, rig2] = await Promise.all([
+            Rig.findOne({ _id: rigId1, ownerId: userId }),
+            Rig.findOne({ _id: rigId2, ownerId: userId })
+        ]);
+
+        if (!rig1 || !rig2) {
+            return res.status(404).json({ message: 'One or both rigs not found' });
+        }
+
+        // --- VALIDATION ---
+        // 1. Check if broken or dead
+        if (rig1.isDead || rig2.isDead || rig1.status === 'BROKEN' || rig2.status === 'BROKEN') {
+            return res.status(400).json({ message: 'Cannot merge broken or dead rigs' });
+        }
+
+        // 2. Check compatibility (Same Name/Preset)
+        const name1 = typeof rig1.name === 'object' ? rig1.name.en : rig1.name;
+        const name2 = typeof rig2.name === 'object' ? rig2.name.en : rig2.name;
+        if (name1 !== name2) {
+            return res.status(400).json({ message: 'Rigs must be of the same type' });
+        }
+
+        // 3. Check Star Level/Rank
+        if ((rig1.starLevel || 0) !== (rig2.starLevel || 0)) {
+            return res.status(400).json({ message: 'Rigs must be the same star level' });
+        }
+
+        // 4. Check Durability (> 90%)
+        // Get Max Durability from config if possible, or assume based on current
+        // For simplicity, we check if current is close to max of config.
+        // Let's rely on preset ID to find max durability config
+        const presetId = getRigPresetId(rig1);
+        const volatilityConfig = MINING_VOLATILITY_CONFIG[presetId];
+        const maxDurability = volatilityConfig ? volatilityConfig.durabilityMax : 3000; // Default 3000
+
+        const minRequired = maxDurability * 0.9;
+        if ((rig1.currentDurability || 0) < minRequired || (rig2.currentDurability || 0) < minRequired) {
+            return res.status(400).json({ message: 'Both rigs must be fully repaired (>90%)' });
+        }
+
+        // 5. Check Cost
+        const MERGE_FEE = 100;
+        if (user.balance < MERGE_FEE) {
+            return res.status(400).json({ message: `Insufficient funds. Need ${MERGE_FEE} THB` });
+        }
+
+        // --- EXECUTION ---
+
+        // Deduct Fee
+        user.balance -= MERGE_FEE;
+        await user.save();
+
+        // Calculate New Stats
+        const newStarLevel = (rig1.starLevel || 0) + 1;
+        const baseDailyProfit = rig1.dailyProfit;
+        // Logic: (Rig1 + Rig2) * 1.10 is theoretically 2.2x of one rig
+        const newDailyProfit = (rig1.dailyProfit + rig2.dailyProfit) * 1.10;
+
+        // Create New Rig
+        const newRig = new Rig({
+            ownerId: userId,
+            name: rig1.name,
+            investment: rig1.investment * 2, // Track total investment maybe? Or just keep base. Let's sum for value tracking.
+            dailyProfit: newDailyProfit,
+            purchaseDate: new Date(),
+            expiresAt: rig1.expiresAt > rig2.expiresAt ? rig1.expiresAt : rig2.expiresAt, // Take the longer expiry? Or reset?
+            // Let's reset expiry to full duration of the tier to reward merging?
+            // "Occupies only 1 slot" -> It's a new rig.
+            // Let's use the original durationDays from preset for a fresh start or keep best expiry.
+            // Requirement says "Create 1 New Rig". Let's give it fresh expiry or max of both.
+            // User request usually implies an "Upgrade" -> better stats. Resetting durability is separate.
+            // Let's allow inheriting the better expiry + 5 days bonus?
+            // Plan said: "Create 1 New Rig". Let's use a fresh duration from preset if possible, or max(expiry).
+            // Simplified: Max(expiry of 1, expiry of 2)
+
+            // Re-read plan: "MaxDurability = Reset to full". "Occupies only 1 slot".
+            // Let's set expiry to Today + Duration of Tier (Full Reset of time) -> impactful reward.
+            // Actually, let's keep it safe: Max of both + 10% bonus time.
+
+            rarity: rig1.rarity, // Upgrade rarity visual?
+            starLevel: newStarLevel,
+            repairCost: rig1.repairCost * 2, // Higher repair cost?
+            energyCostPerDay: rig1.energyCostPerDay, // Same energy or double? Usually more efficient -> Same.
+            energy: 100,
+            lastEnergyUpdate: new Date(),
+            currentDurability: maxDurability, // Fully repaired
+            status: 'ACTIVE',
+            tierId: rig1.tierId
+        });
+
+        // Determine Expiry: Reset to full duration of original tier?
+        // If we merge two old rigs, do we get a brand new 60 days?
+        // Let's use the RigPreset to find duration.
+        const preset = RIG_PRESETS.find(p => p.id === presetId);
+        if (preset) {
+            const days = preset.durationDays || 60;
+            const now = new Date();
+            now.setDate(now.getDate() + days);
+            newRig.expiresAt = now;
+        }
+
+        await newRig.save();
+
+        // Burn Old Rigs
+        await Rig.deleteOne({ _id: rig1._id });
+        await Rig.deleteOne({ _id: rig2._id });
+
+        // Log Transaction
+        const mergeTx = new Transaction({
+            userId: user._id,
+            type: 'EXPENSE',
+            amount: MERGE_FEE,
+            status: 'COMPLETED',
+            description: `รวมเครื่องขุด: ${typeof rig1.name === 'object' ? rig1.name.th : rig1.name} Rank ${newStarLevel} (Fee: ${MERGE_FEE})`,
+            details: {
+                rigId1: rigId1,
+                rigId2: rigId2,
+                newRigId: newRig._id
+            }
+        });
+        await mergeTx.save();
+
+        // Recalculate Income
+        await recalculateUserIncome(user._id.toString());
+
+        res.json({ success: true, message: 'รวมเครื่องขุดสำเร็จ!', rig: newRig });
+
+    } catch (error) {
+        console.error('[MERGE_RIGS] Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -830,10 +1163,10 @@ export const destroyRig = async (req: AuthRequest, res: Response) => {
         const userId = req.userId;
         const { id: rigId } = req.params;
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-        const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
+        const rig = await Rig.findOne({ _id: rigId, ownerId: user._id });
         if (!rig) return res.status(404).json({ message: 'Rig not found' });
 
         // Identify all items equipped on this rig
@@ -849,13 +1182,84 @@ export const destroyRig = async (req: AuthRequest, res: Response) => {
             });
 
             user.markModified('inventory');
-            await user.save();
         }
+
+        // --- CALCULATE SALVAGE REFUND ---
+        const presetId = getRigPresetId(rig);
+        let salvageTier = 'TIER_1';
+
+        if (presetId === 4) salvageTier = 'TIER_2';
+        else if (presetId === 5) salvageTier = 'TIER_3';
+        else if ([6, 7, 8].includes(presetId)) salvageTier = 'TIER_4';
+
+        const config = SALVAGE_CONFIG[salvageTier];
+        const rewards: { tier: number; amount: number; name: string }[] = [];
+        const items: { id: string; name: string }[] = [];
+
+        // 1. Roll for Materials
+        for (const mat of config.materials) {
+            const chance = mat.chance ?? 1;
+            if (Math.random() <= chance) {
+                const amount = Math.floor(Math.random() * (mat.max - mat.min + 1)) + mat.min;
+                if (amount > 0) {
+                    if (!user.materials) user.materials = {};
+                    user.materials[mat.tier] = (user.materials[mat.tier] || 0) + amount;
+
+                    const matName = MATERIAL_NAMES[mat.tier as keyof typeof MATERIAL_NAMES] || { th: 'แร่', en: 'Ore' };
+                    rewards.push({ tier: mat.tier, amount, name: typeof matName === 'object' ? matName.th : matName });
+                }
+            }
+        }
+
+        // 2. Roll for Bonus Items
+        if (config.bonus && Math.random() <= config.bonus.chance) {
+            const itemCount = config.bonus.count || 1;
+            const shopItem = SHOP_ITEMS.find(i => i.id === config.bonus?.itemId);
+            const itemName = shopItem ? (typeof shopItem.name === 'object' ? shopItem.name.th : shopItem.name) : config.bonus.itemId;
+
+            for (let i = 0; i < itemCount; i++) {
+                user.inventory.push({
+                    id: config.bonus.itemId,
+                    category: 'TOOL', // Default to tool for repair kits
+                    acquiredAt: new Date()
+                });
+            }
+            items.push({ id: config.bonus.itemId, name: itemName as string });
+        }
+
+        user.markModified('materials');
+        user.markModified('inventory');
+        await user.save();
 
         // Delete the rig
         await Rig.deleteOne({ _id: rigId });
 
-        res.json({ success: true, message: 'ทำลายเครื่องจักรและอุปกรณ์ที่ติดตั้งอยู่แล้ว' });
+        // Prepare Summary Strings
+        const matSummary = rewards.map(r => `${r.name} x${r.amount}`).join(', ');
+        const itemSummary = items.length > 0 ? `, ไอเทม: ${items.map(i => i.name).join(', ')}` : '';
+        const fullSummary = matSummary + itemSummary;
+
+        // Log Transaction
+        const salvageTx = new Transaction({
+            userId: user._id,
+            type: 'INCOME',
+            amount: 0,
+            status: 'COMPLETED',
+            description: `หลอมเครื่องจักร: ${typeof rig.name === 'object' ? rig.name.th : rig.name} (ได้รับ: ${fullSummary})`,
+            details: {
+                salvageTier,
+                rewards,
+                items
+            }
+        });
+        await salvageTx.save();
+
+        res.json({
+            success: true,
+            message: `หลอมเครื่องจักรสำเร็จ! ได้รับ ${fullSummary}`,
+            rewards,
+            items
+        });
     } catch (error) {
         console.error('[DESTROY_RIG] Error:', error);
         res.status(500).json({ message: 'Server error' });
@@ -868,10 +1272,10 @@ export const repairRig = async (req: AuthRequest, res: Response) => {
         const userId = req.userId;
         const { id: rigId } = req.params;
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-        const rig = await Rig.findOne({ _id: rigId, ownerId: userId });
+        const rig = await Rig.findOne({ _id: rigId, ownerId: user._id });
         if (!rig) return res.status(404).json({ message: 'Rig not found' });
 
         const repairCost = rig.repairCost || 0;
@@ -885,21 +1289,32 @@ export const repairRig = async (req: AuthRequest, res: Response) => {
         // If we want to extend lifespan, we should add days to expiresAt.
         // But user said "Repair costs", so let's just deduct money and log it.
 
+        // Restore Durability
+        const presetId = getRigPresetId(rig);
+        const volConfig = MINING_VOLATILITY_CONFIG[presetId];
+        const maxDurability = volConfig?.durabilityMax || 3000;
+
+        rig.currentDurability = maxDurability;
+        rig.status = 'ACTIVE';
+        rig.lastRepairAt = new Date();
+        // rig.energy = 100; // Legacy energy system, maybe keep it synced or deprecate
+
         // Update Weekly Stats for Quests
         if (!user.weeklyStats) user.weeklyStats = { materialsCrafted: 0, moneySpent: 0, dungeonsEntered: 0, itemsCrafted: 0, repairAmount: 0, rareLootCount: 0 };
-        user.weeklyStats.repairAmount = (user.weeklyStats.repairAmount || 0) + (100 - rig.energy); // Assuming energy is restored to 100
         user.weeklyStats.moneySpent = (user.weeklyStats.moneySpent || 0) + repairCost;
         user.markModified('weeklyStats');
 
         await user.save();
+        await rig.save();
 
         // Log Transaction
         const repairTx = new Transaction({
-            userId,
+            userId: user._id,
             type: 'REPAIR',
             amount: repairCost,
             status: 'COMPLETED',
-            description: `ซ่อมบำรุงเครื่องขุด: ${typeof rig.name === 'object' ? rig.name.th : rig.name}`
+            description: `ซ่อมบำรุงเครื่องขุด: ${typeof rig.name === 'object' ? rig.name.th : rig.name}`,
+            details: { rigId: rig._id.toString(), note: 'Restored to Max Durability' }
         });
         await repairTx.save();
 
@@ -965,10 +1380,11 @@ export const renewRig = async (req: AuthRequest, res: Response) => {
 
         // Log Transaction
         await Transaction.create({
-            userId,
-            type: 'EXPENSE',
+            userId: user._id,
+            type: 'RIG_RENEW',
             amount: cost,
             description: `Renewed Rig: ${typeof rig.name === 'string' ? rig.name : rig.name['en']} (-5% Discount)`,
+            status: 'COMPLETED',
             timestamp: Date.now()
         });
 

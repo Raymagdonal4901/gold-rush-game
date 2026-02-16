@@ -1,7 +1,13 @@
 import mongoose, { Schema, Document } from 'mongoose';
 export interface IUser extends Document {
     username: string;
-    password: string;
+    email: string;
+    passwordHash: string;
+    isEmailVerified: boolean;
+    verificationToken?: string;
+    verificationTokenExpires?: Date;
+    resetPasswordToken?: string;
+    resetPasswordExpires?: Date;
     pin?: string;
     balance: number;
     bankQrCode?: string; // Base64 of user's receiving QR code
@@ -24,25 +30,38 @@ export interface IUser extends Document {
     unlockedSlots: number;
     lastLuckyDraw?: number;
     overclockExpiresAt?: Date; // Overclock boost expiration
-    overclockRemainingMs: number; // Remaining time for overclock when paused
+    overclockRemainingMs: number; // Legacy support: Used for paused time in old system
     isOverclockActive: boolean; // Whether overclock is currently running
+    overclockMultiplier: number; // Yield multiplier during overclock
     walletAddress?: string; // BSC Wallet Address for USDT
 
     // Referral System
-    referralCode?: string; // Their own code (usually username)
-    referredBy?: string; // User ID of referrer
+    referralCode?: string; // Their own code (Short ID or Username)
+    referrerId?: mongoose.Types.ObjectId; // The person who invited this user
+    referralStats: {
+        totalInvited: number;
+        totalEarned: number;
+    };
     isFirstDepositPaid: boolean;
-    referralCount: number;
 
     createdAt: Date;
     lastEnergyUpdate: Date;
     totalDailyIncome?: number;
+    miningSlots: number;
+    warehouseCapacity: number;
+    lastClaimedAt?: Date;
 }
 
 const UserSchema = new Schema<IUser>({
     username: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    pin: { type: String }, // 6-digit PIN
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    passwordHash: { type: String, required: true, select: false },
+    isEmailVerified: { type: Boolean, default: false },
+    verificationToken: { type: String, select: false },
+    verificationTokenExpires: { type: Date, select: false },
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordExpires: { type: Date, select: false },
+    pin: { type: String, select: false }, // 6-digit PIN
     balance: { type: Number, default: 0 },
     bankQrCode: { type: String },
     walletAddress: { type: String, unique: true, sparse: true },
@@ -64,19 +83,28 @@ const UserSchema = new Schema<IUser>({
     overclockExpiresAt: { type: Date },
     overclockRemainingMs: { type: Number, default: 0 },
     isOverclockActive: { type: Boolean, default: false },
+    overclockMultiplier: { type: Number, default: 1.5 },
     lastQuestReset: { type: Date, default: Date.now },
     activeExpedition: { type: Object, default: null }, // Added for persistence
     craftingQueue: { type: [], default: [] },
 
     // Referral System
     referralCode: { type: String, unique: true, sparse: true },
-    referredBy: { type: String },
+    referrerId: { type: Schema.Types.ObjectId, ref: 'User' },
+    referralStats: {
+        totalInvited: { type: Number, default: 0 },
+        totalEarned: { type: Number, default: 0 },
+    },
     isFirstDepositPaid: { type: Boolean, default: false },
-    referralCount: { type: Number, default: 0 },
 
     createdAt: { type: Date, default: Date.now },
     lastEnergyUpdate: { type: Date, default: Date.now },
-    totalDailyIncome: { type: Number, default: 0 }
+    totalDailyIncome: { type: Number, default: 0 },
+    lastClaimedAt: { type: Date },
+    miningSlots: { type: Number, default: 3 },
+    warehouseCapacity: { type: Number, default: 3 }
+}, {
+    timestamps: true
 });
 
 export default mongoose.model<IUser>('User', UserSchema);

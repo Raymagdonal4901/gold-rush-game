@@ -128,7 +128,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
             if (addNotification) addNotification({
                 id: Date.now().toString(),
                 userId: userId,
-                message: `${action === 'BUY' ? (language === 'th' ? 'ซื้อ' : 'Buy') : (language === 'th' ? 'ขาย' : 'Sell')}${language === 'th' ? 'สำเร็จ!' : ' Success!'}`,
+                message: action === 'BUY' ? t('market.buy_success') : t('market.sell_success'),
                 type: 'SUCCESS',
                 read: false,
                 timestamp: Date.now()
@@ -257,7 +257,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                             <div className="text-left">
                                                 <div className={`font-bold text-sm flex items-center gap-1 ${isSelected ? 'text-white' : 'text-stone-400'}`}>
                                                     {name[language as keyof typeof name]}
-                                                    {isClosed && <span className="text-[10px] bg-red-600/20 text-red-500 border border-red-500/30 px-1 rounded font-black ml-1 animate-pulse uppercase">{language === 'th' ? 'ปิด' : 'CLOSED'}</span>}
+                                                    {isClosed && <span className="text-[10px] bg-red-600/20 text-red-500 border border-red-500/30 px-1 rounded font-black ml-1 animate-pulse uppercase">{t('common.close')}</span>}
                                                     {itemBot && <Bot size={12} className="text-emerald-400 animate-pulse" title={t('market.bot_active')} />}
                                                 </div>
                                                 <div className="text-[10px] text-stone-500">
@@ -406,7 +406,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                                     onChange={(e) => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setAmount(isNaN(val) ? 0 : val); }}
                                                     disabled={selectedTier === 7}
                                                     className="w-full bg-stone-900 border border-stone-700 rounded-xl p-3 text-white font-mono text-base focus:border-blue-500 outline-none transition-colors disabled:opacity-50"
-                                                    placeholder={selectedTier === 7 ? (language === 'th' ? 'ระงับการซื้อขาย' : 'Trading Suspended') : t('market.enter_amount')}
+                                                    placeholder={selectedTier === 7 ? t('market.suspended') : t('market.enter_amount')}
                                                 />
                                                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 text-[10px] font-bold">UNITS</span>
                                             </div>
@@ -444,7 +444,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                         >
                                             {loading ? <RefreshCw className="animate-spin" size={20} /> : (
                                                 <>
-                                                    {selectedTier === 7 ? (language === 'th' ? 'ระงับการซื้อขายชั่วคราว' : 'Trading Suspended') :
+                                                    {selectedTier === 7 ? t('market.suspended') :
                                                         action === 'BUY' && totalPrice > userBalance ? t('market.insufficient_funds') :
                                                             action === 'SELL' && amount > maxSell ? t('market.insufficient_mats') :
                                                                 amount <= 0 ? t('market.enter_amount') :
@@ -468,7 +468,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${tx.type === 'MATERIAL_BUY' ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-500' : 'bg-red-900/20 border-red-500/30 text-red-500'}`}>{tx.type === 'MATERIAL_BUY' ? <ShoppingCart size={14} /> : <DollarSign size={14} />}</div>
                                                         <div>
-                                                            <div className="text-sm font-bold text-stone-200 flex items-center gap-2">{tx.type === 'MATERIAL_BUY' ? (language === 'th' ? 'ซื้อเข้า' : 'Buy') : (language === 'th' ? 'ขายออก' : 'Sell')}<span className="text-[10px] bg-stone-800 text-stone-400 px-1.5 rounded">{tx.description.split(':')[1]?.split('x')[0]?.trim()}</span></div>
+                                                            <div className="text-sm font-bold text-stone-200 flex items-center gap-2">{tx.type === 'MATERIAL_BUY' ? t('market.buy_side') : t('market.sell_action')}<span className="text-[10px] bg-stone-800 text-stone-400 px-1.5 rounded">{tx.description.split(':')[1]?.split('x')[0]?.trim()}</span></div>
                                                             <div className="text-xs text-stone-500 font-mono">{new Date(tx.timestamp).toLocaleString()}</div>
                                                         </div>
                                                     </div>

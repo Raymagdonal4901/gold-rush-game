@@ -3,9 +3,7 @@ import { Response } from 'express';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { v4 as uuidv4 } from 'uuid';
-
-const LUCKY_DRAW_COST = 50;
-const FREE_COOLDOWN = 12 * 60 * 60 * 1000; // 12 hours
+import { LUCKY_DRAW_CONFIG } from '../constants';
 
 export const playLuckyDraw = async (req: any, res: Response) => {
     try {
@@ -14,32 +12,29 @@ export const playLuckyDraw = async (req: any, res: Response) => {
 
         const now = Date.now();
         const lastPlay = user.lastLuckyDraw || 0;
-        const isFree = (now - lastPlay) > FREE_COOLDOWN;
+        const isFree = (now - lastPlay) > LUCKY_DRAW_CONFIG.FREE_COOLDOWN_MS;
 
         if (!isFree) {
-            if (user.balance < LUCKY_DRAW_COST) {
+            if (user.balance < LUCKY_DRAW_CONFIG.COST) {
                 return res.status(400).json({ message: 'เงินไม่พอ (Insufficient balance)' });
             }
-            user.balance -= LUCKY_DRAW_COST;
+            user.balance -= LUCKY_DRAW_CONFIG.COST;
         }
 
-        // Random Logic
+        // Dynamic Reward Logic
         const rand = Math.random() * 100;
-        let reward: any = { type: 'money', amount: 10, label: { th: 'รางวัลปลอบใจ 10 บาท', en: 'Consolation Prize 10 THB' } };
+        let cumulativeChance = 0;
+        let selectedRewardConfig = LUCKY_DRAW_CONFIG.PROBABILITIES[LUCKY_DRAW_CONFIG.PROBABILITIES.length - 1]; // Default to last (consolation)
 
-        if (rand < 1) {
-            // 1% Jackpot
-            reward = { type: 'money', amount: 500, label: { th: 'JACKPOT! 500 บาท', en: 'JACKPOT! 500 THB' } };
-        } else if (rand < 5) {
-            // 4% Rare Item
-            reward = { type: 'item', id: 'upgrade_chip', amount: 10, label: { th: 'ชิปอัปเกรด x10', en: 'Upgrade Chip x10' } };
-        } else if (rand < 15) {
-            // 10% Energy
-            reward = { type: 'energy', amount: 50, label: { th: 'พลังงาน +50', en: 'Energy +50' } };
-        } else if (rand < 40) {
-            // 25% Materials
-            reward = { type: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' } };
+        for (const p of LUCKY_DRAW_CONFIG.PROBABILITIES) {
+            cumulativeChance += p.chance;
+            if (rand < cumulativeChance) {
+                selectedRewardConfig = p;
+                break;
+            }
         }
+
+        const reward: any = { ...selectedRewardConfig };
 
         // Apply Reward
         if (reward.type === 'money') {
@@ -72,7 +67,7 @@ export const playLuckyDraw = async (req: any, res: Response) => {
             const costTx = new Transaction({
                 userId: user._id,
                 type: 'LUCKY_DRAW',
-                amount: LUCKY_DRAW_COST,
+                amount: LUCKY_DRAW_CONFIG.COST,
                 status: 'COMPLETED',
                 description: `เล่นเสี่ยงโชค (Lucky Draw)`
             });

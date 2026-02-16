@@ -9,7 +9,7 @@ import {
     RARITY_SETTINGS, UPGRADE_REQUIREMENTS, UPGRADE_CONFIG,
     LUCKY_DRAW_CONFIG, DAILY_CHECKIN_REWARDS, ENERGY_CONFIG,
     REPAIR_CONFIG, RENEWAL_CONFIG, GIFT_CYCLE_DAYS, MARKET_CONFIG,
-    VIP_TIERS, SLOT_EXPANSION_CONFIG, DUNGEON_CONFIG, QUESTS, MINING_RANKS, ACHIEVEMENTS, MATERIAL_RECIPES, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ROBOT_CONFIG, GLOVE_DETAILS, EQUIPMENT_UPGRADE_CONFIG
+    VIP_TIERS, SLOT_EXPANSION_CONFIG, DUNGEON_CONFIG, QUESTS, MINING_RANKS, ACHIEVEMENTS, MATERIAL_RECIPES, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ROBOT_CONFIG, EQUIPMENT_UPGRADE_CONFIG
 } from '../constants';
 
 const getStore = <T>(key: string, defaultValue: T): T => {
@@ -54,10 +54,12 @@ export const MockDB = {
             const adminUser: User = {
                 id: 'admin_001',
                 username: 'admin',
-                password: 'bleach',
+                email: 'admin@mock.com',
+                passwordHash: 'bleach',
                 pin: '4901',
                 role: 'SUPER_ADMIN' as UserRole,
                 balance: 10000,
+                miningSlots: 6,
                 createdAt: Date.now(),
                 lastLogin: Date.now(),
                 materials: {},
@@ -91,7 +93,7 @@ export const MockDB = {
 
         const user = users.find(u => u.username === username);
         if (!user) throw new Error('User not found');
-        if (password && user.password !== password) throw new Error('Invalid password');
+        if (password && user.passwordHash !== password) throw new Error('Invalid password');
         if (pin && user.pin !== pin) throw new Error('Invalid PIN');
 
         user.lastLogin = Date.now();
@@ -106,17 +108,19 @@ export const MockDB = {
         localStorage.removeItem(STORAGE_KEYS.SESSION);
     },
 
-    register: (username: string, password?: string, pin?: string): User => {
+    register: (username: string, email: string, password?: string, pin?: string): User => {
         const users = getStore<User[]>(STORAGE_KEYS.USERS, []);
         if (users.find(u => u.username === username)) throw new Error('Username already exists');
 
         const newUser: User = {
             id: Math.random().toString(36).substr(2, 9),
             username,
-            password: password || '',
+            email,
+            passwordHash: password || '',
             pin: pin || '',
             role: 'USER',
-            balance: 0, // Default 0 for new users
+            balance: 0,
+            miningSlots: 3,
             createdAt: Date.now(),
             lastLogin: Date.now(),
             energy: 100,

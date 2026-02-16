@@ -13,7 +13,7 @@ async function diagnose() {
         await mongoose.connect(process.env.MONGODB_URI!);
         console.log('Connected.');
 
-        const admin = await User.findOne({ username: 'admin' });
+        const admin = await User.findOne({ username: 'admin' }).select('+passwordHash +pin');
 
         if (!admin) {
             console.error('❌ ERROR: Admin user "admin" NOT FOUND in database.');
@@ -25,7 +25,7 @@ async function diagnose() {
         console.log('Role:', admin.role);
         console.log('Role Match:', admin.role === 'ADMIN' ? '✅ OK' : '❌ WRONG (Expected ADMIN)');
 
-        const isPasswordMatch = await bcrypt.compare('bleach', admin.password);
+        const isPasswordMatch = await bcrypt.compare('bleach', admin.passwordHash);
         console.log('Password ("bleach") Match:', isPasswordMatch ? '✅ OK' : '❌ FAILED');
 
         if (admin.pin) {

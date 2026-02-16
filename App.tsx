@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { AuthPage } from './components/AuthPage';
+import { LoginPage } from './components/LoginPage';
+import { RegisterPage } from './components/RegisterPage';
+import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import PlayerDashboard from './components/PlayerDashboard';
-import { AnnouncementModal } from './components/AnnouncementModal'; // Import Modal
+import { AnnouncementModal } from './components/AnnouncementModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { User } from './services/types';
 import { api } from './services/api';
-import { AlertTriangle } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 import { WhitepaperPage } from './components/WhitepaperPage';
 import { LanguageProvider } from './contexts/LanguageContext';
+
+import { AuthGuard } from './components/AuthGuard';
+
+import { WalletPage } from './components/WalletPage';
 
 const AppContent: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -17,27 +22,42 @@ const AppContent: React.FC = () => {
   const [isSystemMaintenance, setIsSystemMaintenance] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
   const [showWhitepaper, setShowWhitepaper] = useState(false);
-  // ... existing useEffect and component logic ...
+  const [showWallet, setShowWallet] = useState(false);
+  const [authView, setAuthView] = useState<'login' | 'register' | 'verify'>('login');
+  const [viewMode, setViewMode] = useState<'player' | 'admin'>('player');
+
+  const hasDefaultedView = React.useRef(false);
 
   useEffect(() => {
+    if (user && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') && !hasDefaultedView.current) {
+      setViewMode('admin');
+      hasDefaultedView.current = true;
+    }
+  }, [user]);
+
+  useEffect(() => {
+    // Handle direct routing to verify page
+    const params = new URLSearchParams(window.location.search);
+    if (window.location.pathname === '/verify' || params.has('token')) {
+      setAuthView('verify');
+      setShowLanding(false);
+    }
+
     const checkSession = async () => {
       try {
-        // 1. Fetch system config first (can fail if server is down, handle catch)
         try {
           const config = await api.getSystemConfig();
           setIsSystemMaintenance(config.isMaintenanceMode);
-          console.log('[SYSTEM] Maintenance status:', config.isMaintenanceMode);
         } catch (e) {
           console.error('[SYSTEM] Failed to fetch system config', e);
         }
 
-        // 2. Check for token
         const token = localStorage.getItem('token');
         if (token) {
           try {
             const userData = await api.getMe();
             setUser(userData);
-            setShowLanding(false); // Skip landing if logged in
+            setShowLanding(false);
           } catch (authError) {
             console.error('[SYSTEM] Token invalid', authError);
             localStorage.removeItem('token');
@@ -58,11 +78,9 @@ const AppContent: React.FC = () => {
   };
 
   const handleLogout = () => {
-    api.logout();
+    localStorage.removeItem('token');
     setUser(null);
-    setShowLanding(false); // Or true if we want to go back to landing? Let's stay on Auth for now as per consistent UX, or true? User requested "PLAY NOW" button from Landing.
-    // Actually, traditionally logout goes to Landing or Auth. Let's go to AuthPage for now to allow quick re-login, but maybe Landing is better for "Exit".
-    // I'll set it to false (AuthPage) to match current behavior for now.
+    setAuthView('login');
   };
 
   if (isLoading) {
@@ -78,26 +96,49 @@ const AppContent: React.FC = () => {
 
   const isAdmin = user && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN');
 
-  // --- Routing Logic ---
-
-  // 2. Not logged in
-  if (!user) {
-    if (showWhitepaper) {
-      return <WhitepaperPage onBack={() => { setShowWhitepaper(false); setShowLanding(true); }} onPlayNow={() => { setShowWhitepaper(false); setShowLanding(false); }} />;
-    }
-    if (showLanding) {
-      return <LandingPage onPlayNow={() => setShowLanding(false)} onWhitepaper={() => { setShowLanding(false); setShowWhitepaper(true); }} />;
-    }
-    return <AuthPage onLogin={handleLogin} />;
-  }
-
-  // 3. Logged in as Admin -> Dashboard
-  if (isAdmin) {
-    return <AdminDashboard currentUser={user} onLogout={handleLogout} />;
-  }
-
-  // 4. Regular user (No maintenance) -> Player Dashboard
-  return <PlayerDashboard user={user} onLogout={handleLogout} />;
+  return (
+    <>
+      <AnnouncementModal />
+      {!user ? (
+        showWhitepaper ? (
+          <WhitepaperPage onBack={() => { setShowWhitepaper(false); setShowLanding(true); }} onPlayNow={() => { setShowWhitepaper(false); setShowLanding(false); }} />
+        ) : showLanding ? (
+          <LandingPage onPlayNow={() => setShowLanding(false)} onWhitepaper={() => { setShowLanding(false); setShowWhitepaper(true); }} />
+        ) : authView === 'verify' ? (
+          <VerifyEmailPage onGoToLogin={() => setAuthView('login')} />
+        ) : authView === 'register' ? (
+          <RegisterPage onSwitchToLogin={() => setAuthView('login')} />
+        ) : (
+          <LoginPage onLogin={handleLogin} onSwitchToRegister={() => setAuthView('register')} />
+        )
+      ) : isAdmin && viewMode === 'admin' ? (
+        <AuthGuard>
+          <AdminDashboard
+            currentUser={user}
+            onLogout={handleLogout}
+            onSwitchToPlayer={() => setViewMode('player')}
+          />
+        </AuthGuard>
+      ) : showWallet ? (
+        <AuthGuard>
+          <WalletPage
+            user={user}
+            onUpdateUser={(updatedUser) => setUser(updatedUser)}
+            onBack={() => setShowWallet(false)}
+          />
+        </AuthGuard>
+      ) : (
+        <AuthGuard>
+          <PlayerDashboard
+            user={user}
+            onLogout={handleLogout}
+            onOpenWallet={() => setShowWallet(true)}
+            onOpenAdmin={() => setViewMode('admin')}
+          />
+        </AuthGuard>
+      )}
+    </>
+  );
 };
 
 const App: React.FC = () => {

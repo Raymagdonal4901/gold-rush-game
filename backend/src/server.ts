@@ -12,8 +12,14 @@ import userRoutes from './routes/userRoutes';
 import materialRoutes from './routes/materialRoutes';
 import chatRoutes from './routes/chatRoutes';
 import upgradeRoutes from './routes/upgradeRoutes';
+import minesRoutes from './routes/minesRoutes';
+import luckyDrawRoutes from './routes/luckyDrawRoutes';
+
 // โหลด Environment Variables
-dotenv.config();
+import path from 'path';
+dotenv.config({ path: path.join(__dirname, '../.env'), override: true });
+
+console.log('[DEBUG] MONGODB_URI loaded:', process.env.MONGODB_URI ? process.env.MONGODB_URI.split('@')[1] || 'MASKED' : 'UNDEFINED');
 
 // ตรวจสอบตัวแปรที่จำเป็น (Required Environment Variables)
 const REQUIRED_ENV = ['MONGODB_URI', 'JWT_SECRET'];
@@ -32,6 +38,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 import transactionRoutes from './routes/transactionRoutes';
+import walletRoutes from './routes/walletRoutes';
 import { checkMaintenance } from './middleware/checkMaintenance';
 
 // Routes
@@ -47,8 +54,11 @@ app.use('/api/users', userRoutes);
 app.use('/api/materials', materialRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/wallet', walletRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/upgrade', upgradeRoutes);
+app.use('/api/mines', minesRoutes);
+app.use('/api/lucky-draw', luckyDrawRoutes); // Mount Lucky Draw Routes
 // Health Check
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'Gold Rush Backend is running!' });

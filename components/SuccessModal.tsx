@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, CheckCircle2, Sparkles, Key, Battery } from 'lucide-react';
+import { X, CheckCircle2, Sparkles, Key, Battery, AlertCircle } from 'lucide-react';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface SuccessModalProps {
@@ -7,7 +7,7 @@ interface SuccessModalProps {
     onClose: () => void;
     title: string;
     message: string;
-    type?: 'SUCCESS' | 'KEY' | 'BATTERY';
+    type?: 'SUCCESS' | 'KEY' | 'BATTERY' | 'ERROR';
     actionLabel?: string;
 }
 
@@ -19,7 +19,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
     type = 'SUCCESS',
     actionLabel
 }) => {
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
 
     if (!isOpen) return null;
 
@@ -29,6 +29,8 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
                 return <Key className="text-yellow-400" size={48} />;
             case 'BATTERY':
                 return <Battery className="text-emerald-400" size={48} />;
+            case 'ERROR':
+                return <AlertCircle className="text-red-400" size={48} />;
             default:
                 return <CheckCircle2 className="text-emerald-400" size={48} />;
         }
@@ -38,6 +40,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
         switch (type) {
             case 'KEY': return 'from-yellow-400 to-yellow-600';
             case 'BATTERY': return 'from-emerald-400 to-emerald-600';
+            case 'ERROR': return 'from-red-400 to-red-600';
             default: return 'from-emerald-400 to-emerald-600';
         }
     };
@@ -46,6 +49,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
         switch (type) {
             case 'KEY': return 'bg-yellow-500/20';
             case 'BATTERY': return 'bg-emerald-500/20';
+            case 'ERROR': return 'bg-red-500/20';
             default: return 'bg-emerald-500/20';
         }
     };
@@ -102,8 +106,8 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
                     className={`w-full py-4 rounded-2xl bg-gradient-to-r ${getThemeColor()} text-stone-950 font-black uppercase tracking-widest text-sm shadow-xl shadow-yellow-900/10 hover:scale-[1.02] active:scale-95 transition-all group`}
                 >
                     <span className="flex items-center justify-center gap-2">
-                        {actionLabel || t('common.continue') || 'GREAT!'}
-                        <CheckCircle2 size={16} className="opacity-50 group-hover:opacity-100 transition-opacity" />
+                        {actionLabel || (type === 'ERROR' ? (language === 'th' ? 'ตกลง' : 'OK') : (t('common.continue') || 'GREAT!'))}
+                        {type === 'ERROR' ? <X size={16} className="opacity-50" /> : <CheckCircle2 size={16} className="opacity-50 group-hover:opacity-100 transition-opacity" />}
                     </span>
                 </button>
 

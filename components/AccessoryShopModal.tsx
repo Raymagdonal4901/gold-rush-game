@@ -1,9 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase, CreditCard, Ticket, Shield, Wrench, Settings, StarHalf, Pickaxe, AlertCircle, TrainFront } from 'lucide-react';
-import { SHOP_ITEMS, CURRENCY, RARITY_SETTINGS, MATERIAL_CONFIG, EQUIPMENT_SERIES, REPAIR_KITS, RIG_PRESETS } from '../constants';
+import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase, CreditCard, Ticket, Shield, Wrench, Settings, StarHalf, Pickaxe, AlertCircle, TrainFront, Info, Clover, Flame } from 'lucide-react';
+import { SHOP_ITEMS, CURRENCY, RARITY_SETTINGS, MATERIAL_CONFIG, EQUIPMENT_SERIES, REPAIR_KITS, RIG_PRESETS, MINING_VOLATILITY_CONFIG } from '../constants';
 import { CraftingQueueItem } from '../services/types';
-import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
 import { PixelProgressBar } from './PixelProgressBar';
 import { api } from '../services/api';
@@ -15,7 +14,6 @@ interface AccessoryShopModalProps {
     walletBalance: number;
     onBuy: (itemId: string) => void;
     onBuyRig?: (preset: any) => void;
-    onOpenRates?: () => void;
     onRefresh?: () => void;
     addNotification?: (n: any) => void;
     userId?: string;
@@ -27,8 +25,8 @@ interface AccessoryShopModalProps {
 }
 
 export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
-    isOpen, onClose, walletBalance, onBuy, onBuyRig, onOpenRates, onRefresh, addNotification, userId,
-    currentRigCount = 0, maxRigs = 6, materials = {}, inventory = [], rigs = []
+    isOpen, onClose, walletBalance, onBuy, onBuyRig, onRefresh, addNotification, userId,
+    currentRigCount = 0, maxRigs = 3, materials = {}, inventory = [], rigs = []
 }) => {
     const { t, getLocalized, formatCurrency, language, formatBonus } = useTranslation();
     const [activeTab, setActiveTab] = useState<'RIGS' | 'SHOP' | 'WORKSHOP' | 'REPAIR' | 'UPGRADE'>('RIGS');
@@ -44,6 +42,8 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [buyQuantities, setBuyQuantities] = useState<Record<string, number>>({});
     const [claimedItem, setClaimedItem] = useState<any>(null);
+    const [purchasedItem, setPurchasedItem] = useState<any>(null);
+    const [userMiningSlots, setUserMiningSlots] = useState(3);
 
 
     useEffect(() => {
@@ -58,6 +58,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
             api.getMe().then(user => {
                 setUserMaterials(user.materials || {});
                 setUserInventory(user.inventory || []);
+                setUserMiningSlots(user.warehouseCapacity || user.miningSlots || 3);
             }).catch(err => {
                 console.error('Failed to fetch user data:', err);
                 setUserMaterials({});
@@ -101,12 +102,18 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
 
         setBuyingId(id);
         const processBuy = async () => {
-            for (let i = 0; i < quantity; i++) {
-                await onBuy(id); // Wait for each purchase to finish
+            try {
+                let lastItem = null;
+                for (let i = 0; i < quantity; i++) {
+                    lastItem = await onBuy(id);
+                }
+                setBuyingId(null);
+                setBuyQuantities(prev => ({ ...prev, [id]: 1 }));
+                setRefreshTrigger(prev => prev + 1);
+                setPurchasedItem(lastItem);
+            } catch (err) {
+                setBuyingId(null);
             }
-            setBuyingId(null);
-            setBuyQuantities(prev => ({ ...prev, [id]: 1 }));
-            setRefreshTrigger(prev => prev + 1);
         };
 
         processBuy();
@@ -302,21 +309,21 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
         if (iconName === 'Key' || itemId === 'chest_key') return <Key className={className} />;
         if (iconName === 'Factory') return <Hammer className={className} />;
         if (iconName === 'Search') return <Search className={className} />;
-        if (iconName === 'HardHat' || (itemId && itemId.startsWith('hat'))) return null;
+        if (iconName === 'HardHat' || (itemId && itemId.startsWith('hat'))) return <HardHat className={className} />;
         if (iconName === 'Glasses' || (itemId && itemId.startsWith('glasses'))) return <Glasses className={className} />;
         if (iconName === 'Shirt' || (itemId && itemId.startsWith('uniform'))) return <Shirt className={className} />;
         if (iconName === 'Backpack' || (itemId && itemId.startsWith('bag'))) return <Backpack className={className} />;
         if (iconName === 'Footprints' || (itemId && itemId.startsWith('boots'))) return <Footprints className={className} />;
         if (iconName === 'Smartphone' || (itemId && itemId.startsWith('mobile'))) return <Smartphone className={className} />;
         if (iconName === 'Monitor' || (itemId && itemId.startsWith('pc'))) return <Monitor className={className} />;
-        if (iconName === 'Bot') return null;
+        if (iconName === 'Bot') return <Bot className={className} />;
         if (iconName === 'Truck' || iconName === 'TrainFront' || (itemId && itemId === 'auto_excavator')) return <TrainFront className={className} />;
         if (iconName === 'Zap') return <Zap className={className} />;
         if (iconName === 'Cpu' || itemId === 'upgrade_chip') return <Cpu className={className} />;
         if (iconName === 'Hourglass' || (itemId && itemId.startsWith('hourglass'))) return <Hourglass className={className} />;
         if (iconName === 'Shield' || iconName === 'FileText' || itemId === 'insurance_card') return <FileText className={className} />;
-        if (iconName === 'CreditCard' || itemId === 'vip_withdrawal_card' || itemId === 'vip_card_gold') {
-            const isGold = itemId === 'vip_card_gold';
+        if (iconName === 'CreditCard' || itemId === 'vip_withdrawal_card') {
+            const isGold = false;
             return (
                 <div className={`relative ${className.includes('w-') ? className : 'w-full h-full'} aspect-[1.58/1] ${isGold ? 'bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-600 border-2 border-yellow-300 shadow-[0_0_20px_rgba(250,204,21,0.6)]' : 'bg-gradient-to-br from-yellow-100 via-yellow-500 to-yellow-800 border border-yellow-200/50 shadow-[0_0_15px_rgba(234,179,8,0.4)]'} rounded-[4px] flex items-center justify-center overflow-hidden group/card`}>
                     <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-60"></div>
@@ -359,7 +366,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
         }
 
         if (iconName === 'Wrench') return <Wrench className={className} />;
-        return <InfinityGlove className={className} />;
+        return <Briefcase className={className} />;
     };
 
     const renderTooltip = (item: typeof SHOP_ITEMS[0]) => {
@@ -375,11 +382,11 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
         );
     };
 
-    const specialIds = ['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'dungeon_ticket_magma', 'ancient_blueprint', 'insurance_card', 'vip_withdrawal_card', 'vip_card_gold', 'time_skip_ticket', 'construction_nanobot'];
+    const specialIds = ['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'dungeon_ticket_magma', 'ancient_blueprint', 'insurance_card', 'vip_withdrawal_card', 'time_skip_ticket', 'construction_nanobot', 'ai_robot'];
     const specialItems = SHOP_ITEMS.filter(i => {
         if (!specialIds.includes(i.id) || i.buyable === false) return false;
         // Hide VIP card if already owned
-        if ((i.id === 'vip_withdrawal_card' || i.id === 'vip_card_gold') && userInventory.some(inv => inv.typeId === i.id)) return false;
+        if (i.id === 'vip_withdrawal_card' && userInventory.some(inv => inv.typeId === i.id)) return false;
         return true;
     });
     const shopEquipment = SHOP_ITEMS.filter(i => !specialIds.includes(i.id) && i.buyable !== false);
@@ -468,13 +475,13 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                             </>
                         ) : (
                             <div className="flex items-center justify-center gap-1">
-                                {(item.id === 'insurance_card' || item.id.includes('hourglass') || item.id === 'upgrade_chip' || item.id === 'chest_key' || item.id === 'mixer' || item.id === 'magnifying_glass' || item.id === 'repair_kit' || item.id === 'time_skip_ticket' || item.id === 'construction_nanobot') ? (
+                                {(item.id === 'insurance_card' || item.id.includes('hourglass') || item.id === 'upgrade_chip' || item.id === 'chest_key' || item.id === 'mixer' || item.id === 'magnifying_glass' || item.id === 'repair_kit' || item.id === 'time_skip_ticket' || item.id === 'construction_nanobot' || item.id === 'ai_robot') ? (
                                     <span className="text-stone-500 font-medium">
-                                        {item.id.includes('hourglass')
+                                        {item.id === 'ai_robot' ? '' : (item.id.includes('hourglass')
                                             ? (language === 'th' ? 'ใช้ลงเหมืองลับ' : 'Use in Secret Mine')
                                             : (['time_skip_ticket', 'construction_nanobot'].includes(item.id)
                                                 ? (language === 'th' ? 'ไอเทมใช้งาน' : t('item_shop.consumable'))
-                                                : t('item_shop.consumable'))}
+                                                : t('item_shop.consumable')))}
                                     </span>
                                 ) : (
                                     <div className="w-full px-2">
@@ -501,7 +508,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                     </div>
 
                     <div className="flex flex-wrap gap-2 justify-center mb-2 mt-2">
-                        {['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'insurance_card', 'vip_withdrawal_card', 'time_skip_ticket', 'construction_nanobot'].includes(item.id) ? (
+                        {item.id === 'ai_robot' ? null : (['chest_key', 'mixer', 'magnifying_glass', 'upgrade_chip', 'hourglass_small', 'hourglass_medium', 'hourglass_large', 'insurance_card', 'vip_withdrawal_card', 'time_skip_ticket', 'construction_nanobot'].includes(item.id) ? (
                             <div className="text-[9px] text-stone-400 flex items-center gap-1 bg-stone-800 px-2 py-0.5 rounded border border-stone-700">
                                 {item.id === 'vip_withdrawal_card' ? <Zap size={10} className="text-emerald-400" /> : <Zap size={10} className="text-yellow-500" />}
                                 {item.id === 'NOT_A_ROBOT'
@@ -518,13 +525,13 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                             <div className="text-[9px] text-yellow-500 flex items-center gap-1 bg-yellow-950/20 px-2 py-0.5 rounded border border-yellow-900/30">
                                 <Star size={10} /> {t('item_shop.bonus')}: {formatBonus(item.maxBonus, item.id)} / {t('time.day')}
                             </div>
-                        )}
+                        ))}
                     </div>
                 </div>
 
                 <div className="p-4 pt-0">
                     {/* Only show quantity for special bulk items, hide for equipment and robot */}
-                    {isSpecial && (
+                    {isSpecial && item.id !== 'ai_robot' && (
                         <div className="flex items-center justify-between mb-3 bg-stone-950 p-1 rounded-lg border border-stone-800">
                             <button onClick={() => handleQuantityChange(item.id, -1)} className="p-2 hover:bg-stone-800 rounded text-stone-400 hover:text-white transition-colors">-</button>
                             <span className="font-mono font-bold text-white text-sm">{buyQuantities[item.id] || 1}</span>
@@ -539,76 +546,194 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                         </div>
                     )}
 
-                    <button
-                        onClick={() => handleBuyClick(item.id, item.price, getItemDisplayName(item))}
-                        disabled={!canAfford || isBuying || isCooldown}
-                        className={`w-full py-3 rounded-lg font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 transition-all
-                        ${isBuying ? 'bg-stone-700 text-stone-400 cursor-wait' :
-                                isCooldown ? 'bg-red-900/20 text-red-500 border border-red-900 cursor-not-allowed' :
-                                    canAfford
-                                        ? `bg-gradient-to-r from-stone-800 to-stone-700 hover:from-yellow-700 hover:to-yellow-600 border border-stone-600 hover:border-yellow-500 text-white shadow-lg`
-                                        : 'bg-stone-900 text-stone-600 border border-stone-800 cursor-not-allowed opacity-70'
-                            }
-                    `}
-                    >
-                        {isBuying ? t('common.loading') : isCooldown ? cooldownText : (
-                            <>
-                                <span>{formatCurrency(item.price * (buyQuantities[item.id] || 1))}</span>
-                            </>
-                        )}
-                    </button>
+                    {(() => {
+                        const existingBot = item.id === 'ai_robot' ? inventory?.find((i: any) => i.typeId === 'ai_robot' && (!i.expireAt || i.expireAt > Date.now())) : null;
+                        const isOwned = !!existingBot;
+
+                        let buttonText: React.ReactNode = formatCurrency(item.price * (buyQuantities[item.id] || 1));
+                        if (isOwned && existingBot) {
+                            const remainingMs = existingBot.expireAt ? existingBot.expireAt - Date.now() : 0;
+                            const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+                            buttonText = language === 'th' ? `ครอบครองแล้ว: ${remainingDays} วัน` : `Owned: ${remainingDays} Days`;
+                        }
+
+                        return (
+                            <button
+                                onClick={() => handleBuyClick(item.id, item.price, getItemDisplayName(item))}
+                                disabled={!canAfford || isBuying || isCooldown || isOwned}
+                                className={`w-full py-3 rounded-lg font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 transition-all
+                                ${isBuying ? 'bg-stone-700 text-stone-400 cursor-wait' :
+                                        isCooldown ? 'bg-red-900/20 text-red-500 border border-red-900 cursor-not-allowed' :
+                                            isOwned ? 'bg-stone-800 text-stone-500 border border-stone-700 cursor-not-allowed' :
+                                                canAfford
+                                                    ? `bg-gradient-to-r from-stone-800 to-stone-700 hover:from-yellow-700 hover:to-yellow-600 border border-stone-600 hover:border-yellow-500 text-white shadow-lg`
+                                                    : 'bg-stone-900 text-stone-600 border border-stone-800 cursor-not-allowed opacity-70'
+                                    }
+                            `}
+                            >
+                                {isBuying ? t('common.loading') : isCooldown ? cooldownText : buttonText}
+                            </button>
+                        );
+                    })()}
                 </div>
-            </div>
+            </div >
         );
     };
 
     const renderConfirmationModal = () => {
         if (!confirmItem) return null;
         const total = confirmItem.price * confirmItem.quantity;
+        const shopItem = SHOP_ITEMS.find(i => i.id === confirmItem.id);
+
+        let rarityStyle = RARITY_SETTINGS.COMMON;
+        if (shopItem?.id === 'uniform') rarityStyle = RARITY_SETTINGS.RARE;
+        else if (shopItem?.id === 'bag') rarityStyle = RARITY_SETTINGS.SUPER_RARE;
+        else if (shopItem?.id === 'boots') rarityStyle = RARITY_SETTINGS.EPIC;
+        else if (shopItem?.id === 'glasses') rarityStyle = RARITY_SETTINGS.LEGENDARY;
+        else if (shopItem?.id === 'mobile') rarityStyle = RARITY_SETTINGS.ULTRA_LEGENDARY;
+        else if (shopItem?.id === 'pc') rarityStyle = RARITY_SETTINGS.MYTHIC;
+        else if (shopItem?.id === 'auto_excavator') rarityStyle = RARITY_SETTINGS.DIVINE;
 
         return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                <div className="bg-stone-900 border-2 border-yellow-600/50 rounded-2xl w-full max-w-sm p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-900/10 to-stone-900/50 pointer-events-none"></div>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
+                <div className="relative w-full max-w-md">
+                    {/* Animated Background Glow */}
+                    <div className={`absolute -inset-4 bg-gradient-to-r ${rarityStyle.bgGradient} opacity-20 blur-2xl animate-pulse`}></div>
 
-                    <h3 className="text-2xl font-black text-white text-center uppercase tracking-wider mb-2 font-display">
-                        {t('item_shop.confirm_title')}
-                    </h3>
-                    <div className="w-full h-px bg-gradient-to-r from-transparent via-yellow-600 to-transparent mb-6"></div>
+                    <div className="relative bg-stone-900 border border-stone-700/50 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+                        {/* Header Section */}
+                        <div className={`h-2 w-full bg-gradient-to-r ${rarityStyle.bgGradient}`}></div>
 
-                    <div className="space-y-4 mb-8">
-                        <div className="bg-stone-950/80 rounded-xl p-4 border border-stone-800 flex items-center gap-4">
-                            <div className="w-16 h-16 bg-stone-900 rounded-lg flex items-center justify-center border border-stone-700">
-                                {getIcon(SHOP_ITEMS.find(i => i.id === confirmItem.id)?.icon || 'Box', "w-8 h-8 text-yellow-500", confirmItem.id)}
+                        <div className="p-8">
+                            <h3 className="text-3xl font-black text-white text-center uppercase tracking-[0.2em] mb-6 font-display italic">
+                                {language === 'th' ? 'ยืนยันการซื้อไอเทม' : (t('item_shop.confirm_purchase') || 'CONFIRM PURCHASE')}
+                            </h3>
+
+                            <div className="flex flex-col items-center gap-6 mb-8">
+                                {/* Item Preview */}
+                                <div className="relative group">
+                                    <div className={`absolute -inset-4 bg-gradient-to-r ${rarityStyle.bgGradient} opacity-30 blur-xl group-hover:opacity-50 transition-opacity`}></div>
+                                    <div className={`relative w-32 h-32 bg-stone-950 rounded-2xl border-2 ${rarityStyle.border} flex items-center justify-center shadow-2xl overflow-hidden`}>
+                                        <div className={`absolute inset-0 bg-gradient-to-b ${rarityStyle.bgGradient} opacity-10`}></div>
+                                        {getIcon(shopItem?.icon || 'Box', "w-16 h-16 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]", confirmItem.id)}
+                                    </div>
+                                </div>
+
+                                <div className="text-center">
+                                    {shopItem?.id !== 'ai_robot' && (
+                                        <div className={`text-xs font-black uppercase tracking-[0.3em] ${rarityStyle.color} mb-1 animate-pulse`}>
+                                            {shopItem?.id === 'auto_excavator' ? 'DIVINE ARTIFACT' : rarityStyle.color.replace('text-', '').replace('-', ' ').toUpperCase()}
+                                        </div>
+                                    )}
+                                    <h4 className="text-2xl font-bold text-white mb-2">{getItemDisplayName(confirmItem)}</h4>
+                                    <div className="flex items-center justify-center gap-3">
+                                        <div className="px-3 py-1 bg-stone-800 rounded-full border border-stone-700 text-stone-400 text-xs font-bold">
+                                            {t('item_shop.quantity')}: <span className="text-white">x{confirmItem.quantity}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <div className="text-stone-400 text-xs uppercase tracking-widest font-bold">{t('item_shop.product')}</div>
-                                <div className="text-white font-bold text-lg">{getItemDisplayName(confirmItem)}</div>
-                                <div className="text-stone-500 text-xs">x{confirmItem.quantity} {t('item_shop.quantity')}</div>
-                            </div>
-                        </div>
 
-                        <div className="flex justify-between items-end bg-stone-950/50 p-4 rounded-xl border border-stone-800">
-                            <div className="text-stone-400 font-bold text-xs uppercase tracking-widest mb-1">{t('item_shop.total_price')}</div>
-                            <div className="text-yellow-400 font-mono font-bold text-2xl flex items-baseline gap-1">
-                                {formatCurrency(total)}
+                            {/* Payment Summary */}
+                            <div className="space-y-3 mb-8">
+                                <div className="flex justify-between items-center px-4 py-3 bg-stone-950/50 rounded-xl border border-stone-800/50">
+                                    <span className="text-stone-500 text-xs font-bold uppercase tracking-wider">{t('item_shop.price_per_unit')}</span>
+                                    <span className="text-stone-200 font-mono font-bold">{formatCurrency(confirmItem.price)}</span>
+                                </div>
+                                <div className="flex justify-between items-center px-4 py-4 bg-stone-950 rounded-xl border border-yellow-500/30 shadow-[inset_0_0_20px_rgba(234,179,8,0.05)]">
+                                    <span className="text-yellow-600/80 text-xs font-black uppercase tracking-widest">{t('item_shop.total_payment')}</span>
+                                    <div className="text-yellow-400 font-mono font-black text-2xl flex items-baseline gap-1">
+                                        {formatCurrency(total)}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => setConfirmItem(null)}
+                                    className="py-4 bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-white font-black uppercase tracking-widest rounded-xl transition-all border border-stone-700 text-xs"
+                                >
+                                    {t('common.cancel') || 'CANCEL'}
+                                </button>
+                                <button
+                                    onClick={handleConfirmBuy}
+                                    className="py-4 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-stone-950 font-black uppercase tracking-widest rounded-xl transition-all shadow-[0_0_30px_rgba(234,179,8,0.3)] hover:shadow-[0_0_40px_rgba(234,179,8,0.5)] border border-yellow-400 text-xs"
+                                >
+                                    {t('common.confirm') || 'CONFIRM'}
+                                </button>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        );
+    };
 
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => setConfirmItem(null)}
-                            className="flex-1 py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold uppercase tracking-wider rounded-xl transition-colors border border-stone-700"
-                        >
-                            {t('item_shop.confirm_cancel')}
-                        </button>
-                        <button
-                            onClick={handleConfirmBuy}
-                            className="flex-1 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:shadow-[0_0_30px_rgba(234,179,8,0.4)] border border-yellow-500"
-                        >
-                            {t('item_shop.confirm_buy')}
-                        </button>
+    const renderSuccessModal = () => {
+        if (!purchasedItem) return null;
+
+        const shopItem = SHOP_ITEMS.find(i => i.id === purchasedItem.typeId);
+        let rarityStyle = RARITY_SETTINGS.COMMON;
+        if (purchasedItem.rarity && RARITY_SETTINGS[purchasedItem.rarity]) {
+            rarityStyle = RARITY_SETTINGS[purchasedItem.rarity];
+        }
+
+        return (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 animate-in fade-in zoom-in duration-500">
+                {/* Background Particle Effects (CSS only) */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    {[...Array(20)].map((_, i) => (
+                        <div
+                            key={i}
+                            className={`absolute w-2 h-2 rounded-full ${rarityStyle.bgGradient.split(' ')[1]} opacity-40 animate-bounce`}
+                            style={{
+                                left: `${Math.random() * 100}%`,
+                                top: `${Math.random() * 100}%`,
+                                animationDelay: `${Math.random() * 3}s`,
+                                animationDuration: `${2 + Math.random() * 2}s`
+                            }}
+                        ></div>
+                    ))}
+                </div>
+
+                <div className="relative w-full max-w-sm">
+                    {/* Main Success Card */}
+                    <div className={`absolute -inset-1 bg-gradient-to-r ${rarityStyle.bgGradient} rounded-[2rem] blur-xl opacity-50 animate-pulse`}></div>
+
+                    <div className="relative bg-stone-900 border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl">
+                        <div className={`h-24 bg-gradient-to-b ${rarityStyle.bgGradient} flex items-center justify-center relative`}>
+                            <div className="absolute inset-0 bg-stone-900/20 backdrop-blur-sm"></div>
+                            <Sparkles className="text-white relative z-10 animate-spin-slow" size={48} />
+                        </div>
+
+                        <div className="p-8 pt-0 -mt-10 flex flex-col items-center">
+                            {/* Item Preview Card */}
+                            <div className="relative mb-8">
+                                <div className={`absolute -inset-6 bg-gradient-to-r ${rarityStyle.bgGradient} opacity-40 blur-2xl rounded-full`}></div>
+                                <div className={`relative w-40 h-40 bg-stone-950 rounded-3xl border-4 ${rarityStyle.border} flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden group`}>
+                                    <div className={`absolute inset-0 bg-gradient-to-tr ${rarityStyle.bgGradient} opacity-20`}></div>
+                                    {getIcon(shopItem?.icon || 'Box', "w-24 h-24 text-white drop-shadow-[0_0_20px_white]", purchasedItem.typeId)}
+
+                                    {/* Shimmer Effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+                                </div>
+                            </div>
+
+                            <div className="text-center mb-8">
+                                <h2 className="text-sm font-black text-yellow-500 uppercase tracking-[0.4em] mb-2 animate-bounce">
+                                    {t('item_shop.purchase_success') || 'ITEM ACQUIRED'}
+                                </h2>
+                                <h3 className="text-3xl font-bold text-white mb-2">{getItemDisplayName(purchasedItem)}</h3>
+                            </div>
+
+                            <button
+                                onClick={() => setPurchasedItem(null)}
+                                className="w-full py-5 bg-white text-stone-950 font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 text-sm"
+                            >
+                                {t('common.awesome') || 'AWESOME!'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -650,7 +775,10 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
         }
 
         const isAlreadyCrafting = craftingQueue.some(q => q.itemId === item.id);
-        const canCraftActual = canCraft && !isAlreadyCrafting;
+        const requiredItemConfig = (item as any).requiredItem ? SHOP_ITEMS.find(i => i.id === (item as any).requiredItem) : null;
+        const hasRequiredItem = (item as any).requiredItem ? (inventory || []).some(inv => inv.typeId === (item as any).requiredItem) : true;
+
+        const canCraftActual = canCraft && !isAlreadyCrafting && hasRequiredItem;
 
         return (
             <div key={item.id} className={`bg-stone-900 border ${rarityStyle.border} rounded-xl overflow-hidden flex flex-col gap-4 relative shadow-lg`}>
@@ -747,6 +875,17 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                     {formatCurrency(fee)}
                                 </span>
                             </div>
+                            {requiredItemConfig && (
+                                <div className="flex items-center justify-between text-xs bg-stone-900 p-1.5 rounded col-span-2 border border-blue-500/20">
+                                    <div className="flex items-center gap-2">
+                                        {getIcon(requiredItemConfig.icon, "w-4 h-4 text-blue-400", requiredItemConfig.id)}
+                                        <span className="text-blue-300 font-bold">{getItemDisplayName(requiredItemConfig)}</span>
+                                    </div>
+                                    <span className={hasRequiredItem ? 'text-green-400' : 'text-red-400 font-black animate-pulse'}>
+                                        {hasRequiredItem ? (language === 'th' ? 'พร้อมใช้งาน' : 'Ready') : (language === 'th' ? 'ขาดอุปกรณ์นี้' : 'Missing Item')}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -1008,15 +1147,28 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
 
         if (id === 9) {
             return (
-                <div className={`${baseClass} ${sizeClass} ${colorClass} rounded-lg overflow-hidden flex items-center justify-center bg-stone-900`}>
-                    <div className="relative">
-                        <div className="absolute inset-0 bg-green-500 blur-md opacity-20 animate-pulse"></div>
-                        <div className="relative z-10 text-green-600">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
+                <div className={`${baseClass} ${sizeClass} ${colorClass} rounded-lg overflow-hidden flex items-center justify-center bg-stone-950`}>
+                    <div className="relative group/glove">
+                        {/* Toxic Smoke/Glow Effect */}
+                        <div className="absolute inset-0 bg-green-500/20 blur-xl rounded-full animate-pulse scale-150"></div>
+                        <div className="absolute inset-0 bg-emerald-600/10 blur-lg rounded-full animate-pulse delay-700"></div>
+
+                        <div className="relative z-10 flex items-center justify-center">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]">
+                                {/* The Glove Body (Tattered Hand) */}
+                                <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" className="opacity-80" />
                                 <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
                                 <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
                                 <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+
+                                {/* Rotten Details / Holes */}
+                                <circle cx="15" cy="18" r="1" fill="currentColor" className="text-stone-900" />
+                                <circle cx="12" cy="14" r="0.8" fill="currentColor" className="text-stone-900" />
+                                <path d="M7 16l-1 1" stroke="currentColor" strokeWidth="1" className="text-stone-800" />
+
+                                {/* Toxic Drips */}
+                                <path d="M12 22v2" stroke="currentColor" strokeWidth="1" className="animate-bounce" />
+                                <path d="M15 21v1" stroke="currentColor" strokeWidth="1" className="animate-bounce delay-150" />
                             </svg>
                         </div>
                     </div>
@@ -1041,6 +1193,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
             case 6: return { border: "border-yellow-500", text: "text-yellow-400", bg: "from-yellow-900/20 to-stone-950/80" };
             case 7: return { border: "border-cyan-400", text: "text-cyan-300", bg: "from-cyan-900/20 to-stone-950/80" };
             case 8: return { border: "border-purple-500", text: "text-purple-400", bg: "from-purple-900/30 to-stone-950/80" };
+            case 9: return { border: "border-green-900/50", text: "text-green-500/70", bg: "from-green-950/20 to-stone-950/80" };
             default: return { border: "border-stone-800", text: "text-stone-400", bg: "bg-stone-900" };
         }
     };
@@ -1055,16 +1208,38 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                         <Pickaxe className="text-yellow-500" size={24} />
                         <div>
                             <h3 className="text-xl font-bold text-white uppercase tracking-wider">{t('machine_shop.title')}</h3>
-                            <p className="text-xs text-stone-500">{t('machine_shop.slots_used')}: {currentRigCount}/{maxRigs}</p>
+                            <p className="text-xs text-stone-500">{t('machine_shop.slots_used')}: {rigs.length}/{userMiningSlots}</p>
                         </div>
                     </div>
-                    {onOpenRates && (
-                        <button
-                            onClick={onOpenRates}
-                            className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 bg-purple-900/20 px-3 py-1.5 rounded border border-purple-900/50 transition-colors"
-                        >
-                            <Sparkles size={14} /> {t('machine_shop.bonus_chance')}
-                        </button>
+                </div>
+
+                {/* {t('machine_shop.stats.warehouse_capacity')} Bar */}
+                <div className="mb-6 bg-stone-900/40 p-4 rounded-xl border border-stone-800">
+                    <div className="flex justify-between items-end mb-2">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-yellow-500/20 rounded-lg">
+                                <BoxSelect size={16} className="text-yellow-500" />
+                            </div>
+                            <div>
+                                <div className="text-[10px] text-stone-500 uppercase font-black tracking-widest leading-none mb-1">{t('machine_shop.stats.warehouse_capacity')}</div>
+                                 <div className="text-sm font-bold text-white leading-none">{t('machine_shop.stats.warehouse_capacity')}</div>
+                            </div>
+                        </div>
+                        <div className={`text-sm font-mono font-bold ${rigs.length >= userMiningSlots ? 'text-red-500 animate-pulse' : 'text-yellow-500'}`}>
+                            {rigs.length} / {userMiningSlots}
+                        </div>
+                    </div>
+                    <div className="h-2 bg-stone-950 rounded-full overflow-hidden border border-stone-800 p-0.5">
+                        <div
+                            className={`h-full rounded-full transition-all duration-500 ${rigs.length >= userMiningSlots ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-gradient-to-r from-yellow-600 to-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.3)]'}`}
+                            style={{ width: `${Math.min(100, (rigs.length / userMiningSlots) * 100)}%` }}
+                        ></div>
+                    </div>
+                    {rigs.length >= userMiningSlots && (
+                        <div className="mt-2 text-[10px] text-red-400 font-bold flex items-center gap-1 animate-pulse">
+                            <AlertCircle size={10} />
+                            {language === 'th' ? 'โกดังเต็มแล้ว! ต้องขยายพื้นที่ก่อน' : 'Warehouse full! Must expand first.'}
+                        </div>
                     )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -1095,7 +1270,12 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                             isAffordable = walletBalance >= preset.price;
                         }
 
-                        const canBuy = isAffordable && !isSlotLimitReached && !isMaxReached;
+                        const tierOwnedCount = rigs.filter(r => r.tierId === preset.id).length;
+                        const tierMax = MINING_VOLATILITY_CONFIG[preset.id]?.maxQuantity || 50;
+                        const isTierLimitReached = tierOwnedCount >= tierMax;
+                        const isWarehouseFull = rigs.length >= userMiningSlots;
+
+                        const canBuy = isAffordable && !isWarehouseFull && !isTierLimitReached;
                         const durationDays = preset.durationDays || (preset.durationMonths || 1) * 30;
                         const netProfit = preset.bonusProfit !== undefined ? preset.bonusProfit : (preset.dailyProfit * durationDays) - preset.price;
                         const styles = getTierStyles(preset.id);
@@ -1106,14 +1286,69 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                 <div className={`p-3 flex items-center gap-3 bg-gradient-to-r ${styles.bg} border-b border-stone-800/50`}>
                                     {renderTierIcon(preset.id)}
                                     <div className="min-w-0">
-                                        <div className="text-xs font-black text-white uppercase tracking-widest mb-0.5">Tier {preset.id}</div>
+                                        <div className="text-xs font-black text-white uppercase tracking-widest mb-0.5">{t('machine_shop.stats.tier')} {preset.id}</div>
                                         <h3 className={`font-display font-bold text-sm leading-tight truncate ${styles.text}`}>{getLocalized(preset.name)}</h3>
                                     </div>
+                                    {/* Recommendation Badge */}
+                                    {MINING_VOLATILITY_CONFIG[preset.id]?.tag && (
+                                        <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-tighter shadow-sm z-10 animate-fade-in
+                                            ${MINING_VOLATILITY_CONFIG[preset.id].tagColor === 'green' ? 'bg-green-500 text-white' :
+                                                MINING_VOLATILITY_CONFIG[preset.id].tagColor === 'orange' ? 'bg-orange-500 text-white' :
+                                                    MINING_VOLATILITY_CONFIG[preset.id].tagColor === 'purple' ? 'bg-purple-600 text-white' :
+                                                        MINING_VOLATILITY_CONFIG[preset.id].tagColor === 'red' ? 'bg-red-600 text-white' :
+                                                            'bg-yellow-500 text-stone-900 shadow-[0_0_10px_rgba(234,179,8,0.4)]'}
+                                        `}>
+                                            {t(MINING_VOLATILITY_CONFIG[preset.id].tag || '')}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="p-3 flex-1 flex flex-col gap-2 text-xs">
-                                    <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
-                                        <span className="text-stone-500">{t('machine_shop.production')}</span>
-                                        <span className="text-yellow-500 font-bold font-mono">+{formatCurrency(preset.dailyProfit)}/{t('time.day')}</span>
+                                    {/* Hashrate & {t('machine_shop.stats.stability')} (Volatility Model) */}
+                                    <div className="flex flex-col gap-1 w-full bg-stone-950/30 px-2 py-1.5 rounded">
+                                        <div className="flex justify-between items-center text-[10px] text-stone-500 uppercase tracking-tighter">
+                                            <div className="flex items-center gap-1">
+                                                <span>Hashrate ⓘ</span>
+                                                <div className="group/tooltip relative">
+                                                    <Info size={10} className="text-stone-600 cursor-help" />
+                                                    <div className="absolute bottom-full left-0 mb-2 w-56 p-2 bg-stone-900 border border-stone-800 rounded shadow-xl text-[10px] text-stone-400 leading-relaxed opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-50 normal-case font-sans">
+                                                        <div className="font-bold text-white mb-1">{t('rig.mystery_yield')}</div>
+                                                        <div>{t('machine_shop.stats.current_rate')} {MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMin}-{MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMax} MH/s</div>
+                                                        <div className="text-white mt-1 flex items-center gap-1.5 font-bold">
+                                                            <span className="text-yellow-500">≈</span>
+                                                            <span className="bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-500 bg-clip-text text-transparent animate-pulse drop-shadow-[0_0_8px_rgba(234,179,8,0.5)] tracking-widest">
+                                                                ???
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-[8px] text-stone-500 mt-1 italic">{t('rig.mystery_yield_tooltip')}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <span className="text-yellow-500 font-bold font-mono">
+                                                {MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMin} - {MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMax} MH/s
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px] text-stone-500 uppercase tracking-tighter">
+                                            <span>{t('machine_shop.stats.stability')}</span>
+                                            <div className="flex items-center gap-0.5">
+                                                {Array.from({ length: 5 }).map((_, i) => (
+                                                    <Star key={i} size={8} className={i < (MINING_VOLATILITY_CONFIG[preset.id]?.stabilityStars || 0) ? 'text-yellow-500 fill-yellow-500' : 'text-stone-700'} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        {/* {t('machine_shop.stats.jackpot')} / Luck Row */}
+                                        <div className="flex justify-between items-center text-[10px] text-stone-500 uppercase tracking-tighter border-t border-stone-800/50 pt-1 mt-0.5">
+                                            <div className="flex items-center gap-1">
+                                                <span>{t('machine_shop.stats.jackpot')}</span>
+                                                {(MINING_VOLATILITY_CONFIG[preset.id]?.jackpotChance || 0) > 0.05 ? (
+                                                    <Flame size={10} className="text-orange-500 animate-pulse" />
+                                                ) : (
+                                                    <Clover size={10} className="text-emerald-500" />
+                                                )}
+                                            </div>
+                                            <span className={`font-mono font-bold ${(MINING_VOLATILITY_CONFIG[preset.id]?.jackpotChance || 0) > 0.05 ? 'text-orange-400 animate-pulse' : 'text-stone-400'}`}>
+                                                {(MINING_VOLATILITY_CONFIG[preset.id]?.jackpotChance || 0) * 100}%
+                                            </span>
+                                        </div>
                                     </div>
                                     <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
                                         <span className="text-stone-500">{t('machine_shop.contract')}</span>
@@ -1121,7 +1356,15 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                             {preset.specialProperties?.infiniteDurability ? t('rig.permanent') : preset.durationDays ? `${preset.durationDays} ${t('time.days')}` : `${preset.durationMonths} ${t('time.months_short')}`}
                                         </span>
                                     </div>
-                                    {isCrafting ? (
+
+                                    {/* {t('machine_shop.stats.owned')} Counter */}
+                                    <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded border border-stone-800/50">
+                                        <span className="text-stone-500">{t('machine_shop.stats.owned')}</span>
+                                        <span className={`font-mono font-bold ${isTierLimitReached ? 'text-red-500' : 'text-stone-300'}`}>
+                                            {tierOwnedCount} / {tierMax}
+                                        </span>
+                                    </div>
+                                    {isCrafting && (
                                         <div className="mt-auto pt-2 border-t border-dashed border-stone-800">
                                             <div className="text-[10px] text-stone-400 mb-1">{t('machine_shop.craft_req')}:</div>
                                             <div className="flex flex-wrap gap-1">
@@ -1138,11 +1381,6 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                                 })}
                                             </div>
                                         </div>
-                                    ) : (
-                                        <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded border border-emerald-900/10">
-                                            <span className="text-stone-500">{t('machine_shop.net_profit')}</span>
-                                            <span className="text-emerald-400 font-bold font-mono">+{formatCurrency(netProfit)}</span>
-                                        </div>
                                     )}
                                 </div>
                                 <div className="p-3 pt-0 mt-auto">
@@ -1150,15 +1388,19 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                         onClick={() => onBuyRig && onBuyRig(preset)}
                                         disabled={!canBuy}
                                         className={`w-full py-2 rounded font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all text-xs
-                                            ${!isSlotLimitReached && !isMaxReached
-                                                ? isAffordable
-                                                    ? 'bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white shadow-lg'
-                                                    : 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'
-                                                : 'bg-stone-800 text-stone-600 cursor-not-allowed border border-stone-700'
+                                                ${canBuy
+                                                ? 'bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white shadow-lg'
+                                                : 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'
                                             }
-                                        `}
+                                            `}
                                     >
-                                        {isSlotLimitReached ? t('machine_shop.space_full') : isMaxReached ? `${t('machine_shop.limit_reached')} (${preset.specialProperties?.maxAllowed})` : isCrafting ? t('shop.craft_action') : formatCurrency(preset.price)}
+                                        {isWarehouseFull
+                                            ? (language === 'th' ? 'โกดังเต็ม' : 'Warehouse Full')
+                                            : isTierLimitReached
+                                                ? (language === 'th' ? `ครบจำกัด (${tierMax})` : `Limit Reached (${tierMax})`)
+                                                : isCrafting
+                                                    ? t('shop.craft_action')
+                                                    : formatCurrency(preset.price)}
                                     </button>
                                 </div>
                             </div>
@@ -1513,17 +1755,19 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                             </div>
 
                             <div className="bg-stone-950/50 rounded-xl p-4 space-y-3 border border-stone-800 text-sm w-full">
-                                <div className="flex justify-between items-center text-stone-400">
-                                    <span>{t('item_shop.bonus_info')}</span>
-                                    <span className="text-yellow-400 font-bold">{formatBonus(claimedItem.dailyBonus || 0, claimedItem.typeId)}/{t('time.day')}</span>
-                                </div>
+                                {claimedItem.dailyBonus > 0 && (
+                                    <div className="flex justify-between items-center text-stone-400">
+                                        <span>{t('item_shop.bonus_info')}</span>
+                                        <span className="text-yellow-400 font-bold">{formatBonus(claimedItem.dailyBonus || 0, claimedItem.typeId)}/{t('time.day')}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center text-stone-400">
                                     <span>{t('item_shop.status_label')}</span>
                                     <span className="text-white font-bold">{t('item_shop.success_status')}</span>
                                 </div>
                                 {claimedItem.specialEffect && (
                                     <div className="pt-2 border-t border-stone-800 text-xs text-emerald-400 text-center font-bold">
-                                        {t('item_shop.property_label')}: {claimedItem.specialEffect}
+                                        {t('item_shop.property_label')}: {getLocalized(claimedItem.specialEffect)}
                                     </div>
                                 )}
                             </div>
@@ -1540,6 +1784,9 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
             )}
             {/* CONFIRMATION POPUP */}
             {renderConfirmationModal()}
+            {renderSuccessModal()}
         </div>
     );
 };
+
+

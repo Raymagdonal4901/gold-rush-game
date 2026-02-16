@@ -9,6 +9,7 @@ export interface IRig extends Document {
     expiresAt: Date;
     slots: any[];
     rarity: string;
+    starLevel?: number;
     repairCost: number;
     energyCostPerDay: number;
     energy: number;
@@ -18,6 +19,11 @@ export interface IRig extends Document {
     lastGiftAt?: Date;
     isDead?: boolean;
     lastRepairAt?: Date;
+    // Dynamic Volatility Fields
+    tierId?: number;
+    currentDurability?: number;
+    status?: 'ACTIVE' | 'BROKEN';
+    totalMined?: number;
 }
 const RigSchema = new Schema<IRig>({
     ownerId: { type: String, required: true },
@@ -28,6 +34,7 @@ const RigSchema = new Schema<IRig>({
     expiresAt: { type: Date, required: true },
     slots: { type: [String], default: [null, null, null, null, null] },
     rarity: { type: String, default: 'COMMON' },
+    starLevel: { type: Number, default: 0 },
     repairCost: { type: Number, default: 0 },
     energyCostPerDay: { type: Number, default: 0 },
     bonusProfit: { type: Number, default: 0 },
@@ -37,6 +44,11 @@ const RigSchema = new Schema<IRig>({
     lastClaimAt: { type: Date },
     lastGiftAt: { type: Date },
     isDead: { type: Boolean, default: false },
-    lastRepairAt: { type: Date }
+    lastRepairAt: { type: Date },
+    // Dynamic Volatility Fields
+    tierId: { type: Number },
+    currentDurability: { type: Number, default: 3000 },
+    status: { type: String, enum: ['ACTIVE', 'BROKEN'], default: 'ACTIVE' },
+    totalMined: { type: Number, default: 0 }
 });
 export default mongoose.model<IRig>('Rig', RigSchema);

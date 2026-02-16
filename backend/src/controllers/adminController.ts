@@ -10,6 +10,7 @@ import DepositRequest from '../models/DepositRequest';
 import ClaimRequest from '../models/ClaimRequest';
 import SystemConfig from '../models/SystemConfig';
 import Transaction from '../models/Transaction';
+import Withdrawal from '../models/Withdrawal';
 
 // Convert All Currency Data to USD (1 USD = 32 THB)
 export const adminConvertCurrencyToUSD = async (req: AuthRequest, res: Response) => {
@@ -346,7 +347,7 @@ export const getUserStats = async (req: AuthRequest, res: Response) => {
 // Get All Users
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
     try {
-        const users = await User.find().select('-password -pin').sort({ createdAt: -1 });
+        const users = await User.find().select('-passwordHash -pin').sort({ createdAt: -1 });
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: 'Server error', error });
@@ -428,8 +429,8 @@ export const processDepositRequest = async (req: AuthRequest, res: Response) => 
                 user.balance += deposit.amount;
 
                 // --- REFERRAL LOGIC: First Deposit Reward ---
-                if (!user.isFirstDepositPaid && user.referredBy) {
-                    const referrer = await User.findById(user.referredBy);
+                if (!user.isFirstDepositPaid && user.referrerId) {
+                    const referrer = await User.findById(user.referrerId);
                     if (referrer) {
                         // Reward: 1 Gacha Key (Key to the Mine)
                         const rewardItem = {
@@ -443,7 +444,7 @@ export const processDepositRequest = async (req: AuthRequest, res: Response) => 
                         };
 
                         referrer.inventory.push(rewardItem);
-                        referrer.referralCount = (referrer.referralCount || 0) + 1;
+                        referrer.referralStats.totalInvited = (referrer.referralStats.totalInvited || 0) + 1;
                         await referrer.save();
 
                         // Create Transaction Record for Referrer (Optional but good for tracking)
@@ -475,8 +476,8 @@ export const processDepositRequest = async (req: AuthRequest, res: Response) => 
     }
 };
 
-// Get Pending Withdrawals
-export const getPendingWithdrawals = async (req: AuthRequest, res: Response) => {
+// Get Pending Withdrawals (LEGACY)
+export const getLegacyPendingWithdrawals = async (req: AuthRequest, res: Response) => {
     try {
         const withdrawals = await WithdrawalRequest.find({ status: 'PENDING' }).sort({ createdAt: -1 });
         res.json(withdrawals);
@@ -485,8 +486,8 @@ export const getPendingWithdrawals = async (req: AuthRequest, res: Response) => 
     }
 };
 
-// Process Withdrawal (Approve/Reject)
-export const processWithdrawalRequest = async (req: AuthRequest, res: Response) => {
+// Process Withdrawal (Approve/Reject) (LEGACY)
+export const processLegacyWithdrawalRequest = async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
         const { status } = req.body; // APPROVED or REJECTED
@@ -663,25 +664,72 @@ export const clearRevenueStats = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
-// Reset All User Balances to Zero
-export const resetAllBalances = async (req: AuthRequest, res: Response) => {
+// Reset All User Progress and Data (Full Wipe)
+export const resetAllPlayerData = async (req: AuthRequest, res: Response) => {
     try {
-        console.log('[ADMIN] Resetting all user balances to 0...');
+        console.log('[ADMIN] Performing TOTAL PLAYER DATA RESET (Global Wipe)...');
 
-        // Reset everyone to 0
-        const result = await User.updateMany({}, { $set: { balance: 0 } });
+        // 1. Reset all users to default values
+        const userResult = await User.updateMany({}, {
+            $set: {
+                balance: 0,
+                energy: 100,
+                inventory: [],
+                materials: {},
+                stats: {},
+                weeklyStats: {},
+                claimedQuests: [],
+                claimedAchievements: [],
+                masteryPoints: 0,
+                claimedRanks: [],
+                notifications: [],
+                checkInStreak: 0,
+                lastCheckIn: undefined,
+                activeExpedition: null,
+                craftingQueue: [],
+                unlockedSlots: 3,
+                miningSlots: 3,
+                lastLuckyDraw: 0,
+                overclockExpiresAt: undefined,
+                overclockRemainingMs: 0,
+                isOverclockActive: false,
+                isFirstDepositPaid: false,
+                referralStats: { totalInvited: 0, totalEarned: 0 },
+                lastEnergyUpdate: new Date(),
+                totalDailyIncome: 0
+            }
+        });
 
-        // Also clear any pending withdrawal/deposit? 
-        // For safety, let's just reset the balance as requested first.
+        // 2. Clear all associated game assets and history
+        console.log('[ADMIN] Deleting all rigs, transactions, and requests...');
+        const rigResult = await Rig.deleteMany({});
+        const txResult = await Transaction.deleteMany({});
+        const claimResult = await ClaimRequest.deleteMany({});
+        const withResult = await WithdrawalRequest.deleteMany({});
+        const depResult = await DepositRequest.deleteMany({});
 
-        console.log(`[ADMIN] All balances reset. Updated ${result.modifiedCount} users.`);
+        console.log(`[ADMIN] Total Reset Complete:
+            - Users Updated: ${userResult.modifiedCount}
+            - Rigs Deleted: ${rigResult.deletedCount}
+            - Transactions Deleted: ${txResult.deletedCount}
+            - Claims Deleted: ${claimResult.deletedCount}
+            - Withdrawals Deleted: ${withResult.deletedCount}
+            - Deposits Deleted: ${depResult.deletedCount}`);
+
         res.json({
-            message: 'All balances reset to 0 successfully',
-            count: result.modifiedCount
+            message: 'All player data has been reset successfully',
+            count: userResult.modifiedCount,
+            details: {
+                rigs: rigResult.deletedCount,
+                transactions: txResult.deletedCount,
+                claims: claimResult.deletedCount,
+                withdrawals: withResult.deletedCount,
+                deposits: depResult.deletedCount
+            }
         });
     } catch (error) {
-        console.error('[ADMIN ERROR] resetAllBalances failed:', error);
-        res.status(500).json({ message: 'Server error during reset', error });
+        console.error('[ADMIN ERROR] resetAllPlayerData failed:', error);
+        res.status(500).json({ message: 'Server error during total reset', error });
     }
 };
 // Delete Rig (Admin)
@@ -776,12 +824,13 @@ export const resetUser = async (req: AuthRequest, res: Response) => {
         user.activeExpedition = null;
         user.craftingQueue = [];
         user.unlockedSlots = 3;
+        user.miningSlots = 3;
         user.lastLuckyDraw = 0;
         user.overclockExpiresAt = undefined;
         user.overclockRemainingMs = 0;
         user.isOverclockActive = false;
         user.isFirstDepositPaid = false;
-        user.referralCount = 0;
+        user.referralStats = { totalInvited: 0, totalEarned: 0 };
         user.lastEnergyUpdate = new Date();
 
         // Mark modified for complex objects/arrays
@@ -840,5 +889,301 @@ export const removeVip = async (req: AuthRequest, res: Response) => {
     } catch (error) {
         console.error('[ADMIN ERROR] removeVip failed:', error);
         res.status(500).json({ message: 'Server error during VIP removal', error });
+    }
+};
+
+// --- NEW ADMIN FUNCTIONS (PART 6) ---
+
+/**
+ * Get overall dashboard stats
+ */
+export const getDashboardStats = async (req: AuthRequest, res: Response) => {
+    try {
+        const totalUsers = await User.countDocuments();
+        const totalRigs = await Rig.countDocuments();
+        const pendingWithdrawalsCount = await Withdrawal.countDocuments({ status: 'PENDING' });
+
+        // Calculate total revenue from specific transaction types
+        const revenueTypes = ['RIG_BUY', 'REPAIR', 'WITHDRAW_FEE', 'MARKET_FEE', 'ITEM_BUY', 'GAME_LOSS', 'ENERGY_REFILL'];
+        const revenueAggregation = await Transaction.aggregate([
+            {
+                $match: {
+                    status: 'COMPLETED',
+                    type: { $in: revenueTypes }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: '$amount' }
+                }
+            }
+        ]);
+
+        const totalRevenue = revenueAggregation.length > 0 ? revenueAggregation[0].total : 0;
+
+        res.json({
+            totalUsers,
+            totalRigs,
+            pendingWithdrawalsCount,
+            totalRevenue
+        });
+    } catch (error) {
+        console.error('[ADMIN ERROR] getDashboardStats failed:', error);
+        res.status(500).json({ message: 'Server error fetching stats' });
+    }
+};
+
+/**
+ * Get detailed revenue stats by type
+ */
+export const getRevenueStats = async (req: AuthRequest, res: Response) => {
+    try {
+        const revenueTypes = ['RIG_BUY', 'REPAIR', 'WITHDRAW_FEE', 'MARKET_FEE', 'ITEM_BUY', 'GAME_LOSS', 'ENERGY_REFILL'];
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+
+        // 1. Totals (Current aggregation)
+        const stats = await Transaction.aggregate([
+            {
+                $match: {
+                    status: 'COMPLETED',
+                    type: { $in: revenueTypes }
+                }
+            },
+            {
+                $group: {
+                    _id: '$type',
+                    totalAmount: { $sum: '$amount' }
+                }
+            }
+        ]);
+
+        const totals: Record<string, number> = {
+            RIG_BUY: 0,
+            REPAIR: 0,
+            WITHDRAW_FEE: 0,
+            MARKET_FEE: 0,
+            ITEM_BUY: 0,
+            GAME_LOSS: 0,
+            ENERGY_REFILL: 0,
+            total: 0
+        };
+
+        let grandTotal = 0;
+        stats.forEach(item => {
+            if (item._id && totals.hasOwnProperty(item._id)) {
+                totals[item._id] = item.totalAmount;
+                grandTotal += item.totalAmount;
+            }
+        });
+        totals.total = grandTotal;
+
+        // 2. Trend (7-day time series)
+        const trendData = await Transaction.aggregate([
+            {
+                $match: {
+                    status: 'COMPLETED',
+                    type: { $in: revenueTypes },
+                    createdAt: { $gte: sevenDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+                    },
+                    amount: { $sum: "$amount" }
+                }
+            },
+            { $sort: { "_id": 1 } }
+        ]);
+
+        // Map trend data to a readable format (Date, Amount)
+        const trend = trendData.map(d => ({
+            date: d._id,
+            amount: d.amount
+        }));
+
+        // 3. Recent major revenue transactions
+        const recent = await Transaction.find({
+            status: 'COMPLETED',
+            type: { $in: revenueTypes }
+        })
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .populate('userId', 'username');
+
+        const recentFormatted = recent.map((tx: any) => ({
+            id: tx._id,
+            username: tx.userId?.username || 'System',
+            type: tx.type,
+            amount: tx.amount,
+            description: tx.description,
+            timestamp: tx.createdAt
+        }));
+
+        // 4. Volume aggregation (APPROVED only) - Ported from getGlobalRevenueStats
+        const depositStats = await DepositRequest.aggregate([
+            { $match: { status: 'APPROVED' } },
+            {
+                $group: {
+                    _id: { $toUpper: { $cond: { if: { $eq: ["$slipImage", "CRYPTO_USDT_BSC"] }, then: "USDT", else: "BANK" } } },
+                    total: { $sum: "$amount" }
+                }
+            }
+        ]);
+        const depMap: Record<string, number> = {};
+        depositStats.forEach(s => depMap[s._id] = s.total);
+
+        const withdrawStats = await Withdrawal.aggregate([
+            { $match: { status: 'APPROVED' } },
+            {
+                $group: {
+                    _id: { $cond: { if: { $eq: ["$method", "USDT"] }, then: "USDT", else: "BANK" } },
+                    total: { $sum: "$amount" }
+                }
+            }
+        ]);
+        const withMap: Record<string, number> = {};
+        withdrawStats.forEach(s => withMap[s._id] = s.total);
+
+        res.json({
+            totals,
+            trend,
+            recent: recentFormatted,
+            volumes: {
+                bank_deposits: depMap['BANK'] || 0,
+                usdt_deposits: depMap['USDT'] || 0,
+                bank_withdrawals: withMap['BANK'] || 0,
+                usdt_withdrawals: withMap['USDT'] || 0
+            }
+        });
+    } catch (error) {
+        console.error('[ADMIN ERROR] getRevenueStats failed:', error);
+        res.status(500).json({ message: 'Server error fetching revenue stats' });
+    }
+};
+
+/**
+ * Get all pending withdrawals with user details
+ */
+export const getPendingWithdrawals = async (req: AuthRequest, res: Response) => {
+    try {
+        const withdrawals = await Withdrawal.find({ status: 'PENDING' })
+            .populate('userId', 'username email')
+            .sort({ createdAt: -1 });
+
+        res.json(withdrawals);
+    } catch (error) {
+        console.error('[ADMIN ERROR] getPendingWithdrawals failed:', error);
+        res.status(500).json({ message: 'Server error fetching withdrawals' });
+    }
+};
+
+/**
+ * Process a withdrawal request (Approve/Reject)
+ */
+export const processWithdrawal = async (req: AuthRequest, res: Response) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const { id } = req.params;
+        const { action, adminNote } = req.body; // action: 'APPROVE' | 'REJECT'
+
+        if (!['APPROVE', 'REJECT'].includes(action)) {
+            return res.status(400).json({ message: 'Invalid action' });
+        }
+
+        const withdrawal = await Withdrawal.findById(id);
+        if (!withdrawal) {
+            return res.status(404).json({ message: 'Withdrawal not found' });
+        }
+
+        if (withdrawal.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Withdrawal already processed' });
+        }
+
+        const status = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+        withdrawal.status = status;
+        if (adminNote) withdrawal.adminNote = adminNote;
+        await withdrawal.save({ session });
+
+        // Update associated transaction status
+        await Transaction.findOneAndUpdate(
+            { refId: id, type: 'WITHDRAWAL' },
+            { status: status === 'APPROVED' ? 'COMPLETED' : 'FAILED' },
+            { session }
+        );
+
+        if (action === 'REJECT') {
+            // Refund user balance
+            const user = await User.findById(withdrawal.userId).session(session);
+            if (user) {
+                user.balance += withdrawal.amount;
+                await user.save({ session });
+            }
+        }
+
+        await session.commitTransaction();
+        res.json({ message: `Withdrawal ${action.toLowerCase()}d successfully`, withdrawal });
+    } catch (error) {
+        await session.abortTransaction();
+        console.error('[ADMIN ERROR] processWithdrawal failed:', error);
+        res.status(500).json({ message: 'Server error processing withdrawal' });
+    } finally {
+        session.endSession();
+    }
+};
+
+// Delete ALL Players (High Danger)
+export const deleteAllUsers = async (req: AuthRequest, res: Response) => {
+    try {
+        console.log('[ADMIN] CAUTION: Deleting ALL non-admin users...');
+
+        // 1. Find all users who are NOT admins, and NOT the current requester, and NOT the super admin email
+        const SUPER_ADMIN_EMAIL = 'raymagdonal4901@gmail.com';
+        const usersToDelete = await User.find({
+            $and: [
+                { role: { $ne: 'ADMIN' } },
+                { _id: { $ne: req.userId } },
+                { email: { $ne: SUPER_ADMIN_EMAIL } }
+            ]
+        }, '_id');
+        const userIds = usersToDelete.map(u => u._id.toString());
+
+        if (userIds.length === 0) {
+            return res.json({ message: 'No player accounts found to delete', count: 0 });
+        }
+
+        // 2. Cascade delete all linked records for these specific users
+        const rigResult = await Rig.deleteMany({ ownerId: { $in: userIds } });
+        const txResult = await Transaction.deleteMany({ userId: { $in: userIds } });
+        const claimResult = await ClaimRequest.deleteMany({ userId: { $in: userIds } });
+        const withResult = await WithdrawalRequest.deleteMany({ userId: { $in: userIds } });
+        const depResult = await DepositRequest.deleteMany({ userId: { $in: userIds } });
+
+        // 3. Finally delete the User records themselves
+        const userResult = await User.deleteMany({ _id: { $in: userIds } });
+
+        console.log(`[ADMIN] MASS DELETE COMPLETE:
+            - Users Deleted: ${userResult.deletedCount}
+            - Rigs Deleted: ${rigResult.deletedCount}
+            - Transactions Deleted: ${txResult.deletedCount}
+            - Financial Requests Deleted: ${claimResult.deletedCount + withResult.deletedCount + depResult.deletedCount}`);
+
+        res.json({
+            message: `Successfully deleted all player accounts (${userResult.deletedCount} users)`,
+            count: userResult.deletedCount,
+            details: {
+                rigs: rigResult.deletedCount,
+                transactions: txResult.deletedCount
+            }
+        });
+
+    } catch (error) {
+        console.error('[ADMIN ERROR] deleteAllUsers failed:', error);
+        res.status(500).json({ message: 'Server error during mass deletion', error });
     }
 };

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Sparkles, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Hand, Lock, Truck, Cpu, Hourglass, Key, Factory, Search, FileText, Briefcase, Settings, Hammer, Wrench, TrainFront } from 'lucide-react';
 import { Rarity } from '../services/types';
 import { RARITY_SETTINGS, CURRENCY } from '../constants';
-import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -55,7 +54,7 @@ const ItemIcon: React.FC<{ typeId?: string, name?: string, materialId?: number, 
     // If it's a "glove" or undefined type (default loot), show the Infinity Glove
     // But verify it's not one of the above first (implicit else)
     if (!typeId || typeId === 'glove') {
-        return <InfinityGlove rarity={rarity} className={className} size={100} />;
+        return <Briefcase size={100} className={className} />;
     }
 
     let IconComp = Hand;
@@ -75,7 +74,7 @@ const ItemIcon: React.FC<{ typeId?: string, name?: string, materialId?: number, 
         else if (typeId === 'repair_kit_4') IconComp = Settings;
         else IconComp = Wrench;
     }
-    else return <InfinityGlove rarity={rarity} className={className} size={100} />;
+    else return <Briefcase size={100} className={className} />;
 
     return <IconComp className={className} style={{ color: rarity === 'LEGENDARY' ? '#facc15' : undefined }} />;
 };
@@ -98,10 +97,10 @@ export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rar
         setStage('shaking');
 
         // Animation Sequence
-        setTimeout(() => setStage('unlocking'), 800);   // Chains break
-        setTimeout(() => setStage('opening'), 1500);    // Lid Opens
-        setTimeout(() => setStage('flash'), 2000);      // Flash Bang
-        setTimeout(() => setStage('revealed'), 2200);   // Show Item
+        setTimeout(() => setStage('unlocking'), 400);   // Chains break
+        setTimeout(() => setStage('opening'), 750);    // Lid Opens
+        setTimeout(() => setStage('flash'), 1000);      // Flash Bang
+        setTimeout(() => setStage('revealed'), 1200);   // Show Item
     };
 
     if (!isOpen) return null;

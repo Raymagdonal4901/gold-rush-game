@@ -1,114 +1,145 @@
 import React, { useState, useEffect } from 'react';
-import { X, AlertTriangle, ShieldCheck, Gem, Pickaxe } from 'lucide-react';
+import { X, AlertTriangle, Rocket, ShieldCheck, Users, Mail, Zap, ChevronRight } from 'lucide-react';
+
+const EXPIRATION_DATE = new Date('2026-02-18T03:03:58+07:00').getTime();
 
 export const AnnouncementModal: React.FC = () => {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        // Show immediately on mount
-        setIsVisible(true);
+        const now = Date.now();
+        // Only show if haven't acknowledged it yet AND within the 48h window
+        const hasSeen = localStorage.getItem('announcement_gold_rush_2_0_seen');
+        if (now < EXPIRATION_DATE && !hasSeen) {
+            setIsVisible(true);
+        }
     }, []);
+
+    const handleAcknowledge = () => {
+        localStorage.setItem('announcement_gold_rush_2_0_seen', 'true');
+        setIsVisible(false);
+    };
 
     if (!isVisible) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="relative w-full max-w-lg bg-stone-900 border-2 border-yellow-500/50 rounded-2xl shadow-[0_0_50px_rgba(234,179,8,0.2)] overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-500">
+            <div className="relative w-full max-w-2xl bg-stone-900 border-2 border-yellow-500/50 rounded-2xl shadow-[0_0_80px_rgba(234,179,8,0.3)] overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
 
                 {/* Header Pattern */}
-                <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600"></div>
+                <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 z-30"></div>
 
                 {/* Close Button */}
                 <button
-                    onClick={() => setIsVisible(false)}
-                    className="absolute top-4 right-4 text-stone-400 hover:text-white transition-colors z-20"
+                    onClick={handleAcknowledge}
+                    className="absolute top-4 right-4 text-stone-400 hover:text-white transition-colors z-30 bg-black/50 p-1 rounded-full"
                 >
-                    <X size={24} />
+                    <X size={20} />
                 </button>
 
-                <div className="p-6 md:p-8 relative">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 relative">
                     {/* Title Section */}
                     <div className="text-center mb-8">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-500/10 border border-yellow-500/30 rounded-full text-yellow-500 text-xs font-bold uppercase tracking-widest mb-4">
-                            <AlertTriangle size={12} />
-                            Critical Update
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded-full text-yellow-500 text-xs font-black uppercase tracking-widest mb-4 animate-pulse">
+                            <Rocket size={14} />
+                            Major Update
                         </div>
-                        <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight mb-2">
-                            🚧 ประกาศปิดปรับปรุงระบบ <br />
-                            <span className="text-stone-400 text-lg md:text-xl">ส่งท้าย CBT ต้อนรับ OBT! 🚧</span>
+                        <h2 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tight leading-tight">
+                            ⚠️ ประกาศสำคัญ <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600">
+                                Gold Rush 2.0: The New Era 🚀
+                            </span>
                         </h2>
-                        <div className="w-24 h-1 bg-stone-800 mx-auto rounded-full mt-4"></div>
                     </div>
 
                     {/* Content */}
-                    <div className="space-y-6 text-stone-300">
-                        <p className="leading-relaxed text-center">
-                            สวัสดีครับนักขุด! เนื่องจากเราเจอ Bug บางส่วนที่ต้องรีบแก้ด่วน เพื่อความเสถียรของเกม
-                            <span className="text-red-400 font-bold block mt-1">ทางทีมงานขออนุญาตปิดระบบ Close Beta ณ ตอนนี้ครับ</span>
-                        </p>
-
-                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
-                            <p className="font-bold text-yellow-400 uppercase tracking-wide text-sm mb-1">✨ เตรียมพบกับ Open Beta เวอร์ชันสมบูรณ์ ✨</p>
-                            <p className="text-2xl font-black text-white">วันนี้ 13.00 น.!</p>
+                    <div className="space-y-8 text-stone-200">
+                        <div className="text-center space-y-2">
+                            <p className="text-lg font-bold text-white">ถึง เหล่านักขุดทุกท่าน,</p>
+                            <p className="text-stone-400 leading-relaxed">
+                                ทีมงานขอแจ้งปิดปรับปรุงเซิร์ฟเวอร์ชั่วคราว เพื่อทำการอัปเกรดระบบครั้งใหญ่ที่สุด (Major Update)
+                                โดยมีเป้าหมายเพื่อยกระดับเกมให้มีความเป็นมืออาชีพ มั่นคง และรองรับการสร้างรายได้ในระยะยาวอย่างยั่งยืน
+                            </p>
                         </div>
 
-                        {/* Feature Highlight: Permanent Items */}
-                        <div className="relative bg-gradient-to-br from-stone-800 to-black border border-stone-700 p-4 rounded-xl overflow-hidden group">
-                            {/* Decorative Glow */}
-                            <div className="absolute -right-4 -top-4 w-24 h-24 bg-green-500/20 blur-2xl rounded-full group-hover:bg-green-500/30 transition-all"></div>
-
-                            <div className="flex items-center gap-4 relative z-10">
-                                <div className="w-16 h-16 bg-stone-900 rounded-lg flex items-center justify-center border border-stone-600 shadow-inner shrink-0 relative">
-                                    <Gem size={32} className="text-green-400" />
-                                    <div className="absolute -bottom-2 inset-x-0 bg-green-600 text-white text-[8px] font-black uppercase text-center py-0.5 tracking-widest">
-                                        Permanent
-                                    </div>
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h3 className="font-bold text-white">🔥 อัปเดตใหญ่ที่รอคอย</h3>
-                                        <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded uppercase">New</span>
-                                    </div>
-                                    <p className="text-sm text-stone-400">
-                                        ยกเลิกระบบ <span className="text-red-400 line-through decoration-red-500">ไอเทมมีวันหมดอายุ</span> ❌ <br />
-                                        เปลี่ยนเป็น <span className="text-green-400 font-bold">"ไอเทมถาวร"</span> ✅ <br />
-                                        <span className="text-xs text-stone-500">ซื้อครั้งเดียวใช้ยาวๆ ตลอดชีพ!</span>
-                                    </p>
-                                </div>
+                        {/* Patch Notes Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-stone-800/50 border border-stone-700 p-4 rounded-xl">
+                                <h3 className="flex items-center gap-2 font-black text-yellow-500 mb-2 uppercase text-sm">
+                                    <Zap size={16} /> ระบบรายได้แบบใหม่
+                                </h3>
+                                <p className="text-xs text-stone-400 leading-relaxed">
+                                    ยกเลิกรายได้แบบตายตัวที่น่าเบื่อ! เปลี่ยนเป็นระบบ <span className="text-white font-bold">"สุ่ม Hashrate"</span>
+                                    ให้คุณลุ้นรับ Jackpot และรายได้ที่ผันผวนตามค่าความยากจริง
+                                </p>
+                            </div>
+                            <div className="bg-stone-800/50 border border-stone-700 p-4 rounded-xl">
+                                <h3 className="flex items-center gap-2 font-black text-blue-500 mb-2 uppercase text-sm">
+                                    <ShieldCheck size={16} /> ความปลอดภัยขั้นสูง
+                                </h3>
+                                <p className="text-xs text-stone-400 leading-relaxed">
+                                    เปลี่ยนระบบล็อกอินเป็น <span className="text-white font-bold">Email & Password</span> เต็มรูปแบบ
+                                    ป้องกันการสวมรอยและเตรียมพร้อมสำหรับฟีเจอร์ 2FA
+                                </p>
+                            </div>
+                            <div className="bg-stone-800/50 border border-stone-700 p-4 rounded-xl md:col-span-2">
+                                <h3 className="flex items-center gap-2 font-black text-emerald-500 mb-2 uppercase text-sm">
+                                    <Users size={16} /> ระบบพันธมิตรเต็มรูปแบบ (Affiliate)
+                                </h3>
+                                <p className="text-xs text-stone-400 leading-relaxed">
+                                    เปิดโอกาสให้คุณสร้าง Passive Income อย่างแท้จริง! <br />
+                                    • รับทันที <span className="text-emerald-400 font-bold">3%</span> จากยอดซื้อเครื่องขุดของเพื่อน <br />
+                                    • รับต่อเนื่อง <span className="text-emerald-400 font-bold">1%</span> จากยอดการ "เก็บผลผลิต (Claim)" ของเพื่อน ตลอดชีพ!
+                                </p>
                             </div>
                         </div>
 
-                        {/* Refund Note */}
-                        <div className="text-sm bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl">
-                            <h4 className="font-bold text-blue-400 mb-2 flex items-center gap-2">
-                                <ShieldCheck size={16} />
-                                แจ้งเรื่องการชดเชย (Refund)
-                            </h4>
-                            <p className="text-stone-400 leading-relaxed mb-3">
-                                ใครที่เติมเงินเข้ามาแล้ว ทักแชท Line Official ด่วน! พิมพ์แจ้งชื่อ ID มาได้เลยครับ
-                                เดฟจะ <span className="text-white font-bold">คืนเงินเติมให้ครบ 100%</span> + <span className="text-yellow-400 font-bold">โบนัสค่าเสียเวลา</span> ให้ด้วยครับ รับรองว่าคุ้มแน่นอน!
-                            </p>
-                            <a
-                                href="https://line.me/ti/g2/d_jd00pEBf2EKWFyQdkrc2B3FgpwUpZv_ghT0w"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block w-full bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-center py-2 rounded-lg transition-colors shadow-lg shadow-green-500/20"
-                            >
-                                ติดต่อ Line Official
-                            </a>
+                        {/* Server Wipe Alert */}
+                        <div className="bg-red-500/10 border border-red-500/30 p-5 rounded-xl flex gap-4 items-start">
+                            <AlertTriangle className="text-red-500 shrink-0 mt-1" size={24} />
+                            <div>
+                                <h4 className="font-black text-red-500 uppercase text-sm mb-1">⚠️ ประกาศเรื่องการ Reset ข้อมูล (Server Wipe)</h4>
+                                <p className="text-xs text-stone-400 leading-relaxed">
+                                    เนื่องจากการเปลี่ยนโครงสร้างฐานข้อมูล ทีมงานจำเป็นต้องทำการรีเซ็ตข้อมูลผู้เล่นทั้งหมด
+                                    <span className="text-white font-bold"> (Hard Reset) </span> เพื่อเริ่มระบบใหม่พร้อมกันเพื่อความปลอดภัยสูงสุด
+                                </p>
+                            </div>
                         </div>
 
-                        <p className="text-xs text-center text-stone-500 italic">
-                            ขออภัยที่ทำให้ขัดจังหวะการขุดครับ แต่รับรองว่าเวอร์ชันใหม่ ไฉไลกว่าเดิมแน่นอน ขอบคุณครับ! 🙏⛏️
-                        </p>
-                    </div>
+                        {/* Instructions */}
+                        <div className="bg-stone-800/30 border border-stone-700 p-5 rounded-xl">
+                            <h4 className="font-bold text-white mb-3">📌 สิ่งที่ต้องทำเมื่อเปิดเซิร์ฟ:</h4>
+                            <ul className="space-y-2 text-xs text-stone-300">
+                                <li className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></div>
+                                    ทำการสมัครสมาชิกใหม่ (Register) ด้วยอีเมล
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></div>
+                                    หา "Referral Code" จากเพื่อนมาใส่ตอนสมัคร เพื่อรับสิทธิพิเศษ!
+                                </li>
+                            </ul>
+                        </div>
 
+                        <div className="text-center space-y-1">
+                            <p className="text-stone-400 text-sm italic">"ทีมงานขออภัยในความไม่สะดวก แต่รากฐานใหม่นี้จะทำให้เกมเติบโตไปได้อีกไกล"</p>
+                            <p className="text-white font-black uppercase tracking-widest text-sm pt-4">ทีมงาน Gold Rush</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer Action */}
+                <div className="p-6 bg-stone-800/50 border-t border-stone-800">
                     <button
-                        onClick={() => setIsVisible(false)}
-                        className="w-full mt-6 bg-stone-800 hover:bg-stone-700 border border-stone-600 text-stone-300 font-bold py-3 rounded-xl transition-all"
+                        onClick={handleAcknowledge}
+                        className="group w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-black py-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2"
                     >
-                        รับทราบ (Acknowledge)
+                        รับทราบและเตรียมตัวสู่ยุคใหม่
+                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                     </button>
+                    <p className="text-[10px] text-center text-stone-600 mt-4 uppercase font-bold tracking-widest">
+                        ประกาศนี้จะแสดงจนถึงวันที่ 18 ก.พ. 03:03 น.
+                    </p>
                 </div>
             </div>
         </div>

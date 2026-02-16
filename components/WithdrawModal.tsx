@@ -154,7 +154,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
     const isSetupMode = !savedQrCode;
 
-    const hasVipCard = inventory?.some(i => i.typeId === 'vip_withdrawal_card' || i.typeId === 'vip_card_gold');
+    const hasVipCard = inventory?.some(i => i.typeId === 'vip_withdrawal_card');
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 overflow-y-auto">

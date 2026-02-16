@@ -1,6 +1,6 @@
 import express from 'express';
 import { checkIn } from '../controllers/dailyBonusController';
-import { getLeaderboard, unlockSlot, claimNotificationReward, deleteNotification, recalculateAllUsersIncome } from '../controllers/userController';
+import { getLeaderboard, unlockSlot, claimNotificationReward, deleteNotification, recalculateAllUsersIncome, getReferrals } from '../controllers/userController';
 import { activateOverclock, deactivateOverclock } from '../controllers/overclockController';
 import { authenticate } from '../middleware/auth';
 
@@ -12,6 +12,7 @@ router.post('/overclock', authenticate, activateOverclock);
 router.post('/overclock/deactivate', authenticate, deactivateOverclock);
 router.post('/claim-notification-reward', authenticate, claimNotificationReward);
 router.delete('/notifications/:id', authenticate, deleteNotification);
+router.get('/referrals', authenticate, getReferrals);
 router.post('/profile', authenticate, async (req: any, res) => {
     const { walletAddress } = req.body;
     try {

@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../models/User';
 import Rig from '../models/Rig';
 import SystemConfig from '../models/SystemConfig';
+import { ENERGY_CONFIG } from '../constants';
 
 // Public System Config (Maintenance only)
 export const getPublicConfig = async (req: Request, res: Response) => {
@@ -43,91 +45,79 @@ export const getLandingStats = async (req: Request, res: Response) => {
 // Register
 export const register = async (req: Request, res: Response) => {
     try {
-        const { username, password, referralCode } = req.body;
-        // ตรวจสอบว่า username ซ้ำหรือไม่
-        const existingUser = await User.findOne({ username });
+        const { username, email, password, referralCode } = req.body;
+        // ตรวจสอบว่า username หรือ email ซ้ำหรือไม่
+        const existingUser = await User.findOne({
+            $or: [{ username }, { email }]
+        });
         if (existingUser) {
-            return res.status(400).json({ message: 'Username already exists' });
+            return res.status(400).json({ message: 'Username or Email already exists' });
         }
 
         // --- REFERRAL LOGIC: Find Referrer ---
-        let referredBy = null;
+        let referrerId = null;
         if (referralCode) {
-            const referrer = await User.findOne({
-                $or: [{ username: referralCode.trim() }, { referralCode: referralCode.trim() }]
-            });
-            if (referrer) {
-                referredBy = referrer._id;
-                console.log(`[REFERRAL] New user ${username} referred by ${referrer.username}`);
+            const trimmedRef = referralCode.trim();
+            // Prevent self-referral
+            if (trimmedRef !== username) {
+                const referrer = await User.findOne({
+                    $or: [{ username: trimmedRef }, { referralCode: trimmedRef }]
+                });
+                if (referrer) {
+                    referrerId = referrer._id;
+                    // Increment Referrer's totalInvited stat
+                    if (!referrer.referralStats) {
+                        referrer.referralStats = { totalInvited: 0, totalEarned: 0 };
+                    }
+                    referrer.referralStats.totalInvited += 1;
+                    referrer.markModified('referralStats');
+                    await referrer.save();
+
+                    console.log(`[REFERRAL] New user ${username} referred by ${referrer.username}`);
+                }
             }
         }
 
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Define Welcome Pack Item if referred
+        // Initialize empty inventory and notifications
         const inventory: any[] = [];
-        const notifications = [];
+        const notifications: any[] = [];
 
-        if (referredBy) {
-            // Reward: Standard Safety Helmet (Manual Claim)
-            const welcomeItem = {
-                typeId: 'chest_key',
-                name: { th: 'กุญแจหีบสมบัติ', en: 'Chest Key' },
-                rarity: 'EPIC',
-                amount: 1
-            };
+        // Generate short Referral Code (Short ID)
+        const generatedRefCode = Math.random().toString(36).substring(2, 10).toUpperCase();
 
-            notifications.push({
-                id: `welcome_${Date.now()}`,
-                userId: '', // Shared subdoc logic
-                title: 'ยินดีต้อนรับสู่เหมือง Gold Rush!',
-                message: 'คุณได้รับ กุญแจหีบสมบัติ จากการลงทะเบียนผ่านรหัสแนะนำ! กรุณากดปุ่มเพื่อรับอุปกรณ์ของคุณ',
-                type: 'REWARD',
-                read: false,
-                timestamp: Date.now(),
-                hasReward: true,
-                rewardType: 'ITEM',
-                rewardValue: welcomeItem,
-                isClaimed: false
-            });
-        }
+        // Generate Verification Token
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
         // สร้าง User ใหม่
         const user = await User.create({
             username,
-            password: hashedPassword,
-            referralCode: username, // Set their own referral code as their username
-            referredBy,
+            email,
+            passwordHash: hashedPassword,
+            verificationToken,
+            verificationTokenExpires,
+            isEmailVerified: false,
+            referralCode: generatedRefCode,
+            referrerId,
             inventory: [] as any[],
             notifications,
-            balance: 0 // New users always start at 0.00 THB
+            balance: 0,
+            referralStats: { totalInvited: 0, totalEarned: 0 }
         });
 
-        // สร้าง JWT Token
-        const token = jwt.sign(
-            { userId: user._id, username: user.username },
-            process.env.JWT_SECRET!,
-            { expiresIn: '7d' }
-        );
+        // Mock Email Sending
+        console.log('--- MOCK EMAIL ---');
+        console.log(`To: ${email}`);
+        console.log(`Subject: Verify your email`);
+        console.log(`Link: http://localhost:3000/verify?token=${verificationToken}`);
+        console.log('------------------');
+
         res.status(201).json({
-            token,
-            user: {
-                id: user._id,
-                username: user.username,
-                balance: user.balance,
-                energy: user.energy,
-                materials: user.materials || {},
-                stats: user.stats || {},
-                inventory: user.inventory || [],
-                notifications: user.notifications || [],
-                role: user.role,
-                unlockedSlots: user.unlockedSlots || 3,
-                referralCode: user.referralCode,
-                isOverclockActive: user.isOverclockActive || false,
-                overclockRemainingMs: user.overclockRemainingMs || 0,
-                overclockExpiresAt: user.overclockExpiresAt || null
-            }
+            message: 'Registration successful. Please verify your email.',
+            requiresVerification: true
         });
     } catch (error) {
         console.error('Registration error:', error);
@@ -137,22 +127,39 @@ export const register = async (req: Request, res: Response) => {
 // Login
 export const login = async (req: Request, res: Response) => {
     try {
-        const { username, password, pin } = req.body;
-        console.log(`[LOGIN DEBUG] Attempting login for: ${username}`);
-        console.log(`[LOGIN DEBUG] Provided PIN: ${pin}`);
+        const { email, password } = req.body;
+        console.log(`[LOGIN DEBUG] Attempting login for: ${email}`);
 
-        // หา User
-        const user = await User.findOne({ username });
+        // หา User ตาม email (ตามโจทย์ระบุให้รับ email)
+        const user = await User.findOne({ email }).select('+passwordHash +verificationToken +verificationTokenExpires');
+
+        // --- SUPER ADMIN AUTO-PROMOTION ---
+        const ADMIN_EMAILS = ['raymagdonal4901@gmail.com', 'atipat.csi@gmail.com'];
+        if (user && ADMIN_EMAILS.includes(email.toLowerCase())) {
+            if (user.role !== 'ADMIN' || !user.isEmailVerified) {
+                user.role = 'ADMIN';
+                user.isEmailVerified = true;
+                user.verificationToken = undefined;
+                user.verificationTokenExpires = undefined;
+                await user.save();
+                console.log(`[AUTO-ADMIN] Promoted and verified ${email}`);
+            }
+        }
         if (!user) {
-            console.log(`[LOGIN FAIL] User not found: ${username}`);
+            console.log(`[LOGIN FAIL] User not found: ${email}`);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
+        // ตรวจสอบการยืนยันอีเมล
+        if (!user.isEmailVerified) {
+            return res.status(403).json({ message: 'Please verify email' });
+        }
+
         console.log(`[LOGIN DEBUG] User found: ${user.username}, Role: ${user.role}`);
-        console.log(`[LOGIN DEBUG] Stored Hash: ${user.password.substring(0, 10)}...`);
+        console.log(`[LOGIN DEBUG] Stored Hash: ${user.passwordHash.substring(0, 10)}...`);
 
         // ตรวจสอบ password
-        const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await bcrypt.compare(password, user.passwordHash);
         console.log(`[LOGIN DEBUG] Password match result: ${isMatch}`);
 
         if (!isMatch) {
@@ -167,11 +174,23 @@ export const login = async (req: Request, res: Response) => {
         );
         const updatedEnergy = await calculateAndSyncEnergy(user);
 
+        // Normalize Capacity Fields (Repair for legacy users)
+        const maxCapacity = Math.max(user.warehouseCapacity || 3, user.unlockedSlots || 3, user.miningSlots || 3);
+        const needsRepair = user.warehouseCapacity !== maxCapacity || user.miningSlots !== maxCapacity;
+
+        if (needsRepair) {
+            user.warehouseCapacity = maxCapacity;
+            user.miningSlots = maxCapacity;
+            await user.save();
+            console.log(`[REPAIR] Syncing capacity for ${user.username}: ${maxCapacity}`);
+        }
+
         res.json({
             token,
             user: {
                 id: user._id,
                 username: user.username,
+                email: user.email,
                 balance: user.balance,
                 energy: updatedEnergy,
                 role: user.role,
@@ -188,6 +207,8 @@ export const login = async (req: Request, res: Response) => {
                 notifications: user.notifications || [],
                 activeExpedition: user.activeExpedition,
                 unlockedSlots: user.unlockedSlots || 3,
+                miningSlots: maxCapacity,
+                warehouseCapacity: maxCapacity,
                 isOverclockActive: user.isOverclockActive || false,
                 overclockRemainingMs: user.overclockRemainingMs || 0,
                 overclockExpiresAt: user.overclockExpiresAt || null
@@ -198,14 +219,51 @@ export const login = async (req: Request, res: Response) => {
     }
 };
 
+// Verify Email
+export const verifyEmail = async (req: Request, res: Response) => {
+    try {
+        const { token } = req.query;
+        if (!token) return res.status(400).json({ message: 'Token is required' });
+
+        const user = await User.findOne({
+            verificationToken: token,
+            verificationTokenExpires: { $gt: new Date() }
+        }).select('+verificationToken +verificationTokenExpires');
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid or expired token' });
+        }
+
+        user.isEmailVerified = true;
+        user.verificationToken = undefined;
+        user.verificationTokenExpires = undefined;
+        await user.save();
+
+        res.json({ message: 'Email verified successfully. You can now login.' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
 export const getProfile = async (req: any, res: Response) => {
     try {
-        const user = await User.findById(req.userId).select('-password');
+        const user = await User.findById(req.userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
         const updatedEnergy = await calculateAndSyncEnergy(user);
+        // Normalize Capacity Fields (Repair for legacy users)
+        const maxCapacity = Math.max(user.warehouseCapacity || 3, user.unlockedSlots || 3, user.miningSlots || 3);
+        const needsRepair = user.warehouseCapacity !== maxCapacity || user.miningSlots !== maxCapacity;
+
+        if (needsRepair) {
+            user.warehouseCapacity = maxCapacity;
+            user.miningSlots = maxCapacity;
+            await user.save();
+            console.log(`[REPAIR] Syncing capacity for ${user.username}: ${maxCapacity}`);
+        }
+
         res.json({
             id: user._id,
             username: user.username,
@@ -224,6 +282,8 @@ export const getProfile = async (req: any, res: Response) => {
             notifications: user.notifications || [],
             activeExpedition: user.activeExpedition,
             unlockedSlots: user.unlockedSlots || 3,
+            miningSlots: maxCapacity,
+            warehouseCapacity: maxCapacity,
             isOverclockActive: user.isOverclockActive || false,
             overclockRemainingMs: user.overclockRemainingMs || 0,
             overclockExpiresAt: user.overclockExpiresAt || null
@@ -241,7 +301,7 @@ const calculateAndSyncEnergy = async (user: any) => {
     // Constant drain: 100% in 24 hours (4.166% per hour)
     let drainRate = 4.166666666666667;
     if (user.overclockExpiresAt && user.overclockExpiresAt.getTime() > now.getTime()) {
-        drainRate *= 2;
+        drainRate *= (ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST || 1.5);
     }
     const drain = elapsedHours * drainRate;
     const currentEnergy = Math.max(0, Math.min(100, (user.energy ?? 100) - drain));
@@ -264,7 +324,7 @@ export const refillEnergy = async (req: any, res: Response) => {
         let costThb = 0;
         let isOverclock = false;
 
-        // --- 1. OVERCLOCK REFILL (50 THB -> 100% Energy + 48h x2 Boost) ---
+        // --- 1. OVERCLOCK REFILL (50 THB -> 100% Energy + 24h 1.5x Boost) ---
         if (type === 'overclock') {
             costThb = 50; // Fixed 50 THB price
             isOverclock = true;
@@ -296,10 +356,15 @@ export const refillEnergy = async (req: any, res: Response) => {
 
         // Apply Overclock if purchased
         if (isOverclock) {
-            const durationMs = 48 * 60 * 60 * 1000; // 48 Hours
+            const extensionMs = (ENERGY_CONFIG.OVERCLOCK_DURATION_HOURS || 24) * 60 * 60 * 1000;
+            const currentExpires = (user.overclockExpiresAt && user.overclockExpiresAt.getTime() > Date.now())
+                ? user.overclockExpiresAt.getTime()
+                : Date.now();
+
             user.isOverclockActive = true;
-            user.overclockExpiresAt = new Date(Date.now() + durationMs);
-            user.overclockRemainingMs = durationMs;
+            user.overclockExpiresAt = new Date(currentExpires + extensionMs);
+            user.overclockRemainingMs = (user.overclockExpiresAt.getTime() - Date.now());
+            console.log(`[OVERCLOCK_EXTEND] User ${user.username} | New Expiry: ${user.overclockExpiresAt}`);
         }
 
         await user.save();
@@ -329,16 +394,17 @@ export const seedAdmin = async (req: Request, res: Response) => {
         const hashedPin = await bcrypt.hash(ADMIN_PIN, salt);
 
         // Update or create admin
-        let admin = await User.findOne({ username: ADMIN_USERNAME });
+        let admin = await User.findOne({ username: ADMIN_USERNAME }).select('+passwordHash');
         if (admin) {
-            admin.password = hashedPassword;
+            admin.passwordHash = hashedPassword;
             admin.pin = hashedPin;
             admin.role = 'ADMIN';
             await admin.save();
         } else {
             admin = await User.create({
                 username: ADMIN_USERNAME,
-                password: hashedPassword,
+                email: 'admin@goldrush.com',
+                passwordHash: hashedPassword,
                 pin: hashedPin,
                 role: 'ADMIN',
                 balance: 999999,

@@ -111,9 +111,29 @@ export const en = {
         capacity: "Capacity",
         collect: "Collect",
         pay: "Pay",
-        refill: "Refill"
+        refill: "Refill",
+        confirm_demolish: "CONFIRM DEMOLISH",
+        confirm_demolish_msg: "Are you sure you want to melt this rig? It will be destroyed and you will receive some materials back.",
+        melt_scrap: "Melt into Scrap",
+        exploring: "Exploring..."
     },
     time: {
         day: "Day"
+    },
+    mines: {
+        title: "MINES",
+        subtitle: "Risk & Reward Mini-Game",
+        bet_amount: "Bet Amount",
+        mines_count: "Mines",
+        start_game: "START GAME",
+        cash_out: "CASH OUT",
+        potential_win: "Potential Win",
+        boom: "BOOM! You hit a mine.",
+        win: "WINNER!",
+        play_again: "Play Again",
+        insufficient_funds: "Insufficient funds for this bet.",
+        multiplier: "Multiplier",
+        secure_logic: "Secure Provably Fair Logic",
+        mines_label: "Mines",
     }
 };

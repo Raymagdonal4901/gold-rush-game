@@ -68,6 +68,23 @@ export const startCrafting = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ message: `เงินไม่พอสำหรับค่าธรรมเนียม (${fee} บาท)` });
         }
 
+        // Check required item (e.g., Mixer)
+        if ((itemConfig as any).requiredItem) {
+            const requiredItemId = (itemConfig as any).requiredItem;
+            const hasItem = user.inventory && user.inventory.some((i: any) => i.typeId === requiredItemId);
+            if (!hasItem) {
+                const itemName = SHOP_ITEMS.find(i => i.id === requiredItemId)?.name.th || requiredItemId;
+                return res.status(400).json({ message: `จำเป็นต้องมีอุปกรณ์: ${itemName}` });
+            }
+
+            // Consume required item
+            const itemIndex = user.inventory.findIndex((i: any) => i.typeId === requiredItemId);
+            if (itemIndex !== -1) {
+                user.inventory.splice(itemIndex, 1);
+                user.markModified('inventory');
+            }
+        }
+
         // Deduct materials
         for (const [tierStr, needed] of Object.entries(itemConfig.craftingRecipe)) {
             const tier = parseInt(tierStr);
@@ -210,6 +227,8 @@ export const claimCraftedItem = async (req: AuthRequest, res: Response) => {
                 isHandmade: true
             };
         }
+
+        // All items including blueprints now go to inventory normally
 
         // Add to inventory
         if (!user.inventory) user.inventory = [];

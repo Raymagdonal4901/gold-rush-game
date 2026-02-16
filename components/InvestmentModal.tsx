@@ -1,6 +1,6 @@
 import React from 'react';
-import { X, AlertCircle, CheckCircle2, Pickaxe, Sparkles, Gem, Hammer, HelpCircle, Coins, Lock, Hexagon, Cable, TowerControl, Cpu } from 'lucide-react';
-import { CURRENCY, RIG_PRESETS, RigPreset, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
+import { X, AlertCircle, CheckCircle2, Pickaxe, Sparkles, Gem, Hammer, HelpCircle, Coins, Lock, Hexagon, Cable, TowerControl, Cpu, Info, Star } from 'lucide-react';
+import { CURRENCY, RIG_PRESETS, RigPreset, MATERIAL_CONFIG, SHOP_ITEMS, MINING_VOLATILITY_CONFIG } from '../constants';
 import { AccessoryItem, OilRig } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -188,6 +188,15 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
                 if (existingCount >= preset.specialProperties.maxAllowed) isMaxReached = true;
               }
 
+              // Hide Rotten Glove if owned
+              if (preset.id === 9) {
+                const existingCount = rigs.filter(r => {
+                  const rName = typeof r.name === 'string' ? r.name : (r.name?.th || r.name?.en);
+                  return rName === preset.name.th || rName === preset.name.en;
+                }).length;
+                if (existingCount > 0) return null;
+              }
+
               // Check Affordability (Price OR Crafting)
               let isAffordable = true;
               if (preset.craftingRecipe) {
@@ -221,7 +230,7 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
                   <div className={`p-3 flex items-center gap-3 bg-gradient-to-r ${styles.bg} border-b border-stone-800/50`}>
                     {renderTierIcon(preset.id)}
                     <div className="min-w-0">
-                      <div className="text-xs font-black text-white uppercase tracking-widest mb-0.5">Tier {preset.id}</div>
+                      <div className="text-xs font-black text-white uppercase tracking-widest mb-0.5">{t('machine_shop.stats.tier')} {preset.id}</div>
                       <h3 className={`font-display font-bold text-sm leading-tight truncate ${styles.text}`}>
                         {getLocalized(preset.name)}
                       </h3>
@@ -230,9 +239,30 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
 
                   {/* Compact Stats */}
                   <div className="p-2.5 flex-1 flex flex-col gap-1.5 text-xs">
-                    <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
-                      <span className="text-stone-500">{t('machine_shop.production')}</span>
-                      <span className="text-yellow-500 font-bold font-mono">+{formatCurrency(preset.dailyProfit)}/{t('time.day')}</span>
+                    {/* Hashrate & Stability (Volatility Model) */}
+                    <div className="flex flex-col gap-1 w-full bg-stone-950/30 px-2 py-1.5 rounded">
+                      <div className="flex justify-between items-center text-[10px] text-stone-500 uppercase tracking-tighter">
+                        <div className="flex items-center gap-1">
+                          <span>{t('machine_shop.stats.hashrate')}</span>
+                          <div className="group/tooltip relative">
+                            <Info size={10} className="text-stone-600 cursor-help" />
+                            <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-stone-900 border border-stone-800 rounded shadow-xl text-[10px] text-stone-400 leading-relaxed opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-50 normal-case">
+                              {t('rig.volatility_tooltip') || "Income depends on daily market volatility and luck."}
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-yellow-500 font-bold font-mono">
+                          {MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMin} - {MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMax} MH/s
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-[10px] text-stone-500 uppercase tracking-tighter">
+                        <span>{t('machine_shop.stats.stability')}</span>
+                        <div className="flex items-center gap-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star key={i} size={8} className={i < (MINING_VOLATILITY_CONFIG[preset.id]?.stabilityStars || 0) ? 'text-yellow-500 fill-yellow-500' : 'text-stone-700'} />
+                          ))}
+                        </div>
+                      </div>
                     </div>
                     <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded">
                       <span className="text-stone-500">{t('machine_shop.contract')}</span>
@@ -280,8 +310,8 @@ export const InvestmentModal: React.FC<InvestmentModalProps> = ({
                       </div>
                     ) : (
                       <div className="flex justify-between items-center bg-stone-950/30 px-2 py-1 rounded border border-emerald-900/10">
-                        <span className="text-stone-500">{t('machine_shop.net_profit')}</span>
-                        <span className="text-emerald-400 font-bold font-mono">+{formatCurrency(netProfit)}</span>
+                        <span className="text-stone-500">{t('machine_shop.estimated_earnings')}</span>
+                        <span className="text-emerald-400 font-bold font-mono">{formatCurrency(preset.dailyProfit)}/24h</span>
                       </div>
                     )}
                   </div>

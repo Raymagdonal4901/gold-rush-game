@@ -19,6 +19,7 @@ const run = async () => {
 
         // Reset user for testing
         user.unlockedSlots = 3;
+        user.miningSlots = 3;
         user.balance = 10000;
         await user.save();
 

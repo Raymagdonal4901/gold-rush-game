@@ -10,7 +10,7 @@ export interface UserStats {
     withdrawalHistory?: WithdrawalRequest[];
     depositHistory?: DepositRequest[];
 }
-import { User, OilRig, AccessoryItem, ClaimRequest, WithdrawalRequest, DepositRequest, Transaction, ChatMessage, MarketState, CraftingQueueItem } from './types';
+import { User, OilRig, AccessoryItem, ClaimRequest, WithdrawalRequest, Withdrawal, DepositRequest, Transaction, ChatMessage, MarketState, CraftingQueueItem } from './types';
 
 const isProd = (import.meta as any).env.PROD;
 const API_URL = (import.meta as any).env.VITE_API_URL ||
@@ -35,30 +35,13 @@ client.interceptors.request.use((config) => {
 
 export const api = {
     // Auth
-    register: async (username: string, password?: string, pin?: string, referralCode?: string): Promise<User> => {
-        const res = await client.post('/auth/register', { username, password, pin, referralCode });
-        if (res.data.token) {
-            localStorage.setItem('token', res.data.token);
-        }
-        const user = res.data.user;
-        return {
-            ...user,
-            id: user.id || user._id,
-            inventory: user.inventory || [],
-            notifications: user.notifications || [],
-            claimedRanks: user.claimedRanks || [],
-            stats: user.stats || {
-                totalMaterialsMined: 0,
-                totalMoneySpent: 0,
-                totalLogins: 0,
-                luckyDraws: 0,
-                questsCompleted: 0
-            }
-        } as User;
+    register: async (username: string, email: string, password?: string, pin?: string, referralCode?: string): Promise<{ message: string, requiresVerification: boolean }> => {
+        const res = await client.post('/auth/register', { username, email, password, pin, referralCode });
+        return res.data;
     },
 
-    login: async (username: string, password?: string, pin?: string): Promise<User> => {
-        const res = await client.post('/auth/login', { username, password, pin });
+    login: async (email: string, password?: string): Promise<User> => {
+        const res = await client.post('/auth/login', { email, password });
         if (res.data.token) {
             localStorage.setItem('token', res.data.token);
         }
@@ -81,6 +64,20 @@ export const api = {
         } as User;
     },
 
+    // Mines Game
+    getActiveMinesGame: async () => {
+        return await client.get('/mines/active');
+    },
+    startMinesGame: async (betAmount: number, minesCount: number) => {
+        return await client.post('/mines/start', { betAmount, minesCount });
+    },
+    revealMinesTile: async (tileIndex: number, gameId: string) => {
+        return await client.post('/mines/reveal', { tileIndex, gameId });
+    },
+    cashOutMines: async (gameId: string) => {
+        return await client.post('/mines/cashout', { gameId });
+    },
+
     getMe: async (): Promise<User> => {
         const res = await client.get('/auth/me');
         const user = res.data;
@@ -98,6 +95,11 @@ export const api = {
                 questsCompleted: 0
             }
         } as User;
+    },
+
+    verifyEmail: async (token: string): Promise<{ message: string }> => {
+        const res = await client.get(`/auth/verify-email?token=${token}`);
+        return res.data;
     },
 
     refillEnergy: async (type?: 'overclock'): Promise<{ success: boolean; message?: string; cost: number; balance: number; energy: number }> => {
@@ -130,18 +132,16 @@ export const api = {
         return res.data.map(mapBackendRigToFrontend);
     },
 
-    buyRig: async (name: string, investment: number, dailyProfit: number, durationDays: number, repairCost?: number, energyCostPerDay?: number, bonusProfit?: number): Promise<{ rig: OilRig, glove: AccessoryItem }> => {
+    buyRig: async (name: string, investment: number, dailyProfit: number, durationDays: number, repairCost?: number, energyCostPerDay?: number, bonusProfit?: number): Promise<{ rig: OilRig }> => {
         const res = await client.post('/rigs/buy', { name, investment, dailyProfit, durationDays, repairCost, energyCostPerDay, bonusProfit });
         return {
-            rig: mapBackendRigToFrontend(res.data.rig),
-            glove: mapBackendGloveToFrontend(res.data.glove)
+            rig: mapBackendRigToFrontend(res.data.rig)
         };
     },
-    craftRig: async (name: string): Promise<{ rig: OilRig, glove?: AccessoryItem, success: boolean }> => {
+    craftRig: async (name: string): Promise<{ rig: OilRig, success: boolean }> => {
         const res = await client.post('/rigs/craft', { name });
         return {
             rig: mapBackendRigToFrontend(res.data.rig),
-            glove: res.data.glove ? mapBackendGloveToFrontend(res.data.glove) : undefined,
             success: res.data.success
         };
     },
@@ -155,8 +155,9 @@ export const api = {
         const res = await client.post('/transactions/withdraw', { amount, pin, method, walletAddress });
         return res.data;
     },
-    claimReward: async (rigId: string, amount: number): Promise<any> => {
-        const res = await client.post(`/rigs/${rigId}/claim`, { amount });
+    claimReward: async (rigId: string, _amount?: number): Promise<any> => {
+        // Dynamic Volatility: backend คำนวณ yield เอง ไม่ต้องส่ง amount จาก frontend
+        const res = await client.post(`/rigs/${rigId}/claim`);
         return res.data;
     },
     collectMaterials: async (rigId: string, amount: number, tier: number): Promise<any> => {
@@ -210,6 +211,10 @@ export const api = {
         const response = await client.post(`/rigs/${rigId}/destroy`);
         return response.data;
     },
+    mergeRigs: async (rigId1: string, rigId2: string): Promise<{ success: boolean, rig: OilRig, message?: string }> => {
+        const res = await client.post('/rigs/merge', { rigId1, rigId2 });
+        return res.data;
+    },
 
     upgradeAccessory: async (itemId: string, useInsurance: boolean): Promise<any> => {
         const response = await client.post('/accessories/upgrade', { itemId, useInsurance });
@@ -238,7 +243,7 @@ export const api = {
         return res.data;
     },
     playLuckyDraw: async (): Promise<any> => {
-        const res = await client.post('/users/lucky-draw');
+        const res = await client.post('/lucky-draw/play');
         return res.data;
     },
     crafting: {
@@ -337,9 +342,9 @@ export const api = {
             const res = await client.get('/admin/claims');
             return res.data.map(mapBackendClaimToFrontend);
         },
-        getPendingWithdrawals: async (): Promise<WithdrawalRequest[]> => {
+        getPendingWithdrawals: async (): Promise<Withdrawal[]> => {
             const res = await client.get('/admin/withdrawals');
-            return res.data.map(mapBackendWithdrawalToFrontend);
+            return res.data.map(mapBackendNewWithdrawalToFrontend);
         },
         getPendingDeposits: async (): Promise<DepositRequest[]> => {
             const res = await client.get('/admin/deposits');
@@ -349,8 +354,8 @@ export const api = {
             const res = await client.post(`/admin/deposits/${id}/process`, { status });
             return res.data;
         },
-        processWithdrawal: async (id: string, status: 'APPROVED' | 'REJECTED'): Promise<any> => {
-            const res = await client.post(`/admin/withdrawals/${id}/process`, { status });
+        processWithdrawal: async (id: string, action: 'APPROVE' | 'REJECT', adminNote?: string): Promise<any> => {
+            const res = await client.put(`/admin/withdrawals/${id}`, { action, adminNote });
             return res.data;
         },
         getUserStats: async (userId: string): Promise<UserStats> => {
@@ -376,8 +381,12 @@ export const api = {
             const res = await client.post('/admin/users/items', { userId, itemId, amount, message });
             return res.data;
         },
-        resetAllBalances: async (): Promise<any> => {
-            const res = await client.post('/admin/users/reset-balances');
+        resetAllPlayerData: async (): Promise<any> => {
+            const res = await client.post('/admin/users/reset-all');
+            return res.data;
+        },
+        deleteAllUsers: async (): Promise<any> => {
+            const res = await client.post('/admin/users/delete-all');
             return res.data;
         },
         deleteUser: async (userId: string): Promise<any> => {
@@ -398,7 +407,7 @@ export const api = {
             return res.data;
         },
         getDashboardStats: async (): Promise<any> => {
-            const res = await client.get('/admin/dashboard-stats');
+            const res = await client.get('/admin/stats');
             return res.data;
         },
         getGlobalRevenue: async (): Promise<any> => {
@@ -415,6 +424,14 @@ export const api = {
         },
         adjustGlobalRevenue: async (amount: number, reason: string): Promise<any> => {
             const res = await client.post('/admin/revenue/adjust', { amount, reason });
+            return res.data;
+        },
+        getRevenueStats: async (): Promise<{
+            totals: Record<string, number>;
+            trend: { date: string, amount: number }[];
+            recent: { id: string, username: string, type: string, amount: number, description: string, timestamp: number }[];
+        }> => {
+            const res = await client.get('/admin/revenue-stats');
             return res.data;
         }
     },
@@ -456,6 +473,10 @@ export const api = {
         updateProfile: async (data: { walletAddress?: string }): Promise<any> => {
             const res = await client.post('/users/profile', data);
             return res.data;
+        },
+        getReferrals: async (): Promise<{ username: string, joinedAt: string }[]> => {
+            const res = await client.get('/users/referrals');
+            return res.data;
         }
     },
     dungeon: {
@@ -482,6 +503,22 @@ export const api = {
     deleteNotification: async (notificationId: string): Promise<{ success: boolean; user: User }> => {
         const res = await client.delete(`/users/notifications/${notificationId}`);
         return res.data;
+    },
+
+    // Wallet
+    wallet: {
+        requestWithdraw: async (amount: number, bankDetails: { bankName: string, accountNumber: string, accountName: string }): Promise<any> => {
+            const res = await client.post('/wallet/withdraw', { amount, bankDetails });
+            return res.data;
+        },
+        getHistory: async (): Promise<Transaction[]> => {
+            const res = await client.get('/wallet/history');
+            return res.data;
+        },
+        adminApprove: async (withdrawalId: string, action: 'APPROVE' | 'REJECT', adminNote?: string): Promise<any> => {
+            const res = await client.post('/wallet/admin/approve', { withdrawalId, action, adminNote });
+            return res.data;
+        }
     }
 };
 
@@ -513,30 +550,6 @@ const mapBackendRigToFrontend = (backendRig: any): OilRig => {
     } as OilRig;
 };
 
-const mapBackendGloveToFrontend = (backendGlove: any): AccessoryItem => {
-    if (!backendGlove) return {} as AccessoryItem;
-    return {
-        id: backendGlove._id || backendGlove.id,
-        typeId: backendGlove.typeId || backendGlove.type || (
-            backendGlove.name.includes('ชิป') ? 'upgrade_chip' :
-                backendGlove.name.includes('กุญแจ') ? 'chest_key' :
-                    backendGlove.name.includes('หุ่นยนต์') ? null :
-                        backendGlove.name.includes('ถุงมือ') ? 'glove' : 'unknown'
-        ),
-        name: backendGlove.name,
-        price: backendGlove.price || 0,
-        dailyBonus: backendGlove.dailyBonus || 0,
-        durationBonus: backendGlove.durationBonus || 0,
-        rarity: backendGlove.rarity,
-        purchasedAt: new Date(backendGlove.purchasedAt || Date.now()).getTime(),
-        lifespanDays: backendGlove.lifespanDays || 30,
-        expireAt: new Date(backendGlove.expireAt || Date.now() + 30 * 24 * 60 * 60 * 1000).getTime(),
-        level: backendGlove.level || 1,
-        // Optional fields that might be in backendGlove or not
-        isHandmade: backendGlove.isHandmade,
-        specialEffect: backendGlove.specialEffect
-    } as AccessoryItem;
-};
 
 const mapBackendDepositToFrontend = (d: any): DepositRequest => ({
     id: d._id || d.id,
@@ -560,6 +573,20 @@ const mapBackendWithdrawalToFrontend = (w: any): WithdrawalRequest => ({
     walletAddress: w.walletAddress,
     bankQrCode: w.bankQrCode,
     transactionId: w.transactionId
+});
+
+const mapBackendNewWithdrawalToFrontend = (w: any): Withdrawal => ({
+    id: w._id || w.id,
+    userId: typeof w.userId === 'object' ? (w.userId._id || w.userId.id) : w.userId,
+    amount: w.amount,
+    status: w.status,
+    bankDetails: w.bankDetails,
+    adminNote: w.adminNote,
+    createdAt: new Date(w.createdAt).getTime(),
+    user: typeof w.userId === 'object' ? {
+        username: w.userId.username,
+        email: w.userId.email
+    } : undefined
 });
 
 const mapBackendClaimToFrontend = (c: any): ClaimRequest => ({

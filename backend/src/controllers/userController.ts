@@ -3,11 +3,7 @@ import User from '../models/User';
 import Rig from '../models/Rig';
 import { AuthRequest } from '../middleware/auth';
 
-const SLOT_EXPANSION_CONFIG: Record<number, { title: string; cost: number; mats: Record<number, number>; item?: string; itemCount?: number }> = {
-    4: { title: 'ขยายพื้นที่ขุดเจาะช่องที่ 4', cost: 57.1429, mats: { 3: 30, 4: 10 }, item: 'chest_key', itemCount: 1 },
-    5: { title: 'ขยายพื้นที่ขุดเจาะช่องที่ 5', cost: 85.7143, mats: { 5: 10, 6: 5 }, item: 'upgrade_chip', itemCount: 5 },
-    6: { title: 'สร้างแท่นขุดเจาะพิเศษ (Master Wing)', cost: 142.8571, mats: { 7: 1, 8: 1, 9: 1 }, item: undefined, itemCount: 0 },
-};
+import { MATERIAL_CONFIG, SLOT_EXPANSION_CONFIG, SHOP_ITEMS } from '../constants';
 
 export const unlockSlot = async (req: AuthRequest, res: Response) => {
     try {
@@ -25,11 +21,22 @@ export const unlockSlot = async (req: AuthRequest, res: Response) => {
 
         // Idempotency: If already unlocked, return success immediately
         if (targetSlot <= currentUnlocked) {
+            // Repair if out of sync
+            const needsRepair = (user.warehouseCapacity || 0) < targetSlot || (user.miningSlots || 0) < targetSlot;
+            if (needsRepair) {
+                user.warehouseCapacity = Math.max(user.warehouseCapacity || 0, targetSlot);
+                user.miningSlots = Math.max(user.miningSlots || 0, targetSlot);
+                await user.save();
+                console.log(`[REPAIR] Fixed capacity for ${user.username} during redundant unlock of slot ${targetSlot}`);
+            }
+
             return res.json({
                 message: 'Slot already unlocked',
                 user: {
                     balance: user.balance,
                     unlockedSlots: user.unlockedSlots,
+                    miningSlots: user.miningSlots,
+                    warehouseCapacity: user.warehouseCapacity,
                     materials: user.materials,
                     inventory: user.inventory
                 }
@@ -66,7 +73,8 @@ export const unlockSlot = async (req: AuthRequest, res: Response) => {
             const inventory = user.inventory || [];
             const ownedItems = inventory.filter(i => i.typeId === config.item);
             if (ownedItems.length < needed) {
-                return res.status(400).json({ message: `Insufficient items: ${config.item}` });
+                const itemName = SHOP_ITEMS.find((s: any) => s.id === config.item)?.name?.th || config.item;
+                return res.status(400).json({ message: `อุปกรณ์ไม่เพียงพอ: ${itemName}` });
             }
 
             // Deduct items
@@ -92,6 +100,8 @@ export const unlockSlot = async (req: AuthRequest, res: Response) => {
 
         // Update Slots
         user.unlockedSlots = targetSlot;
+        user.miningSlots = targetSlot; // Synchronize warehouse capacity with unlocked slots
+        user.warehouseCapacity = targetSlot; // Synchronize official warehouse capacity field
 
         await user.save();
 
@@ -100,6 +110,8 @@ export const unlockSlot = async (req: AuthRequest, res: Response) => {
             user: {
                 balance: user.balance,
                 unlockedSlots: user.unlockedSlots,
+                miningSlots: user.miningSlots,
+                warehouseCapacity: user.warehouseCapacity,
                 materials: user.materials,
                 inventory: user.inventory
             }
@@ -189,29 +201,44 @@ export const recalculateAllUsersIncome = async (req: Request, res: Response) => 
 
 export const getLeaderboard = async (req: Request, res: Response) => {
     try {
-        // Fetch top 20 users by daily income (calculated or stored)
-        // Since dailyIncome isn't directly stored, we might use activeRigs calculation or just use balance/energy as proxy?
-        // Or fetch all and calculate.
-        // For MVP, user.weeklyStats.totalIncome or similar?
-        // Let's rely on User model having 'dailyIncome' field if possible, or calculate it.
-        // Wait, Rig model has dailyProfit.
-        // We need to aggregate Rigs for each user? That's expensive for all users.
-        // For now, let's sort by 'balance' or 'weeklyStats.totalIncome'.
-        // MockDB used 'dailyIncome' which was rigid. 
-        // Let's use 'balance' for "Richest".
-        // Title says "Top 10 Mining Empire" -> "อันดับเศรษฐี".
+        // Aggregation: Top 10 users by totalDailyIncome + their best rig (Ace Machine)
+        const pipeline = [
+            { $match: { totalDailyIncome: { $gt: 0 } } },
+            { $sort: { totalDailyIncome: -1 as const } },
+            { $limit: 10 },
+            {
+                $lookup: {
+                    from: 'rigs',
+                    let: { odId: { $toString: '$_id' } },
+                    pipeline: [
+                        { $match: { $expr: { $eq: ['$ownerId', '$$odId'] }, isDead: { $ne: true } } },
+                        { $sort: { tierId: -1 as const, investment: -1 as const } },
+                    ],
+                    as: 'rigs'
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    username: 1,
+                    totalDailyIncome: 1,
+                    rigCount: { $size: '$rigs' },
+                    aceRig: { $arrayElemAt: ['$rigs', 0] },
+                }
+            }
+        ];
 
-        // Fetch top 20 users by totalDailyIncome
-        const users = await User.find({ totalDailyIncome: { $gt: 0 } })
-            .sort({ totalDailyIncome: -1 })
-            .limit(20)
-            .select('username totalDailyIncome balance');
+        const results = await User.aggregate(pipeline);
 
-        // Map to format
-        const leaders = users.map((u, index) => ({
+        const leaders = results.map((u: any, index: number) => ({
             id: u._id,
             username: u.username,
             dailyIncome: u.totalDailyIncome || 0,
+            rigCount: u.rigCount || 0,
+            aceRig: u.aceRig ? {
+                tierId: u.aceRig.tierId || 1,
+                name: u.aceRig.name,
+            } : null,
             rank: index + 1
         }));
 
@@ -352,6 +379,24 @@ export const deleteNotification = async (req: AuthRequest, res: Response) => {
         });
     } catch (error) {
         console.error('Delete notification error:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+export const getReferrals = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.userId;
+        const referrals = await User.find({ referrerId: userId })
+            .select('username createdAt')
+            .sort({ createdAt: -1 });
+
+        const mappedReferrals = referrals.map(u => ({
+            username: u.username.length > 4 ? u.username.substring(0, 4) + '***' : u.username + '***',
+            joinedAt: u.createdAt
+        }));
+
+        res.json(mappedReferrals);
+    } catch (error) {
+        console.error('Get referrals error:', error);
         res.status(500).json({ message: 'Server error', error });
     }
 };

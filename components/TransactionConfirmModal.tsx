@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Flame, AlertCircle } from 'lucide-react';
+import { X, Zap, AlertCircle } from 'lucide-react';
 
 interface TransactionConfirmModalProps {
     isOpen: boolean;
@@ -35,18 +35,18 @@ export const TransactionConfirmModal: React.FC<TransactionConfirmModalProps> = (
             {/* Modal Container */}
             <div className={`
                 relative w-full max-w-md bg-stone-900 border-2 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200
-                ${type === 'furnace' ? 'border-orange-500/50 shadow-[0_0_30px_rgba(249,115,22,0.2)]' : 'border-stone-700'}
+                ${type === 'furnace' ? 'border-cyan-500/50 shadow-[0_0_30px_rgba(6,182,212,0.2)]' : 'border-stone-700'}
             `}>
                 {/* Visual Flair (Glowing Background) */}
                 {type === 'furnace' && (
-                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-orange-600/20 rounded-full blur-[80px]"></div>
+                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-600/20 rounded-full blur-[80px]"></div>
                 )}
 
                 {/* Header */}
                 <div className="relative p-6 flex items-center justify-between border-b border-stone-800 bg-stone-900/50">
                     <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-xl ${type === 'furnace' ? 'bg-orange-500/20 text-orange-500' : 'bg-stone-800 text-stone-400'}`}>
-                            {type === 'furnace' ? <Flame size={24} className="animate-pulse" /> : <AlertCircle size={24} />}
+                        <div className={`p-2 rounded-xl ${type === 'furnace' ? 'bg-cyan-500/20 text-cyan-500' : 'bg-stone-800 text-stone-400'}`}>
+                            {type === 'furnace' ? <Zap size={24} className="animate-pulse" /> : <AlertCircle size={24} />}
                         </div>
                         <h3 className="text-lg font-black uppercase tracking-tighter text-stone-100 italic">
                             {title}
@@ -67,9 +67,9 @@ export const TransactionConfirmModal: React.FC<TransactionConfirmModalProps> = (
                     </p>
 
                     {type === 'furnace' && (
-                        <div className="mt-6 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10 text-center">
-                            <span className="text-[10px] uppercase font-black tracking-[0.3em] text-orange-500/70">
-                                Premium Refill Action
+                        <div className="mt-6 p-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/10 text-center">
+                            <span className="text-[10px] uppercase font-black tracking-[0.3em] text-cyan-500/70">
+                                High-Performance Overclock
                             </span>
                         </div>
                     )}
@@ -88,7 +88,7 @@ export const TransactionConfirmModal: React.FC<TransactionConfirmModalProps> = (
                         className={`
                             flex-1 py-4 px-6 rounded-2xl font-black uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-lg
                             ${type === 'furnace'
-                                ? 'bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-orange-900/20 animate-pulse'
+                                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-cyan-900/20 animate-pulse'
                                 : 'bg-emerald-600 text-white shadow-emerald-900/20'
                             }
                         `}

@@ -11,10 +11,17 @@ export const connectDB = async () => {
   }
 
   try {
-    const conn = await mongoose.connect(uri);
+    console.log(`📡 Attempting connection to: ${uri!.split('@')[1] || uri}`);
+    const conn = await mongoose.connect(uri!, {
+      connectTimeoutMS: 10000, // 10s timeout
+      serverSelectionTimeoutMS: 10000,
+    });
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`❌ MongoDB Connection Error:`, error);
-    process.exit(1); // ปิดโปรแกรมทันทีถ้าต่อ Database ไม่ได้
+  } catch (error: any) {
+    console.error(`❌ MongoDB Connection Error:`, error.message);
+    if (error.name === 'MongooseServerSelectionError') {
+      console.error('💡 TIP: This is likely an IP Whitelist issue. Ensure 0.0.0.0/0 is added to your Atlas Network Access.');
+    }
+    process.exit(1);
   }
 };

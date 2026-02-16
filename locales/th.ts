@@ -111,9 +111,29 @@ export const th = {
         capacity: "ความจุ",
         collect: "เก็บ",
         pay: "จ่าย",
-        refill: "เติม"
+        refill: "เติม",
+        confirm_demolish: "ยืนยันการทำลาย",
+        confirm_demolish_msg: "คุณแน่ใจหรือไม่ที่จะหลอมเครื่องขุดนี้? เครื่องขุดจะถูกทำลายและคุณจะได้รับวัตถุดิบบางส่วนคืน",
+        melt_scrap: "หลอมเป็นเศษเหล็ก",
+        exploring: "กำลังสำรวจ..."
     },
     time: {
         day: "วัน"
+    },
+    mines: {
+        title: "MINES",
+        subtitle: "เกมวัดดวง เสี่ยงโชคเพื่อรับรางวัล",
+        bet_amount: "จำนวนเงินเดิมพัน",
+        mines_count: "จำนวนระเบิด",
+        start_game: "เริ่มเกมเดี๋ยวนี้",
+        cash_out: "ถอนเงินรางวัล",
+        potential_win: "รางวัลที่จะได้รับ",
+        boom: "ตู้มมม! คุณเจอกับระเบิดเข้าแล้ว",
+        win: "ยินดีด้วย คุณชนะ!",
+        play_again: "เล่นอีกครั้ง",
+        insufficient_funds: "คุณมีเงินไม่พอสำหรับการเดิมพันนี้",
+        multiplier: "ตัวคูณ",
+        secure_logic: "ระบบยุติธรรม ตรวจสอบได้ (Provably Fair)",
+        mines_label: "ระเบิด",
     }
 };

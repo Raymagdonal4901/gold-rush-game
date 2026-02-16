@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Lock, CheckCircle2, AlertTriangle, Coins, Key, Cpu } from 'lucide-react';
+import { X, Lock, CheckCircle2, AlertTriangle, Coins, Key, Cpu, FileText } from 'lucide-react';
 import { MATERIAL_CONFIG, SLOT_EXPANSION_CONFIG, CURRENCY } from '../constants';
 import { User } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
@@ -94,15 +94,17 @@ export const SlotUnlockModal: React.FC<SlotUnlockModalProps> = ({ isOpen, onClos
                         <div className="text-xs font-bold text-stone-500 uppercase tracking-widest">เงื่อนไขการปลดล็อก</div>
 
                         {/* Money */}
-                        <div className="flex justify-between items-center bg-stone-900 p-3 rounded-lg border border-stone-800">
-                            <div className="flex items-center gap-2">
-                                <div className="bg-yellow-900/20 p-1.5 rounded"><Coins size={16} className="text-yellow-500" /></div>
-                                <span className="text-sm font-bold text-stone-300">ค่าก่อสร้าง</span>
+                        {config.cost > 0 && (
+                            <div className="flex justify-between items-center bg-stone-900 p-3 rounded-lg border border-stone-800">
+                                <div className="flex items-center gap-2">
+                                    <div className="bg-yellow-900/20 p-1.5 rounded"><Coins size={16} className="text-yellow-500" /></div>
+                                    <span className="text-sm font-bold text-stone-300">ค่าก่อสร้าง</span>
+                                </div>
+                                <div className={(user?.balance || 0) >= config.cost ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                                    {config.cost.toLocaleString()} {CURRENCY}
+                                </div>
                             </div>
-                            <div className={(user?.balance || 0) >= config.cost ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
-                                {config.cost.toLocaleString()} {CURRENCY}
-                            </div>
-                        </div>
+                        )}
 
                         {/* Materials */}
                         {matReqs.map((req, i) => (
@@ -122,10 +124,14 @@ export const SlotUnlockModal: React.FC<SlotUnlockModalProps> = ({ isOpen, onClos
                             <div className="flex justify-between items-center bg-stone-900 p-3 rounded-lg border border-stone-800">
                                 <div className="flex items-center gap-2">
                                     <div className="bg-purple-900/20 p-1.5 rounded">
-                                        {itemReq.id === 'chest_key' ? <Key size={16} className="text-purple-400" /> : <Cpu size={16} className="text-purple-400" />}
+                                        {itemReq.id === 'chest_key' ? <Key size={16} className="text-purple-400" /> :
+                                            itemReq.id === 'slot_blueprint' ? <FileText size={16} className="text-blue-400" /> :
+                                                <Cpu size={16} className="text-purple-400" />}
                                     </div>
                                     <span className="text-sm font-bold text-stone-300">
-                                        {itemReq.id === 'chest_key' ? 'กุญแจเข้าเหมือง' : 'ชิปอัปเกรด'}
+                                        {itemReq.id === 'chest_key' ? 'กุญแจเข้าเหมือง' :
+                                            itemReq.id === 'slot_blueprint' ? 'ใบพิมพ์เขียวขยายพื้นที่' :
+                                                'ชิปอัปเกรด'}
                                     </span>
                                 </div>
                                 <div className={itemReq.owned >= itemReq.needed ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>

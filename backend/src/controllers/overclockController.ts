@@ -6,7 +6,7 @@ import { AuthRequest } from '../middleware/auth';
 const EXCHANGE_RATE = 1;
 const OVERCLOCK_COST_THB = 50;
 const OVERCLOCK_COST = OVERCLOCK_COST_THB; // 1:1 direct Baht
-const OVERCLOCK_DURATION_MS = 48 * 60 * 60 * 1000; // 48 hours
+const OVERCLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours (Fixed duration)
 
 export const activateOverclock = async (req: AuthRequest, res: Response) => {
     try {
@@ -61,7 +61,7 @@ export const activateOverclock = async (req: AuthRequest, res: Response) => {
                 userId,
                 type: 'ENERGY_REFILL',
                 amount: OVERCLOCK_COST,
-                description: 'เร่งพลังการผลิต (Overclock 48 ชม.)',
+                description: 'เร่งพลังการผลิต (Overclock 24 ชม.)',
                 status: 'COMPLETED',
                 timestamp: new Date()
             });
@@ -89,33 +89,8 @@ export const deactivateOverclock = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // If already inactive/paused, return
-        if (!user.isOverclockActive) {
-            return res.json({
-                success: true,
-                overclockExpiresAt: null,
-                overclockRemainingMs: user.overclockRemainingMs,
-                newBalance: user.balance
-            });
-        }
-
-        // Calculate remaining time
-        const now = Date.now();
-        const expiryTime = user.overclockExpiresAt ? new Date(user.overclockExpiresAt).getTime() : 0;
-        const remainingMs = Math.max(0, expiryTime - now);
-
-        // Pause
-        user.isOverclockActive = false;
-        user.overclockRemainingMs = remainingMs;
-        user.overclockExpiresAt = undefined;
-        await user.save();
-
-        res.json({
-            success: true,
-            overclockExpiresAt: null,
-            overclockRemainingMs: remainingMs,
-            newBalance: user.balance
-        });
+        // Pausing is no longer supported in the fixed-duration model
+        return res.status(400).json({ message: 'Overclock cannot be paused in this mode' });
 
     } catch (error) {
         console.error('[Deactivate Overclock Error]', error);

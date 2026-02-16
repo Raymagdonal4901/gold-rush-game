@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Sparkles, XCircle, Hammer, Backpack, Glasses, Monitor, Smartphone, Truck, Footprints, Zap, TrendingUp, Rocket, Flame, CloudFog, Anvil, FileText, HardHat, Shirt, Bot, Key, Factory, Search, Hourglass, Gem, Lock, Wrench, Clock, Timer, Ticket, Briefcase, Settings, TrainFront } from 'lucide-react';
 import { AccessoryItem, OilRig } from '../services/types';
-import { InfinityGlove } from './InfinityGlove';
 import { PixelProgressBar } from './PixelProgressBar';
-import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS, REPAIR_KITS, GLOVE_DETAILS } from '../constants';
+import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS, REPAIR_KITS } from '../constants';
 import { api } from '../services/api';
 import { MaterialIcon } from './MaterialIcon';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -92,11 +91,11 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
         setTimeout(() => {
             setUpgradePhase('HAMMERING');
-        }, 1500);
+        }, 500);
 
         setTimeout(() => {
             setUpgradePhase('COOLING');
-        }, 3500);
+        }, 1000);
 
         try {
             const res = await api.inventory.upgrade(equippedItem.id, useInsurance);
@@ -123,7 +122,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 onRefresh();
                 setIsUpgrading(false);
                 setUpgradePhase('IDLE');
-            }, 4500);
+            }, 1500);
         } catch (e: any) {
             setTimeout(() => {
                 setUpgradeMsg({
@@ -133,7 +132,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 });
                 setIsUpgrading(false);
                 setUpgradePhase('IDLE');
-            }, 4500);
+            }, 1500);
         }
     };
 
@@ -205,8 +204,6 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
     const getSeriesKey = (typeIdRaw: string | null | undefined) => {
         const typeId = typeIdRaw || '';
-        // Gloves are special (don't have a prefix like hat_ but we treat them as a series)
-        if (typeId.includes('glove')) return 'glove';
 
         // Match by exact key or prefix
         const seriesKeys = Object.keys(EQUIPMENT_SERIES);
@@ -246,10 +243,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
     const availableItems = inventory.filter(item => {
         if (!item) return false;
-        const typeId = item.typeId || '';
-        const isGlove = typeId.includes('glove');
-        if (slotIndex === 0) return isGlove;
-        return !isGlove && isEquipable(item);
+        return isEquipable(item);
     }).filter(item => {
         // HP-based check
         if (item.currentDurability !== undefined) return item.currentDurability > 0;
@@ -268,16 +262,6 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         // 1. Hardware/Software Series Name Resolution
         const seriesKey = getSeriesKey(typeId);
         if (seriesKey) {
-            if (seriesKey === 'glove') {
-                const gloveInfo = GLOVE_DETAILS[rarity as keyof typeof GLOVE_DETAILS];
-                if (gloveInfo) return getLocalized(gloveInfo.name);
-            } else {
-                const series = EQUIPMENT_SERIES[seriesKey as keyof typeof EQUIPMENT_SERIES];
-                if (series) {
-                    const tier = series.tiers.find(t => t.rarity === rarity);
-                    if (tier) return getLocalized(tier.name);
-                }
-            }
         }
 
         // 2. Fallback to generic config-based names
@@ -292,7 +276,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
     };
 
     const getAccessoryIcon = (item: AccessoryItem, size: number = 64) => {
-        if (!item) return <InfinityGlove size={size} />;
+        if (!item) return <Briefcase size={size} />;
 
         // Fix: Force detecting type by name if typeId is generic or missing specific handling
         let typeId = item.typeId || '';
@@ -301,7 +285,6 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         const enName = typeof nameRaw === 'object' ? (nameRaw as any)?.en || '' : String(nameRaw || '');
         const thName = typeof nameRaw === 'object' ? (nameRaw as any)?.th || '' : String(nameRaw || '');
 
-        // Name-based overrides to fix "Glove" icon issue
         if (enName.includes('Chip') || thName.includes('ชิป')) typeId = 'upgrade_chip';
         else if (enName.includes('Key') || thName.includes('กุญแจ')) typeId = 'chest_key';
         else if (enName.includes('Mixer') || thName.includes('เครื่องผสม')) typeId = 'mixer';
@@ -330,10 +313,9 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             else typeId = 'repair_kit_1';
         }
 
-        if (typeId.includes('glove')) return <InfinityGlove rarity={item.rarity} size={size} />;
 
         const getNeonIcon = (typeId: string) => {
-            if (!typeId) return <InfinityGlove size={size} />;
+            if (!typeId) return <Briefcase size={size} />;
             const props = { size, className: "relative z-10" };
 
             if (typeId.startsWith('glasses')) {
@@ -439,7 +421,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 );
             }
 
-            return <InfinityGlove size={size} className={props.className} />;
+            return <Briefcase size={size} className={props.className} />;
         };
 
         return getNeonIcon(typeId);
@@ -594,18 +576,6 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             const seriesKey = getSeriesKey(equippedItem.typeId);
             if (seriesKey && EQUIPMENT_UPGRADE_CONFIG[seriesKey]) {
                 upgradeReq = EQUIPMENT_UPGRADE_CONFIG[seriesKey][currentLevel];
-            } else if (equippedItem.typeId && equippedItem.typeId.includes('glove')) {
-                const legacyReq = UPGRADE_REQUIREMENTS[currentLevel];
-                if (legacyReq) {
-                    upgradeReq = {
-                        chipAmount: legacyReq.catalyst || 0,
-                        matTier: legacyReq.matTier,
-                        matAmount: legacyReq.matAmount,
-                        cost: legacyReq.cost,
-                        chance: legacyReq.chance || 1.0,
-                        bonusMultiplier: 0
-                    };
-                }
             }
         }
 
@@ -737,7 +707,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                                                 userId,
                                                                 message: language === 'th'
                                                                     ? `ไม่มี ${getLocalized(kitConfig.name)} ในกระเป๋า — ไปคราฟต์ก่อน!`
-                                                                    : `No ${kitConfig.name.en} in inventory — craft one first!`,
+                                                                    : `No ${getLocalized(kitConfig.name)} in inventory — craft one first!`,
                                                                 type: 'WARNING',
                                                                 read: false,
                                                                 timestamp: Date.now()

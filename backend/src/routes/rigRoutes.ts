@@ -11,7 +11,8 @@ import {
     repairRig,
     destroyRig,
     craftRig,
-    renewRig
+    renewRig,
+    mergeRigs
 } from '../controllers/rigController';
 import { authenticate } from '../middleware/auth';
 
@@ -20,6 +21,7 @@ const router = express.Router();
 router.get('/', authenticate, getMyRigs);
 router.post('/buy', authenticate, buyRig);
 router.post('/craft', authenticate, craftRig);
+router.post('/merge', authenticate, mergeRigs);
 router.post('/:id/refill', authenticate, refillRigEnergy);
 router.post('/:id/claim', authenticate, claimRigProfit);
 router.post('/:id/collect', authenticate, collectMaterials);

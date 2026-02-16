@@ -14,6 +14,7 @@ import { api } from '../services/api';
 export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [pin, setPin] = useState('');
   const [referralCode, setReferralCode] = useState('');
@@ -27,6 +28,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
       console.error(`[BROWSER ERROR] ${event.message}\nAt: ${event.filename}:${event.lineno}`);
     };
     window.addEventListener('error', errorHandler);
+
+    // Capture Referral Code from URL
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      console.log(`[AUTH] Referral code detected from URL: ${ref}`);
+      setReferralCode(ref);
+      setIsLogin(false); // Switch to Register mode if ref code is present
+    }
 
     return () => window.removeEventListener('error', errorHandler);
   }, []);
@@ -58,7 +68,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
       if (isLogin) {
         user = await api.login(trimmedUsername, trimmedPassword, pin);
       } else {
-        user = await api.register(trimmedUsername, trimmedPassword, pin, referralCode.trim());
+        if (!email.trim() || !email.includes('@')) {
+          setError("กรุณากรอกอีเมลให้ถูกต้อง");
+          setLoading(false);
+          return;
+        }
+        user = await api.register(trimmedUsername, email.trim(), trimmedPassword, pin, referralCode.trim());
       }
 
       console.log('[AUTH] Login successful:', user.username);
@@ -79,6 +94,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
     setIsLogin(!isLogin);
     setError('');
     setUsername('');
+    setEmail('');
     setPassword('');
     setPin('');
     setReferralCode('');
@@ -123,6 +139,23 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
               />
             </div>
           </div>
+
+          {!isLogin && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <label className="text-xs font-bold text-yellow-600 uppercase tracking-wider">อีเมล (Email)</label>
+              <div className="relative group">
+                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 group-focus-within:text-yellow-500 transition-colors" size={18} />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full bg-stone-950/50 border border-stone-700 rounded-sm py-3 pl-10 pr-4 text-yellow-100 focus:border-yellow-500 outline-none transition-all placeholder:text-stone-700 font-mono"
+                  placeholder="กรอกอีเมลของคุณ"
+                />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-yellow-600 uppercase tracking-wider">รหัสผ่าน</label>

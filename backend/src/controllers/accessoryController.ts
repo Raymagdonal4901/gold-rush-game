@@ -17,8 +17,8 @@ export const buyAccessory = async (req: AuthRequest, res: Response) => {
         const actualItemId = itemId || typeId; // Handle mismatch
         const userId = req.userId;
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
         if (user.balance < price) {
             return res.status(400).json({ message: 'Insufficient balance' });
@@ -31,8 +31,8 @@ export const buyAccessory = async (req: AuthRequest, res: Response) => {
         const accessoryId = Math.random().toString(36).substr(2, 9);
         const expireAt = lifespanDays ? Date.now() + (lifespanDays * 24 * 60 * 60 * 1000) : null;
 
-        // Look up item config from centralized SHOP_ITEMS
-        const shopConfig = SHOP_ITEMS.find(s => s.id === actualItemId);
+        // Look up item config from centralized SHOP_ITEMS or REPAIR_KITS
+        const shopConfig = (SHOP_ITEMS as any[]).find(s => s.id === actualItemId) || (REPAIR_KITS as any[]).find(k => k.id === actualItemId);
         let calculatedBonus = dailyBonus || 0;
 
         if (shopConfig && shopConfig.minBonus !== undefined && shopConfig.maxBonus !== undefined && shopConfig.minBonus < shopConfig.maxBonus) {
@@ -53,7 +53,8 @@ export const buyAccessory = async (req: AuthRequest, res: Response) => {
             purchasedAt: Date.now(),
             lifespanDays: lifespanDays || 9999,
             expireAt: expireAt,
-            level: 1
+            level: 1,
+            category: (shopConfig as any)?.category || (actualItemId.startsWith('repair_kit_') ? 'REPAIR_KIT' : undefined)
         };
 
         // เพิ่ม durability fields สำหรับ equipment items
@@ -74,12 +75,13 @@ export const buyAccessory = async (req: AuthRequest, res: Response) => {
         user.markModified('weeklyStats');
 
         // Log Transaction
+        const displayName = name ? (typeof name === 'object' ? (name.th || name.en || 'อุปกรณ์') : name) : 'ไม่ระบุชื่อ';
         const purchaseTx = new Transaction({
             userId,
-            type: 'ACCESSORY_PURCHASE',
+            type: 'ITEM_BUY',
             amount: price,
             status: 'COMPLETED',
-            description: `ซื้ออุปกรณ์: ${typeof name === 'object' ? name.th : name}`
+            description: `ซื้ออุปกรณ์: ${displayName}`
         });
         await purchaseTx.save();
 
@@ -97,12 +99,10 @@ export const buyAccessory = async (req: AuthRequest, res: Response) => {
 
 export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
     try {
-        const userId = req.userId;
+        const user = req.user;
+        if (!user || !user.inventory) return res.status(401).json({ message: 'Unauthorized' });
+
         const { itemId, useInsurance } = req.body;
-
-        const user = await User.findById(userId);
-        if (!user || !user.inventory) return res.status(404).json({ message: 'User not found' });
-
         const itemIndex = user.inventory.findIndex((i: any) => (i.id === itemId || i._id === itemId));
         if (itemIndex === -1) return res.status(404).json({ message: 'Item not found' });
 
@@ -199,7 +199,7 @@ export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
 
         // Log Transaction
         const upgradeTx = new Transaction({
-            userId,
+            userId: user._id,
             type: 'ACCESSORY_UPGRADE',
             amount: cost,
             status: success ? 'COMPLETED' : 'REJECTED',
@@ -208,7 +208,7 @@ export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
         await upgradeTx.save();
 
         // Recalculate Income (if equipped)
-        await recalculateUserIncome(userId as string);
+        await recalculateUserIncome(user._id.toString());
 
         res.json({
             success,
@@ -228,15 +228,10 @@ export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
 
 export const repairEquipment = async (req: AuthRequest, res: Response) => {
     try {
-        const userId = req.userId;
+        const user = req.user;
+        if (!user || !user.inventory) return res.status(401).json({ message: 'Unauthorized' });
+
         const { targetItemId, repairKitId } = req.body;
-
-        if (!targetItemId || !repairKitId) {
-            return res.status(400).json({ message: 'กรุณาระบุอุปกรณ์และชุดซ่อม' });
-        }
-
-        const user = await User.findById(userId);
-        if (!user || !user.inventory) return res.status(404).json({ message: 'User not found' });
 
         // Find both items in inventory
         const targetIndex = user.inventory.findIndex((i: any) => i.id === targetItemId);
@@ -248,8 +243,8 @@ export const repairEquipment = async (req: AuthRequest, res: Response) => {
         const targetItem = user.inventory[targetIndex];
         const repairKit = user.inventory[kitIndex];
 
-        // Validate it's actually a repair kit
-        if (!repairKit.isRepairKit && !repairKit.typeId?.startsWith('repair_kit_')) {
+        // Validate it's actually a repair kit using the new category or fallback checks
+        if (repairKit.category !== 'REPAIR_KIT' && !repairKit.isRepairKit && !repairKit.typeId?.startsWith('repair_kit_')) {
             return res.status(400).json({ message: 'ไอเทมนี้ไม่ใช่ชุดซ่อม' });
         }
 
@@ -314,7 +309,7 @@ export const repairEquipment = async (req: AuthRequest, res: Response) => {
 
         // Log transaction
         const repairTx = new Transaction({
-            userId,
+            userId: user._id,
             type: 'EQUIPMENT_REPAIR',
             amount: 0,
             status: 'COMPLETED',
@@ -327,7 +322,7 @@ export const repairEquipment = async (req: AuthRequest, res: Response) => {
 
         const durabilityPercent = Math.round((newDurability / maxDurability) * 100);
 
-        console.log(`[REPAIR] User ${userId} repaired ${targetItem.typeId} with ${kitTypeId}, HP: ${currentDurability} -> ${newDurability}/${maxDurability} (${durabilityPercent}%)`);
+        console.log(`[REPAIR] User ${req.userId} repaired ${targetItem.typeId} with ${kitTypeId}, HP: ${currentDurability} -> ${newDurability}/${maxDurability} (${durabilityPercent}%)`);
 
         res.json({
             success: true,

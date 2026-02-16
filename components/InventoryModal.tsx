@@ -1,10 +1,9 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { X, Backpack, DollarSign, ArrowUpCircle, Cpu, Hammer, HardHat, Glasses, Shirt, Footprints, Smartphone, Monitor, Bot, Truck, ShoppingBag, Sparkles, AlertTriangle, Hourglass, Search, Factory, Key, FileText, Timer, Shield, Gem, Star, TrendingUp, TrendingDown, Ticket, Zap, TrainFront, CreditCard } from 'lucide-react';
+import { X, Backpack, DollarSign, ArrowUpCircle, Cpu, Hammer, HardHat, Glasses, Shirt, Footprints, Smartphone, Monitor, Bot, Truck, ShoppingBag, Sparkles, AlertTriangle, Hourglass, Search, Factory, Key, FileText, Timer, Shield, Gem, Star, TrendingUp, TrendingDown, Ticket, Zap, TrainFront, CreditCard, Briefcase } from 'lucide-react';
 import { AccessoryItem } from '../services/types';
 import { CURRENCY, RARITY_SETTINGS, UPGRADE_REQUIREMENTS, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
-import { InfinityGlove } from './InfinityGlove';
 import { MaterialIcon } from './MaterialIcon';
 import { useTranslation } from '../contexts/LanguageContext';
 import { api } from '../services/api';
@@ -118,7 +117,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         else if (nameToCheck.includes('PC') || nameToCheck.includes('Computer')) typeId = 'pc';
         else if (nameToCheck.includes('Time Skip Ticket') || nameToCheck.includes('ตั๋วเร่งเวลา')) typeId = 'time_skip_ticket';
         else if (nameToCheck.includes('Construction Nanobot') || nameToCheck.includes('นาโนบอทก่อสร้าง')) typeId = 'construction_nanobot';
-        else if (nameToCheck.includes('VIP')) typeId = 'vip_card_gold';
+        else if (nameToCheck.includes('VIP')) typeId = 'vip_withdrawal_card';
 
         // Also check Thai if English check failed and we have it (for legacy or direct string)
         if (!typeId && typeof item.name === 'string') {
@@ -144,8 +143,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
 
         const rarity = (item.rarity && RARITY_SETTINGS[item.rarity]) ? item.rarity : 'COMMON';
 
-        if (!typeId) return <InfinityGlove rarity={rarity} className={className} />;
-        if (typeId.includes('glove')) return <InfinityGlove rarity={rarity} className={className} />;
+        if (!typeId) return <Briefcase className={className} />;
 
         if (typeId.startsWith('hat')) return <HardHat className={className} />;
         if (typeId.startsWith('glasses')) return <Glasses className={className} />;
@@ -199,7 +197,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
             case 'miner_card_gold':
                 return <Shield className={className} />;
             default:
-                return <InfinityGlove rarity={rarity} className={className} />;
+                return <Briefcase className={className} />;
         }
     };
 
@@ -278,7 +276,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         const isEquipped = equippedIds.has(selectedItem.id);
         const isChip = selectedItem.typeId === 'upgrade_chip';
         const isSpecial = ['chest_key', 'mixer', 'magnifying_glass', 'hourglass_small', 'hourglass_medium', 'hourglass_large'].includes(selectedItem.typeId);
-        const isGlove = selectedItem.typeId === 'glove';
 
         return (
             <div className="p-4 bg-stone-900 border border-stone-800 rounded-xl relative overflow-hidden">

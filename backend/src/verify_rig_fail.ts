@@ -13,6 +13,7 @@ const run = async () => {
         if (!user) return;
 
         user.unlockedSlots = 3;
+        user.miningSlots = 3;
         await user.save();
         await Rig.deleteMany({ ownerId: userId });
 
