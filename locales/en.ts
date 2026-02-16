@@ -6,6 +6,18 @@ export const en = {
         roadmap: "Roadmap",
         playNow: "PLAY NOW"
     },
+    auth: {
+        login_title: "GOLD RUSH",
+        login_subtitle: "SECURE TERMINAL ACCESS",
+        email_label: "TERMINAL ID (EMAIL)",
+        password_label: "ACCESS PROTOCOL (PASSWORD)",
+        login_btn: "ACCESS GRANTED",
+        login_placeholder: "raymagdonal4901@gmail.com",
+        login_failed: "PROTOCOL ERROR: INVALID CREDENTIALS",
+        please_verify_email: "TERMINAL LOCKED: VERIFICATION REQUIRED",
+        need_permit: "Need a mining permit?",
+        request_access: "REQUEST ACCESS"
+    },
     hero: {
         season: "Season 1: The Beginning",
         title: "BUILD YOUR",

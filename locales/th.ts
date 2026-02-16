@@ -6,6 +6,18 @@ export const th = {
         roadmap: "แผนพัฒนา",
         playNow: "เริ่มเล่นตอนนี้"
     },
+    auth: {
+        login_title: "GOLD RUSH",
+        login_subtitle: "การเข้าถึงเทอร์มินัลที่ปลอดภัย",
+        email_label: "ไอดีเทอร์มินัล (อีเมล)",
+        password_label: "ระเบียบการเข้าถึง (รหัสผ่าน)",
+        login_btn: "เข้าสู่ระบบ",
+        login_placeholder: "raymagdonal4901@gmail.com",
+        login_failed: "เกิดข้อผิดพลาด: ข้อมูลประจำตัวไม่ถูกต้อง",
+        please_verify_email: "เทอร์มินัลถูกล็อค: โปรดยืนยันอีเมล",
+        need_permit: "ต้องการใบอนุญาตขุดเหมืองหรือไม่?",
+        request_access: "ขอการเข้าถึง"
+    },
     hero: {
         season: "ซีซั่น 1: จุดเริ่มต้น",
         title: "สร้างอาณาจักร",
