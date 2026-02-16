@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { ArrowRight, Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check, TrendingUp, CreditCard, Clock, Zap, Briefcase, Star, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu } from 'lucide-react';
+import { ArrowRight, Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, ShieldAlert, Info, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check, TrendingUp, CreditCard, Clock, Zap, Briefcase, Star, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu } from 'lucide-react';
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
 import { User, OilRig, ClaimRequest, WithdrawalRequest, Withdrawal, DepositRequest, Notification } from '../services/types';
@@ -69,6 +69,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
     // User Details Modal State
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [showAudit, setShowAudit] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [userStats, setUserStats] = useState<{
         totalDeposits: number;
@@ -705,9 +706,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     <div className="text-stone-500 text-xs font-mono">{selectedUser.id}</div>
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedUser(null)} className="text-stone-500 hover:text-white p-2 hover:bg-stone-800 rounded">
-                                <X size={24} />
-                            </button>
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={() => setShowAudit(!showAudit)}
+                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 ${showAudit ? 'bg-yellow-600 text-stone-900' : 'bg-stone-800 text-stone-400 hover:text-white'}`}
+                                >
+                                    <ShieldAlert size={14} /> {t('admin.financial_audit') || "FINANCIAL AUDIT (ตรวจสอบ)"}
+                                </button>
+                                <button onClick={() => { setSelectedUser(null); setShowAudit(false); }} className="text-stone-500 hover:text-white p-2 hover:bg-stone-800 rounded">
+                                    <X size={24} />
+                                </button>
+                            </div>
                         </div>
 
                         <div className="p-6 overflow-y-auto space-y-6">
@@ -730,6 +739,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     <div className="text-sm font-bold text-blue-200 uppercase">{selectedUser.role}</div>
                                 </div>
                             </div>
+
+                            {showAudit && userStats?.audit && (
+                                <div className="bg-stone-950 border border-yellow-900/30 rounded-lg p-5 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                    <div className="flex items-center justify-between border-b border-stone-800 pb-3">
+                                        <div className="flex items-center gap-2 text-yellow-500 font-bold uppercase text-xs">
+                                            <ShieldAlert size={16} /> {t('admin.financial_audit')}
+                                        </div>
+                                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${userStats.audit.profitabilityRatio > 3 ? 'bg-red-900 text-red-100' : userStats.audit.profitabilityRatio > 1.5 ? 'bg-orange-900 text-orange-100' : 'bg-emerald-900 text-emerald-100'}`}>
+                                            {t('admin.fraud_risk')}: {userStats.audit.profitabilityRatio > 3 ? t('admin.risk_high') : userStats.audit.profitabilityRatio > 1.5 ? t('admin.risk_medium') : t('admin.risk_low')}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div className="space-y-1">
+                                            <div className="text-[10px] text-stone-500 uppercase font-bold">{t('admin.profitability')}</div>
+                                            <div className={`text-xl font-mono font-bold ${userStats.audit.profitabilityRatio > 3 ? 'text-red-500' : 'text-white'}`}>
+                                                {(userStats.audit.profitabilityRatio * 100).toFixed(1)}%
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="text-[10px] text-stone-500 uppercase font-bold">{t('admin.total_mined')}</div>
+                                            <div className="text-xl font-mono font-bold text-emerald-400">
+                                                +{Math.floor(userStats.audit.totalMiningProfit).toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="text-[10px] text-stone-500 uppercase font-bold">{t('admin.free_income')}</div>
+                                            <div className="text-xl font-mono font-bold text-blue-400">
+                                                +{Math.floor(userStats.audit.totalBonusIncome).toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="text-[10px] text-stone-500 uppercase font-bold">{t('admin.net_cashflow')}</div>
+                                            <div className={`text-xl font-mono font-bold ${userStats.audit.netCashFlow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                {userStats.audit.netCashFlow > 0 ? '+' : ''}{Math.floor(userStats.audit.netCashFlow).toLocaleString()}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-stone-900/50 p-3 rounded text-[10px] text-stone-400 italic">
+                                        <Info size={12} className="inline mr-1 mb-0.5" />
+                                        {t('admin.audit_desc')}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Mining Machines List */}
                             <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
@@ -1078,7 +1132,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                     </div>
 
                     {/* Action Buttons - Fixed at bottom */}
-                    <div className="p-6 bg-stone-950 border-t border-stone-800 flex gap-4">
+                    <div className="p-6 bg-stone-950 border-t border-stone-800 flex flex-wrap gap-4">
+                        <button
+                            onClick={() => setShowAudit(!showAudit)}
+                            className={`flex-1 min-w-[150px] py-3 rounded font-bold transition-all flex items-center justify-center gap-2 border ${showAudit ? 'bg-yellow-600 text-stone-900 border-yellow-500' : 'bg-stone-800 text-yellow-500 border-stone-700 hover:bg-stone-700'}`}
+                        >
+                            <ShieldAlert size={18} />
+                            {t('admin.financial_audit')}
+                        </button>
                         {selectedUser.isBanned ? (
                             <button
                                 onClick={() => handleUnbanUser(selectedUser.id)}
@@ -1120,25 +1181,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         </button>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Image Preview Overlay */}
-            {previewImage && (
-                <div
-                    className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out"
-                    onClick={() => setPreviewImage(null)}
-                >
-                    <div className="relative max-w-full max-h-full animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-                        <img src={previewImage} alt="Preview" className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl border border-stone-700 object-contain" />
-                        <button
-                            onClick={() => setPreviewImage(null)}
-                            className="absolute -top-12 right-0 text-white hover:text-stone-300 flex items-center gap-2 font-bold bg-black/20 p-2 rounded-full transition-colors"
-                        >
-                            <X size={32} />
-                        </button>
+            {
+                previewImage && (
+                    <div
+                        className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out"
+                        onClick={() => setPreviewImage(null)}
+                    >
+                        <div className="relative max-w-full max-h-full animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                            <img src={previewImage} alt="Preview" className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl border border-stone-700 object-contain" />
+                            <button
+                                onClick={() => setPreviewImage(null)}
+                                className="absolute -top-12 right-0 text-white hover:text-stone-300 flex items-center gap-2 font-bold bg-black/20 p-2 rounded-full transition-colors"
+                            >
+                                <X size={32} />
+                            </button>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Admin Navbar */}
             <nav className="bg-stone-900 border-b border-yellow-900/20 p-4 sticky top-0 z-30">
@@ -1188,750 +1252,752 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 </div>
             </nav>
 
-            {activeView === 'REVENUE' ? (
-                <div className="max-w-[1920px] mx-auto">
-                    <AdminRevenuePage />
-                </div>
-            ) : (
-                <div className="w-full px-6 py-6 space-y-8 max-w-[1920px] mx-auto">
+            {
+                activeView === 'REVENUE' ? (
+                    <div className="max-w-[1920px] mx-auto">
+                        <AdminRevenuePage />
+                    </div>
+                ) : (
+                    <div className="w-full px-6 py-6 space-y-8 max-w-[1920px] mx-auto">
 
-                    {/* === Notification / Approval Center === */}
-                    {(pendingWithdrawals.length > 0 || pendingDeposits.length > 0) && (
-                        <div className="bg-stone-900 border-l-4 border-yellow-500 shadow-2xl overflow-hidden rounded-r-lg animate-in slide-in-from-top-4 duration-500">
-                            <div className="bg-yellow-900/20 p-3 flex items-center justify-between border-b border-yellow-900/30">
-                                <div className="flex items-center gap-2 text-yellow-500 font-bold uppercase tracking-wider text-sm">
-                                    <Bell className="animate-pulse" size={16} /> {t('admin.pending_requests')} ({pendingWithdrawals.length + pendingDeposits.length})
-                                </div>
-                            </div>
-                            <div className="max-h-96 overflow-y-auto custom-scrollbar">
-
-                                {/* Deposits First */}
-                                {pendingDeposits.map(d => (
-                                    <div key={d.id} className="p-4 border-b border-stone-800 flex flex-col sm:flex-row items-center justify-between hover:bg-emerald-950/10 transition-colors bg-emerald-950/5 gap-4">
-                                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                                            <div className="p-2 bg-emerald-900/20 rounded border border-emerald-900/50 text-emerald-500">
-                                                <Wallet size={16} />
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="font-bold text-white text-sm flex items-center gap-2">
-                                                    <span className="text-yellow-500">{d.username}</span>
-                                                    <span className="text-xs bg-emerald-900/40 text-emerald-300 px-1.5 rounded">{t('admin.deposit_label')}</span>
-                                                </div>
-                                                <div className="text-xs text-stone-500 font-mono mt-0.5">{new Date(d.timestamp).toLocaleString()}</div>
-                                            </div>
-                                            {/* Slip Preview */}
-                                            <div
-                                                className={`w-12 h-16 bg-stone-950 border border-stone-700 rounded overflow-hidden shadow-lg ${!d.slipImage || d.slipImage === 'USDT_DIRECT_TRANSFER' ? 'cursor-default' : 'cursor-pointer hover:scale-125 transition-transform origin-center'}`}
-                                                onClick={() => d.slipImage && d.slipImage !== 'USDT_DIRECT_TRANSFER' && setPreviewImage(d.slipImage)}
-                                            >
-                                                {d.slipImage === 'USDT_DIRECT_TRANSFER' || !d.slipImage ? (
-                                                    <div className="w-full h-full flex flex-col items-center justify-center bg-blue-900/10 text-blue-400 gap-1">
-                                                        <Wallet size={16} />
-                                                        <span className="text-[8px] font-bold">USDT</span>
-                                                    </div>
-                                                ) : (
-                                                    <img src={d.slipImage} className="w-full h-full object-cover" alt="Slip" />
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
-                                            <span className="font-mono font-bold text-lg text-emerald-400">+{Math.floor(d.amount).toLocaleString()} <span className="text-stone-500 text-xs">{CURRENCY}</span></span>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => initiateProcessDeposit(d, 'REJECTED')}
-                                                    className="px-3 py-1.5 rounded border border-red-900/50 bg-stone-900 text-stone-400 text-xs font-bold uppercase hover:bg-red-900/20 hover:text-red-400 flex items-center gap-1 transition-colors"
-                                                >
-                                                    <XCircle size={14} /> {t('admin.reject')}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDirectProcessDeposit(d.id, 'APPROVED')}
-                                                    className="px-3 py-1.5 rounded border border-emerald-500 bg-emerald-600 text-white text-xs font-bold uppercase hover:bg-emerald-500 flex items-center gap-1 transition-colors shadow-lg shadow-emerald-900/20"
-                                                >
-                                                    <CheckCircle size={14} /> {t('admin.approve')}
-                                                </button>
-                                            </div>
-                                        </div>
+                        {/* === Notification / Approval Center === */}
+                        {(pendingWithdrawals.length > 0 || pendingDeposits.length > 0) && (
+                            <div className="bg-stone-900 border-l-4 border-yellow-500 shadow-2xl overflow-hidden rounded-r-lg animate-in slide-in-from-top-4 duration-500">
+                                <div className="bg-yellow-900/20 p-3 flex items-center justify-between border-b border-yellow-900/30">
+                                    <div className="flex items-center gap-2 text-yellow-500 font-bold uppercase tracking-wider text-sm">
+                                        <Bell className="animate-pulse" size={16} /> {t('admin.pending_requests')} ({pendingWithdrawals.length + pendingDeposits.length})
                                     </div>
-                                ))}
+                                </div>
+                                <div className="max-h-96 overflow-y-auto custom-scrollbar">
 
-                                {/* Withdrawals */}
-                                {pendingWithdrawals.map(w => (
-                                    <div key={w.id} className="p-4 border-b border-stone-800 flex flex-col sm:flex-row items-center justify-between hover:bg-red-950/10 transition-colors bg-red-950/5 gap-4">
-                                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                                            <div className="p-2 bg-red-900/20 rounded border border-red-900/50 text-red-500">
-                                                <ArrowUpRight size={16} />
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="font-bold text-white text-sm flex items-center gap-2">
-                                                    <span className="text-yellow-500">{w.username}</span>
-                                                    <span className={`text-xs px-1.5 rounded ${(w.method === 'USDT' || (w.walletAddress && !w.bankQrCode)) ? 'bg-blue-900/40 text-blue-300' : 'bg-red-900/40 text-red-300'}`}>
-                                                        {t('admin.withdraw_label')} {(w.method === 'USDT' || (w.walletAddress && !w.bankQrCode)) ? 'USDT' : 'BANK'}
-                                                    </span>
+                                    {/* Deposits First */}
+                                    {pendingDeposits.map(d => (
+                                        <div key={d.id} className="p-4 border-b border-stone-800 flex flex-col sm:flex-row items-center justify-between hover:bg-emerald-950/10 transition-colors bg-emerald-950/5 gap-4">
+                                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                                                <div className="p-2 bg-emerald-900/20 rounded border border-emerald-900/50 text-emerald-500">
+                                                    <Wallet size={16} />
                                                 </div>
-                                                <div className="text-xs text-stone-500 font-mono mt-0.5 flex flex-col gap-1">
-                                                    <span>{new Date(w.timestamp).toLocaleString()}</span>
-                                                    {(w.walletAddress || users.find(u => u.id === w.userId)?.walletAddress) && (
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <button
-                                                                onClick={() => {
-                                                                    const addr = w.walletAddress || users.find(u => u.id === w.userId)?.walletAddress;
-                                                                    if (addr) {
-                                                                        navigator.clipboard.writeText(addr);
-                                                                        alert('Copied Wallet Address');
-                                                                    }
-                                                                }}
-                                                                className="text-blue-400/80 hover:text-blue-300 flex items-center gap-1.5 bg-blue-900/10 px-2 py-1 rounded border border-blue-900/30 w-fit transition-colors hover:bg-blue-900/20"
-                                                                title="BSC Wallet Address"
-                                                            >
-                                                                <Wallet size={12} />
-                                                                <span className="text-[10px] font-mono break-all max-w-[180px]">
-                                                                    {w.walletAddress || users.find(u => u.id === w.userId)?.walletAddress}
-                                                                </span>
-                                                            </button>
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-white text-sm flex items-center gap-2">
+                                                        <span className="text-yellow-500">{d.username}</span>
+                                                        <span className="text-xs bg-emerald-900/40 text-emerald-300 px-1.5 rounded">{t('admin.deposit_label')}</span>
+                                                    </div>
+                                                    <div className="text-xs text-stone-500 font-mono mt-0.5">{new Date(d.timestamp).toLocaleString()}</div>
+                                                </div>
+                                                {/* Slip Preview */}
+                                                <div
+                                                    className={`w-12 h-16 bg-stone-950 border border-stone-700 rounded overflow-hidden shadow-lg ${!d.slipImage || d.slipImage === 'USDT_DIRECT_TRANSFER' ? 'cursor-default' : 'cursor-pointer hover:scale-125 transition-transform origin-center'}`}
+                                                    onClick={() => d.slipImage && d.slipImage !== 'USDT_DIRECT_TRANSFER' && setPreviewImage(d.slipImage)}
+                                                >
+                                                    {d.slipImage === 'USDT_DIRECT_TRANSFER' || !d.slipImage ? (
+                                                        <div className="w-full h-full flex flex-col items-center justify-center bg-blue-900/10 text-blue-400 gap-1">
+                                                            <Wallet size={16} />
+                                                            <span className="text-[8px] font-bold">USDT</span>
                                                         </div>
+                                                    ) : (
+                                                        <img src={d.slipImage} className="w-full h-full object-cover" alt="Slip" />
                                                     )}
                                                 </div>
                                             </div>
-                                            {/* Method Specific Display (QR or Wallet Address Icon) */}
-                                            {(w.method === 'BANK' || (w.bankQrCode && !w.walletAddress)) && w.bankQrCode && (
-                                                <div
-                                                    className="w-12 h-16 bg-white border border-stone-700 rounded overflow-hidden shadow-lg cursor-pointer hover:scale-125 transition-transform origin-center shrink-0"
-                                                    onClick={() => setPreviewImage(w.bankQrCode!)}
-                                                >
-                                                    <img src={w.bankQrCode} className="w-full h-full object-cover" alt="Bank QR" />
+                                            <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
+                                                <span className="font-mono font-bold text-lg text-emerald-400">+{Math.floor(d.amount).toLocaleString()} <span className="text-stone-500 text-xs">{CURRENCY}</span></span>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => initiateProcessDeposit(d, 'REJECTED')}
+                                                        className="px-3 py-1.5 rounded border border-red-900/50 bg-stone-900 text-stone-400 text-xs font-bold uppercase hover:bg-red-900/20 hover:text-red-400 flex items-center gap-1 transition-colors"
+                                                    >
+                                                        <XCircle size={14} /> {t('admin.reject')}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDirectProcessDeposit(d.id, 'APPROVED')}
+                                                        className="px-3 py-1.5 rounded border border-emerald-500 bg-emerald-600 text-white text-xs font-bold uppercase hover:bg-emerald-500 flex items-center gap-1 transition-colors shadow-lg shadow-emerald-900/20"
+                                                    >
+                                                        <CheckCircle size={14} /> {t('admin.approve')}
+                                                    </button>
                                                 </div>
-                                            )}
-                                            {(w.method === 'USDT' || (w.walletAddress && !w.bankQrCode)) && (
-                                                <div className="w-12 h-16 flex flex-col items-center justify-center bg-blue-900/10 text-blue-400 border border-blue-900/20 rounded shrink-0">
-                                                    <Wallet size={16} />
-                                                    <span className="text-[8px] font-bold">USDT</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
-                                            <span className="font-mono font-bold text-lg text-white">
-                                                {(w.method === 'BANK' || (w.bankQrCode && !w.walletAddress))
-                                                    ? `${Math.floor(w.amount * EXCHANGE_RATE_USD_THB).toLocaleString()} ฿`
-                                                    : `$${Math.floor(w.amount).toLocaleString()}`
-                                                }
-                                            </span>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => initiateProcessWithdrawal(w, 'REJECTED')}
-                                                    className="px-3 py-1.5 rounded border border-red-900/50 bg-stone-900 text-stone-400 text-xs font-bold uppercase hover:bg-red-900/20 hover:text-red-400 flex items-center gap-1 transition-colors"
-                                                >
-                                                    <XCircle size={14} /> {t('admin.reject')}
-                                                </button>
-                                                <button
-                                                    onClick={() => initiateProcessWithdrawal(w, 'APPROVED')}
-                                                    className="px-3 py-1.5 rounded border border-red-500 bg-red-600 text-white text-xs font-bold uppercase hover:bg-red-500 flex items-center gap-1 transition-colors shadow-lg shadow-red-900/20"
-                                                >
-                                                    <CheckCircle size={14} /> {t('admin.approve')}
-                                                </button>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-
-
-                            </div>
-                        </div>
-                    )}
-
-                    {/* System Settings: QR Code */}
-                    <div className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6 flex flex-col md:flex-row items-start md:items-center gap-6">
-                        <div className="flex items-center gap-4 flex-1">
-                            <div className="bg-blue-900/20 p-3 rounded-lg border border-blue-900/50 text-blue-400">
-                                <QrCode size={32} />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-bold text-white">{t('admin.setup_qr')}</h3>
-                                <p className="text-sm text-stone-400">{t('admin.setup_qr_desc')}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-6">
-                            {/* Maintenance Toggle */}
-                            <div className="flex items-center gap-3 pr-6 border-r border-stone-800">
-                                <div className="flex flex-col items-end">
-                                    <span className="text-xs text-stone-500 uppercase font-bold">{t('admin.server_status')}</span>
-                                    <span className={`text-sm font-bold ${isMaintenance ? 'text-red-500' : 'text-emerald-500'}`}>
-                                        {isMaintenance ? t('admin.status_maintenance') : t('admin.status_online')}
-                                    </span>
-                                </div>
-                                <button
-                                    onClick={toggleMaintenance}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-stone-950 ${isMaintenance ? 'bg-red-600' : 'bg-stone-700'}`}
-                                >
-                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isMaintenance ? 'translate-x-6' : 'translate-x-1'}`} />
-                                </button>
-                            </div>
-                            {systemQr && (
-                                <div className="w-16 h-16 bg-white rounded p-1">
-                                    <img src={systemQr} alt="System QR" className="w-full h-full object-contain" />
-                                </div>
-                            )}
-
-                            <div
-                                className="relative cursor-pointer bg-stone-950 hover:bg-stone-800 border border-stone-700 border-dashed rounded-lg px-6 py-3 flex items-center gap-3 transition-colors"
-                                onClick={() => fileInputRef.current?.click()}
-                            >
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    ref={fileInputRef}
-                                    onChange={handleQrUpload}
-                                />
-                                <Upload size={18} className="text-stone-400" />
-                                <span className="text-sm font-bold text-stone-300">{t('admin.upload_new_qr')}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* System Overview Cards (PART 6) */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div
-                            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                            className="relative overflow-hidden bg-stone-900 p-6 border border-stone-800 shadow-xl cursor-pointer hover:bg-stone-800 transition-all group rounded-xl"
-                        >
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <Clock size={80} />
-                            </div>
-                            <div className="flex justify-between items-start mb-4">
-                                <span className="text-stone-500 text-xs font-bold uppercase tracking-widest">{t('admin.pending_requests')}</span>
-                                <div className="p-2 bg-yellow-900/20 rounded-lg text-yellow-500">
-                                    <Bell size={20} />
-                                </div>
-                            </div>
-                            <div className="text-4xl font-display font-bold text-white mb-1">
-                                {stats?.pendingWithdrawalsCount || 0}
-                            </div>
-                            <div className="text-xs text-stone-500 font-medium">{t('admin.pending_checks')} (Withdrawals)</div>
-                        </div>
-
-                        <div
-                            onClick={() => document.getElementById('user-management')?.scrollIntoView({ behavior: 'smooth' })}
-                            className="relative overflow-hidden bg-stone-900 p-6 border border-stone-800 shadow-xl cursor-pointer hover:bg-stone-800 transition-all group rounded-xl"
-                        >
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <Users size={80} />
-                            </div>
-                            <div className="flex justify-between items-start mb-4">
-                                <span className="text-stone-500 text-xs font-bold uppercase tracking-widest">{t('admin.total_users')}</span>
-                                <div className="p-2 bg-blue-900/20 rounded-lg text-blue-500">
-                                    <Users size={20} />
-                                </div>
-                            </div>
-                            <div className="text-4xl font-display font-bold text-white mb-1">
-                                {(stats?.totalUsers || users.length).toLocaleString()}
-                            </div>
-                            <div className="text-xs text-stone-500 font-medium">{t('admin.all_members')}</div>
-                        </div>
-
-                        <div
-                            onClick={() => document.getElementById('game-config')?.scrollIntoView({ behavior: 'smooth' })}
-                            className="relative overflow-hidden bg-stone-900 p-6 border border-stone-800 shadow-xl cursor-pointer hover:bg-stone-800 transition-all group rounded-xl"
-                        >
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <Wallet size={80} />
-                            </div>
-                            <div className="flex justify-between items-start mb-4">
-                                <span className="text-stone-500 text-xs font-bold uppercase tracking-widest">{t('admin.system_balance')}</span>
-                                <div className="p-2 bg-emerald-900/20 rounded-lg text-emerald-500">
-                                    <Coins size={20} />
-                                </div>
-                            </div>
-                            <div className="text-4xl font-display font-bold text-white mb-1">
-                                {totalUserBalance.toLocaleString()}
-                            </div>
-                            <div className="text-xs text-stone-500 font-medium">{t('admin.total_user_balance_desc')} ({CURRENCY})</div>
-                        </div>
-                    </div>
-
-                    {/* Developer Revenue Summary */}
-                    {globalRevenue && (
-                        <div className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <div className="flex items-center gap-3 border-b border-stone-800 pb-4">
-                                <div className="bg-yellow-900/20 p-2 rounded text-yellow-500">
-                                    <Coins size={20} />
-                                </div>
-                                <div className="flex-1 flex justify-between items-center">
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={handleResetAllPlayerData}
-                                            className="px-3 py-1 bg-orange-900/20 hover:bg-orange-900/40 text-orange-500 border border-orange-900/30 rounded text-xs font-bold transition-all flex items-center gap-2"
-                                        >
-                                            <AlertTriangle size={14} /> {t('admin.reset_balances')}
-                                        </button>
-                                        <button
-                                            onClick={handleDeleteAllUsers}
-                                            className="px-3 py-1 bg-red-900/40 hover:bg-red-900 border border-red-900/50 rounded text-xs font-bold transition-all flex items-center gap-2 text-white"
-                                        >
-                                            <Trash2 size={14} /> {t('admin.delete_all_users')}
-                                        </button>
-                                        <button
-                                            onClick={handleClearRevenue}
-                                            className="px-3 py-1 bg-red-900/20 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded text-xs font-bold transition-all flex items-center gap-2"
-                                        >
-                                            <Trash2 size={14} /> {t('admin.clear_all_revenue')}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
-                                <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
-                                    <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.rig_sales')}</div>
-                                    <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.RIG_BUY || 0).toLocaleString()}</div>
-                                </div>
-                                <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
-                                    <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.repairs_renew')}</div>
-                                    <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.REPAIR || 0).toLocaleString()}</div>
-                                </div>
-                                <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
-                                    <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.withdraw_fees')}</div>
-                                    <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.WITHDRAW_FEE || 0).toLocaleString()}</div>
-                                </div>
-                                <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
-                                    <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.market_fees')}</div>
-                                    <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.MARKET_FEE || 0).toLocaleString()}</div>
-                                </div>
-                                <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
-                                    <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.item_sales')}</div>
-                                    <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.ITEM_BUY || 0).toLocaleString()}</div>
-                                </div>
-                                <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
-                                    <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.game_profits')}</div>
-                                    <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.GAME_LOSS || 0).toLocaleString()}</div>
-                                </div>
-                                <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
-                                    <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.energy_oc')}</div>
-                                    <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.ENERGY_REFILL || 0).toLocaleString()}</div>
-                                </div>
-                                <div className="bg-yellow-900/10 p-4 rounded border border-yellow-500/30 hover:bg-yellow-900/20 transition-colors">
-                                    <div className="text-[10px] text-yellow-500 uppercase font-bold mb-1">{t('admin.dev_revenue')}</div>
-                                    <div className="text-xl font-mono font-bold text-yellow-400">+{Math.floor(globalRevenue.totals.total || 0).toLocaleString()} ฿</div>
-                                </div>
-                            </div>
-
-                            {/* Revenue Adjustment Form */}
-                            <div className="flex flex-col md:flex-row items-end gap-3 mt-4 pt-4 border-t border-stone-800/50">
-                                <div className="flex-1 w-full">
-                                    <label className="block text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.adjust_reason')}</label>
-                                    <input
-                                        type="text"
-                                        placeholder={t('admin.adjust_reason')}
-                                        className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-sm text-white focus:border-yellow-600 outline-none transition-colors"
-                                        value={adjustForm.reason}
-                                        onChange={(e) => setAdjustForm(prev => ({ ...prev, reason: e.target.value }))}
-                                    />
-                                </div>
-                                <div className="w-full md:w-48">
-                                    <label className="block text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.adjust_amount')}</label>
-                                    <input
-                                        type="number"
-                                        placeholder="0"
-                                        className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-sm text-emerald-400 font-mono focus:border-yellow-600 outline-none transition-colors"
-                                        value={adjustForm.amount === 0 ? '' : adjustForm.amount}
-                                        onChange={(e) => setAdjustForm(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                                    />
-                                </div>
-                                <button
-                                    onClick={handleAdjustRevenue}
-                                    disabled={!adjustForm.amount}
-                                    className="w-full md:w-auto px-6 py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-stone-800 disabled:text-stone-600 text-stone-900 font-bold rounded text-sm transition-all shadow-lg flex items-center justify-center gap-2"
-                                >
-                                    <CheckCircle2 size={16} />
-                                    {t('admin.adjust_revenue')}
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-stone-800/50">
-                                <div className="bg-stone-950/50 p-4 rounded border border-stone-800 flex items-center justify-between">
-                                    <div>
-                                        <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">Total Deposit Volume</div>
-                                        <div className="flex gap-4">
-                                            <div>
-                                                <span className="text-xs text-stone-400 block">Bank</span>
-                                                <span className="text-lg font-mono font-bold text-white">{Math.floor(globalRevenue.volumes?.bank_deposits || 0).toLocaleString()}</span>
-                                            </div>
-                                            <div className="w-px h-8 bg-stone-800 self-center"></div>
-                                            <div>
-                                                <span className="text-xs text-blue-400 block">USDT</span>
-                                                <span className="text-lg font-mono font-bold text-blue-400">{Math.floor(globalRevenue.volumes?.usdt_deposits || 0).toLocaleString()}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <ArrowUpRight className="text-emerald-500 opacity-20" size={40} />
-                                </div>
-                                <div className="bg-stone-950/50 p-4 rounded border border-stone-800 flex items-center justify-between">
-                                    <div>
-                                        <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">Total Withdrawal Volume</div>
-                                        <div className="flex gap-4">
-                                            <div>
-                                                <span className="text-xs text-stone-400 block">Bank</span>
-                                                <span className="text-lg font-mono font-bold text-white">{Math.floor(globalRevenue.volumes?.bank_withdrawals || 0).toLocaleString()}</span>
-                                            </div>
-                                            <div className="w-px h-8 bg-stone-800 self-center"></div>
-                                            <div>
-                                                <span className="text-xs text-blue-400 block">USDT</span>
-                                                <span className="text-lg font-mono font-bold text-blue-400">{Math.floor(globalRevenue.volumes?.usdt_withdrawals || 0).toLocaleString()}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <ArrowDownLeft className="text-red-500 opacity-20" size={40} />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* === USERS MANAGEMENT === */}
-                    <div id="user-management" className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg overflow-hidden">
-                        <div className="p-4 border-b border-stone-800 flex justify-between items-center bg-stone-950">
-                            <div className="flex items-center gap-2">
-                                <Users size={20} className="text-blue-400" />
-                                <h3 className="font-bold text-white">{t('admin.manage_users')} ({users.length})</h3>
-                            </div>
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" size={14} />
-                                <input
-                                    type="text"
-                                    placeholder={t('admin.search_user')}
-                                    value={search}
-                                    onChange={e => setSearch(e.target.value)}
-                                    className="bg-stone-900 border border-stone-700 rounded-full pl-9 pr-4 py-1.5 text-sm text-stone-200 focus:outline-none focus:border-yellow-600 w-64"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-stone-900/50 text-stone-500 text-xs uppercase tracking-wider border-b border-stone-800">
-                                        <th className="p-4 font-bold">{t('admin.user_info')}</th>
-                                        <th className="p-4 font-bold text-right">{t('admin.balance')}</th>
-                                        <th className="p-4 font-bold text-center">{t('admin.rigs_count')}</th>
-                                        <th className="p-4 font-bold text-right text-emerald-400">{t('admin.daily_profit')}</th>
-                                        <th className="p-4 font-bold text-center">{t('admin.status')}</th>
-                                        <th className="p-4 font-bold text-right">{t('admin.management')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-stone-800">
-                                    {filteredUsers.map(u => (
-                                        <tr key={u.id} className="hover:bg-stone-800/30 transition-colors">
-                                            <td className="p-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${u.role?.includes('ADMIN') ? 'bg-red-500/20 text-red-500 border border-red-500/50' : 'bg-stone-800 text-stone-400'}`}>
-                                                        {u.username.substring(0, 2).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-bold text-white text-sm flex items-center gap-2">
-                                                            {u.username}
-                                                            {u.role?.includes('ADMIN') && <span className="text-[10px] bg-red-900/40 text-red-400 px-1 rounded border border-red-900/50">ADMIN</span>}
-                                                            {u.inventory?.some((i: any) => i.typeId === 'vip_withdrawal_card') && (
-                                                                <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-500 text-[10px] px-1.5 py-0.5 rounded border border-yellow-500/30 font-black shadow-[0_0_10px_rgba(234,179,8,0.2)]">
-                                                                    <CreditCard size={10} />
-                                                                    VIP
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-xs text-stone-500 font-mono">ID: {u.id}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="p-4 text-right">
-                                                {u.role?.includes('ADMIN') ? (
-                                                    <span className="text-stone-600 font-bold">-</span>
-                                                ) : (
-                                                    <>
-                                                        <div className="font-mono font-bold text-emerald-400 text-sm">{Math.floor(u.balance).toLocaleString()}</div>
-                                                        <div className="text-[10px] text-stone-600">{CURRENCY}</div>
-                                                    </>
-                                                )}
-                                            </td>
-                                            <td className="p-4 text-center">
-                                                <div className="inline-flex items-center gap-1 bg-stone-900 px-2 py-1 rounded border border-stone-800">
-                                                    <Hammer size={10} className="text-yellow-500" />
-                                                    <span className="text-xs font-bold text-stone-300">{getRigsForUser(u.id).length}</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-4 text-right">
-                                                <div className="font-mono font-bold text-emerald-400 text-sm">+{Math.floor(getDailyProfitForUser(u.id)).toLocaleString()}</div>
-                                                <div className="text-[10px] text-stone-600">{CURRENCY}/Day</div>
-                                            </td>
-                                            <td className="p-4 text-center">
-                                                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${u.isBanned ? 'bg-red-900/20 text-red-500 border-red-900/30' : 'bg-emerald-900/20 text-emerald-500 border-emerald-900/30'}`}>
-                                                    {u.isBanned ? 'BANNED' : 'Active'}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 text-right">
-                                                <button
-                                                    className="text-stone-500 hover:text-white p-2 rounded hover:bg-stone-800 transition-colors"
-                                                    title="View Details"
-                                                    onClick={() => {
-                                                        setSelectedUser(u);
-                                                        setEconomyForm(prev => ({ ...prev, targetUser: u.id, compUser: u.id }));
-                                                        api.admin.getUserStats(u.id).then(setUserStats).catch(() => setUserStats({ totalDeposits: 0, totalWithdrawals: 0 }));
-                                                    }}
-                                                >
-                                                    <ChevronRight size={16} />
-                                                </button>
-                                            </td>
-                                        </tr>
                                     ))}
-                                </tbody>
-                            </table>
-                        </div>
 
-                        {filteredUsers.length === 0 && (
-                            <div className="p-8 text-center text-stone-500 text-sm">
-                                {t('admin.no_user_found')}
+                                    {/* Withdrawals */}
+                                    {pendingWithdrawals.map(w => (
+                                        <div key={w.id} className="p-4 border-b border-stone-800 flex flex-col sm:flex-row items-center justify-between hover:bg-red-950/10 transition-colors bg-red-950/5 gap-4">
+                                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                                                <div className="p-2 bg-red-900/20 rounded border border-red-900/50 text-red-500">
+                                                    <ArrowUpRight size={16} />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-white text-sm flex items-center gap-2">
+                                                        <span className="text-yellow-500">{w.username}</span>
+                                                        <span className={`text-xs px-1.5 rounded ${(w.method === 'USDT' || (w.walletAddress && !w.bankQrCode)) ? 'bg-blue-900/40 text-blue-300' : 'bg-red-900/40 text-red-300'}`}>
+                                                            {t('admin.withdraw_label')} {(w.method === 'USDT' || (w.walletAddress && !w.bankQrCode)) ? 'USDT' : 'BANK'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-xs text-stone-500 font-mono mt-0.5 flex flex-col gap-1">
+                                                        <span>{new Date(w.timestamp).toLocaleString()}</span>
+                                                        {(w.walletAddress || users.find(u => u.id === w.userId)?.walletAddress) && (
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const addr = w.walletAddress || users.find(u => u.id === w.userId)?.walletAddress;
+                                                                        if (addr) {
+                                                                            navigator.clipboard.writeText(addr);
+                                                                            alert('Copied Wallet Address');
+                                                                        }
+                                                                    }}
+                                                                    className="text-blue-400/80 hover:text-blue-300 flex items-center gap-1.5 bg-blue-900/10 px-2 py-1 rounded border border-blue-900/30 w-fit transition-colors hover:bg-blue-900/20"
+                                                                    title="BSC Wallet Address"
+                                                                >
+                                                                    <Wallet size={12} />
+                                                                    <span className="text-[10px] font-mono break-all max-w-[180px]">
+                                                                        {w.walletAddress || users.find(u => u.id === w.userId)?.walletAddress}
+                                                                    </span>
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {/* Method Specific Display (QR or Wallet Address Icon) */}
+                                                {(w.method === 'BANK' || (w.bankQrCode && !w.walletAddress)) && w.bankQrCode && (
+                                                    <div
+                                                        className="w-12 h-16 bg-white border border-stone-700 rounded overflow-hidden shadow-lg cursor-pointer hover:scale-125 transition-transform origin-center shrink-0"
+                                                        onClick={() => setPreviewImage(w.bankQrCode!)}
+                                                    >
+                                                        <img src={w.bankQrCode} className="w-full h-full object-cover" alt="Bank QR" />
+                                                    </div>
+                                                )}
+                                                {(w.method === 'USDT' || (w.walletAddress && !w.bankQrCode)) && (
+                                                    <div className="w-12 h-16 flex flex-col items-center justify-center bg-blue-900/10 text-blue-400 border border-blue-900/20 rounded shrink-0">
+                                                        <Wallet size={16} />
+                                                        <span className="text-[8px] font-bold">USDT</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
+                                                <span className="font-mono font-bold text-lg text-white">
+                                                    {(w.method === 'BANK' || (w.bankQrCode && !w.walletAddress))
+                                                        ? `${Math.floor(w.amount * EXCHANGE_RATE_USD_THB).toLocaleString()} ฿`
+                                                        : `$${Math.floor(w.amount).toLocaleString()}`
+                                                    }
+                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => initiateProcessWithdrawal(w, 'REJECTED')}
+                                                        className="px-3 py-1.5 rounded border border-red-900/50 bg-stone-900 text-stone-400 text-xs font-bold uppercase hover:bg-red-900/20 hover:text-red-400 flex items-center gap-1 transition-colors"
+                                                    >
+                                                        <XCircle size={14} /> {t('admin.reject')}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => initiateProcessWithdrawal(w, 'APPROVED')}
+                                                        className="px-3 py-1.5 rounded border border-red-500 bg-red-600 text-white text-xs font-bold uppercase hover:bg-red-500 flex items-center gap-1 transition-colors shadow-lg shadow-red-900/20"
+                                                    >
+                                                        <CheckCircle size={14} /> {t('admin.approve')}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+
+
+                                </div>
                             </div>
                         )}
-                    </div>
 
-
-                    {/* === ECONOMY CONTROL === */}
-                    <div id="economy-control" className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6">
-                        <div className="flex items-center gap-2 mb-6 border-b border-stone-800 pb-4">
-                            <Coins size={24} className="text-yellow-500" />
-                            <h3 className="text-xl font-bold text-white">{t('admin.economy_control')}</h3>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Add Item Form */}
-                            <div className="space-y-4">
-                                <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">{t('admin.add_item')}</h4>
-                                <div className="space-y-3">
-                                    <div className="flex bg-stone-950 p-1 rounded border border-stone-800">
-                                        <button
-                                            className={`flex-1 py-1 text-xs font-bold rounded transition-all ${economyForm.itemScope === 'SINGLE' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:text-stone-300'}`}
-                                            onClick={() => setEconomyForm({ ...economyForm, itemScope: 'SINGLE' })}
-                                        >
-                                            รายบุคคล (Single)
-                                        </button>
-                                        <button
-                                            className={`flex-1 py-1 text-xs font-bold rounded transition-all ${economyForm.itemScope === 'ALL' ? 'bg-indigo-900/40 text-indigo-400 border border-indigo-900/50' : 'text-stone-500 hover:text-stone-300'}`}
-                                            onClick={() => setEconomyForm({ ...economyForm, itemScope: 'ALL' })}
-                                        >
-                                            ทั้งหมด (All Users)
-                                        </button>
-                                    </div>
-
-                                    {economyForm.itemScope === 'SINGLE' && (
-                                        <input
-                                            type="text"
-                                            placeholder="User ID / Username"
-                                            className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
-                                            value={economyForm.targetUser}
-                                            onChange={e => setEconomyForm({ ...economyForm, targetUser: e.target.value })}
-                                        />
-                                    )}
-                                    <select
-                                        className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
-                                        value={economyForm.itemId}
-                                        onChange={e => setEconomyForm({ ...economyForm, itemId: e.target.value })}
-                                    >
-                                        <option value="">{t('admin.choose_item')}</option>
-                                        <optgroup label="Items & Equipment">
-                                            {SHOP_ITEMS.map(item => (
-                                                <option key={item.id} value={item.id}>{getLocalized(item.name)} ({item.id})</option>
-                                            ))}
-                                        </optgroup>
-                                        <optgroup label="Materials">
-                                            {Object.entries(MATERIAL_CONFIG.NAMES).map(([id, name]) => (
-                                                <option key={`mat-${id}`} value={`material_${id}`}>{getLocalized(name)} (Tier {id})</option>
-                                            ))}
-                                        </optgroup>
-                                    </select>
-                                    <input
-                                        type="text"
-                                        placeholder="ข้อความ (Optional)"
-                                        className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
-                                        value={economyForm.message}
-                                        onChange={e => setEconomyForm({ ...economyForm, message: e.target.value })}
-                                    />
-                                    <input
-                                        type="number"
-                                        placeholder={t('admin.amount')}
-                                        className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
-                                        value={economyForm.itemAmount}
-                                        onChange={e => setEconomyForm({ ...economyForm, itemAmount: parseInt(e.target.value) || 1 })}
-                                    />
-                                    <button
-                                        className="w-full bg-yellow-600 hover:bg-yellow-500 disabled:bg-stone-800 disabled:text-stone-600 text-stone-900 font-bold py-3 rounded transition-colors flex items-center justify-center gap-2"
-                                        onClick={handleAddItem}
-                                        disabled={economyForm.itemScope === 'SINGLE' && !economyForm.targetUser}
-                                    >
-                                        {economyForm.itemScope === 'SINGLE' && !economyForm.targetUser && <AlertTriangle size={16} className="text-yellow-600" />}
-                                        {t('admin.send_item')}
-                                    </button>
+                        {/* System Settings: QR Code */}
+                        <div className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6 flex flex-col md:flex-row items-start md:items-center gap-6">
+                            <div className="flex items-center gap-4 flex-1">
+                                <div className="bg-blue-900/20 p-3 rounded-lg border border-blue-900/50 text-blue-400">
+                                    <QrCode size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">{t('admin.setup_qr')}</h3>
+                                    <p className="text-sm text-stone-400">{t('admin.setup_qr_desc')}</p>
                                 </div>
                             </div>
 
-                            {/* Give Compensation Form */}
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">{t('admin.compensation')}</h4>
-                                    <span className="text-xs text-emerald-500 font-mono">{t('admin.server_issues_refunds')}</span>
-                                </div>
-                                <div className="space-y-3">
-                                    <div className="flex bg-stone-950 p-1 rounded border border-stone-800">
-                                        <button
-                                            className={`flex-1 py-1 text-xs font-bold rounded transition-all ${economyForm.compScope === 'SINGLE' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:text-stone-300'}`}
-                                            onClick={() => setEconomyForm({ ...economyForm, compScope: 'SINGLE' })}
-                                        >
-                                            ไอดีเดียว (Single)
-                                        </button>
-                                        <button
-                                            className={`flex-1 py-1 text-xs font-bold rounded transition-all ${economyForm.compScope === 'ALL' ? 'bg-red-900/40 text-red-400 border border-red-900/50' : 'text-stone-500 hover:text-stone-300'}`}
-                                            onClick={() => setEconomyForm({ ...economyForm, compScope: 'ALL' })}
-                                        >
-                                            ทั้งหมด (All Users)
-                                        </button>
+                            <div className="flex flex-wrap items-center gap-6">
+                                {/* Maintenance Toggle */}
+                                <div className="flex items-center gap-3 pr-6 border-r border-stone-800">
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-xs text-stone-500 uppercase font-bold">{t('admin.server_status')}</span>
+                                        <span className={`text-sm font-bold ${isMaintenance ? 'text-red-500' : 'text-emerald-500'}`}>
+                                            {isMaintenance ? t('admin.status_maintenance') : t('admin.status_online')}
+                                        </span>
                                     </div>
-
-                                    {economyForm.compScope === 'SINGLE' && (
-                                        <input
-                                            type="text"
-                                            placeholder="User ID / Username"
-                                            className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
-                                            value={economyForm.compUser}
-                                            onChange={e => setEconomyForm({ ...economyForm, compUser: e.target.value })}
-                                        />
-                                    )}
-                                    <div className="flex flex-col sm:flex-row gap-2">
-                                        <div className="sm:w-1/3 bg-emerald-900/20 border border-emerald-900/50 rounded p-3 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                                            {t('admin.add_funds')}
-                                        </div>
-                                        <div className="flex bg-stone-950 border border-stone-700 rounded overflow-hidden shadow-lg shrink-0">
-                                            <button
-                                                className={`px-3 py-1 text-xs font-bold transition-colors ${compCurrency === 'THB' ? 'bg-emerald-600 text-white' : 'bg-stone-900 text-stone-500 hover:text-stone-300'}`}
-                                                onClick={() => setCompCurrency('THB')}
-                                            >
-                                                {CURRENCY}
-                                            </button>
-                                            <button
-                                                className={`px-3 py-1 text-xs font-bold transition-colors ${compCurrency === 'USDT' ? 'bg-blue-600 text-white' : 'bg-stone-900 text-stone-500 hover:text-stone-300'}`}
-                                                onClick={() => setCompCurrency('USDT')}
-                                            >
-                                                USDT
-                                            </button>
-                                        </div>
-                                        <input
-                                            type="number"
-                                            placeholder={`${t('admin.amount')} (${compCurrency})`}
-                                            className="flex-1 bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
-                                            value={economyForm.compAmount || ''}
-                                            onChange={e => setEconomyForm({ ...economyForm, compAmount: parseFloat(e.target.value) || 0 })}
-                                        />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder={t('admin.comp_reason_placeholder')}
-                                        className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
-                                        value={economyForm.compReason}
-                                        onChange={e => setEconomyForm({ ...economyForm, compReason: e.target.value })}
-                                    />
                                     <button
-                                        className="w-full bg-emerald-700 hover:bg-emerald-600 disabled:bg-stone-800 disabled:text-stone-600 disabled:border-transparent text-white font-bold py-3 rounded border border-emerald-600 transition-colors flex items-center justify-center gap-2"
-                                        onClick={handleGiveCompensation}
-                                        disabled={economyForm.compScope === 'SINGLE' && !economyForm.compUser}
+                                        onClick={toggleMaintenance}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-stone-950 ${isMaintenance ? 'bg-red-600' : 'bg-stone-700'}`}
                                     >
-                                        {economyForm.compScope === 'SINGLE' && !economyForm.compUser && <AlertTriangle size={16} className="text-yellow-600" />}
-                                        {t('admin.confirm_comp')}
+                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isMaintenance ? 'translate-x-6' : 'translate-x-1'}`} />
                                     </button>
+                                </div>
+                                {systemQr && (
+                                    <div className="w-16 h-16 bg-white rounded p-1">
+                                        <img src={systemQr} alt="System QR" className="w-full h-full object-contain" />
+                                    </div>
+                                )}
+
+                                <div
+                                    className="relative cursor-pointer bg-stone-950 hover:bg-stone-800 border border-stone-700 border-dashed rounded-lg px-6 py-3 flex items-center gap-3 transition-colors"
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        ref={fileInputRef}
+                                        onChange={handleQrUpload}
+                                    />
+                                    <Upload size={18} className="text-stone-400" />
+                                    <span className="text-sm font-bold text-stone-300">{t('admin.upload_new_qr')}</span>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* === GAME CONFIG === */}
-                    <div id="game-config" className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6">
-                        <div className="flex items-center gap-2 mb-6 border-b border-stone-800 pb-4">
-                            <LayoutDashboard size={24} className="text-purple-400" />
-                            <h3 className="text-xl font-bold text-white">{t('admin.game_config')}</h3>
-                        </div>
-
+                        {/* System Overview Cards (PART 6) */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {/* Drop Rate */}
-                            <div className="bg-stone-950 p-4 rounded border border-stone-800">
-                                <div className="flex justify-between items-center mb-4">
-                                    <span className="text-stone-400 font-bold text-sm">{t('admin.drop_rate')}</span>
-                                    <div className="flex items-center gap-1">
-                                        <input
-                                            type="number"
-                                            value={gameConfig.dropRate}
-                                            onChange={(e) => handleConfigChange('dropRate', Number(e.target.value))}
-                                            className="w-16 bg-stone-900 border border-stone-700 rounded px-2 py-1 text-right font-mono text-emerald-400 focus:border-emerald-500 outline-none text-sm"
-                                        />
-                                        <span className="text-stone-600 text-xs">%</span>
+                            <div
+                                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                                className="relative overflow-hidden bg-stone-900 p-6 border border-stone-800 shadow-xl cursor-pointer hover:bg-stone-800 transition-all group rounded-xl"
+                            >
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <Clock size={80} />
+                                </div>
+                                <div className="flex justify-between items-start mb-4">
+                                    <span className="text-stone-500 text-xs font-bold uppercase tracking-widest">{t('admin.pending_requests')}</span>
+                                    <div className="p-2 bg-yellow-900/20 rounded-lg text-yellow-500">
+                                        <Bell size={20} />
                                     </div>
                                 </div>
-                                <input
-                                    type="range"
-                                    min="0" max="100"
-                                    value={gameConfig.dropRate}
-                                    onChange={(e) => handleConfigChange('dropRate', Number(e.target.value))}
-                                    className="w-full accent-emerald-500 h-2 bg-stone-800 rounded-lg appearance-none cursor-pointer"
-                                />
+                                <div className="text-4xl font-display font-bold text-white mb-1">
+                                    {stats?.pendingWithdrawalsCount || 0}
+                                </div>
+                                <div className="text-xs text-stone-500 font-medium">{t('admin.pending_checks')} (Withdrawals)</div>
                             </div>
 
-                            {/* Tax Rate */}
-                            <div className="bg-stone-950 p-4 rounded border border-stone-800">
-                                <div className="flex justify-between items-center mb-4">
-                                    <span className="text-stone-400 font-bold text-sm">{t('admin.tax_rate')}</span>
-                                    <div className="flex items-center gap-1">
-                                        <input
-                                            type="number"
-                                            value={gameConfig.taxRate}
-                                            onChange={(e) => handleConfigChange('taxRate', Number(e.target.value))}
-                                            className="w-16 bg-stone-900 border border-stone-700 rounded px-2 py-1 text-right font-mono text-red-400 focus:border-red-500 outline-none text-sm"
-                                        />
-                                        <span className="text-stone-600 text-xs">%</span>
+                            <div
+                                onClick={() => document.getElementById('user-management')?.scrollIntoView({ behavior: 'smooth' })}
+                                className="relative overflow-hidden bg-stone-900 p-6 border border-stone-800 shadow-xl cursor-pointer hover:bg-stone-800 transition-all group rounded-xl"
+                            >
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <Users size={80} />
+                                </div>
+                                <div className="flex justify-between items-start mb-4">
+                                    <span className="text-stone-500 text-xs font-bold uppercase tracking-widest">{t('admin.total_users')}</span>
+                                    <div className="p-2 bg-blue-900/20 rounded-lg text-blue-500">
+                                        <Users size={20} />
                                     </div>
                                 </div>
-                                <input
-                                    type="range"
-                                    min="0" max="50"
-                                    value={gameConfig.taxRate}
-                                    onChange={(e) => handleConfigChange('taxRate', Number(e.target.value))}
-                                    className="w-full accent-red-500 h-2 bg-stone-800 rounded-lg appearance-none cursor-pointer"
-                                />
+                                <div className="text-4xl font-display font-bold text-white mb-1">
+                                    {(stats?.totalUsers || users.length).toLocaleString()}
+                                </div>
+                                <div className="text-xs text-stone-500 font-medium">{t('admin.all_members')}</div>
                             </div>
-                            <div className="bg-stone-950 p-4 rounded border border-stone-800">
-                                <div className="flex justify-between items-center mb-4">
-                                    <span className="text-stone-400 font-bold text-sm">{t('admin.repair_cost')}</span>
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-stone-600 text-xs">x</span>
-                                        <input
-                                            type="number"
-                                            step="0.1"
-                                            value={gameConfig.repairCost}
-                                            onChange={(e) => handleConfigChange('repairCost', Number(e.target.value))}
-                                            className="w-16 bg-stone-900 border border-stone-700 rounded px-2 py-1 text-right font-mono text-yellow-400 focus:border-yellow-500 outline-none text-sm"
-                                        />
+
+                            <div
+                                onClick={() => document.getElementById('game-config')?.scrollIntoView({ behavior: 'smooth' })}
+                                className="relative overflow-hidden bg-stone-900 p-6 border border-stone-800 shadow-xl cursor-pointer hover:bg-stone-800 transition-all group rounded-xl"
+                            >
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <Wallet size={80} />
+                                </div>
+                                <div className="flex justify-between items-start mb-4">
+                                    <span className="text-stone-500 text-xs font-bold uppercase tracking-widest">{t('admin.system_balance')}</span>
+                                    <div className="p-2 bg-emerald-900/20 rounded-lg text-emerald-500">
+                                        <Coins size={20} />
                                     </div>
                                 </div>
-                                <input
-                                    type="range"
-                                    min="0.1" max="5.0" step="0.1"
-                                    value={gameConfig.repairCost}
-                                    onChange={(e) => handleConfigChange('repairCost', Number(e.target.value))}
-                                    className="w-full accent-yellow-500 h-2 bg-stone-800 rounded-lg appearance-none cursor-pointer"
-                                />
+                                <div className="text-4xl font-display font-bold text-white mb-1">
+                                    {totalUserBalance.toLocaleString()}
+                                </div>
+                                <div className="text-xs text-stone-500 font-medium">{t('admin.total_user_balance_desc')} ({CURRENCY})</div>
                             </div>
                         </div>
-                        <div className="mt-4 flex justify-end">
-                            <button className="bg-stone-800 hover:bg-stone-700 text-stone-300 px-6 py-2 rounded font-bold transition-colors" onClick={() => alert(t('admin.config_saved'))}>
-                                {t('admin.save_config')}
-                            </button>
+
+                        {/* Developer Revenue Summary */}
+                        {globalRevenue && (
+                            <div className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="flex items-center gap-3 border-b border-stone-800 pb-4">
+                                    <div className="bg-yellow-900/20 p-2 rounded text-yellow-500">
+                                        <Coins size={20} />
+                                    </div>
+                                    <div className="flex-1 flex justify-between items-center">
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleResetAllPlayerData}
+                                                className="px-3 py-1 bg-orange-900/20 hover:bg-orange-900/40 text-orange-500 border border-orange-900/30 rounded text-xs font-bold transition-all flex items-center gap-2"
+                                            >
+                                                <AlertTriangle size={14} /> {t('admin.reset_balances')}
+                                            </button>
+                                            <button
+                                                onClick={handleDeleteAllUsers}
+                                                className="px-3 py-1 bg-red-900/40 hover:bg-red-900 border border-red-900/50 rounded text-xs font-bold transition-all flex items-center gap-2 text-white"
+                                            >
+                                                <Trash2 size={14} /> {t('admin.delete_all_users')}
+                                            </button>
+                                            <button
+                                                onClick={handleClearRevenue}
+                                                className="px-3 py-1 bg-red-900/20 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded text-xs font-bold transition-all flex items-center gap-2"
+                                            >
+                                                <Trash2 size={14} /> {t('admin.clear_all_revenue')}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
+                                    <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
+                                        <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.rig_sales')}</div>
+                                        <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.RIG_BUY || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
+                                        <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.repairs_renew')}</div>
+                                        <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.REPAIR || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
+                                        <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.withdraw_fees')}</div>
+                                        <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.WITHDRAW_FEE || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
+                                        <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.market_fees')}</div>
+                                        <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.MARKET_FEE || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
+                                        <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.item_sales')}</div>
+                                        <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.ITEM_BUY || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
+                                        <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.game_profits')}</div>
+                                        <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.GAME_LOSS || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div className="bg-stone-950 p-4 rounded border border-stone-800 hover:bg-stone-800 transition-colors">
+                                        <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.energy_oc')}</div>
+                                        <div className="text-xl font-mono font-bold text-emerald-400">+{Math.floor(globalRevenue.totals.ENERGY_REFILL || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div className="bg-yellow-900/10 p-4 rounded border border-yellow-500/30 hover:bg-yellow-900/20 transition-colors">
+                                        <div className="text-[10px] text-yellow-500 uppercase font-bold mb-1">{t('admin.dev_revenue')}</div>
+                                        <div className="text-xl font-mono font-bold text-yellow-400">+{Math.floor(globalRevenue.totals.total || 0).toLocaleString()} ฿</div>
+                                    </div>
+                                </div>
+
+                                {/* Revenue Adjustment Form */}
+                                <div className="flex flex-col md:flex-row items-end gap-3 mt-4 pt-4 border-t border-stone-800/50">
+                                    <div className="flex-1 w-full">
+                                        <label className="block text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.adjust_reason')}</label>
+                                        <input
+                                            type="text"
+                                            placeholder={t('admin.adjust_reason')}
+                                            className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-sm text-white focus:border-yellow-600 outline-none transition-colors"
+                                            value={adjustForm.reason}
+                                            onChange={(e) => setAdjustForm(prev => ({ ...prev, reason: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div className="w-full md:w-48">
+                                        <label className="block text-[10px] text-stone-500 uppercase font-bold mb-1">{t('admin.adjust_amount')}</label>
+                                        <input
+                                            type="number"
+                                            placeholder="0"
+                                            className="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-sm text-emerald-400 font-mono focus:border-yellow-600 outline-none transition-colors"
+                                            value={adjustForm.amount === 0 ? '' : adjustForm.amount}
+                                            onChange={(e) => setAdjustForm(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleAdjustRevenue}
+                                        disabled={!adjustForm.amount}
+                                        className="w-full md:w-auto px-6 py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-stone-800 disabled:text-stone-600 text-stone-900 font-bold rounded text-sm transition-all shadow-lg flex items-center justify-center gap-2"
+                                    >
+                                        <CheckCircle2 size={16} />
+                                        {t('admin.adjust_revenue')}
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-stone-800/50">
+                                    <div className="bg-stone-950/50 p-4 rounded border border-stone-800 flex items-center justify-between">
+                                        <div>
+                                            <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">Total Deposit Volume</div>
+                                            <div className="flex gap-4">
+                                                <div>
+                                                    <span className="text-xs text-stone-400 block">Bank</span>
+                                                    <span className="text-lg font-mono font-bold text-white">{Math.floor(globalRevenue.volumes?.bank_deposits || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div className="w-px h-8 bg-stone-800 self-center"></div>
+                                                <div>
+                                                    <span className="text-xs text-blue-400 block">USDT</span>
+                                                    <span className="text-lg font-mono font-bold text-blue-400">{Math.floor(globalRevenue.volumes?.usdt_deposits || 0).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <ArrowUpRight className="text-emerald-500 opacity-20" size={40} />
+                                    </div>
+                                    <div className="bg-stone-950/50 p-4 rounded border border-stone-800 flex items-center justify-between">
+                                        <div>
+                                            <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">Total Withdrawal Volume</div>
+                                            <div className="flex gap-4">
+                                                <div>
+                                                    <span className="text-xs text-stone-400 block">Bank</span>
+                                                    <span className="text-lg font-mono font-bold text-white">{Math.floor(globalRevenue.volumes?.bank_withdrawals || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div className="w-px h-8 bg-stone-800 self-center"></div>
+                                                <div>
+                                                    <span className="text-xs text-blue-400 block">USDT</span>
+                                                    <span className="text-lg font-mono font-bold text-blue-400">{Math.floor(globalRevenue.volumes?.usdt_withdrawals || 0).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <ArrowDownLeft className="text-red-500 opacity-20" size={40} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* === USERS MANAGEMENT === */}
+                        <div id="user-management" className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg overflow-hidden">
+                            <div className="p-4 border-b border-stone-800 flex justify-between items-center bg-stone-950">
+                                <div className="flex items-center gap-2">
+                                    <Users size={20} className="text-blue-400" />
+                                    <h3 className="font-bold text-white">{t('admin.manage_users')} ({users.length})</h3>
+                                </div>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" size={14} />
+                                    <input
+                                        type="text"
+                                        placeholder={t('admin.search_user')}
+                                        value={search}
+                                        onChange={e => setSearch(e.target.value)}
+                                        className="bg-stone-900 border border-stone-700 rounded-full pl-9 pr-4 py-1.5 text-sm text-stone-200 focus:outline-none focus:border-yellow-600 w-64"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-stone-900/50 text-stone-500 text-xs uppercase tracking-wider border-b border-stone-800">
+                                            <th className="p-4 font-bold">{t('admin.user_info')}</th>
+                                            <th className="p-4 font-bold text-right">{t('admin.balance')}</th>
+                                            <th className="p-4 font-bold text-center">{t('admin.rigs_count')}</th>
+                                            <th className="p-4 font-bold text-right text-emerald-400">{t('admin.daily_profit')}</th>
+                                            <th className="p-4 font-bold text-center">{t('admin.status')}</th>
+                                            <th className="p-4 font-bold text-right">{t('admin.management')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-stone-800">
+                                        {filteredUsers.map(u => (
+                                            <tr key={u.id} className="hover:bg-stone-800/30 transition-colors">
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${u.role?.includes('ADMIN') ? 'bg-red-500/20 text-red-500 border border-red-500/50' : 'bg-stone-800 text-stone-400'}`}>
+                                                            {u.username.substring(0, 2).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold text-white text-sm flex items-center gap-2">
+                                                                {u.username}
+                                                                {u.role?.includes('ADMIN') && <span className="text-[10px] bg-red-900/40 text-red-400 px-1 rounded border border-red-900/50">ADMIN</span>}
+                                                                {u.inventory?.some((i: any) => i.typeId === 'vip_withdrawal_card') && (
+                                                                    <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-500 text-[10px] px-1.5 py-0.5 rounded border border-yellow-500/30 font-black shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                                                                        <CreditCard size={10} />
+                                                                        VIP
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-xs text-stone-500 font-mono">ID: {u.id}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    {u.role?.includes('ADMIN') ? (
+                                                        <span className="text-stone-600 font-bold">-</span>
+                                                    ) : (
+                                                        <>
+                                                            <div className="font-mono font-bold text-emerald-400 text-sm">{Math.floor(u.balance).toLocaleString()}</div>
+                                                            <div className="text-[10px] text-stone-600">{CURRENCY}</div>
+                                                        </>
+                                                    )}
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    <div className="inline-flex items-center gap-1 bg-stone-900 px-2 py-1 rounded border border-stone-800">
+                                                        <Hammer size={10} className="text-yellow-500" />
+                                                        <span className="text-xs font-bold text-stone-300">{getRigsForUser(u.id).length}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    <div className="font-mono font-bold text-emerald-400 text-sm">+{Math.floor(getDailyProfitForUser(u.id)).toLocaleString()}</div>
+                                                    <div className="text-[10px] text-stone-600">{CURRENCY}/Day</div>
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${u.isBanned ? 'bg-red-900/20 text-red-500 border-red-900/30' : 'bg-emerald-900/20 text-emerald-500 border-emerald-900/30'}`}>
+                                                        {u.isBanned ? 'BANNED' : 'Active'}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    <button
+                                                        className="text-stone-500 hover:text-white p-2 rounded hover:bg-stone-800 transition-colors"
+                                                        title="View Details"
+                                                        onClick={() => {
+                                                            setSelectedUser(u);
+                                                            setEconomyForm(prev => ({ ...prev, targetUser: u.id, compUser: u.id }));
+                                                            api.admin.getUserStats(u.id).then(setUserStats).catch(() => setUserStats({ totalDeposits: 0, totalWithdrawals: 0 }));
+                                                        }}
+                                                    >
+                                                        <ChevronRight size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {filteredUsers.length === 0 && (
+                                <div className="p-8 text-center text-stone-500 text-sm">
+                                    {t('admin.no_user_found')}
+                                </div>
+                            )}
+                        </div>
+
+
+                        {/* === ECONOMY CONTROL === */}
+                        <div id="economy-control" className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6">
+                            <div className="flex items-center gap-2 mb-6 border-b border-stone-800 pb-4">
+                                <Coins size={24} className="text-yellow-500" />
+                                <h3 className="text-xl font-bold text-white">{t('admin.economy_control')}</h3>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Add Item Form */}
+                                <div className="space-y-4">
+                                    <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">{t('admin.add_item')}</h4>
+                                    <div className="space-y-3">
+                                        <div className="flex bg-stone-950 p-1 rounded border border-stone-800">
+                                            <button
+                                                className={`flex-1 py-1 text-xs font-bold rounded transition-all ${economyForm.itemScope === 'SINGLE' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:text-stone-300'}`}
+                                                onClick={() => setEconomyForm({ ...economyForm, itemScope: 'SINGLE' })}
+                                            >
+                                                รายบุคคล (Single)
+                                            </button>
+                                            <button
+                                                className={`flex-1 py-1 text-xs font-bold rounded transition-all ${economyForm.itemScope === 'ALL' ? 'bg-indigo-900/40 text-indigo-400 border border-indigo-900/50' : 'text-stone-500 hover:text-stone-300'}`}
+                                                onClick={() => setEconomyForm({ ...economyForm, itemScope: 'ALL' })}
+                                            >
+                                                ทั้งหมด (All Users)
+                                            </button>
+                                        </div>
+
+                                        {economyForm.itemScope === 'SINGLE' && (
+                                            <input
+                                                type="text"
+                                                placeholder="User ID / Username"
+                                                className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                                value={economyForm.targetUser}
+                                                onChange={e => setEconomyForm({ ...economyForm, targetUser: e.target.value })}
+                                            />
+                                        )}
+                                        <select
+                                            className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                            value={economyForm.itemId}
+                                            onChange={e => setEconomyForm({ ...economyForm, itemId: e.target.value })}
+                                        >
+                                            <option value="">{t('admin.choose_item')}</option>
+                                            <optgroup label="Items & Equipment">
+                                                {SHOP_ITEMS.map(item => (
+                                                    <option key={item.id} value={item.id}>{getLocalized(item.name)} ({item.id})</option>
+                                                ))}
+                                            </optgroup>
+                                            <optgroup label="Materials">
+                                                {Object.entries(MATERIAL_CONFIG.NAMES).map(([id, name]) => (
+                                                    <option key={`mat-${id}`} value={`material_${id}`}>{getLocalized(name)} (Tier {id})</option>
+                                                ))}
+                                            </optgroup>
+                                        </select>
+                                        <input
+                                            type="text"
+                                            placeholder="ข้อความ (Optional)"
+                                            className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                            value={economyForm.message}
+                                            onChange={e => setEconomyForm({ ...economyForm, message: e.target.value })}
+                                        />
+                                        <input
+                                            type="number"
+                                            placeholder={t('admin.amount')}
+                                            className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                            value={economyForm.itemAmount}
+                                            onChange={e => setEconomyForm({ ...economyForm, itemAmount: parseInt(e.target.value) || 1 })}
+                                        />
+                                        <button
+                                            className="w-full bg-yellow-600 hover:bg-yellow-500 disabled:bg-stone-800 disabled:text-stone-600 text-stone-900 font-bold py-3 rounded transition-colors flex items-center justify-center gap-2"
+                                            onClick={handleAddItem}
+                                            disabled={economyForm.itemScope === 'SINGLE' && !economyForm.targetUser}
+                                        >
+                                            {economyForm.itemScope === 'SINGLE' && !economyForm.targetUser && <AlertTriangle size={16} className="text-yellow-600" />}
+                                            {t('admin.send_item')}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Give Compensation Form */}
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="text-sm font-bold text-stone-400 uppercase tracking-widest">{t('admin.compensation')}</h4>
+                                        <span className="text-xs text-emerald-500 font-mono">{t('admin.server_issues_refunds')}</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div className="flex bg-stone-950 p-1 rounded border border-stone-800">
+                                            <button
+                                                className={`flex-1 py-1 text-xs font-bold rounded transition-all ${economyForm.compScope === 'SINGLE' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:text-stone-300'}`}
+                                                onClick={() => setEconomyForm({ ...economyForm, compScope: 'SINGLE' })}
+                                            >
+                                                ไอดีเดียว (Single)
+                                            </button>
+                                            <button
+                                                className={`flex-1 py-1 text-xs font-bold rounded transition-all ${economyForm.compScope === 'ALL' ? 'bg-red-900/40 text-red-400 border border-red-900/50' : 'text-stone-500 hover:text-stone-300'}`}
+                                                onClick={() => setEconomyForm({ ...economyForm, compScope: 'ALL' })}
+                                            >
+                                                ทั้งหมด (All Users)
+                                            </button>
+                                        </div>
+
+                                        {economyForm.compScope === 'SINGLE' && (
+                                            <input
+                                                type="text"
+                                                placeholder="User ID / Username"
+                                                className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                                value={economyForm.compUser}
+                                                onChange={e => setEconomyForm({ ...economyForm, compUser: e.target.value })}
+                                            />
+                                        )}
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <div className="sm:w-1/3 bg-emerald-900/20 border border-emerald-900/50 rounded p-3 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                                                {t('admin.add_funds')}
+                                            </div>
+                                            <div className="flex bg-stone-950 border border-stone-700 rounded overflow-hidden shadow-lg shrink-0">
+                                                <button
+                                                    className={`px-3 py-1 text-xs font-bold transition-colors ${compCurrency === 'THB' ? 'bg-emerald-600 text-white' : 'bg-stone-900 text-stone-500 hover:text-stone-300'}`}
+                                                    onClick={() => setCompCurrency('THB')}
+                                                >
+                                                    {CURRENCY}
+                                                </button>
+                                                <button
+                                                    className={`px-3 py-1 text-xs font-bold transition-colors ${compCurrency === 'USDT' ? 'bg-blue-600 text-white' : 'bg-stone-900 text-stone-500 hover:text-stone-300'}`}
+                                                    onClick={() => setCompCurrency('USDT')}
+                                                >
+                                                    USDT
+                                                </button>
+                                            </div>
+                                            <input
+                                                type="number"
+                                                placeholder={`${t('admin.amount')} (${compCurrency})`}
+                                                className="flex-1 bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                                value={economyForm.compAmount || ''}
+                                                onChange={e => setEconomyForm({ ...economyForm, compAmount: parseFloat(e.target.value) || 0 })}
+                                            />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder={t('admin.comp_reason_placeholder')}
+                                            className="w-full bg-stone-950 border border-stone-700 rounded p-3 text-white focus:border-yellow-600 outline-none"
+                                            value={economyForm.compReason}
+                                            onChange={e => setEconomyForm({ ...economyForm, compReason: e.target.value })}
+                                        />
+                                        <button
+                                            className="w-full bg-emerald-700 hover:bg-emerald-600 disabled:bg-stone-800 disabled:text-stone-600 disabled:border-transparent text-white font-bold py-3 rounded border border-emerald-600 transition-colors flex items-center justify-center gap-2"
+                                            onClick={handleGiveCompensation}
+                                            disabled={economyForm.compScope === 'SINGLE' && !economyForm.compUser}
+                                        >
+                                            {economyForm.compScope === 'SINGLE' && !economyForm.compUser && <AlertTriangle size={16} className="text-yellow-600" />}
+                                            {t('admin.confirm_comp')}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* === GAME CONFIG === */}
+                        <div id="game-config" className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6">
+                            <div className="flex items-center gap-2 mb-6 border-b border-stone-800 pb-4">
+                                <LayoutDashboard size={24} className="text-purple-400" />
+                                <h3 className="text-xl font-bold text-white">{t('admin.game_config')}</h3>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {/* Drop Rate */}
+                                <div className="bg-stone-950 p-4 rounded border border-stone-800">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <span className="text-stone-400 font-bold text-sm">{t('admin.drop_rate')}</span>
+                                        <div className="flex items-center gap-1">
+                                            <input
+                                                type="number"
+                                                value={gameConfig.dropRate}
+                                                onChange={(e) => handleConfigChange('dropRate', Number(e.target.value))}
+                                                className="w-16 bg-stone-900 border border-stone-700 rounded px-2 py-1 text-right font-mono text-emerald-400 focus:border-emerald-500 outline-none text-sm"
+                                            />
+                                            <span className="text-stone-600 text-xs">%</span>
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0" max="100"
+                                        value={gameConfig.dropRate}
+                                        onChange={(e) => handleConfigChange('dropRate', Number(e.target.value))}
+                                        className="w-full accent-emerald-500 h-2 bg-stone-800 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                </div>
+
+                                {/* Tax Rate */}
+                                <div className="bg-stone-950 p-4 rounded border border-stone-800">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <span className="text-stone-400 font-bold text-sm">{t('admin.tax_rate')}</span>
+                                        <div className="flex items-center gap-1">
+                                            <input
+                                                type="number"
+                                                value={gameConfig.taxRate}
+                                                onChange={(e) => handleConfigChange('taxRate', Number(e.target.value))}
+                                                className="w-16 bg-stone-900 border border-stone-700 rounded px-2 py-1 text-right font-mono text-red-400 focus:border-red-500 outline-none text-sm"
+                                            />
+                                            <span className="text-stone-600 text-xs">%</span>
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0" max="50"
+                                        value={gameConfig.taxRate}
+                                        onChange={(e) => handleConfigChange('taxRate', Number(e.target.value))}
+                                        className="w-full accent-red-500 h-2 bg-stone-800 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                </div>
+                                <div className="bg-stone-950 p-4 rounded border border-stone-800">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <span className="text-stone-400 font-bold text-sm">{t('admin.repair_cost')}</span>
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-stone-600 text-xs">x</span>
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                value={gameConfig.repairCost}
+                                                onChange={(e) => handleConfigChange('repairCost', Number(e.target.value))}
+                                                className="w-16 bg-stone-900 border border-stone-700 rounded px-2 py-1 text-right font-mono text-yellow-400 focus:border-yellow-500 outline-none text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0.1" max="5.0" step="0.1"
+                                        value={gameConfig.repairCost}
+                                        onChange={(e) => handleConfigChange('repairCost', Number(e.target.value))}
+                                        className="w-full accent-yellow-500 h-2 bg-stone-800 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-4 flex justify-end">
+                                <button className="bg-stone-800 hover:bg-stone-700 text-stone-300 px-6 py-2 rounded font-bold transition-colors" onClick={() => alert(t('admin.config_saved'))}>
+                                    {t('admin.save_config')}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Chat System for Admin */}
             <ChatSystem currentUser={currentUser} />
-        </div>
+        </div >
     );
 };

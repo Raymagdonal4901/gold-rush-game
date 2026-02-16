@@ -321,6 +321,25 @@ export const getUserStats = async (req: AuthRequest, res: Response) => {
         // 3.5 Total Revenue
         const total_revenue = rev_energy_items + rev_market_fees + rev_withdrawal_fees + rev_repair_fees;
 
+        // --- Fraud Audit Stats ---
+        const user = await User.findById(objId);
+        const currentBalance = user?.balance || 0;
+
+        // Total Mining Claims
+        const totalMiningProfit = revenueMap['MINING_CLAIM'] || 0;
+        const totalCompensation = revenueMap['COMPENSATION'] || 0;
+        const totalReferralBonus = revenueMap['REFERRAL_BONUS'] || 0;
+        const totalQuestReward = revenueMap['QUEST_REWARD'] || 0;
+        const totalDailyBonus = revenueMap['DAILY_BONUS'] || 0;
+        const totalLuckyDraw = revenueMap['LUCKY_DRAW'] || 0;
+
+        // Sum of all "Free money" from system
+        const totalBonusIncome = totalCompensation + totalReferralBonus + totalQuestReward + totalDailyBonus + totalLuckyDraw;
+
+        // Profitability Ratio: (Withdrawals + Balance) / Deposits
+        const cashOutPotential = totalWithdrawals + currentBalance;
+        const profitabilityRatio = totalDeposits > 0 ? (cashOutPotential / totalDeposits) : 0;
+
         // --- Transaction History ---
         const withdrawalHistory = await WithdrawalRequest.find({ userId: objId }).sort({ createdAt: -1 });
         const depositHistory = await DepositRequest.find({ userId: objId }).sort({ createdAt: -1 });
@@ -334,6 +353,17 @@ export const getUserStats = async (req: AuthRequest, res: Response) => {
                 withdrawal_fees: rev_withdrawal_fees,
                 repair_fees: rev_repair_fees,
                 total: total_revenue
+            },
+            audit: {
+                currentBalance,
+                totalMiningProfit,
+                totalBonusIncome,
+                totalCompensation,
+                totalReferralBonus,
+                totalQuestReward,
+                totalDailyBonus,
+                profitabilityRatio,
+                netCashFlow: totalDeposits - totalWithdrawals
             },
             withdrawalHistory,
             depositHistory

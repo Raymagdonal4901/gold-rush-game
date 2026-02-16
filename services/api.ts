@@ -9,6 +9,17 @@ export interface UserStats {
     totalWithdrawals: number;
     withdrawalHistory?: WithdrawalRequest[];
     depositHistory?: DepositRequest[];
+    audit?: {
+        currentBalance: number;
+        totalMiningProfit: number;
+        totalBonusIncome: number;
+        totalCompensation: number;
+        totalReferralBonus: number;
+        totalQuestReward: number;
+        totalDailyBonus: number;
+        profitabilityRatio: number;
+        netCashFlow: number;
+    };
 }
 import { User, OilRig, AccessoryItem, ClaimRequest, WithdrawalRequest, Withdrawal, DepositRequest, Transaction, ChatMessage, MarketState, CraftingQueueItem } from './types';
 
