@@ -155,6 +155,14 @@ export const login = async (req: Request, res: Response) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
+        // --- FORCE AUTO-VERIFY ALL USERS ---
+        // ปลดล็อคให้ทุกคนเข้าใช้งานได้ทันทีโดยไม่ต้องรอกดเมล
+        if (!user.isEmailVerified) {
+            user.isEmailVerified = true;
+            await user.save();
+            console.log(`[AUTH] Auto-verified user on login: ${user.email}`);
+        }
+
         // ตรวจสอบการยืนยันอีเมล
         if (!user.isEmailVerified) {
             return res.status(403).json({ message: 'Please verify email' });
