@@ -215,7 +215,17 @@ export const api = {
     },
     mergeRigs: async (rigId1: string, rigId2: string): Promise<{ success: boolean, rig: OilRig, message?: string }> => {
         const res = await client.post('/rigs/merge', { rigId1, rigId2 });
-        return res.data;
+        return {
+            ...res.data,
+            rig: res.data.rig ? mapBackendRigToFrontend(res.data.rig) : undefined
+        };
+    },
+    upgradeRig: async (rigId: string): Promise<{ success: boolean, rig: OilRig, message?: string }> => {
+        const res = await client.post(`/rigs/${rigId}/upgrade`);
+        return {
+            ...res.data,
+            rig: res.data.rig ? mapBackendRigToFrontend(res.data.rig) : undefined
+        };
     },
 
     upgradeAccessory: async (itemId: string, useInsurance: boolean): Promise<any> => {
@@ -548,7 +558,9 @@ const mapBackendRigToFrontend = (backendRig: any): OilRig => {
         lastEnergyUpdate: backendRig.lastEnergyUpdate ? new Date(backendRig.lastEnergyUpdate).getTime() : new Date(backendRig.purchaseDate || backendRig.createdAt || Date.now()).getTime(),
         currentMaterials: backendRig.currentMaterials,
         lastCollectionAt: backendRig.lastCollectionAt ? new Date(backendRig.lastCollectionAt).getTime() : undefined,
-        lastGiftAt: backendRig.lastGiftAt ? new Date(backendRig.lastGiftAt).getTime() : undefined
+        lastGiftAt: backendRig.lastGiftAt ? new Date(backendRig.lastGiftAt).getTime() : undefined,
+        starLevel: backendRig.starLevel || 0,
+        level: backendRig.level || 1
     } as OilRig;
 };
 

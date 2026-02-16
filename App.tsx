@@ -99,17 +99,25 @@ const AppContent: React.FC = () => {
   return (
     <>
       <AnnouncementModal />
-      {!user ? (
-        showWhitepaper ? (
-          <WhitepaperPage onBack={() => { setShowWhitepaper(false); setShowLanding(true); }} onPlayNow={() => { setShowWhitepaper(false); setShowLanding(false); }} />
-        ) : showLanding ? (
-          <LandingPage onPlayNow={() => setShowLanding(false)} onWhitepaper={() => { setShowLanding(false); setShowWhitepaper(true); }} />
-        ) : authView === 'verify' ? (
-          <VerifyEmailPage onGoToLogin={() => setAuthView('login')} />
+      {showWhitepaper ? (
+        <AuthGuard>
+          <WhitepaperPage
+            onBack={() => { setShowWhitepaper(false); setShowLanding(true); }}
+            onPlayNow={() => { setShowWhitepaper(false); setShowLanding(false); }}
+          />
+        </AuthGuard>
+      ) : showLanding ? (
+        <LandingPage
+          onPlayNow={() => setShowLanding(false)}
+          onWhitepaper={() => { setShowLanding(false); setShowWhitepaper(true); }}
+        />
+      ) : !user ? (
+        authView === 'verify' ? (
+          <VerifyEmailPage onGoToLogin={() => setAuthView('login')} onBack={() => setShowLanding(true)} />
         ) : authView === 'register' ? (
-          <RegisterPage onSwitchToLogin={() => setAuthView('login')} />
+          <RegisterPage onSwitchToLogin={() => setAuthView('login')} onBack={() => setShowLanding(true)} />
         ) : (
-          <LoginPage onLogin={handleLogin} onSwitchToRegister={() => setAuthView('register')} />
+          <LoginPage onLogin={handleLogin} onSwitchToRegister={() => setAuthView('register')} onBack={() => setShowLanding(true)} />
         )
       ) : isAdmin && viewMode === 'admin' ? (
         <AuthGuard>
@@ -117,6 +125,7 @@ const AppContent: React.FC = () => {
             currentUser={user}
             onLogout={handleLogout}
             onSwitchToPlayer={() => setViewMode('player')}
+            onBack={() => setShowLanding(true)}
           />
         </AuthGuard>
       ) : showWallet ? (
@@ -134,6 +143,7 @@ const AppContent: React.FC = () => {
             onLogout={handleLogout}
             onOpenWallet={() => setShowWallet(true)}
             onOpenAdmin={() => setViewMode('admin')}
+            onBack={() => setShowLanding(true)}
           />
         </AuthGuard>
       )}

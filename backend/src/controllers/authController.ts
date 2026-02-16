@@ -178,6 +178,10 @@ export const login = async (req: Request, res: Response) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
+        if (user.isBanned) {
+            return res.status(403).json({ message: 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อเจ้าหน้าที่' });
+        }
+
         // สร้าง JWT Token
         const token = jwt.sign(
             { userId: user._id, username: user.username, role: user.role },
@@ -223,7 +227,11 @@ export const login = async (req: Request, res: Response) => {
                 warehouseCapacity: maxCapacity,
                 isOverclockActive: user.isOverclockActive || false,
                 overclockRemainingMs: user.overclockRemainingMs || 0,
-                overclockExpiresAt: user.overclockExpiresAt || null
+                overclockExpiresAt: user.overclockExpiresAt || null,
+                lastLuckyDraw: user.lastLuckyDraw || 0,
+                referralCode: user.referralCode,
+                referralStats: user.referralStats,
+                isFirstDepositPaid: user.isFirstDepositPaid || false
             }
         });
     } catch (error) {
@@ -298,7 +306,11 @@ export const getProfile = async (req: any, res: Response) => {
             warehouseCapacity: maxCapacity,
             isOverclockActive: user.isOverclockActive || false,
             overclockRemainingMs: user.overclockRemainingMs || 0,
-            overclockExpiresAt: user.overclockExpiresAt || null
+            overclockExpiresAt: user.overclockExpiresAt || null,
+            lastLuckyDraw: user.lastLuckyDraw || 0,
+            referralCode: user.referralCode,
+            referralStats: user.referralStats,
+            isFirstDepositPaid: user.isFirstDepositPaid || false
         });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error });

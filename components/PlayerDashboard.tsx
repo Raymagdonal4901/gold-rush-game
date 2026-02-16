@@ -20,6 +20,7 @@ const formatCountdown = (ms: number | null) => {
 };
 
 import { RigCard } from './RigCard';
+import { RigMergeModal } from './RigMergeModal';
 import { InvestmentModal } from './InvestmentModal';
 import { AccessoryShopModal } from './AccessoryShopModal';
 import { LeaderboardModal } from './LeaderboardModal';
@@ -61,9 +62,10 @@ interface PlayerDashboardProps {
     onLogout: () => void;
     onOpenWallet?: () => void;
     onOpenAdmin?: () => void;
+    onBack?: () => void;
 }
 
-const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLogout, onOpenWallet, onOpenAdmin }) => {
+const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLogout, onOpenWallet, onOpenAdmin, onBack }) => {
     const { t, language, setLanguage, formatCurrency, formatBonus } = useLanguage();
 
     const [user, setUser] = useState<any>(propUser);
@@ -104,6 +106,8 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const [isBotModalOpen, setIsBotModalOpen] = useState(false);
     const [isMinesOpen, setIsMinesOpen] = useState(false);
     const [isLuckyDrawOpen, setIsLuckyDrawOpen] = useState(false);
+    const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+    const [selectedRigForMerge, setSelectedRigForMerge] = useState<any>(null);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successModalConfig, setSuccessModalConfig] = useState<{ title: string; message: string; type: 'SUCCESS' | 'KEY' | 'BATTERY' | 'ERROR' }>({
         title: '',
@@ -430,12 +434,6 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
         setIsAccessoryManagerOpen(true);
     };
 
-    const handleUpgradeRig = (rig: any) => {
-        // setSelectedRig(rig);
-        // setIsUpgradeOpen(true);
-        alert("Upgrade feature unavailable.");
-    };
-
     const handleUnlockSlot = (rig: any, slotIndex: number) => {
         setSelectedRig(rig);
         setUnlockTargetSlot(slotIndex);
@@ -465,6 +463,20 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             }
         } catch (err: any) {
             console.error("Renew failed", err);
+        }
+    };
+
+    const handleUpgradeRig = async (rigId: string) => {
+        try {
+            const res = await api.upgradeRig(rigId);
+            if (res.success) {
+                // Success sound or notification could go here
+                fetchData();
+            }
+        } catch (err: any) {
+            console.error("Upgrade rig failed", err);
+            const errMsg = err.response?.data?.message || "Upgrade failed";
+            alert(errMsg);
         }
     };
 
@@ -788,6 +800,15 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                                 GOLD RUSH
                             </span>
                         </div>
+                        {onBack && (
+                            <button
+                                onClick={onBack}
+                                className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border border-stone-800 bg-stone-900/50 hover:bg-stone-800 text-[10px] font-black tracking-widest text-stone-400 hover:text-yellow-500 transition-all ml-2"
+                            >
+                                <ArrowRight size={14} className="rotate-180" />
+                                {language === 'th' ? 'หน้าหลัก' : 'HOME'}
+                            </button>
+                        )}
                     </div>
 
                     {/* Desktop Stats */}
@@ -1247,17 +1268,9 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                                         key={rig.id}
                                         rig={rig}
                                         availableRigs={rigs} // Pass all rigs for merge selection
-                                        onMerge={(newRig) => {
-                                            fetchData();
-                                            addNotification({
-                                                id: Date.now().toString(),
-                                                userId: user.id || '',
-                                                title: language === 'th' ? 'รวมสำเร็จ!' : 'Merge Successful!',
-                                                message: language === 'th' ? `ได้รับเครื่องขุด Rank ${newRig.starLevel || 1}` : `Received Rig Rank ${newRig.starLevel || 1}`,
-                                                type: 'SUCCESS',
-                                                read: false,
-                                                timestamp: Date.now()
-                                            });
+                                        onOpenMerge={(r) => {
+                                            setSelectedRigForMerge(r);
+                                            setIsMergeModalOpen(true);
                                         }}
                                         onClaim={(id, amount) => handleClaim(id, amount)}
                                         onClaimGift={(r) => handleClaimGift(r)}
@@ -1276,8 +1289,8 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                                         onToggleBotPause={toggleBotPause}
                                         isOverclockActive={user?.isOverclockActive && new Date(user?.overclockExpiresAt).getTime() > Date.now()}
                                         overclockMultiplier={ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST || 1.5}
-                                        userLastClaimedAt={user?.lastClaimedAt}
                                         addNotification={addNotification}
+                                        onUpgrade={handleUpgradeRig}
                                     />
                                 );
                             }
@@ -1608,6 +1621,19 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                 onRefresh={fetchData}
                 addNotification={addNotification}
             />
+
+            {selectedRigForMerge && (
+                <RigMergeModal
+                    isOpen={isMergeModalOpen}
+                    onClose={() => setIsMergeModalOpen(false)}
+                    baseRig={selectedRigForMerge}
+                    availableRigs={rigs}
+                    onMergeSuccess={(newRig) => {
+                        fetchData();
+                        setIsMergeModalOpen(false);
+                    }}
+                />
+            )}
 
             <SalvageResultModal
                 isOpen={isSalvageResultOpen}

@@ -325,7 +325,7 @@ export interface RigPreset {
 export const RIG_PRESETS: RigPreset[] = [
     { id: 1, name: { th: 'พลั่วสนิมเขรอะ', en: 'Starter' }, price: 300, dailyProfit: 10, durationDays: 60, repairCost: 0, energyCostPerDay: 1, specialProperties: { infiniteDurability: false, noGift: true }, type: 'COMMON' },
     { id: 2, name: { th: 'สว่านพกพา', en: 'Common' }, price: 500, dailyProfit: 18.5, durationDays: 60, repairCost: 0, energyCostPerDay: 2, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'UNCOMMON', specialProperties: { infiniteDurability: false } },
-    { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Uncommon' }, price: 1000, dailyProfit: 38.5, durationDays: 90, repairCost: 63, energyCostPerDay: 3, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' } },
+    { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Uncommon' }, price: 1000, dailyProfit: 38.5, durationDays: 90, repairCost: 63, energyCostPerDay: 3, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'RARE' },
     { id: 4, name: { th: 'เครื่องขุดทองแดง', en: 'Rare' }, price: 1500, dailyProfit: 62.5, durationDays: 90, repairCost: 122, energyCostPerDay: 6, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'SUPER_RARE' },
     { id: 5, name: { th: 'เครื่องขุดเหล็ก', en: 'Epic' }, price: 2000, dailyProfit: 85, durationDays: 120, repairCost: 182, energyCostPerDay: 10, type: 'EPIC' },
     { id: 6, name: { th: 'เครื่องขุดทองคำ', en: 'Legendary' }, price: 2500, dailyProfit: 115, durationDays: 120, repairCost: 252, energyCostPerDay: 15, type: 'MYTHIC' },
@@ -389,6 +389,24 @@ export const MINING_VOLATILITY_CONFIG: Record<number, {
     7: { type: 'Volatile', baseValue: 120, maxRandom: 60, jackpotChance: 0.08, jackpotMultiplier: 2.0, stabilityStars: 1, stabilityLabel: 'Extreme Risk', hashrateMin: 200, hashrateMax: 350, durabilityMax: 8000, durabilityDecay: 100, tag: 'Tycoon Only', tagColor: 'red', maxQuantity: 50 },
     8: { type: 'Chaos', baseValue: 300, maxRandom: 200, jackpotChance: 0.10, jackpotMultiplier: 3.0, stabilityStars: 0, stabilityLabel: 'Danger', hashrateMin: 1000, hashrateMax: 2000, durabilityMax: 12000, durabilityDecay: 100, tag: 'God Tier', tagColor: 'gold', maxQuantity: 3 },
     9: { type: 'Stable', baseValue: 2, maxRandom: 3, jackpotChance: 0, jackpotMultiplier: 1.0, stabilityStars: 5, hashrateMin: 1, hashrateMax: 5, durabilityMax: 999999, durabilityDecay: 0, tag: 'F2P Starter', tagColor: 'green', maxQuantity: 1 },
+};
+
+// === Rig Level Up System ===
+export const MAX_RIG_LEVEL = 10;
+export const RIG_UPGRADE_RULES: Record<number, {
+    materialTier: number; baseCost: number;
+    costMultiplier: number; statGrowth: number;
+    durabilityBonus: number;
+}> = {
+    1: { materialTier: 0, baseCost: 30, costMultiplier: 2.0, statGrowth: 1.04, durabilityBonus: 100 },  // Starter → Stone
+    2: { materialTier: 0, baseCost: 25, costMultiplier: 2.0, statGrowth: 1.04, durabilityBonus: 100 },  // Drill → Stone
+    3: { materialTier: 1, baseCost: 20, costMultiplier: 2.0, statGrowth: 1.05, durabilityBonus: 150 },  // Coal → Coal
+    4: { materialTier: 2, baseCost: 15, costMultiplier: 1.8, statGrowth: 1.06, durabilityBonus: 200 },  // Copper → Copper
+    5: { materialTier: 3, baseCost: 10, costMultiplier: 1.8, statGrowth: 1.07, durabilityBonus: 300 },  // Iron → Iron
+    6: { materialTier: 4, baseCost: 5, costMultiplier: 1.5, statGrowth: 1.08, durabilityBonus: 400 },  // Gold → Gold
+    7: { materialTier: 5, baseCost: 3, costMultiplier: 1.5, statGrowth: 1.09, durabilityBonus: 500 },  // Diamond → Diamond
+    8: { materialTier: 6, baseCost: 2, costMultiplier: 1.5, statGrowth: 1.10, durabilityBonus: 1000 }, // Reactor → Crude Oil
+    9: { materialTier: 0, baseCost: 50, costMultiplier: 2.0, statGrowth: 1.03, durabilityBonus: 50 },   // F2P → Stone
 };
 
 export const SLOT_EXPANSION_CONFIG: Record<number, { title: { th: string; en: string }; cost: number; mats: Record<number, number>; item?: string; itemCount?: number }> = {

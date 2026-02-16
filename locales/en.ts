@@ -6,6 +6,7 @@ export const en = {
         roadmap: "Roadmap",
         playNow: "PLAY NOW"
     },
+    language: "en",
     auth: {
         login_title: "GOLD RUSH",
         login_subtitle: "SECURE TERMINAL ACCESS",
@@ -127,7 +128,12 @@ export const en = {
         confirm_demolish: "CONFIRM DEMOLISH",
         confirm_demolish_msg: "Are you sure you want to melt this rig? It will be destroyed and you will receive some materials back.",
         melt_scrap: "Melt into Scrap",
-        exploring: "Exploring..."
+        exploring: "Exploring...",
+        confirm_upgrade: "CONFIRM UPGRADE",
+        cost: "Cost",
+        upgrade_benefit: "Upgrading increases Hashrate, Max Durability, and fully Repairs the rig.",
+        upgrade_failed: "Upgrade failed",
+        out_of_energy_msg: "Rig is out of energy! Please refill first."
     },
     time: {
         day: "Day"

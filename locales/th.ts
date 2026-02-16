@@ -6,6 +6,7 @@ export const th = {
         roadmap: "แผนพัฒนา",
         playNow: "เริ่มเล่นตอนนี้"
     },
+    language: "th",
     auth: {
         login_title: "GOLD RUSH",
         login_subtitle: "การเข้าถึงเทอร์มินัลที่ปลอดภัย",
@@ -127,7 +128,12 @@ export const th = {
         confirm_demolish: "ยืนยันการทำลาย",
         confirm_demolish_msg: "คุณแน่ใจหรือไม่ที่จะหลอมเครื่องขุดนี้? เครื่องขุดจะถูกทำลายและคุณจะได้รับวัตถุดิบบางส่วนคืน",
         melt_scrap: "หลอมเป็นเศษเหล็ก",
-        exploring: "กำลังสำรวจ..."
+        exploring: "กำลังสำรวจ...",
+        confirm_upgrade: "ยืนยันการอัปเกรด",
+        cost: "ค่าใช้จ่าย",
+        upgrade_benefit: "การอัปเกรดจะเพิ่มกำลังขุด, ความทนทานสูงสุด และซ่อมแซมเครื่องให้เต็มทันที",
+        upgrade_failed: "อัปเกรดล้มเหลว",
+        out_of_energy_msg: "พลังงานหมด! กรุณาเติมพลังงานก่อน"
     },
     time: {
         day: "วัน"

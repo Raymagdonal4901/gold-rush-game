@@ -31,8 +31,19 @@ export const RigMergeModal: React.FC<RigMergeModalProps> = ({ isOpen, onClose, b
 
         const name1 = typeof baseRig.name === 'object' ? baseRig.name.en : baseRig.name;
         const name2 = typeof r.name === 'object' ? r.name.en : r.name;
+        // Rig types are determined by their preset ID or name equivalence.
         return name1 === name2;
     });
+
+    const getStabilityStars = (rig: OilRig) => {
+        // Logic to find preset ID and get stabilityStars from MINING_VOLATILITY_CONFIG
+        // Usually name matching or ID matching
+        const preset = RIG_PRESETS.find(p => {
+            const rName = typeof rig.name === 'object' ? rig.name.en : rig.name;
+            return p.name.en === rName || p.name.th === rName;
+        });
+        return preset ? MINING_VOLATILITY_CONFIG[preset.id]?.stabilityStars || 0 : 0;
+    };
 
     // Reset selection when modal opens or baseRig changes
     useEffect(() => {
@@ -47,7 +58,14 @@ export const RigMergeModal: React.FC<RigMergeModalProps> = ({ isOpen, onClose, b
     // Predicted Stats
     const currentStars = baseRig.starLevel || 0;
     const nextStars = currentStars + 1;
-    const combinedHashrate = selectedRig ? (baseRig.dailyProfit + selectedRig.dailyProfit) * 1.10 : baseRig.dailyProfit * 2.10; // Approx preview
+    // ensure values are numbers to avoid string concatenation or NaN
+    const baseProfit = Number(baseRig.dailyProfit || 0);
+    const selectedProfit = selectedRig ? Number(selectedRig.dailyProfit || 0) : 0;
+
+    const combinedHashrate = selectedRig
+        ? (baseProfit + selectedProfit) * 1.10
+        : baseProfit * 2.10; // Approx preview for UI only
+
     const MERGE_FEE = 100;
 
     const handleMerge = async () => {
@@ -70,7 +88,7 @@ export const RigMergeModal: React.FC<RigMergeModalProps> = ({ isOpen, onClose, b
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
             <div className="bg-stone-900 border border-stone-700 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
                 {/* Header */}
                 <div className="p-4 border-b border-stone-800 flex justify-between items-center bg-stone-950">
@@ -88,20 +106,36 @@ export const RigMergeModal: React.FC<RigMergeModalProps> = ({ isOpen, onClose, b
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center mb-8">
                         {/* Base Rig */}
                         <div className="bg-stone-950 p-4 rounded-lg border border-stone-800 flex flex-col items-center gap-2">
-                            <div className="text-xs text-stone-500 uppercase font-bold">Base Rig</div>
+                            <div className="text-xs text-stone-500 uppercase font-bold">เครื่องหลัก (Base Rig)</div>
                             <div className="w-16 h-16 bg-stone-900 rounded-full flex items-center justify-center border border-stone-700">
                                 <Hammer className="text-stone-400" />
                             </div>
                             <div className="font-bold text-stone-300 text-center">{getLocalized(baseRig.name)}</div>
-                            <div className="flex items-center gap-1 text-yellow-500 text-xs">
-                                <Star size={12} fill="currentColor" /> <span>{currentStars}</span>
+                            <div className="flex items-center gap-0.5 mt-1">
+                                {Array.from({ length: 5 }).map((_, i) => {
+                                    const stability = getStabilityStars(baseRig);
+                                    const stars = baseRig.starLevel || 0;
+                                    const total = stability + stars;
+                                    const isPurple = (i < total) && (i >= (total > 5 ? 5 - stars : stability));
+                                    const isYellow = (i < total) && !isPurple;
+
+                                    return (
+                                        <Star
+                                            key={i}
+                                            size={10}
+                                            className={isPurple
+                                                ? 'text-purple-400 fill-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.95)] scale-110 transition-all'
+                                                : (isYellow ? 'text-yellow-500 fill-yellow-500 hover:drop-shadow-[0_0_4px_rgba(234,179,8,0.7)]' : 'text-stone-800')}
+                                        />
+                                    );
+                                })}
                             </div>
-                            <div className="text-xs text-stone-500 font-mono">{formatCurrency(baseRig.dailyProfit, { hideSymbol: true })} / day</div>
+                            <div className="text-xs text-stone-500 font-mono">{formatCurrency(baseProfit, { hideSymbol: true })} / วัน</div>
                         </div>
 
                         {/* Arrow */}
                         <div className="flex flex-col items-center justify-center gap-2">
-                            <ArrowRight className="text-yellow-500 animate-pulse" size={32} />
+                            <ArrowRight className="text-yellow-500" size={32} />
                             <div className="px-3 py-1 bg-yellow-900/20 border border-yellow-700/50 rounded text-yellow-500 text-xs font-bold">
                                 +10% BONUS
                             </div>
@@ -109,30 +143,54 @@ export const RigMergeModal: React.FC<RigMergeModalProps> = ({ isOpen, onClose, b
 
                         {/* Target/Result Rig */}
                         <div className={`bg-stone-950 p-4 rounded-lg border transition-all flex flex-col items-center gap-2 ${selectedRig ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'border-stone-800 border-dashed opacity-50'}`}>
-                            <div className="text-xs text-stone-500 uppercase font-bold">Result</div>
+                            <div className="text-xs text-stone-500 uppercase font-bold">ผลลัพธ์ (Result)</div>
                             <div className="w-16 h-16 bg-gradient-to-br from-yellow-900/50 to-stone-900 rounded-full flex items-center justify-center border border-yellow-700/50">
                                 <Star className="text-yellow-400" size={32} fill="currentColor" />
                             </div>
                             <div className="font-bold text-yellow-400 text-center">{getLocalized(baseRig.name)}</div>
-                            <div className="flex items-center gap-1 text-yellow-400 text-xs font-bold bg-yellow-900/30 px-2 py-0.5 rounded-full border border-yellow-700/50">
-                                <Star size={12} fill="currentColor" /> <span>{nextStars}</span>
+                            <div className="flex items-center gap-0.5 mt-1">
+                                {Array.from({ length: 5 }).map((_, i) => {
+                                    const stability = getStabilityStars(baseRig);
+                                    const stars = nextStars;
+                                    const total = stability + stars;
+                                    const isPurple = (i < total) && (i >= (total > 5 ? 5 - stars : stability));
+                                    const isYellow = (i < total) && !isPurple;
+
+                                    return (
+                                        <Star
+                                            key={i}
+                                            size={12}
+                                            className={isPurple
+                                                ? 'text-purple-400 fill-purple-400 drop-shadow-[0_0_12px_rgba(168,85,247,0.95)] scale-110 transition-all'
+                                                : (isYellow ? 'text-yellow-400 fill-yellow-400 drop-shadow-[0_0_5px_rgba(234,179,8,0.6)]' : 'text-stone-800')}
+                                        />
+                                    );
+                                })}
                             </div>
                             <div className="text-xs text-emerald-400 font-mono font-bold">
-                                {selectedRig ? formatCurrency(combinedHashrate, { hideSymbol: true }) : '???'} / day
+                                {selectedRig ? formatCurrency(combinedHashrate, { hideSymbol: true }) : '???'} / วัน
                             </div>
                         </div>
                     </div>
 
                     {/* Selection Area */}
                     <h3 className="text-stone-400 text-sm font-bold uppercase mb-3 flex items-center gap-2">
-                        <Check size={16} /> Select Material Rig
+                        <Check size={16} /> เลือกเครื่องวัตถุดิบ (Material Rig)
                     </h3>
 
-                    {compatibleRigs.length === 0 ? (
+                    {currentStars >= 5 ? (
+                        <div className="p-8 text-center border border-yellow-500/30 rounded-lg bg-yellow-900/10">
+                            <Star className="mx-auto text-yellow-500 mb-2" size={32} fill="currentColor" />
+                            <h3 className="text-yellow-500 font-bold uppercase mb-1">ระดับดาวสูงสุดแล้ว (Max Level)</h3>
+                            <p className="text-stone-400 text-sm">เครื่องขุดนี้ถึงระดับสูงสุดแล้ว (5 ดาว)</p>
+                        </div>
+                    ) : compatibleRigs.length === 0 ? (
                         <div className="p-8 text-center border border-stone-800 border-dashed rounded-lg bg-stone-900/50">
                             <AlertTriangle className="mx-auto text-yellow-500 mb-2" size={24} />
-                            <p className="text-stone-400 text-sm">No compatible rigs found.</p>
-                            <p className="text-stone-600 text-xs mt-1">Need identical rig with same Star Level.</p>
+                            <p className="text-stone-400 text-sm">ไม่พบเครื่องจักรที่เข้าเงื่อนไข</p>
+                            <p className="text-stone-600 text-xs mt-1">
+                                คุณต้องใช้เครื่องจักรที่เหมือนกัน และมีระดับดาวเท่ากัน ({currentStars} ดาว)
+                            </p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[200px] overflow-y-auto custom-scrollbar">
@@ -144,8 +202,26 @@ export const RigMergeModal: React.FC<RigMergeModalProps> = ({ isOpen, onClose, b
                                 >
                                     <div className="text-xs font-bold text-stone-300 truncate">{getLocalized(rig.name)}</div>
                                     <div className="flex justify-between items-center text-[10px] text-stone-500">
-                                        <span>Durability: {Math.floor((rig.currentDurability || 3000) / 30)}%</span>
-                                        <div className="flex items-center gap-0.5 text-yellow-600"><Star size={8} fill="currentColor" /> {rig.starLevel || 0}</div>
+                                        <span>ความทนทาน: {Math.floor((rig.currentDurability || 3000) / 30)}%</span>
+                                        <div className="flex items-center gap-0.5">
+                                            {Array.from({ length: 5 }).map((_, i) => {
+                                                const stability = getStabilityStars(rig);
+                                                const stars = rig.starLevel || 0;
+                                                const total = stability + stars;
+                                                const isPurple = (i < total) && (i >= (total > 5 ? 5 - stars : stability));
+                                                const isYellow = (i < total) && !isPurple;
+
+                                                return (
+                                                    <Star
+                                                        key={i}
+                                                        size={6}
+                                                        className={isPurple
+                                                            ? 'text-purple-500 fill-purple-500 drop-shadow-[0_0_4px_rgba(168,85,247,0.8)]'
+                                                            : (isYellow ? 'text-yellow-600 fill-yellow-600' : 'text-stone-800')}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
                                     </div>
                                     {selectedRigId === rig.id && (
                                         <div className="absolute top-1 right-1 w-2 h-2 bg-yellow-500 rounded-full shadow-[0_0_5px_rgba(234,179,8,1)]"></div>
@@ -159,23 +235,23 @@ export const RigMergeModal: React.FC<RigMergeModalProps> = ({ isOpen, onClose, b
                 {/* Footer */}
                 <div className="p-4 border-t border-stone-800 bg-stone-950 flex justify-between items-center">
                     <div className="flex flex-col">
-                        <span className="text-stone-500 text-xs">Merge Fee</span>
+                        <span className="text-stone-500 text-xs">ค่าธรรมเนียม (Fee)</span>
                         <span className={`font-mono font-bold text-lg flex items-center gap-1 ${MERGE_FEE > 0 ? 'text-red-400' : 'text-stone-300'}`}>
                             {formatCurrency(MERGE_FEE)}
                         </span>
                     </div>
 
                     <div className="flex items-center gap-3">
-                        {error && <span className="text-red-500 text-xs font-bold animate-pulse">{error}</span>}
+                        {error && <span className="text-red-500 text-xs font-bold">{error}</span>}
                         <button
                             onClick={handleMerge}
                             disabled={!selectedRig || isProcessing}
                             className={`px-6 py-3 rounded-lg font-bold uppercase flex items-center gap-2 ${!selectedRig || isProcessing ? 'bg-stone-800 text-stone-600 cursor-not-allowed' : 'bg-yellow-600 text-white hover:bg-yellow-500 shadow-lg shadow-yellow-900/20'}`}
                         >
                             {isProcessing ? (
-                                <><Hammer className="animate-spin" size={18} /> Merging...</>
+                                <><Hammer className="animate-spin" size={18} /> กำลังรวม...</>
                             ) : (
-                                <><Zap size={18} /> Confirm Merge</>
+                                <><Zap size={18} /> ยืนยันการรวม</>
                             )}
                         </button>
                     </div>

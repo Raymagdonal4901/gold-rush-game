@@ -125,7 +125,7 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
     return (
         <>
             {/* Main Game Modal */}
-            <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 overflow-y-auto">
+            <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 p-4 overflow-y-auto">
                 <div className="bg-stone-950 border border-stone-800 w-[95%] sm:w-full sm:max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] relative ring-1 ring-white/10">
 
                     {/* Header with Premium Gradient */}
@@ -168,7 +168,7 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                         </div>
 
                         {/* Probabilities Table (Styled as Tablet/Hologram) */}
-                        <div className="bg-stone-900/80 border border-stone-700 rounded-xl p-3 backdrop-blur-md shadow-2xl mb-8 transform hover:scale-105 transition-transform duration-300 w-full max-w-sm">
+                        <div className="bg-stone-900/80 border border-stone-700 rounded-xl p-3 shadow-2xl mb-8 transform hover:scale-105 transition-transform duration-300 w-full max-w-sm">
                             <h4 className="font-bold text-stone-300 text-[10px] uppercase tracking-widest mb-2 border-b border-stone-700 pb-1 flex items-center gap-2">
                                 <Sparkles size={10} className="text-yellow-500" />
                                 {t('lucky_draw.chance_label')}
@@ -302,11 +302,11 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
 
             {/* Result Popup Overlay - Premium Reveal */}
             {showResultPopup && reward && (
-                <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 animate-in fade-in duration-300">
                     <div className="relative w-full max-w-md p-10 text-center flex flex-col items-center animate-in zoom-in-50 duration-500">
 
                         {/* Background Burst FX */}
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,theme(colors.yellow.600),transparent_70%)] opacity-20 blur-3xl animate-pulse"></div>
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,theme(colors.yellow.600),transparent_70%)] opacity-20 blur-3xl animate-pulse pointer-events-none"></div>
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[conic-gradient(from_0deg_at_50%_50%,transparent_0deg,theme(colors.yellow.500)_20deg,transparent_40deg,theme(colors.yellow.500)_60deg,transparent_80deg)] opacity-10 animate-[spin_8s_linear_infinite] rounded-full pointer-events-none"></div>
 
                         {/* Orb Container */}
@@ -357,7 +357,7 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                     75% { transform: translate(-2px, -2px) rotate(-1deg); }
                     100% { transform: translate(0, 0) rotate(0deg); }
                 }
-                .animate-rumble { animation: rumble 0.1s linear infinite; }
+                .animate-rumble { animation: rumble 0.3s linear infinite; }
             `}</style>
         </>
     );

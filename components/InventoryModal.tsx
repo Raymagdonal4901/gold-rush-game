@@ -210,7 +210,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                 setSelectedItem(null);
                 setAction('DETAILS');
                 onRefresh();
-            }, 1500);
+            }, 500);
         } catch (e: any) {
             setMsg(e.message);
         }
@@ -225,12 +225,12 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                 setAnimationStep('HAMMER');
                 setTimeout(() => {
                     setAnimationStep('IMPACT');
-                }, 1200);
+                }, 400);
                 setTimeout(() => {
                     setUpgradeResult({ success: res.success, newItem: res.item });
                     setAnimationStep('RESULT');
                     if (res.success) onRefresh();
-                }, 2000);
+                }, 800);
             } catch (e: any) {
                 setMsg(e.message);
                 setAnimationStep('IDLE');

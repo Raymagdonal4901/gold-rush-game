@@ -176,7 +176,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                     setIsAnimating(false);
                     setCraftingTargetTier(0);
                 }
-            }, 800);
+            }, 300);
         }
     };
 

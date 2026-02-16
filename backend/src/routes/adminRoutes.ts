@@ -4,7 +4,7 @@ import {
     getAllUsers, getAllRigs, getSystemConfig, updateSystemConfig,
     getPendingClaims, getPendingWithdrawals, getPendingDeposits, processDepositRequest, getUserStats,
     adminGiveCompensation, adminGiveCompensationAll, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats, adminConvertCurrencyToUSD, resetAllPlayerData, deleteRig, adminAdjustRevenue,
-    resetUser, removeVip, getDashboardStats, processWithdrawal, processLegacyWithdrawalRequest, getRevenueStats, deleteAllUsers
+    resetUser, removeVip, getDashboardStats, processWithdrawal, processLegacyWithdrawalRequest, getRevenueStats, deleteAllUsers, toggleBan
 } from '../controllers/adminController';
 
 const router = express.Router();
@@ -41,6 +41,7 @@ router.post('/users/delete-all', deleteAllUsers);
 router.post('/convert-currency', adminConvertCurrencyToUSD);
 router.post('/users/:userId/reset', resetUser);
 router.post('/users/:userId/remove-vip', removeVip);
+router.post('/users/:userId/toggle-ban', toggleBan);
 
 
 export default router;

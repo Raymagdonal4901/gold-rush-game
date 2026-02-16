@@ -50,6 +50,7 @@ export interface IUser extends Document {
     miningSlots: number;
     warehouseCapacity: number;
     lastClaimedAt?: Date;
+    isBanned: boolean;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -102,7 +103,8 @@ const UserSchema = new Schema<IUser>({
     totalDailyIncome: { type: Number, default: 0 },
     lastClaimedAt: { type: Date },
     miningSlots: { type: Number, default: 3 },
-    warehouseCapacity: { type: Number, default: 3 }
+    warehouseCapacity: { type: Number, default: 3 },
+    isBanned: { type: Boolean, default: false }
 }, {
     timestamps: true
 });

@@ -1222,7 +1222,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                             </div>
                             <div>
                                 <div className="text-[10px] text-stone-500 uppercase font-black tracking-widest leading-none mb-1">{t('machine_shop.stats.warehouse_capacity')}</div>
-                                 <div className="text-sm font-bold text-white leading-none">{t('machine_shop.stats.warehouse_capacity')}</div>
+                                <div className="text-sm font-bold text-white leading-none">{t('machine_shop.stats.warehouse_capacity')}</div>
                             </div>
                         </div>
                         <div className={`text-sm font-mono font-bold ${rigs.length >= userMiningSlots ? 'text-red-500 animate-pulse' : 'text-yellow-500'}`}>
@@ -1244,6 +1244,15 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {RIG_PRESETS.map((preset) => {
+                        // Special logic: Hide Rotten Glove (Tier 9) if already owned
+                        if (preset.id === 9) {
+                            const isOwned = rigs.some(r => {
+                                const name = typeof r.name === 'string' ? r.name : (r.name?.th || r.name?.en);
+                                return r.tierId === 9 || name?.includes('เน่า') || name?.includes('Rotten');
+                            });
+                            if (isOwned) return null;
+                        }
+
                         let isMaxReached = false;
                         if (preset.specialProperties?.maxAllowed) {
                             const existingCount = rigs.filter(r => {

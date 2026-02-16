@@ -26,8 +26,8 @@ export const MaterialRevealModal: React.FC<MaterialRevealModalProps> = ({
         if (isOpen) {
             setStage('opening');
             // Opening animation
-            setTimeout(() => setStage('reveal'), 1500);
-            setTimeout(() => setStage('done'), 2500);
+            setTimeout(() => setStage('reveal'), 400);
+            setTimeout(() => setStage('done'), 800);
         }
     }, [isOpen]);
 

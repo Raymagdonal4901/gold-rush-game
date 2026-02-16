@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check, TrendingUp, CreditCard, Clock, Zap, Briefcase, Star, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu } from 'lucide-react';
+import { ArrowRight, Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check, TrendingUp, CreditCard, Clock, Zap, Briefcase, Star, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu } from 'lucide-react';
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
 import { User, OilRig, ClaimRequest, WithdrawalRequest, Withdrawal, DepositRequest, Notification } from '../services/types';
@@ -13,10 +13,11 @@ interface AdminDashboardProps {
     currentUser: User;
     onLogout: () => void;
     onSwitchToPlayer: () => void;
+    onBack?: () => void;
 }
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onLogout, onSwitchToPlayer }) => {
-    const { t, getLocalized } = useTranslation();
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onLogout, onSwitchToPlayer, onBack }) => {
+    const { t, getLocalized, language } = useTranslation();
     const [users, setUsers] = useState<User[]>([]);
     const [rigs, setRigs] = useState<OilRig[]>([]);
     const [pendingClaims, setPendingClaims] = useState<ClaimRequest[]>([]);
@@ -1152,6 +1153,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
+                        {onBack && (
+                            <button
+                                onClick={onBack}
+                                className="flex items-center gap-2 px-4 py-2 rounded bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-800 text-xs font-bold transition-all"
+                            >
+                                <ArrowRight size={14} className="rotate-180" />
+                                {language === 'th' ? 'หน้าหลัก' : 'HOME'}
+                            </button>
+                        )}
                         <button
                             onClick={() => setActiveView(activeView === 'DASHBOARD' ? 'REVENUE' : 'DASHBOARD')}
                             className={`px-4 py-2 rounded text-xs font-bold transition-all flex items-center gap-2 ${activeView === 'REVENUE'

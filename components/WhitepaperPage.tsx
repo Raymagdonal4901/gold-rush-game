@@ -13,6 +13,9 @@ import {
     ChevronRight,
     Hammer,
     Wrench,
+    Trophy,
+    ShieldCheck,
+    Bot,
 } from 'lucide-react';
 
 interface WhitepaperPageProps {
@@ -187,6 +190,57 @@ export const WhitepaperPage: React.FC<WhitepaperPageProps> = ({ onBack, onPlayNo
                             </InfoCard>
                         </div>
                     </SubSection>
+
+                    {/* 2.5 Star Ascension */}
+                    <SubSection emoji="⭐" title="2.5 ระบบอัพเกรดดาว (Star Ascension)" subtitle="Star Ascension System">
+                        <p className="text-stone-400 leading-relaxed mb-6">
+                            เพิ่มประสิทธิภาพเครื่องขุดให้ถึงขีดสุดด้วยการ "Ascension" เมื่อคุณรวมเครื่องขุดระดับเดียวกัน (Merge) เครื่องใหม่ที่ได้จะไม่เพียงแค่มีกำลังขุดที่เพิ่มขึ้น แต่จะได้รับการปลดล็อก <Highlight>Prestige Star (ดาวสีม่วง)</Highlight>
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div className="bg-stone-900/50 border border-purple-500/20 rounded-xl p-5 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-10">
+                                    <Zap size={80} className="text-purple-500" />
+                                </div>
+                                <h4 className="text-purple-400 font-bold text-sm uppercase tracking-wider mb-2">Purple Star Bonus</h4>
+                                <ul className="space-y-2 text-sm text-stone-300">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-purple-500 mt-0.5">✦</span>
+                                        <span>ปลดล็อกเมื่อทำการ Merge เครื่องขุด</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-purple-500 mt-0.5">✦</span>
+                                        <span>ดาวดวงที่ 5 จะเปลี่ยนเป็น <span className="text-purple-400 font-bold shadow-purple-500/50 drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]">สีม่วงเรืองแสง</span></span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-purple-500 mt-0.5">✦</span>
+                                        <span>เพิ่มค่าความเสถียร (Stability) และลดโอกาสเครื่องเสีย</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div className="flex flex-col justify-center items-center bg-black/40 border border-stone-800 rounded-xl p-4">
+                                <div className="text-xs text-stone-500 uppercase font-bold mb-4">Visual Progression</div>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex flex-col items-center gap-1">
+                                        <div className="flex gap-0.5">
+                                            {[1, 2, 3, 4].map(i => <div key={i} className="w-2 h-2 bg-yellow-500 rounded-full shadow-[0_0_5px_rgba(234,179,8,0.5)]"></div>)}
+                                            <div className="w-2 h-2 bg-stone-700 rounded-full"></div>
+                                        </div>
+                                        <span className="text-[10px] text-stone-400">Base Rig (4 Stars)</span>
+                                    </div>
+                                    <div className="text-stone-600"><ChevronRight size={16} /></div>
+                                    <div className="flex flex-col items-center gap-1">
+                                        <div className="flex gap-0.5">
+                                            {[1, 2, 3, 4].map(i => <div key={i} className="w-2 h-2 bg-yellow-500 rounded-full shadow-[0_0_5px_rgba(234,179,8,0.5)]"></div>)}
+                                            <div className="w-2 h-2 bg-purple-500 rounded-full shadow-[0_0_8px_rgba(168,85,247,0.8)] animate-pulse"></div>
+                                        </div>
+                                        <span className="text-[10px] text-purple-400 font-bold">Ascended Rig (5 Stars)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </SubSection>
                 </Section>
 
 
@@ -298,8 +352,94 @@ export const WhitepaperPage: React.FC<WhitepaperPageProps> = ({ onBack, onPlayNo
                 </Section>
 
 
-                {/* ============ SECTION 6: Roadmap ============ */}
-                <Section id="roadmap-wp" number="06" title="แผนงานในอนาคต" subtitle="Roadmap" icon={<Globe size={24} />} accent="yellow">
+                {/* ============ SECTION 6: Mini Games ============ */}
+                <Section id="mini-games" number="06" title="ระบบเสี่ยงโชคและมินิเกม" subtitle="Mini Games & Luck" icon={<Trophy size={24} />} accent="red">
+                    <p className="text-stone-400 leading-relaxed mb-8">
+                        เพิ่มความตื่นเต้นนอกจากการขุดเหมือง ด้วยระบบเสี่ยงโชคที่ให้ผลตอบแทนมหาศาล
+                    </p>
+
+                    {/* Lucky Draw */}
+                    <SubSection emoji="💎" title="6.1 Lucky Draw (ขุดวัดดวง)" subtitle="Geode Mining">
+                        <p className="text-stone-400 leading-relaxed mb-6">
+                            ระบบกะเทาะหินนำโชคเพื่อค้นหาทรัพยากรและไอเทมพิเศษ
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <InfoCard title="Daily Free Spin" color="green">
+                                ผู้เล่นสามารถสุ่มได้ฟรีทุก 24 ชม. รับรางวัลตั้งแต่เงินสดไปจนถึงวัตถุดิบหายาก
+                            </InfoCard>
+                            <InfoCard title="Jackpot Reward" color="yellow">
+                                โอกาสลุ้นรับเงินรางวัลสูงสุดถึง 500 ฿ ในการกดเพียงครั้งเดียว
+                            </InfoCard>
+                        </div>
+                        <LuckyDrawVisual />
+                    </SubSection>
+
+                    {/* Mines Game */}
+                    <SubSection emoji="💣" title="6.2 The Mines (เกมกู้ระเบิด)" subtitle="High Stakes Mines">
+                        <p className="text-stone-400 leading-relaxed mb-6">
+                            มินิเกมยอดนิยมที่ใช้ความกล้าและการคาดเดา ยิ่งเปิดเจออัญมณีมากเท่าไหร่ ตัวคูณเงินรางวัลยิ่งสูงขึ้น
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <InfoCard title="Custom Risk" color="red">
+                                เลือกจำนวนระเบิดได้ตั้งแต่ 1 ถึง 24 ลูก ยิ่งระเบิดเยอะ รางวัลยิ่งทวีคูณ
+                            </InfoCard>
+                            <InfoCard title="Cash Out Any Time" color="emerald">
+                                สามารถถอนเงินรางวัลได้ตลอดเวลาที่ต้องการ ก่อนที่จะเหยียบระเบิด
+                            </InfoCard>
+                            <InfoCard title="Provably Fair" color="blue">
+                                ระบบคำนวณผลแบบโปร่งใส มั่นใจได้ในความยุติธรรมของตัวเลข
+                            </InfoCard>
+                        </div>
+                    </SubSection>
+                </Section>
+
+
+                {/* ============ SECTION 7: Support & Governance ============ */}
+                <Section id="support" number="07" title="ระบบสนับสนุนและธรรมาภิบาล" subtitle="Support & Governance" icon={<ShieldCheck size={24} />} accent="blue">
+                    <p className="text-stone-400 leading-relaxed mb-8">
+                        เราให้ความสำคัญกับประสบการณ์การเล่นที่ดีและความปลอดภัยของระบบเศรษฐกิจ
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* AI Robot */}
+                        <div className="bg-stone-900/50 border border-stone-800 rounded-2xl p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center text-yellow-500">
+                                    <Bot size={24} />
+                                </div>
+                                <h4 className="text-white font-bold">Goldy: AI Assistant</h4>
+                            </div>
+                            <p className="text-stone-400 text-sm leading-relaxed mb-4">
+                                หุ่นยนต์ผู้ช่วยอัจฉริยะที่จะคอยแนะนำการเล่นเบื้องต้น แจ้งเตือนเมื่อพลังงานต่ำ หรือเมื่อเครื่องจักรต้องการการซ่อมบำรุง
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                <span className="bg-stone-800 text-stone-300 text-[10px] px-2 py-1 rounded">Tutorial Help</span>
+                                <span className="bg-stone-800 text-stone-300 text-[10px] px-2 py-1 rounded">Real-time Alerts</span>
+                            </div>
+                        </div>
+
+                        {/* Security */}
+                        <div className="bg-stone-900/50 border border-stone-800 rounded-2xl p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center text-red-500">
+                                    <Shield size={24} />
+                                </div>
+                                <h4 className="text-white font-bold">Security & Fair Play</h4>
+                            </div>
+                            <p className="text-stone-400 text-sm leading-relaxed mb-4">
+                                ระบบป้องกันการโกงที่เข้มงวด รวมถึงระบบ Ban สำหรับผู้ที่ทำผิดกฎ เพื่อรักษาเสถียรภาพของระบบเศรษฐกิจส่วนรวม
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                <span className="bg-red-500/10 text-red-400 text-[10px] px-2 py-1 rounded border border-red-500/20">Anti-Cheat</span>
+                                <span className="bg-red-500/10 text-red-400 text-[10px] px-2 py-1 rounded border border-red-500/20">User Ban System</span>
+                            </div>
+                        </div>
+                    </div>
+                </Section>
+
+
+                {/* ============ SECTION 8: Roadmap ============ */}
+                <Section id="roadmap-wp" number="08" title="แผนงานในอนาคต" subtitle="Roadmap" icon={<Globe size={24} />} accent="yellow">
                     <div className="space-y-8">
                         <RoadmapPhase
                             phase="Phase 1"
@@ -334,8 +474,8 @@ export const WhitepaperPage: React.FC<WhitepaperPageProps> = ({ onBack, onPlayNo
                 </Section>
 
 
-                {/* ============ SECTION 7: Technical ============ */}
-                <Section id="tech" number="07" title="ข้อมูลทางเทคนิค" subtitle="Technical Specs" icon={<Cpu size={24} />} accent="cyan">
+                {/* ============ SECTION 9: Technical ============ */}
+                <Section id="tech" number="09" title="ข้อมูลทางเทคนิค" subtitle="Technical Specs" icon={<Cpu size={24} />} accent="cyan">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[
                             { label: 'Frontend', value: 'Next.js (React), Tailwind CSS', desc: 'เพื่อความลื่นไหลและสวยงาม' },
@@ -621,6 +761,26 @@ const RepairKitVisual: React.FC = () => (
             </div>
             <div className="text-stone-400 text-xs leading-relaxed">
                 ไอเทมพิเศษสำหรับช่างเทคนิค ใช้กู้คืนค่าความทนทาน <span className="text-white font-bold text-blue-300">100%</span> ทันที โดยไม่ต้องใช้วัตถุดิบในการซ่อม สามารถคราฟต์ได้ที่โรงงาน
+            </div>
+        </div>
+    </div>
+);
+
+const LuckyDrawVisual: React.FC = () => (
+    <div className="bg-stone-900/80 border border-stone-800 p-6 rounded-2xl relative overflow-hidden mb-6 shadow-2xl">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-500/5 blur-[60px] rounded-full"></div>
+        <div className="flex items-center justify-between gap-6 relative z-10">
+            <div className="flex gap-3">
+                {[0, 1, 2].map(i => (
+                    <div key={i} className={`w-16 h-16 rounded-xl border-2 flex items-center justify-center ${i === 1 ? 'border-yellow-500 bg-yellow-500/10 animate-pulse' : 'border-stone-700 bg-stone-800'}`}>
+                        {i === 1 ? <Gem size={32} className="text-yellow-500" /> : <Pickaxe size={24} className="text-stone-600" />}
+                    </div>
+                ))}
+            </div>
+            <div className="flex-1 text-right">
+                <div className="text-yellow-500 font-black text-xs uppercase tracking-widest mb-1">Win Big!</div>
+                <div className="text-2xl font-black text-white">500 ฿</div>
+                <div className="text-[10px] text-stone-500 uppercase font-bold">Jackpot Chance: 0.1%</div>
             </div>
         </div>
     </div>

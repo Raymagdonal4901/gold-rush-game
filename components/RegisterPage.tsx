@@ -5,9 +5,10 @@ import { api } from '../services/api';
 
 interface RegisterPageProps {
     onSwitchToLogin: () => void;
+    onBack: () => void;
 }
 
-export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
+export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin, onBack }) => {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -82,8 +83,15 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) =
             </div>
 
             <div className="relative z-10 w-full max-w-lg">
-                {/* Language Toggle */}
-                <div className="flex justify-end mb-4">
+                {/* Top Actions */}
+                <div className="flex justify-between items-center mb-4">
+                    <button
+                        onClick={onBack}
+                        className="flex items-center gap-2 px-4 py-2 rounded-full border border-yellow-500/20 bg-stone-900/50 hover:bg-stone-800 text-[10px] font-black tracking-widest text-yellow-500 transition-all backdrop-blur-sm group"
+                    >
+                        <ArrowRight size={14} className="rotate-180 group-hover:-translate-x-1 transition-transform" />
+                        {language === 'th' ? 'หน้าหลัก' : 'BACK TO HOME'}
+                    </button>
                     <button
                         onClick={() => setLanguage(language === 'th' ? 'en' : 'th')}
                         className="flex items-center gap-2 px-4 py-2 rounded-full border border-yellow-500/20 bg-stone-900/50 hover:bg-stone-800 text-[10px] font-black tracking-widest text-yellow-500 transition-all backdrop-blur-sm"

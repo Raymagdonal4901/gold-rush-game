@@ -1,9 +1,8 @@
 ﻿import React, { useEffect, useState, useRef } from 'react';
 import { RigLootModal } from './RigLootModal';
-import { RigMergeModal } from './RigMergeModal';
 import { OilRig, AccessoryItem } from '../services/types';
 import { OilRigAnimation } from './OilRigAnimation';
-import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, MINING_VOLATILITY_CONFIG } from '../constants';
+import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, MINING_VOLATILITY_CONFIG, RIG_UPGRADE_RULES, MAX_RIG_LEVEL, RIG_LEVEL_STYLES } from '../constants';
 import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star, Settings, TrainFront, Clover } from 'lucide-react';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
@@ -13,14 +12,13 @@ import { AutomatedBotOverlay } from './AutomatedBotOverlay';
 interface RigCardProps {
     rig: OilRig;
     availableRigs?: OilRig[];
-    onMerge?: (newRig: OilRig) => void;
+    onOpenMerge?: (rig: OilRig) => void;
     accessoryBonus?: number;
     durationBonusDays?: number;
     inventory?: AccessoryItem[];
     botStatus?: 'WORKING' | 'COOLDOWN' | 'PAUSED';
     botCooldown?: number;
     botWorkTimeLeft?: number;
-    userLastClaimedAt?: string | number | Date;
     onToggleBotPause?: () => void;
     onClaim: (id: string, amount: number) => Promise<any> | void;
     onClaimGift: (id: string) => void;
@@ -42,12 +40,13 @@ interface RigCardProps {
     isFurnaceActive?: boolean;
     isDemo?: boolean;
     addNotification?: (n: any) => void;
+    onUpgrade?: (rigId: string) => Promise<any> | void;
 }
 
 export const RigCard: React.FC<RigCardProps> = ({
     rig,
     availableRigs = [],
-    onMerge,
+    onOpenMerge,
     durationBonusDays = 0,
     inventory = [],
     onClaim,
@@ -73,8 +72,8 @@ export const RigCard: React.FC<RigCardProps> = ({
     botStatus,
     botCooldown,
     botWorkTimeLeft,
-    userLastClaimedAt,
-    onToggleBotPause
+    onToggleBotPause,
+    onUpgrade
 }) => {
     const { t, language, getLocalized, formatCurrency, formatBonus } = useTranslation();
     const handleDestroyClick = async (e: React.MouseEvent) => {
@@ -94,31 +93,38 @@ export const RigCard: React.FC<RigCardProps> = ({
         }
     };
     const [currentAmount, setCurrentAmount] = useState(BASE_CLAIM_AMOUNT);
-    const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
     const [currentMaterials, setCurrentMaterials] = useState(rig.currentMaterials || 0);
     const [pendingMaterial, setPendingMaterial] = useState<{ name: any; tier: number; amount: number } | null>(null);
     const [globalCooldownSeconds, setGlobalCooldownSeconds] = useState(0);
 
-    // --- GLOBAL CLAIM COOLDOWN LOGIC (24H) ---
+    // --- PER-RIG CLAIM COOLDOWN LOGIC (24H) ---
     useEffect(() => {
-        if (!userLastClaimedAt) {
+        if (!rig.lastClaimAt) {
             setGlobalCooldownSeconds(0);
             return;
         }
 
-        const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+        const baseCooldownMs = 24 * 60 * 60 * 1000;
         const updateCooldown = () => {
-            const lastClaimTime = new Date(userLastClaimedAt).getTime();
+            const lastClaimTime = new Date(rig.lastClaimAt).getTime();
             const now = Date.now();
+
+            // Apply potential buffs (matching backend logic)
+            const buffs = { claimCooldownMultiplier: 1.0 };
+            if (rig.slots && rig.slots.length > 0) {
+                // Simplified buff check for frontend display
+                // If needed, we can pass down the actual buff from dashboard
+            }
+
             const elapsed = now - lastClaimTime;
-            const remaining = Math.max(0, COOLDOWN_MS - elapsed);
+            const remaining = Math.max(0, baseCooldownMs - elapsed);
             setGlobalCooldownSeconds(Math.floor(remaining / 1000));
         };
 
         updateCooldown();
         const interval = setInterval(updateCooldown, 1000);
         return () => clearInterval(interval);
-    }, [userLastClaimedAt]);
+    }, [rig.lastClaimAt]);
 
     const formatGlobalCooldown = (totalSeconds: number) => {
         const h = Math.floor(totalSeconds / 3600);
@@ -134,6 +140,8 @@ export const RigCard: React.FC<RigCardProps> = ({
     const [isRepairConfirming, setIsRepairConfirming] = useState(false);
     const [isScrapConfirming, setIsScrapConfirming] = useState(false);
     const [isChargeConfirming, setIsChargeConfirming] = useState(false);
+    const [isUpgradeConfirming, setIsUpgradeConfirming] = useState(false);
+    const [isUpgradeRolling, setIsUpgradeRolling] = useState(false);
     const [isJustCharged, setIsJustCharged] = useState(false);
     const [isLootModalOpen, setIsLootModalOpen] = useState(false);
 
@@ -150,10 +158,10 @@ export const RigCard: React.FC<RigCardProps> = ({
     const [isIdleRolling, setIsIdleRolling] = useState(false);
 
     const nameStr = typeof rig.name === 'string' ? rig.name : (rig.name?.en || rig.name?.th || '');
-    const preset = RIG_PRESETS.find(p =>
-        (p.name.en && p.name.en === nameStr) ||
-        (p.name.th && p.name.th === nameStr)
-    ) || RIG_PRESETS.find(p => p.price === rig.investment && rig.investment > 0);
+    // Prioritize ID match if available, then name match, then price only if no other match found
+    const preset = RIG_PRESETS.find(p => p.id === rig.tierId) ||
+        RIG_PRESETS.find(p => (p.name.en && p.name.en === nameStr) || (p.name.th && p.name.th === nameStr)) ||
+        RIG_PRESETS.find(p => p.price === rig.investment && rig.investment > 0);
 
     const rarityKey = (preset?.type?.toUpperCase() || rig.rarity || 'COMMON') as keyof typeof RARITY_SETTINGS;
     const rarityConfig = RARITY_SETTINGS[rarityKey] || RARITY_SETTINGS['COMMON'];
@@ -177,10 +185,18 @@ export const RigCard: React.FC<RigCardProps> = ({
     const isNoBonusRig = [t('rig.rusty_shovel'), t('rig.portable_drill'), 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
     const effectiveBonusProfit = isNoBonusRig ? 0 : safeNumber(rig.bonusProfit);
 
-    const rawProfit = safeNumber(rig.dailyProfit) || safeNumber(preset?.dailyProfit);
-    const baseDailyProfit = (rawProfit < 5 && rawProfit > 0) ? rawProfit * 35 : rawProfit;
+    const volConfig = MINING_VOLATILITY_CONFIG[rig.tierId || preset?.id || 1];
+    const baseValue = volConfig?.baseValue || 0;
 
-    let totalDailyProfit = safeNumber(baseDailyProfit + effectiveBonusProfit + equippedBonus) * safeNumber(globalMultiplier) * safeNumber(reactorMultiplier);
+    const starMult = 1 + (rig.starLevel || 0) * 0.05;
+    const upgradeRule = RIG_UPGRADE_RULES[rig.tierId || preset?.id || 1];
+    const levelMult = upgradeRule ? Math.pow(upgradeRule.statGrowth, (rig.level || 1) - 1) : 1;
+
+    let totalDailyProfit = safeNumber(baseValue + effectiveBonusProfit + equippedBonus) *
+        safeNumber(globalMultiplier) *
+        safeNumber(reactorMultiplier) *
+        starMult *
+        levelMult;
 
     if (isOverclockActive) {
         totalDailyProfit *= overclockMultiplier;
@@ -191,7 +207,6 @@ export const RigCard: React.FC<RigCardProps> = ({
 
     const totalRatePerSecond = totalDailyProfit / 86400;
 
-    const volConfig = MINING_VOLATILITY_CONFIG[preset?.id || 1];
     const hashrateText = volConfig ? `${volConfig.hashrateMin} - ${volConfig.hashrateMax} MH/s` : '??? MH/s';
     const stabilityStars = volConfig?.stabilityStars || 0;
     const stabilityLabel = volConfig?.stabilityLabel || '';
@@ -444,7 +459,6 @@ export const RigCard: React.FC<RigCardProps> = ({
             if (result && result.success && result.amount !== undefined) {
                 setIsRolling(false);
                 setDisplayAmount(Number(result.amount).toFixed(2));
-                await new Promise(resolve => setTimeout(resolve, 2000));
             }
         } catch (err) { console.error(err); } finally {
             setIsRolling(false);
@@ -490,11 +504,24 @@ export const RigCard: React.FC<RigCardProps> = ({
     const handleScrapClick = (e: React.MouseEvent) => { e.stopPropagation(); setIsScrapConfirming(true); };
     const confirmScrap = (e: React.MouseEvent) => { e.stopPropagation(); if (onScrap) onScrap(rig); setIsScrapConfirming(false); };
 
-    const handleGiftClick = (e: React.MouseEvent) => {
+    const handleUpgradeClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (isGiftAvailable) {
-            if (!isOutOfEnergy) onClaimGift(rig.id);
-            else if (addNotification) addNotification({ id: Date.now().toString(), userId: rig.ownerId || '', message: t('rig.out_of_energy_msg'), type: 'ERROR', read: false, timestamp: Date.now() });
+        if (rig.level && rig.level >= MAX_RIG_LEVEL) return;
+        setIsUpgradeConfirming(true);
+    };
+
+    const confirmUpgrade = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!onUpgrade) return;
+        setIsUpgradeConfirming(false);
+        setIsUpgradeRolling(true);
+        try {
+            await onUpgrade(rig.id);
+            // Component will re-render with new level from props
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsUpgradeRolling(false);
         }
     };
 
@@ -545,7 +572,7 @@ export const RigCard: React.FC<RigCardProps> = ({
     };
 
     return (
-        <div className={`relative rounded-xl p-0.5 transition-all duration-300 sm:hover:-translate-y-1 group border 
+        <div className={`relative rounded-xl p-0.5 border 
             ${((globalMultiplier || 1) > 1 || (reactorMultiplier || 1) > 1) ? 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]' : (styles.container || '').replace('bg-stone-950', '').replace('shadow-', '') + ' ' + (styles.container || '')}
         `}>
             <div className={`absolute inset-0 bg-stone-950`}></div>
@@ -562,8 +589,15 @@ export const RigCard: React.FC<RigCardProps> = ({
                         const overclockMultActual = isOverclockActive ? overclockMultiplier : 1;
                         const commonMult = safeNumber(globalMultiplier) * safeNumber(reactorMultiplier);
 
-                        const minYield = (safeNumber(volConfig?.baseValue || 0) + effectiveBonusProfit + equippedBonus) * commonMult * overclockMultActual * furnaceMult;
-                        const maxYield = (safeNumber(volConfig?.baseValue || 0) + safeNumber(volConfig?.maxRandom || 0) + effectiveBonusProfit + equippedBonus) * commonMult * overclockMultActual * furnaceMult;
+                        const starMult = 1 + (rig.starLevel || 0) * 0.05;
+                        const upgradeRule = RIG_UPGRADE_RULES[rig.tierId || preset?.id || 1];
+                        const levelMult = upgradeRule ? Math.pow(upgradeRule.statGrowth, (rig.level || 1) - 1) : 1;
+
+                        const baseValue = volConfig?.baseValue || 0;
+                        const maxRandom = volConfig?.maxRandom || 0;
+
+                        const minYield = (baseValue + effectiveBonusProfit + equippedBonus) * commonMult * overclockMultActual * furnaceMult * starMult * levelMult;
+                        const maxYield = (baseValue + maxRandom + effectiveBonusProfit + equippedBonus) * commonMult * overclockMultActual * furnaceMult * starMult * levelMult;
 
                         return (
                             <div className="text-2xl font-mono font-bold text-white mb-1">
@@ -629,6 +663,47 @@ export const RigCard: React.FC<RigCardProps> = ({
                 </div>
             )}
 
+            {isUpgradeConfirming && (() => {
+                const tierId = rig.tierId || preset?.id || 1;
+                const rule = RIG_UPGRADE_RULES[tierId];
+                const currentLevel = rig.level || 1;
+                const cost = rule ? Math.floor(rule.baseCost * Math.pow(rule.costMultiplier, currentLevel - 1)) : 0;
+                const matName = MATERIAL_CONFIG.NAMES[rule?.materialTier as keyof typeof MATERIAL_CONFIG.NAMES] || { th: 'แร่', en: 'Ore' };
+
+                return (
+                    <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                        <ArrowDownToLine className="text-blue-400 animate-bounce mb-3" size={24} />
+                        <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_upgrade')}</h4>
+                        <div className="text-2xl font-mono font-bold text-white mb-1">
+                            Lv.{currentLevel} → <span className="text-emerald-400">Lv.{currentLevel + 1}</span>
+                        </div>
+                        <div className="text-[10px] text-stone-500 mb-4 flex items-center justify-center gap-1">
+                            {t('rig.cost')}: <span className="text-orange-400 font-bold">{cost}</span>
+                            <span className="text-orange-400">{typeof matName === 'object' ? (t('language') === 'th' ? matName.th : matName.en) : matName}</span>
+                        </div>
+                        <div className="text-[10px] text-stone-400 mb-4 italic px-4">
+                            * {t('rig.upgrade_benefit')}
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 w-full mt-2">
+                            <button onClick={(e) => { e.stopPropagation(); setIsUpgradeConfirming(false); }} className="py-2.5 rounded border border-stone-700 text-stone-400 text-xs font-bold uppercase">{t('actions.cancel')}</button>
+                            <button onClick={confirmUpgrade} className="py-2.5 rounded bg-blue-600 text-white text-xs font-bold uppercase flex items-center justify-center gap-1"><ArrowDownToLine size={14} /> {t('actions.confirm')}</button>
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {isUpgradeRolling && (
+                <div className="absolute inset-0 z-[60] bg-stone-950/80 backdrop-blur-md flex flex-col items-center justify-center">
+                    <div className="relative">
+                        <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <ArrowDownToLine className="text-blue-400 animate-pulse" size={24} />
+                        </div>
+                    </div>
+                    <span className="mt-4 text-xs font-bold text-blue-400 animate-pulse uppercase tracking-widest">Upgrading...</span>
+                </div>
+            )}
+
             {isScrapConfirming && (
                 <div className="absolute inset-0 z-50 bg-red-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center border-2 border-red-900/50 rounded-xl">
                     <Trash2 className="text-red-500 animate-bounce mb-4" size={32} />
@@ -666,7 +741,24 @@ export const RigCard: React.FC<RigCardProps> = ({
                         </span>
                         <div className="flex items-center gap-2 mt-1">
                             <div className={`px-1.5 py-0.5 rounded text-[8px] font-bold border ${rarityConfig.color} ${rarityConfig.border} bg-black/40`}>{rarityConfig.label}</div>
-                            <span className="text-[9px] text-stone-600 font-mono">Lvl {currentTier}</span>
+                            <div className="flex items-center gap-2">
+                                {(() => {
+                                    const level = rig.level || 1;
+                                    const style = RIG_LEVEL_STYLES[level] || RIG_LEVEL_STYLES[1];
+                                    return (
+                                        <div
+                                            className={`px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-tighter ${style.bg} ${style.border} ${style.text} ${style.glow} ${style.animate || ''} cursor-pointer transition-all hover:scale-110 active:scale-95 flex items-center gap-1 group`}
+                                            onClick={handleUpgradeClick}
+                                        >
+                                            <Sparkles size={8} className="group-hover:rotate-12 transition-transform" />
+                                            {style.label}
+                                            {level < MAX_RIG_LEVEL && (
+                                                <div className="ml-1 w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
                         </div>
                         <div className={`text-[9px] flex items-center gap-1 mt-1 font-mono ${isExpired ? 'text-red-500' : 'text-stone-400'}`}>
                             <Timer size={10} /> <span>{formatTimeLeft(timeLeftMs)}</span>
@@ -680,7 +772,22 @@ export const RigCard: React.FC<RigCardProps> = ({
                             </div>
                         )}
                         <div className="flex items-center gap-0.5">
-                            {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={8} className={i < volConfig.stabilityStars ? 'text-yellow-400 fill-yellow-400' : 'text-stone-700'} />)}
+                            {Array.from({ length: 5 }).map((_, i) => {
+                                const total = stabilityStars + (rig.starLevel || 0);
+                                const stars = rig.starLevel || 0;
+                                const isPurple = (i < total) && (i >= (total > 5 ? 5 - stars : stabilityStars));
+                                const isYellow = (i < total) && !isPurple;
+
+                                return (
+                                    <Star
+                                        key={i}
+                                        size={9}
+                                        className={isPurple
+                                            ? 'text-purple-400 fill-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.95)] scale-110 transition-all'
+                                            : (isYellow ? 'text-yellow-400 fill-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.9)]' : 'text-stone-800')}
+                                    />
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
@@ -724,7 +831,26 @@ export const RigCard: React.FC<RigCardProps> = ({
                             </div>
                             <span className="text-[9px] text-stone-400 font-mono">{Math.ceil(healthPercent)}%</span>
                         </div>
-                        <div className="flex-1 flex items-center justify-center">
+                        <div className="flex-1 flex items-center justify-center relative">
+                            {/* Floating Stars Animation */}
+                            {(rig.starLevel || 0) > 0 && (
+                                <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+                                    {Array.from({ length: rig.starLevel || 0 }).map((_, i) => (
+                                        <div
+                                            key={`floating-star-${i}`}
+                                            className="absolute animate-float"
+                                            style={{
+                                                top: `${20 + (i * 15)}%`,
+                                                left: `${10 + (i * 20)}%`,
+                                                animationDelay: `${i * 0.5}s`,
+                                                animationDuration: '3s'
+                                            }}
+                                        >
+                                            <Star size={10} className="text-yellow-400 fill-yellow-400 drop-shadow-[0_0_5px_rgba(234,179,8,0.8)] opacity-80" />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <OilRigAnimation isActive={!isExpired && !isBroken && !isExploring && !isOutOfEnergy} rarity={rig.rarity} tier={currentTier} rigName={getLocalized(rig.name)} isOverclockActive={isOverclockActive} />
                         </div>
                     </div>
@@ -792,15 +918,15 @@ export const RigCard: React.FC<RigCardProps> = ({
                                 {rig.investment > 0 && (
                                     <button onClick={handleRenewClick} disabled={!isExpired} className={`px-3 py-2 rounded-lg font-bold uppercase text-[12px] flex items-center justify-center gap-1.5 border h-10 ${!isExpired ? 'bg-stone-800 text-stone-600 border-stone-700' : 'bg-blue-600 text-white border-blue-500 hover:bg-blue-500'}`}><RefreshCw size={14} /> {language === 'th' ? 'ต่อสัญญา' : 'Renew'}</button>
                                 )}
-                                <button onClick={handleScrapClick} className={`px-3 py-2 rounded-lg font-bold uppercase text-[12px] flex items-center justify-center gap-1.5 bg-red-600 text-white border border-red-500 hover:bg-red-500 h-10 ${(rig.investment <= 0 || preset?.id === 9) && !onMerge ? 'col-span-2' : (preset?.id === 9 ? 'col-span-2' : '')}`}><Trash2 size={14} /> {t('rig.destroy')}</button>
+                                <button onClick={handleScrapClick} className={`px-3 py-2 rounded-lg font-bold uppercase text-[12px] flex items-center justify-center gap-1.5 bg-red-600 text-white border border-red-500 hover:bg-red-500 h-10 ${(rig.investment <= 0 || preset?.id === 9) && !onOpenMerge ? 'col-span-2' : (preset?.id === 9 ? 'col-span-2' : '')}`}><Trash2 size={14} /> {t('rig.destroy')}</button>
                             </div>
 
-                            {!isExpired && !isBroken && !isExploring && onMerge && !preset?.specialProperties?.cannotMerge && (
+                            {!isExpired && !isBroken && !isExploring && onOpenMerge && !preset?.specialProperties?.cannotMerge && (
                                 <button
-                                    onClick={() => setIsMergeModalOpen(true)}
+                                    onClick={() => onOpenMerge(rig)}
                                     className="w-full mb-2 bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white font-bold py-2 rounded border border-yellow-500/50 flex items-center justify-center gap-2 h-10 shadow-lg shadow-yellow-900/20"
                                 >
-                                    <Sparkles size={16} className="text-yellow-200 animate-pulse" />
+                                    <Sparkles size={16} className="text-yellow-200" />
                                     <span className="uppercase text-xs tracking-wider">Merge / Evolve</span>
                                 </button>
                             )}
@@ -827,16 +953,6 @@ export const RigCard: React.FC<RigCardProps> = ({
                 </div>
             </div>
             <RigLootModal isOpen={isLootModalOpen} onClose={() => setIsLootModalOpen(false)} rig={rig} />
-            <RigMergeModal
-                isOpen={isMergeModalOpen}
-                onClose={() => setIsMergeModalOpen(false)}
-                baseRig={rig}
-                availableRigs={availableRigs}
-                onMergeSuccess={(newRig) => {
-                    if (onMerge) onMerge(newRig);
-                    setIsMergeModalOpen(false);
-                }}
-            />
         </div>
     );
 };

@@ -32,6 +32,8 @@ export interface OilRig {
   lastEnergyUpdate?: number;
   slots?: (string | null)[];
   explorationEnd?: number; // Timestamp when dungeon exploration ends
+  starLevel?: number; // Level of the rig after merging
+  level?: number; // Rig level (1-10) for upgrade system
 }
 
 export interface AccessoryItem {

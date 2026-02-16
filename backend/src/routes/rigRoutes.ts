@@ -12,7 +12,8 @@ import {
     destroyRig,
     craftRig,
     renewRig,
-    mergeRigs
+    mergeRigs,
+    upgradeRig
 } from '../controllers/rigController';
 import { authenticate } from '../middleware/auth';
 
@@ -31,5 +32,6 @@ router.post('/:id/unequip', authenticate, unequipAccessory);
 router.post('/:id/repair', authenticate, repairRig);
 router.post('/:id/renew', authenticate, renewRig);
 router.post('/:id/destroy', authenticate, destroyRig);
+router.post('/:id/upgrade', authenticate, upgradeRig);
 
 export default router;

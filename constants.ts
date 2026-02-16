@@ -318,7 +318,7 @@ export interface RigPreset {
 export const RIG_PRESETS: RigPreset[] = [
     { id: 1, name: { th: 'พลั่วสนิมเขรอะ', en: 'Starter' }, price: 300, dailyProfit: 10, durationDays: 60, repairCost: 0, energyCostPerDay: 1, specialProperties: { infiniteDurability: false, noGift: true }, type: 'COMMON' },
     { id: 2, name: { th: 'สว่านพกพา', en: 'Common' }, price: 500, dailyProfit: 18.5, durationDays: 60, repairCost: 0, energyCostPerDay: 2, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'UNCOMMON', specialProperties: { infiniteDurability: false } },
-    { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Uncommon' }, price: 1000, dailyProfit: 38.5, durationDays: 90, repairCost: 63, energyCostPerDay: 3, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' } },
+    { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Uncommon' }, price: 1000, dailyProfit: 38.5, durationDays: 90, repairCost: 63, energyCostPerDay: 3, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'RARE' },
     { id: 4, name: { th: 'เครื่องขุดทองแดง', en: 'Rare' }, price: 1500, dailyProfit: 62.5, durationDays: 90, repairCost: 122, energyCostPerDay: 6, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'SUPER_RARE' },
     { id: 5, name: { th: 'เครื่องขุดเหล็ก', en: 'Epic' }, price: 2000, dailyProfit: 85, durationDays: 120, repairCost: 182, energyCostPerDay: 10, type: 'EPIC' },
     { id: 6, name: { th: 'เครื่องขุดทองคำ', en: 'Legendary' }, price: 2500, dailyProfit: 115, durationDays: 120, repairCost: 252, energyCostPerDay: 15, type: 'MYTHIC' },
@@ -382,6 +382,40 @@ export const MINING_VOLATILITY_CONFIG: Record<number, {
     7: { type: 'Volatile', baseValue: 120, maxRandom: 60, jackpotChance: 0.08, jackpotMultiplier: 2.0, stabilityStars: 1, stabilityLabel: 'machine_shop.stability_labels.extreme_risk', hashrateMin: 200, hashrateMax: 350, durabilityMax: 8000, durabilityDecay: 100, tag: 'machine_shop.tags.tycoon_only', tagColor: 'red', maxQuantity: 50 },
     8: { type: 'Chaos', baseValue: 300, maxRandom: 200, jackpotChance: 0.10, jackpotMultiplier: 3.0, stabilityStars: 0, stabilityLabel: 'machine_shop.stability_labels.danger', hashrateMin: 1000, hashrateMax: 2000, durabilityMax: 12000, durabilityDecay: 100, tag: 'machine_shop.tags.god_tier', tagColor: 'gold', maxQuantity: 3 },
     9: { type: 'Stable', baseValue: 2, maxRandom: 3, jackpotChance: 0, jackpotMultiplier: 1.0, stabilityStars: 5, hashrateMin: 1, hashrateMax: 5, durabilityMax: 999999, durabilityDecay: 0, tag: 'machine_shop.tags.f2p_starter', tagColor: 'green', maxQuantity: 1 },
+};
+
+// === Rig Level Up System ===
+export const MAX_RIG_LEVEL = 10;
+export const RIG_UPGRADE_RULES: Record<number, {
+    materialTier: number; baseCost: number;
+    costMultiplier: number; statGrowth: number;
+}> = {
+    1: { materialTier: 0, baseCost: 30, costMultiplier: 2.0, statGrowth: 1.04 },
+    2: { materialTier: 0, baseCost: 25, costMultiplier: 2.0, statGrowth: 1.04 },
+    3: { materialTier: 1, baseCost: 20, costMultiplier: 2.0, statGrowth: 1.05 },
+    4: { materialTier: 2, baseCost: 15, costMultiplier: 1.8, statGrowth: 1.06 },
+    5: { materialTier: 3, baseCost: 10, costMultiplier: 1.8, statGrowth: 1.07 },
+    6: { materialTier: 4, baseCost: 5, costMultiplier: 1.5, statGrowth: 1.08 },
+    7: { materialTier: 5, baseCost: 3, costMultiplier: 1.5, statGrowth: 1.09 },
+    8: { materialTier: 6, baseCost: 2, costMultiplier: 1.5, statGrowth: 1.10 },
+    9: { materialTier: 0, baseCost: 50, costMultiplier: 2.0, statGrowth: 1.03 },
+};
+
+// 10 unique premium level badge styles
+export const RIG_LEVEL_STYLES: Record<number, {
+    label: string; bg: string; text: string; border: string;
+    glow: string; animate?: string;
+}> = {
+    1: { label: 'Lv.1', bg: 'bg-stone-800', text: 'text-stone-400', border: 'border-stone-600', glow: '' },
+    2: { label: 'Lv.2', bg: 'bg-emerald-950', text: 'text-emerald-400', border: 'border-emerald-600', glow: 'shadow-[0_0_6px_rgba(52,211,153,0.3)]' },
+    3: { label: 'Lv.3', bg: 'bg-sky-950', text: 'text-sky-400', border: 'border-sky-500', glow: 'shadow-[0_0_8px_rgba(56,189,248,0.4)]' },
+    4: { label: 'Lv.4', bg: 'bg-violet-950', text: 'text-violet-400', border: 'border-violet-500', glow: 'shadow-[0_0_10px_rgba(139,92,246,0.5)]' },
+    5: { label: 'Lv.5', bg: 'bg-yellow-950', text: 'text-yellow-400', border: 'border-yellow-500', glow: 'shadow-[0_0_12px_rgba(250,204,21,0.5)]', animate: 'animate-pulse' },
+    6: { label: 'Lv.6', bg: 'bg-gradient-to-r from-red-950 to-orange-950', text: 'text-orange-400', border: 'border-orange-500', glow: 'shadow-[0_0_14px_rgba(249,115,22,0.6)]' },
+    7: { label: 'Lv.7', bg: 'bg-gradient-to-r from-cyan-950 to-blue-950', text: 'text-cyan-300', border: 'border-cyan-400', glow: 'shadow-[0_0_16px_rgba(34,211,238,0.6)]' },
+    8: { label: 'Lv.8', bg: 'bg-gradient-to-r from-stone-900 to-white/10', text: 'text-white', border: 'border-white/50', glow: 'shadow-[0_0_18px_rgba(255,255,255,0.5)]' },
+    9: { label: 'Lv.9', bg: 'bg-gradient-to-r from-red-950 to-stone-950', text: 'text-red-400', border: 'border-red-600', glow: 'shadow-[0_0_20px_rgba(239,68,68,0.6)]' },
+    10: { label: 'Lv.10', bg: 'bg-gradient-to-r from-purple-900 via-pink-900 to-yellow-900', text: 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400', border: 'border-yellow-400', glow: 'shadow-[0_0_24px_rgba(250,204,21,0.7)]', animate: 'animate-pulse' },
 };
 
 export const SLOT_EXPANSION_CONFIG: Record<number, { title: { th: string; en: string }; cost: number; mats: Record<number, number>; item?: string; itemCount?: number }> = {

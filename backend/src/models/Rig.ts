@@ -10,6 +10,7 @@ export interface IRig extends Document {
     slots: any[];
     rarity: string;
     starLevel?: number;
+    level?: number;
     repairCost: number;
     energyCostPerDay: number;
     energy: number;
@@ -22,6 +23,7 @@ export interface IRig extends Document {
     // Dynamic Volatility Fields
     tierId?: number;
     currentDurability?: number;
+    maxDurability?: number;
     status?: 'ACTIVE' | 'BROKEN';
     totalMined?: number;
 }
@@ -35,6 +37,7 @@ const RigSchema = new Schema<IRig>({
     slots: { type: [String], default: [null, null, null, null, null] },
     rarity: { type: String, default: 'COMMON' },
     starLevel: { type: Number, default: 0 },
+    level: { type: Number, default: 1, min: 1, max: 10 },
     repairCost: { type: Number, default: 0 },
     energyCostPerDay: { type: Number, default: 0 },
     bonusProfit: { type: Number, default: 0 },
@@ -48,6 +51,7 @@ const RigSchema = new Schema<IRig>({
     // Dynamic Volatility Fields
     tierId: { type: Number },
     currentDurability: { type: Number, default: 3000 },
+    maxDurability: { type: Number, default: 3000 },
     status: { type: String, enum: ['ACTIVE', 'BROKEN'], default: 'ACTIVE' },
     totalMined: { type: Number, default: 0 }
 });

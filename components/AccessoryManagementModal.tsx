@@ -91,11 +91,11 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
         setTimeout(() => {
             setUpgradePhase('HAMMERING');
-        }, 500);
+        }, 200);
 
         setTimeout(() => {
             setUpgradePhase('COOLING');
-        }, 1000);
+        }, 400);
 
         try {
             const res = await api.inventory.upgrade(equippedItem.id, useInsurance);
@@ -122,7 +122,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 onRefresh();
                 setIsUpgrading(false);
                 setUpgradePhase('IDLE');
-            }, 1500);
+            }, 600);
         } catch (e: any) {
             setTimeout(() => {
                 setUpgradeMsg({
@@ -132,7 +132,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 });
                 setIsUpgrading(false);
                 setUpgradePhase('IDLE');
-            }, 1500);
+            }, 600);
         }
     };
 

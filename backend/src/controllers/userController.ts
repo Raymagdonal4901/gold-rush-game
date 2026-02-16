@@ -3,7 +3,7 @@ import User from '../models/User';
 import Rig from '../models/Rig';
 import { AuthRequest } from '../middleware/auth';
 
-import { MATERIAL_CONFIG, SLOT_EXPANSION_CONFIG, SHOP_ITEMS } from '../constants';
+import { MATERIAL_CONFIG, SLOT_EXPANSION_CONFIG, SHOP_ITEMS, RIG_UPGRADE_RULES, MINING_VOLATILITY_CONFIG } from '../constants';
 
 export const unlockSlot = async (req: AuthRequest, res: Response) => {
     try {
@@ -153,8 +153,9 @@ export const recalculateUserIncome = async (userId: string) => {
             // Actually, frontend says: "All amounts in system are stored as THB".
             // So we just sum them up.
 
-            const baseDailyProfit = Number(rig.dailyProfit) || 0;
-            const bonusProfit = Number(effectiveBonusProfit) || 0;
+            const volConfig = MINING_VOLATILITY_CONFIG[rig.tierId || 1];
+            const baseValue = volConfig?.baseValue || 0;
+            const bonusProfit = Number(rig.bonusProfit) || 0;
 
             // Equipment Bonus
             let equippedBonus = 0;
@@ -168,8 +169,11 @@ export const recalculateUserIncome = async (userId: string) => {
                 }
             }
 
-            totalBaseDaily += baseDailyProfit + bonusProfit;
-            totalEquipmentDaily += equippedBonus;
+            const starMult = 1 + (Number(rig.starLevel) || 0) * 0.05;
+            const upgradeRule = RIG_UPGRADE_RULES[rig.tierId || 1];
+            const levelMult = upgradeRule ? Math.pow(upgradeRule.statGrowth, (Number(rig.level) || 1) - 1) : 1;
+
+            totalBaseDaily += (baseValue + bonusProfit + equippedBonus) * starMult * levelMult;
         }
 
         const totalDailyIncome = (totalBaseDaily + totalEquipmentDaily) * globalMultiplier;

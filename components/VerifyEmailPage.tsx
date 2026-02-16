@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, XCircle, Loader2, Pickaxe, ArrowRight, Mountain } from 'lucide-react';
 import { api } from '../services/api';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface VerifyEmailPageProps {
     onGoToLogin: () => void;
+    onBack?: () => void;
 }
 
-export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = ({ onGoToLogin }) => {
+export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = ({ onGoToLogin, onBack }) => {
+    const { language } = useLanguage();
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [message, setMessage] = useState('');
 
@@ -40,13 +43,24 @@ export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = ({ onGoToLogin })
             {/* Ambient Background Effects */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
                 <div className={`absolute top-[20%] left-[20%] w-[60%] h-[60%] blur-[120px] rounded-full animate-pulse transition-colors duration-1000 ${status === 'loading' ? 'bg-yellow-500/5' :
-                        status === 'success' ? 'bg-emerald-500/5' : 'bg-red-500/5'
+                    status === 'success' ? 'bg-emerald-500/5' : 'bg-red-500/5'
                     }`}></div>
             </div>
 
             <div className="relative z-10 w-full max-w-md">
+                {onBack && (
+                    <div className="flex justify-start mb-4">
+                        <button
+                            onClick={onBack}
+                            className="flex items-center gap-2 px-4 py-2 rounded-full border border-yellow-500/20 bg-stone-900/50 hover:bg-stone-800 text-[10px] font-black tracking-widest text-yellow-500 transition-all backdrop-blur-sm group"
+                        >
+                            <ArrowRight size={14} className="rotate-180 group-hover:-translate-x-1 transition-transform" />
+                            {language === 'th' ? 'หน้าหลัก' : 'BACK TO HOME'}
+                        </button>
+                    </div>
+                )}
                 <div className={`bg-stone-900/80 border rounded-3xl p-10 backdrop-blur-xl shadow-2xl text-center transition-colors duration-500 ${status === 'loading' ? 'border-yellow-500/10' :
-                        status === 'success' ? 'border-emerald-500/20' : 'border-red-500/20'
+                    status === 'success' ? 'border-emerald-500/20' : 'border-red-500/20'
                     }`}>
 
                     <div className="mb-10 flex justify-center">
@@ -78,7 +92,7 @@ export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = ({ onGoToLogin })
                     </h1>
 
                     <p className={`text-sm mb-10 leading-relaxed font-medium ${status === 'loading' ? 'text-stone-500' :
-                            status === 'success' ? 'text-emerald-400/80' : 'text-red-400/80'
+                        status === 'success' ? 'text-emerald-400/80' : 'text-red-400/80'
                         }`}>
                         {message || 'Verifying your mining credentials with the central database...'}
                     </p>
@@ -87,8 +101,8 @@ export const VerifyEmailPage: React.FC<VerifyEmailPageProps> = ({ onGoToLogin })
                         <button
                             onClick={onGoToLogin}
                             className={`w-full py-4 font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-3 text-xs ${status === 'success'
-                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/10'
-                                    : 'bg-stone-800 hover:bg-stone-700 text-stone-300'
+                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/10'
+                                : 'bg-stone-800 hover:bg-stone-700 text-stone-300'
                                 }`}
                         >
                             <span>{status === 'success' ? 'Enter Mining Terminal' : 'Back to Induction'}</span>

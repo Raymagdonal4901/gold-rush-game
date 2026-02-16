@@ -867,21 +867,11 @@ export const removeVip = async (req: AuthRequest, res: Response) => {
     try {
         const { userId } = req.params;
         const user = await User.findById(userId);
-
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        console.log(`[ADMIN] Removing VIP status from user ${user.username}...`);
-
-        // Filter out VIP items from inventory
-        const originalCount = user.inventory.length;
         user.inventory = user.inventory.filter((item: any) => item.typeId !== 'vip_withdrawal_card');
-
-        if (user.inventory.length === originalCount) {
-            return res.status(400).json({ message: 'User does not have a VIP card' });
-        }
-
         user.markModified('inventory');
         await user.save();
 
@@ -889,6 +879,22 @@ export const removeVip = async (req: AuthRequest, res: Response) => {
     } catch (error) {
         console.error('[ADMIN ERROR] removeVip failed:', error);
         res.status(500).json({ message: 'Server error during VIP removal', error });
+    }
+};
+
+export const toggleBan = async (req: AuthRequest, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        user.isBanned = !user.isBanned;
+        await user.save();
+        res.json({ message: user.isBanned ? 'User banned' : 'User unbanned', isBanned: user.isBanned });
+    } catch (error) {
+        console.error('[ADMIN ERROR] toggleBan failed:', error);
+        res.status(500).json({ message: 'Server error during toggle-ban', error });
     }
 };
 

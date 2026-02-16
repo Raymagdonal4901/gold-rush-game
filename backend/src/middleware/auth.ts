@@ -30,6 +30,10 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
         req.username = decoded.username;
         req.role = user.role; // Use role from DB for security
 
+        if (user.isBanned) {
+            return res.status(403).json({ message: 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อเจ้าหน้าที่' });
+        }
+
         next();
     } catch (error) {
         res.status(401).json({ message: 'Invalid token' });

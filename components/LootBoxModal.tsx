@@ -96,11 +96,11 @@ export const LootBoxModal: React.FC<LootBoxModalProps> = ({ isOpen, onClose, rar
 
         setStage('shaking');
 
-        // Animation Sequence
-        setTimeout(() => setStage('unlocking'), 400);   // Chains break
-        setTimeout(() => setStage('opening'), 750);    // Lid Opens
-        setTimeout(() => setStage('flash'), 1000);      // Flash Bang
-        setTimeout(() => setStage('revealed'), 1200);   // Show Item
+        // Animation Sequence (Fast Mode)
+        setTimeout(() => setStage('unlocking'), 150);   // Chains break
+        setTimeout(() => setStage('opening'), 350);     // Lid Opens
+        setTimeout(() => setStage('flash'), 500);       // Flash Bang
+        setTimeout(() => setStage('revealed'), 650);    // Show Item
     };
 
     if (!isOpen) return null;

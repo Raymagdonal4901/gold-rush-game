@@ -99,7 +99,7 @@ export const claimExpedition = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ message: 'ไม่มีการสำรวจที่พร้อมรับรางวัล' });
         }
 
-        const GRACE_PERIOD = 10000; // 10 seconds grace period
+        const GRACE_PERIOD = 2000; // 2 seconds grace period
         if (Date.now() < user.activeExpedition.endTime - GRACE_PERIOD) {
             return res.status(400).json({ message: 'การสำรวจยังไม่เสร็จสิ้น' });
         }

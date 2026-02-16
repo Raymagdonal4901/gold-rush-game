@@ -10,16 +10,20 @@ import crypto from 'crypto';
  * Helper: Calculate multiplier for the next reveal
  * Multiplier = (TotalTiles / (TotalTiles - Mines)) * HouseEdge
  */
-const calculateMultiplier = (minesCount: number, revealedCount: number) => {
+const calculateMultiplier = (minesCount: number, revealedCount: number, currentMultiplier: number) => {
     const totalTiles = 25;
-    const houseEdge = 0.90; // 10% House Edge
+    const houseEdge = 0.99; // 1% House Edge as requested
 
-    // probability of picking a safe tile = (Total Safe - Revealed) / (Total - Revealed)
-    // 1 / probability = (Total - Revealed) / (Total Safe - Revealed)
-    const totalSafe = totalTiles - minesCount;
-    const multiplierIncrease = (totalTiles - revealedCount) / (totalSafe - revealedCount);
+    const remainingTiles = totalTiles - revealedCount;
+    const remainingSafe = totalTiles - minesCount - revealedCount;
 
-    return multiplierIncrease * houseEdge;
+    if (remainingSafe <= 0) return currentMultiplier; // Safety check
+
+    const stepMultiplier = remainingTiles / remainingSafe;
+    const nextMultiplier = currentMultiplier * stepMultiplier * houseEdge;
+
+    // Sanity check: Ensure growth
+    return Math.max(nextMultiplier, currentMultiplier * 1.01);
 };
 
 export const startGame = async (req: AuthRequest, res: Response) => {
@@ -132,10 +136,8 @@ export const revealTile = async (req: AuthRequest, res: Response) => {
         }
 
         // CASE B: GEM 💎
-        const multiplierIncrease = calculateMultiplier(game.minesCount, game.revealed.length);
-
-        // Cap Multiplier at x50
-        game.currentMultiplier = Math.min(50.0, game.currentMultiplier * multiplierIncrease);
+        const nextMultiplier = calculateMultiplier(game.minesCount, game.revealed.length, game.currentMultiplier);
+        game.currentMultiplier = Math.min(50.0, nextMultiplier);
         game.potentialWin = Math.floor(game.betAmount * game.currentMultiplier * 100) / 100;
         game.revealed.push(tileIndex);
 

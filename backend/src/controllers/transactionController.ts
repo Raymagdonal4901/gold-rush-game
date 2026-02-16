@@ -233,7 +233,7 @@ export const claimReward = async (req: AuthRequest, res: Response) => {
 
         // === Dynamic Volatility ===
         const presetId = getRigPresetId(rig);
-        const { amount, isJackpot } = calculateDailyYield(presetId);
+        const { amount, isJackpot } = calculateDailyYield(presetId, false, 1.5, {}, rig.starLevel || 0, rig.level || 1);
 
         if (amount <= 0) return res.status(400).json({ message: 'Yield is 0, no claim possible' });
 

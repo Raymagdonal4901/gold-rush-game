@@ -3,7 +3,7 @@ import Rig from '../models/Rig';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
-import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS, ENERGY_CONFIG, MINING_VOLATILITY_CONFIG, SALVAGE_CONFIG } from '../constants';
+import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS, ENERGY_CONFIG, MINING_VOLATILITY_CONFIG, SALVAGE_CONFIG, RIG_UPGRADE_RULES, MAX_RIG_LEVEL } from '../constants';
 import { recalculateUserIncome } from './userController';
 
 const MATERIAL_NAMES = MATERIAL_CONFIG.NAMES;
@@ -99,31 +99,36 @@ function rollLoot(presetId: number, buffs: any = {}): { tier?: number; itemId?: 
 
 // === Dynamic Volatility: คำนวณ yield ต่อครั้ง ===
 // สุ่ม baseValue + Random(0~maxRandom) แล้วลุ้น Jackpot (Critical Hit)
-export function calculateDailyYield(presetId: number, isOverclocked: boolean = false, multiplier: number = 1.5, buffs: any = {}): { amount: number; isJackpot: boolean } {
+export function calculateDailyYield(presetId: number, isOverclocked: boolean = false, multiplier: number = 1.5, buffs: any = {}, starLevel: number = 0, rigLevel: number = 1): { amount: number; isJackpot: boolean } {
     const config = MINING_VOLATILITY_CONFIG[presetId];
     if (!config) {
         console.warn(`[YIELD] No volatility config for preset ${presetId}, fallback to 0`);
         return { amount: 0, isJackpot: false };
     }
 
-    // Calculate Raw Yield = Base + Math.floor(Math.random() * (MaxRandom + 1))
-    const randomBonus = Math.floor(Math.random() * (config.maxRandom + 1));
-    const rawYield = config.baseValue + randomBonus;
+    // Original Yield Logic: Base Value + Random(0, maxRandom)
+    const rawYield = config.baseValue + Math.floor(Math.random() * (config.maxRandom + 1));
 
     let isJackpot = false;
 
     // --- Additive Stacking Implementation ---
-    // Final Multiplier = 1 + (OC Bonus) + (Item Bonus)
+    // Final Multiplier = 1 + (OC Bonus) + (Item Bonus) + (Star Bonus)
+    // Star Bonus: Each star adds 5% yield (0.05)
     let totalMultiplier = 1.0;
     const ocBonus = isOverclocked ? (multiplier - 1.0) : 0;
     const itemBonus = (buffs.hashrateBoost && buffs.hashrateBoost > 1.0) ? (buffs.hashrateBoost - 1.0) : 0;
+    const starBonus = starLevel * 0.05; // 5% per star
 
-    totalMultiplier += ocBonus + itemBonus;
+    totalMultiplier += ocBonus + itemBonus + starBonus;
 
-    let finalYield = rawYield * totalMultiplier;
+    // Level multiplier: statGrowth^(level-1)
+    const upgradeRule = RIG_UPGRADE_RULES[presetId];
+    const levelMult = upgradeRule ? Math.pow(upgradeRule.statGrowth, (rigLevel - 1)) : 1.0;
+
+    let finalYield = rawYield * totalMultiplier * levelMult;
 
     // Log breakdown for sanity check
-    console.log(`[YIELD_FIX] Tier ${presetId} | Base: ${rawYield} | OC_Bonus: ${ocBonus.toFixed(2)} | Item_Bonus: ${itemBonus.toFixed(2)} | Total_Mult: ${totalMultiplier.toFixed(2)} | Final: ${finalYield.toFixed(2)}`);
+    console.log(`[YIELD_FIX] Tier ${presetId} | Base: ${rawYield} | OC_Bonus: ${ocBonus.toFixed(2)} | Item_Bonus: ${itemBonus.toFixed(2)} | Star_Bonus: ${starBonus.toFixed(2)} | Total_Mult: ${totalMultiplier.toFixed(2)} | Final: ${finalYield.toFixed(2)}`);
 
     // Roll for Jackpot: if (Math.random() < JackpotChance)
     // Overclock adds flat 0.02 (2%) to jackpot chance
@@ -266,11 +271,12 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
             dailyProfit: preset.dailyProfit,
             expiresAt,
             slots: [null, null, null, null, null], // Empty slots
-            rarity: preset.type || 'ULTRA_LEGENDARY',
+            rarity: preset.type || 'COMMON',
             repairCost: 0,
             energyCostPerDay: preset.energyCostPerDay,
             bonusProfit: 0,
-            lastClaimAt: new Date()
+            lastClaimAt: new Date(),
+            level: 1
         });
 
         await user.save();
@@ -345,8 +351,8 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + lifespanDays);
 
-        // Calculate rig rarity based on investment (USD scale: ~3000 -> 85, ~2000 -> 57, ~1000 -> 28)
-        const rigRarity = investment >= 85 ? 'LEGENDARY' : investment >= 57 ? 'EPIC' : investment >= 28 ? 'RARE' : 'COMMON';
+        // Calculate rig rarity based on preset type or investment (THB scale: 3000 -> LEGENDARY, 2000 -> EPIC, 1000 -> RARE)
+        const rigRarity = preset?.type || (investment >= 3000 ? 'LEGENDARY' : investment >= 2000 ? 'EPIC' : investment >= 1000 ? 'RARE' : 'COMMON');
 
         console.log(`[BUY_RIG DEBUG] Creating rig for user: ${userId}, name: ${typeof name === 'object' ? JSON.stringify(name) : name}, rarity: ${rigRarity}`);
 
@@ -366,7 +372,8 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
             tierId: getRigPresetId({ investment, name }), // Helper function needs object with investment/name
             currentDurability: MINING_VOLATILITY_CONFIG[getRigPresetId({ investment, name })]?.durabilityMax || 3000,
             status: 'ACTIVE',
-            totalMined: 0
+            totalMined: 0,
+            level: 1
         });
 
         // === REFERRAL BONUS (3% of Purchase Price) ===
@@ -431,21 +438,21 @@ export const claimRigProfit = async (req: AuthRequest, res: Response) => {
         const rig = await Rig.findOne({ _id: rigId, ownerId: user._id });
         if (!rig) return res.status(404).json({ message: 'Rig not found' });
 
-        // === 24-HOUR GLOBAL COOLDOWN CHECK ===
+        // === 24-HOUR PER-RIG COOLDOWN CHECK ===
         const baseCooldownMs = 24 * 60 * 60 * 1000;
         const buffs = getRigBuffs(rig, user);
         const cooldownMs = baseCooldownMs * buffs.claimCooldownMultiplier;
         const now = new Date();
 
-        if (user.lastClaimedAt) {
-            const timeSinceLastClaim = now.getTime() - new Date(user.lastClaimedAt).getTime();
+        if (rig.lastClaimAt) {
+            const timeSinceLastClaim = now.getTime() - new Date(rig.lastClaimAt).getTime();
             if (timeSinceLastClaim < cooldownMs) {
                 const remainingMs = cooldownMs - timeSinceLastClaim;
                 const hours = Math.floor(remainingMs / (60 * 60 * 1000));
                 const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
 
                 return res.status(400).json({
-                    message: `คุณสามารถรับรายได้ได้อีกครั้งในอีก ${hours} ชม. ${minutes} นาที (You can claim again in ${hours}h ${minutes}m)`,
+                    message: `คุณสามารถรับรายได้จากเครื่องนี้ได้อีกครั้งในอีก ${hours} ชม. ${minutes} นาที (You can claim from this rig again in ${hours}h ${minutes}m)`,
                     code: 'CLAIM_COOLDOWN',
                     remainingMs
                 });
@@ -488,7 +495,7 @@ export const claimRigProfit = async (req: AuthRequest, res: Response) => {
         }
 
         // === Dynamic Volatility: คำนวณ yield ===
-        const { amount, isJackpot } = calculateDailyYield(presetId, isOverclocked, overclockMultiplier, buffs);
+        const { amount, isJackpot } = calculateDailyYield(presetId, isOverclocked, overclockMultiplier, buffs, rig.starLevel || 0, rig.level || 1);
 
         const rigNameStr = typeof rig.name === 'object' ? (rig.name.th || rig.name.en) : rig.name;
         console.log(`[CLAIM] User ${userId} | Rig: ${rigNameStr} (Preset ${presetId}) | Yield: ${amount} THB ${isJackpot ? '⚡ CRITICAL HIT!' : ''} | Old Balance: ${user.balance}`);
@@ -1017,7 +1024,7 @@ export const mergeRigs = async (req: AuthRequest, res: Response) => {
         const { rigId1, rigId2 } = req.body;
 
         if (!rigId1 || !rigId2 || rigId1 === rigId2) {
-            return res.status(400).json({ message: 'Invalid rig selection' });
+            return res.status(400).json({ message: 'การเลือกเครื่องจักรไม่ถูกต้อง' });
         }
 
         const user = req.user;
@@ -1030,25 +1037,29 @@ export const mergeRigs = async (req: AuthRequest, res: Response) => {
         ]);
 
         if (!rig1 || !rig2) {
-            return res.status(404).json({ message: 'One or both rigs not found' });
+            return res.status(404).json({ message: 'ไม่พบเครื่องจักรที่ระบุ' });
         }
 
         // --- VALIDATION ---
         // 1. Check if broken or dead
         if (rig1.isDead || rig2.isDead || rig1.status === 'BROKEN' || rig2.status === 'BROKEN') {
-            return res.status(400).json({ message: 'Cannot merge broken or dead rigs' });
+            return res.status(400).json({ message: 'ไม่สามารถรวมเครื่องที่เสียหายหรือพังแล้วได้' });
         }
 
         // 2. Check compatibility (Same Name/Preset)
         const name1 = typeof rig1.name === 'object' ? rig1.name.en : rig1.name;
         const name2 = typeof rig2.name === 'object' ? rig2.name.en : rig2.name;
         if (name1 !== name2) {
-            return res.status(400).json({ message: 'Rigs must be of the same type' });
+            return res.status(400).json({ message: 'เครื่องจักรต้องเป็นรุ่นเดียวกัน' });
         }
 
         // 3. Check Star Level/Rank
-        if ((rig1.starLevel || 0) !== (rig2.starLevel || 0)) {
-            return res.status(400).json({ message: 'Rigs must be the same star level' });
+        if (Number(rig1.starLevel || 0) !== Number(rig2.starLevel || 0)) {
+            return res.status(400).json({ message: 'เครื่องจักรต้องมีระดับดาวเท่ากัน' });
+        }
+
+        if ((rig1.starLevel || 0) >= 5) {
+            return res.status(400).json({ message: 'เครื่องขุดนี้ถึงระดับสูงสุดแล้ว (5 ดาว)' });
         }
 
         // 4. Check Durability (> 90%)
@@ -1061,13 +1072,13 @@ export const mergeRigs = async (req: AuthRequest, res: Response) => {
 
         const minRequired = maxDurability * 0.9;
         if ((rig1.currentDurability || 0) < minRequired || (rig2.currentDurability || 0) < minRequired) {
-            return res.status(400).json({ message: 'Both rigs must be fully repaired (>90%)' });
+            return res.status(400).json({ message: 'เครื่องจักรทั้งสองต้องได้รับการซ่อมแซมสมบูรณ์ (>90%)' });
         }
 
         // 5. Check Cost
         const MERGE_FEE = 100;
         if (user.balance < MERGE_FEE) {
-            return res.status(400).json({ message: `Insufficient funds. Need ${MERGE_FEE} THB` });
+            return res.status(400).json({ message: `ยอดเงินไม่เพียงพอ ต้องการ ${MERGE_FEE} บาท` });
         }
 
         // --- EXECUTION ---
@@ -1077,53 +1088,32 @@ export const mergeRigs = async (req: AuthRequest, res: Response) => {
         await user.save();
 
         // Calculate New Stats
-        const newStarLevel = (rig1.starLevel || 0) + 1;
+        const newStarLevel = Number(rig1.starLevel || 0) + 1;
         const baseDailyProfit = rig1.dailyProfit;
         // Logic: (Rig1 + Rig2) * 1.10 is theoretically 2.2x of one rig
-        const newDailyProfit = (rig1.dailyProfit + rig2.dailyProfit) * 1.10;
+        const newDailyProfit = (Number(rig1.dailyProfit) + Number(rig2.dailyProfit)) * 1.10;
 
         // Create New Rig
+        console.log(`[MERGE_DEBUG] Merging Rigs: ${rig1._id} (Lvl ${rig1.starLevel}) + ${rig2._id} (Lvl ${rig2.starLevel}) -> New Lvl ${newStarLevel}`);
+
         const newRig = new Rig({
             ownerId: userId,
             name: rig1.name,
-            investment: rig1.investment * 2, // Track total investment maybe? Or just keep base. Let's sum for value tracking.
+            investment: rig1.investment + rig2.investment,
             dailyProfit: newDailyProfit,
             purchaseDate: new Date(),
-            expiresAt: rig1.expiresAt > rig2.expiresAt ? rig1.expiresAt : rig2.expiresAt, // Take the longer expiry? Or reset?
-            // Let's reset expiry to full duration of the tier to reward merging?
-            // "Occupies only 1 slot" -> It's a new rig.
-            // Let's use the original durationDays from preset for a fresh start or keep best expiry.
-            // Requirement says "Create 1 New Rig". Let's give it fresh expiry or max of both.
-            // User request usually implies an "Upgrade" -> better stats. Resetting durability is separate.
-            // Let's allow inheriting the better expiry + 5 days bonus?
-            // Plan said: "Create 1 New Rig". Let's use a fresh duration from preset if possible, or max(expiry).
-            // Simplified: Max(expiry of 1, expiry of 2)
-
-            // Re-read plan: "MaxDurability = Reset to full". "Occupies only 1 slot".
-            // Let's set expiry to Today + Duration of Tier (Full Reset of time) -> impactful reward.
-            // Actually, let's keep it safe: Max of both + 10% bonus time.
-
-            rarity: rig1.rarity, // Upgrade rarity visual?
+            expiresAt: rig1.expiresAt > rig2.expiresAt ? rig1.expiresAt : rig2.expiresAt,
+            rarity: rig1.rarity,
             starLevel: newStarLevel,
-            repairCost: rig1.repairCost * 2, // Higher repair cost?
-            energyCostPerDay: rig1.energyCostPerDay, // Same energy or double? Usually more efficient -> Same.
+            level: 1,
+            repairCost: rig1.repairCost * 2,
+            energyCostPerDay: rig1.energyCostPerDay,
             energy: 100,
             lastEnergyUpdate: new Date(),
-            currentDurability: maxDurability, // Fully repaired
+            currentDurability: maxDurability,
             status: 'ACTIVE',
-            tierId: rig1.tierId
+            tierId: rig1.tierId || 1
         });
-
-        // Determine Expiry: Reset to full duration of original tier?
-        // If we merge two old rigs, do we get a brand new 60 days?
-        // Let's use the RigPreset to find duration.
-        const preset = RIG_PRESETS.find(p => p.id === presetId);
-        if (preset) {
-            const days = preset.durationDays || 60;
-            const now = new Date();
-            now.setDate(now.getDate() + days);
-            newRig.expiresAt = now;
-        }
 
         await newRig.save();
 
@@ -1262,6 +1252,98 @@ export const destroyRig = async (req: AuthRequest, res: Response) => {
         });
     } catch (error) {
         console.error('[DESTROY_RIG] Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// === Rig Level Up (Material Burning) ===
+export const upgradeRig = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.userId;
+        const { id: rigId } = req.params;
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'Unauthorized' });
+
+        const rig = await Rig.findOne({ _id: rigId, ownerId: user._id });
+        if (!rig) return res.status(404).json({ message: 'Rig not found' });
+
+        const currentLevel = rig.level || 1;
+        if (currentLevel >= MAX_RIG_LEVEL) {
+            return res.status(400).json({ message: 'Rig is already at max level' });
+        }
+
+        const tierId = rig.tierId || getRigPresetId(rig);
+        const rule = RIG_UPGRADE_RULES[tierId];
+        if (!rule) {
+            return res.status(400).json({ message: 'No upgrade rules for this rig type' });
+        }
+
+        // Calculate material cost: baseCost * costMultiplier^(currentLevel - 1)
+        const materialCost = Math.floor(rule.baseCost * Math.pow(rule.costMultiplier, currentLevel - 1));
+        const matTier = rule.materialTier;
+
+        // Check user has enough materials
+        if (!user.materials) user.materials = {};
+        const currentMats = Number(user.materials[matTier] || 0);
+        if (currentMats < materialCost) {
+            const matName = MATERIAL_NAMES[matTier as keyof typeof MATERIAL_NAMES] || { th: 'แร่', en: 'Ore' };
+            return res.status(400).json({
+                message: `Not enough materials`,
+                required: materialCost,
+                have: currentMats,
+                materialName: matName
+            });
+        }
+
+        // Deduct materials
+        user.materials[matTier] = currentMats - materialCost;
+        user.markModified('materials');
+
+        // Increment level
+        const newLevel = currentLevel + 1;
+        rig.level = newLevel;
+
+        // Restore durability to max (free repair!) & Increase Max Capacity
+        const volConfig = MINING_VOLATILITY_CONFIG[tierId];
+        const baseMax = volConfig?.durabilityMax || 3000;
+
+        // Increase Max Durability
+        const currentMax = rig.maxDurability || baseMax;
+        const newMax = currentMax + (rule.durabilityBonus || 0);
+
+        rig.maxDurability = newMax;
+        rig.currentDurability = newMax;
+        rig.status = 'ACTIVE';
+
+        await rig.save();
+        await user.save();
+
+        // Recalculate user income
+        await recalculateUserIncome(user._id.toString());
+
+        // Log transaction
+        const matName = MATERIAL_NAMES[matTier as keyof typeof MATERIAL_NAMES] || { th: 'แร่', en: 'Ore' };
+        const rigName = typeof rig.name === 'object' ? rig.name.th : rig.name;
+        const tx = new Transaction({
+            userId: user._id,
+            type: 'EXPENSE',
+            amount: 0,
+            status: 'COMPLETED',
+            description: `อัพเกรด ${rigName} เป็น Lv.${newLevel} (ใช้ ${typeof matName === 'object' ? matName.th : matName} x${materialCost})`
+        });
+        await tx.save();
+
+        console.log(`[UPGRADE_RIG] ${rigName} upgraded to Lv.${newLevel} | Cost: ${materialCost} of tier ${matTier}`);
+
+        res.json({
+            success: true,
+            rig,
+            newLevel,
+            materialUsed: materialCost,
+            materialTier: matTier
+        });
+    } catch (error) {
+        console.error('[UPGRADE_RIG] Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
