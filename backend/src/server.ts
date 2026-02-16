@@ -39,6 +39,8 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 import transactionRoutes from './routes/transactionRoutes';
 import walletRoutes from './routes/walletRoutes';
+import { checkMaintenance } from './middleware/checkMaintenance';
+
 // Health Check (must be above maintenance middleware for Render)
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'Gold Rush Backend is running!' });
