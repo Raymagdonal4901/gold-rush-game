@@ -388,6 +388,10 @@ export const SLOT_EXPANSION_CONFIG: Record<number, { title: { th: string; en: st
     4: { title: { th: 'ขยายพื้นที่ขุดเจาะช่องที่ 4', en: 'Expand Mining Slot 4' }, cost: 0, mats: {}, item: 'slot_blueprint', itemCount: 1 },
     5: { title: { th: 'ขยายพื้นที่ขุดเจาะช่องที่ 5', en: 'Expand Mining Slot 5' }, cost: 0, mats: {}, item: 'slot_blueprint', itemCount: 1 },
     6: { title: { th: 'สร้างแท่นขุดเจาะพิเศษ (Master Wing)', en: 'Establish Special Platform (Master Wing)' }, cost: 0, mats: {}, item: 'slot_blueprint', itemCount: 1 },
+    7: { title: { th: 'ขยายพื้นที่ขุดเจาะช่องที่ 7', en: 'Expand Mining Slot 7' }, cost: 0, mats: {}, item: 'slot_blueprint', itemCount: 1 },
+    8: { title: { th: 'ขยายพื้นที่ขุดเจาะช่องที่ 8', en: 'Expand Mining Slot 8' }, cost: 0, mats: {}, item: 'slot_blueprint', itemCount: 1 },
+    9: { title: { th: 'ขยายพื้นที่ขุดเจาะช่องที่ 9', en: 'Expand Mining Slot 9' }, cost: 0, mats: {}, item: 'slot_blueprint', itemCount: 1 },
+    10: { title: { th: 'ขยายพื้นที่ขุดเจาะช่องที่ 10', en: 'Expand Mining Slot 10' }, cost: 0, mats: {}, item: 'slot_blueprint', itemCount: 1 },
 };
 
 export const TRANSACTION_LIMITS = {
@@ -455,7 +459,7 @@ export const ROBOT_CONFIG = {
 };
 
 export const MAX_ACCESSORIES = 20;
-export const MAX_RIGS_PER_USER = 3;
+export const MAX_RIGS_PER_USER = 10;
 export const MAX_SLOTS_PER_RIG = 5;
 
 export interface ShopItemConfig {

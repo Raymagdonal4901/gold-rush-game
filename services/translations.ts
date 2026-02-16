@@ -247,6 +247,7 @@ export const translations = {
             your_balance: 'ยอดคงเหลือของคุณ',
             awesome: 'ยอดเยี่ยม!',
             back_to_mine: 'กลับไปที่หน้าหลัก',
+            coming_soon: 'เร็วๆ นี้',
         },
         actions: {
             repair: 'ซ่อมแซม',
@@ -288,6 +289,7 @@ export const translations = {
             daily_bonus: 'โบนัสประจำวัน',
             missions: 'ภารกิจ',
             dungeon: 'ดันเจียน',
+            logistics: 'โลจิสติกส์',
             lootbox: 'กล่องสุ่ม',
             leaderboard_title: 'กระดานผู้นำ',
             secret_mine: 'เหมืองลับ',
@@ -1161,6 +1163,7 @@ export const translations = {
             your_balance: 'Your Balance',
             awesome: 'Awesome!',
             back_to_mine: 'Back to Mine',
+            coming_soon: 'Coming Soon',
             market_price: 'Market Price',
         },
         machine_shop: {
@@ -1314,6 +1317,7 @@ export const translations = {
             daily_bonus: 'Daily Bonus',
             missions: 'Missions',
             dungeon: 'Dungeon',
+            logistics: 'Logistics',
             lootbox: 'Loot Box',
             leaderboard_title: 'Leaderboard',
             secret_mine: 'Secret Mine',

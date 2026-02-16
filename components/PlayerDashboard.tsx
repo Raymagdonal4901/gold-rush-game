@@ -4,7 +4,7 @@ import { api } from '../services/api';
 // import { MockDB } from '../services/db'; // Not using MockDB directly for now unless needed
 import { useLanguage } from '../contexts/LanguageContext';
 import { translations } from '../services/translations';
-import { ROBOT_CONFIG, SHOP_ITEMS, MATERIAL_CONFIG, REPAIR_CONFIG, ENERGY_CONFIG } from '../constants';
+import { ROBOT_CONFIG, SHOP_ITEMS, MATERIAL_CONFIG, REPAIR_CONFIG, ENERGY_CONFIG, MAX_RIGS_PER_USER } from '../constants';
 import { MaterialIcon } from './MaterialIcon';
 
 // Utility functions moved here since utils folder is missing
@@ -1053,28 +1053,31 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                                         </div>
                                     </div>
 
-                                    <div className="mt-auto h-8 lg:h-10 w-full bg-blue-900/10 rounded-lg flex items-center border border-blue-500/10 overflow-hidden market-ticker-container">
+                                    <div className="mt-auto h-8 lg:h-10 w-full bg-blue-900/20 rounded-lg flex items-center border border-blue-500/20 overflow-hidden market-ticker-container">
                                         <div className="market-ticker-content flex items-center h-full">
-                                            {/* Repeat once for seamless loop */}
-                                            {[...Object.keys(MATERIAL_CONFIG.NAMES), ...Object.keys(MATERIAL_CONFIG.NAMES)].map((id, idx) => {
-                                                const matId = Number(id);
-                                                if (matId === 0) return null; // Skip stone shards
+                                            {/* Repeat for seamless loop */}
+                                            {(() => {
+                                                const pricedMaterials = [1, 2, 3, 4, 5, 6, 7];
+                                                const items = [...pricedMaterials, ...pricedMaterials, ...pricedMaterials, ...pricedMaterials];
+                                                return items.map((matId, idx) => {
+                                                    const trend = trends[matId] || { multiplier: 1 };
+                                                    const change = ((trend.multiplier - 1) * 100).toFixed(1);
+                                                    const isUp = trend.multiplier >= 1;
+                                                    const name = MATERIAL_CONFIG.NAMES[matId]?.[language as 'th' | 'en'] || '';
 
-                                                const trend = trends[matId] || { multiplier: 1 };
-                                                const change = ((trend.multiplier - 1) * 100).toFixed(1);
-                                                const isUp = trend.multiplier >= 1;
-                                                const name = MATERIAL_CONFIG.NAMES[matId]?.[language as 'th' | 'en'] || '';
-
-                                                return (
-                                                    <div key={idx} className="market-ticker-item flex items-center gap-1.5 px-2">
-                                                        <MaterialIcon id={matId} size="w-4 h-4" iconSize={10} />
-                                                        <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tight">{name}</span>
-                                                        <span className={`text-[9px] font-black flex items-center ${isUp ? '▲' : '▼'} ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                            {Math.abs(Number(change))}%
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })}
+                                                    return (
+                                                        <div key={idx} className="market-ticker-item flex items-center gap-2 px-4 border-r border-blue-500/10">
+                                                            <MaterialIcon id={matId} size="w-5 h-5" iconSize={14} />
+                                                            <div className="flex flex-col leading-none">
+                                                                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tight">{name}</span>
+                                                                <span className={`text-[10px] font-black flex items-center gap-0.5 ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                    {isUp ? '▲' : '▼'}{Math.abs(Number(change))}%
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                });
+                                            })()}
                                         </div>
                                     </div>
                                 </>
@@ -1097,14 +1100,20 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                         { icon: Dices, label: t('lucky_draw.title') || "Lucky Draw", action: () => setIsLuckyDrawOpen(true), color: "text-purple-400" },
                         { icon: CreditCard, label: language === 'th' ? 'ประวัติธุรกรรม' : 'Transaction History', action: () => onOpenWallet(), color: "text-yellow-500" },
                         { icon: Trophy, label: t('dashboard.leaderboard_title') || "Leaderboard", action: () => setIsLeaderboardOpen(true), color: "text-amber-200" },
-                    ].map((item, idx) => (
+                        { icon: Truck, label: t('dashboard.logistics') || "Logistics", action: () => { }, color: "text-purple-400", comingSoon: true },
+                    ].map((item: any, idx) => (
                         <button
                             key={idx}
-                            onClick={item.action}
-                            className="flex flex-col items-center justify-center gap-1 lg:gap-2 bg-stone-900 border border-stone-800 rounded-xl p-2 lg:p-3 relative overflow-hidden transition-all hover:bg-stone-800 hover:border-stone-700 active:scale-95"
+                            onClick={item.comingSoon ? undefined : item.action}
+                            className={`flex flex-col items-center justify-center gap-1 lg:gap-2 bg-stone-900 border border-stone-800 rounded-xl p-2 lg:p-3 relative overflow-hidden transition-all ${item.comingSoon ? 'opacity-60 cursor-not-allowed' : 'hover:bg-stone-800 hover:border-stone-700 active:scale-95'}`}
                         >
                             <item.icon size={24} className={item.color} />
                             <span className="text-[10px] font-bold text-stone-400 text-center leading-tight">{item.label}</span>
+                            {item.comingSoon && (
+                                <div className="absolute top-0 right-0 bg-stone-800 text-stone-500 text-[6px] font-black px-1.5 py-0.5 rounded-bl border-b border-l border-stone-700 uppercase tracking-tighter">
+                                    {t('common.coming_soon')}
+                                </div>
+                            )}
                         </button>
                     ))}
                 </div>
@@ -1227,7 +1236,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {Array.from({ length: 6 }).map((_, index) => {
+                        {Array.from({ length: MAX_RIGS_PER_USER }).map((_, index) => {
                             const slotNumber = index + 1;
                             const rig = rigs[index];
                             const isLocked = slotNumber > (user?.warehouseCapacity || user?.unlockedSlots || 3);
