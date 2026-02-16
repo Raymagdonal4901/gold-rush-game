@@ -45,7 +45,7 @@ export const getLandingStats = async (req: Request, res: Response) => {
 // Register
 export const register = async (req: Request, res: Response) => {
     try {
-        const { username, email, password, referralCode } = req.body;
+        const { username, email, password, pin, referralCode } = req.body;
         // ตรวจสอบว่า username หรือ email ซ้ำหรือไม่
         const existingUser = await User.findOne({
             $or: [{ username }, { email }]
@@ -81,6 +81,12 @@ export const register = async (req: Request, res: Response) => {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Hash PIN if provided
+        let hashedPin = undefined;
+        if (pin) {
+            hashedPin = await bcrypt.hash(pin, 10);
+        }
+
         // Initialize empty inventory and notifications
         const inventory: any[] = [];
         const notifications: any[] = [];
@@ -97,6 +103,7 @@ export const register = async (req: Request, res: Response) => {
             username,
             email,
             passwordHash: hashedPassword,
+            pin: hashedPin,
             verificationToken,
             verificationTokenExpires,
             isEmailVerified: false,
@@ -119,9 +126,13 @@ export const register = async (req: Request, res: Response) => {
             message: 'Registration successful. Please verify your email.',
             requiresVerification: true
         });
-    } catch (error) {
-        console.error('Registration error:', error);
-        res.status(500).json({ message: 'Server error', error });
+    } catch (error: any) {
+        console.error('Registration error details:', error);
+        res.status(500).json({
+            message: 'Server error',
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
 // Login
