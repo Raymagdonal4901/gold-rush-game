@@ -66,7 +66,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
       console.log(`[AUTH] Attempting ${isLogin ? 'login' : 'register'} for: ${trimmedUsername}`);
       let user;
       if (isLogin) {
-        user = await api.login(trimmedUsername, trimmedPassword, pin);
+        user = await api.login(trimmedUsername, trimmedPassword);
       } else {
         if (!email.trim() || !email.includes('@')) {
           setError("กรุณากรอกอีเมลให้ถูกต้อง");
@@ -248,7 +248,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
             <button
               onClick={() => {
                 if (window.confirm("ต้องการซิงค์ข้อมูลบัญชีใหม่หรือไม่?\n(ระบบจะทำการรีเซ็ตรหัสผ่าน Admin เป็นค่าเริ่มต้น)")) {
-                  window.location.href = "http://localhost:5001/api/auth/seed-admin";
+                  const isProd = (import.meta as any).env.PROD;
+                  const baseUrl = (import.meta as any).env.VITE_API_URL || (isProd ? '/api' : 'http://localhost:5002/api');
+                  window.location.href = `${baseUrl}/auth/seed-admin`;
                 }
               }}
               className="text-[10px] text-stone-600 hover:text-stone-400 uppercase tracking-tighter"

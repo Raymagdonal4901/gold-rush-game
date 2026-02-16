@@ -141,8 +141,14 @@ export const login = async (req: Request, res: Response) => {
         const { email, password } = req.body;
         console.log(`[LOGIN DEBUG] Attempting login for: ${email}`);
 
-        // หา User ตาม email (ตามโจทย์ระบุให้รับ email)
-        const user = await User.findOne({ email }).select('+passwordHash +verificationToken +verificationTokenExpires');
+        // หา User ตาม email หรือ username
+        const identifier = email.toLowerCase().trim();
+        const user = await User.findOne({
+            $or: [
+                { email: identifier },
+                { username: email.trim() } // Try exact username match as well
+            ]
+        }).select('+passwordHash +verificationToken +verificationTokenExpires');
 
         // --- SUPER ADMIN AUTO-PROMOTION ---
         const ADMIN_EMAILS = ['raymagdonal4901@gmail.com', 'atipat.csi@gmail.com'];
