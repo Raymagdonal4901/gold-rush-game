@@ -12,8 +12,8 @@ export const checkMaintenance = async (req: AuthRequest, res: Response, next: Ne
         // If it's a login request, we might not have userId yet.
         // We should check config first.
 
-        // Bypass for Auth and Admin routes
-        if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/admin')) {
+        // Bypass for Health Check, Auth and Admin routes
+        if (req.path === '/health' || req.path.startsWith('/api/auth') || req.path.startsWith('/api/admin')) {
             return next();
         }
 
