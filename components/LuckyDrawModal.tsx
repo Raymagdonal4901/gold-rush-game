@@ -21,6 +21,7 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
     const [selectedRock, setSelectedRock] = useState<number | null>(null);
     const [reward, setReward] = useState<{ label: any, type: string, amount?: number } | null>(null);
     const [canPlayFree, setCanPlayFree] = useState(false);
+    const [wasFreePlay, setWasFreePlay] = useState(false);
     const [showResultPopup, setShowResultPopup] = useState(false);
 
     useEffect(() => {
@@ -49,16 +50,21 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
     };
 
     const handleStart = () => {
-        if (!canPlayFree && user.balance < LUCKY_DRAW_CONFIG.COST) {
-            if (addNotification) addNotification({
-                id: Date.now().toString(),
-                userId: user.id,
-                message: t('lucky_draw.insufficient_funds'),
-                type: 'ERROR',
-                read: false,
-                timestamp: Date.now()
-            });
-            return;
+        if (canPlayFree) {
+            setWasFreePlay(true);
+        } else {
+            if (user.balance < LUCKY_DRAW_CONFIG.COST) {
+                if (addNotification) addNotification({
+                    id: Date.now().toString(),
+                    userId: user.id,
+                    message: t('lucky_draw.insufficient_funds'),
+                    type: 'ERROR',
+                    read: false,
+                    timestamp: Date.now()
+                });
+                return;
+            }
+            setWasFreePlay(false);
         }
         setGameState('MINING');
     };
@@ -79,7 +85,9 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                         amount: res.reward.amount
                     });
                     onRefresh();
-                    setCanPlayFree(false);
+                    if (wasFreePlay) {
+                        setCanPlayFree(false);
+                    }
                     setGameState('REVEALED');
 
                     // Show result popup

@@ -59,7 +59,9 @@ export const playLuckyDraw = async (req: any, res: Response) => {
             }
         }
 
-        user.lastLuckyDraw = now;
+        if (isFree) {
+            user.lastLuckyDraw = now;
+        }
         await user.save();
 
         // Log Transaction (Cost)
