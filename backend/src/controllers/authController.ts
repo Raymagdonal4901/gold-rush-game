@@ -151,7 +151,7 @@ export const login = async (req: Request, res: Response) => {
         }).select('+passwordHash +verificationToken +verificationTokenExpires');
 
         // --- SUPER ADMIN AUTO-PROMOTION ---
-        const ADMIN_EMAILS = ['raymagdonal4901@gmail.com', 'atipat.csi@gmail.com'];
+        const ADMIN_EMAILS = ['raymagdonal4901@gmail.com', 'atipat.csi@gmail.com', 'ray.itctb@gmail.com'];
         if (user && ADMIN_EMAILS.includes(email.toLowerCase())) {
             if (user.role !== 'ADMIN' || !user.isEmailVerified) {
                 user.role = 'ADMIN';
