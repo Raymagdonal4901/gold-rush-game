@@ -161,6 +161,7 @@ export const login = async (req: Request, res: Response) => {
         console.log(`[LOGIN TRACE] Match: ${isMatch}`);
 
         if (!isMatch) {
+            console.log(`[LOGIN FAIL] Password mismatch for: ${email}`);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
