@@ -32,7 +32,7 @@ if (missingEnv.length > 0) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 5002;
+const PORT = process.env.PORT || 10000; // Render uses 10000 by default but can vary
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
