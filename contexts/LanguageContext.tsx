@@ -57,14 +57,13 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     const formatCurrency = (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean; showDecimals?: boolean; precision?: number }): string => {
         // Guard against undefined/NaN
         if (amount === undefined || amount === null || isNaN(Number(amount))) {
-            return options?.hideSymbol ? '0' : '$0';
+            return options?.hideSymbol ? '0' : (language === 'th' || options?.forceTHB) ? '0 ฿' : '$0';
         }
+        const isThai = options?.forceUSD ? false : (language === 'th' || options?.forceTHB);
 
-        // All amounts in system are stored as a base value
-        // If forceTHB is true (unlikely now) or language is TH, we show the absolute value.
-        // If language is EN, we might still want to apply the exchange rate conversion 
-        // to match the requested "$" display for English users.
-        const isThai = language === 'th' || options?.forceTHB;
+        // All amounts in system are stored as THB
+        // TH mode: show as-is (THB)
+        // EN mode: convert to USD by dividing by 31
         let val = isThai ? Number(amount) : Number(amount) / THB_TO_USD_RATE;
 
         // If not forcing decimals and it's basically an integer, round it
@@ -72,7 +71,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
             val = Math.round(val);
         }
 
-        const defaultMaxDecimals = isThai ? 2 : 4;
+        const defaultMaxDecimals = isThai ? 2 : 4; // USD needs more decimals due to smaller values
         const minDecimals = options?.precision !== undefined ? options.precision : (options?.showDecimals ? 2 : (val % 1 === 0 ? 0 : 2));
         const formatted = val.toLocaleString(undefined, {
             minimumFractionDigits: minDecimals,
@@ -80,9 +79,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         });
 
         if (options?.hideSymbol) return formatted;
-
-        // Always return $ at the beginning as requested
-        return `$${formatted}`;
+        return isThai ? `${formatted} ฿` : `$${formatted}`;
     };
 
     const formatBonus = (amount: number, typeId?: string): string => {

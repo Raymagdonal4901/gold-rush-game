@@ -1,4 +1,4 @@
-export const CURRENCY = '$';
+export const CURRENCY = '฿';
 export const EXCHANGE_RATE_USD_THB = 1;
 export const EXCHANGE_RATE_USDT_THB = 31;
 export const BASE_CLAIM_AMOUNT = 0;
