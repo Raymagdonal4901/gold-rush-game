@@ -182,12 +182,12 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
                                 {depositCurrency === 'USD' && amount && !isNaN(parseFloat(amount)) && (
                                     <div className="flex items-center justify-center gap-2 text-stone-500 text-xs font-mono">
                                         <span>≈</span>
-                                        <span className="text-emerald-500 font-bold">{(parseFloat(amount) * EXCHANGE_RATE_USDT_THB).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ฿</span>
+                                        <span className="text-emerald-500 font-bold">{(parseFloat(amount) * EXCHANGE_RATE_USDT_THB).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} $</span>
                                     </div>
                                 )}
 
                                 <p className="text-xs text-stone-500">
-                                    {t('common.min')} {depositCurrency === 'USD' ? `$${currentLimits.MIN}` : `${currentLimits.MIN.toLocaleString()} ฿`} - {t('common.max')} {depositCurrency === 'USD' ? `$${currentLimits.MAX}` : `${currentLimits.MAX.toLocaleString()} ฿`}
+                                    {t('common.min')} {depositCurrency === 'USD' ? `$${currentLimits.MIN}` : `${currentLimits.MIN.toLocaleString()} $`} - {t('common.max')} {depositCurrency === 'USD' ? `$${currentLimits.MAX}` : `${currentLimits.MAX.toLocaleString()} $`}
                                 </p>
                             </div>
 
@@ -283,7 +283,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
                                                     <div className="text-2xl font-mono font-bold text-white">
                                                         {depositCurrency === 'THB' ? (
                                                             <>
-                                                                {parseFloat(amount).toLocaleString()} ฿
+                                                                {parseFloat(amount).toLocaleString()} $
                                                                 <span className="text-xs text-stone-500 ml-2">({(parseFloat(amount) / EXCHANGE_RATE_USD_THB).toLocaleString(undefined, { minimumFractionDigits: 2 })} {CURRENCY})</span>
                                                             </>
                                                         ) : (

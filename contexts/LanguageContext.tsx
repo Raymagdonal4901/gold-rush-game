@@ -59,11 +59,12 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         if (amount === undefined || amount === null || isNaN(Number(amount))) {
             return options?.hideSymbol ? '0' : (language === 'th' || options?.forceTHB) ? '0 ฿' : '$0';
         }
-        const isThai = options?.forceUSD ? false : (language === 'th' || options?.forceTHB);
 
-        // All amounts in system are stored as THB
-        // TH mode: show as-is (THB)
-        // EN mode: convert to USD by dividing by 31
+        // Force USD if requested, otherwise follow language but prioritize USD
+        const isThai = options?.forceUSD ? false : (options?.forceTHB || language === 'th');
+
+        // All amounts in system are stored as THB (Backend legacy)
+        // Convert to USD by dividing by the rate if not in Thai mode
         let val = isThai ? Number(amount) : Number(amount) / THB_TO_USD_RATE;
 
         // If not forcing decimals and it's basically an integer, round it
@@ -71,7 +72,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
             val = Math.round(val);
         }
 
-        const defaultMaxDecimals = isThai ? 2 : 4; // USD needs more decimals due to smaller values
+        const defaultMaxDecimals = isThai ? 2 : 2; // Standardize to 2 for both usually, can be 4 for crypto
         const minDecimals = options?.precision !== undefined ? options.precision : (options?.showDecimals ? 2 : (val % 1 === 0 ? 0 : 2));
         const formatted = val.toLocaleString(undefined, {
             minimumFractionDigits: minDecimals,
@@ -79,6 +80,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         });
 
         if (options?.hideSymbol) return formatted;
+        // Prefix $ for USD, suffix ฿ for THB
         return isThai ? `${formatted} ฿` : `$${formatted}`;
     };
 

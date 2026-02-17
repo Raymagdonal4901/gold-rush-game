@@ -379,7 +379,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                                             className={`w-full bg-slate-900 border ${systemAmount > displayBalance ? 'border-red-500' : 'border-slate-600'} rounded-lg py-3 px-4 text-white focus:border-emerald-500 outline-none transition-colors`}
                                         />
                                         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                            <span className="text-[10px] text-slate-500 font-bold">{isUSDT ? 'USDT' : '฿'}</span>
+                                            <span className="text-[10px] text-slate-500 font-bold">{isUSDT ? 'USDT' : '$'}</span>
                                             <button
                                                 onClick={setMaxAmount}
                                                 className="text-xs bg-slate-700 hover:bg-slate-600 text-emerald-400 px-2 py-1 rounded"

@@ -119,9 +119,54 @@ export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
             user.inventory.splice(cardIdx, 1);
         }
 
-        // Determine Config
-        let seriesKey = Object.keys(EQUIPMENT_UPGRADE_CONFIG).find(key => item.typeId.includes(key)) || null;
-        let reqs = seriesKey ? EQUIPMENT_UPGRADE_CONFIG[seriesKey][currentLevel] : UPGRADE_REQUIREMENTS[currentLevel];
+        // Determine Config with robust detection (Sync with frontend logic)
+        const getSeriesKey = (item: any) => {
+            if (!item) return null;
+            const typeId = (item.typeId || '').toLowerCase();
+            const nameRaw = item.name;
+            const enName = typeof nameRaw === 'object' ? (nameRaw as any)?.en || '' : String(nameRaw || '');
+            const thName = typeof nameRaw === 'object' ? (nameRaw as any)?.th || '' : String(nameRaw || '');
+            const nameStr = (enName + ' ' + thName).toLowerCase();
+
+            // 1. Match by typeId (exact key or prefix)
+            const seriesKeys = Object.keys(EQUIPMENT_UPGRADE_CONFIG);
+            const matchedByKey = seriesKeys.find(key =>
+                typeId === key.toLowerCase() ||
+                typeId.startsWith(key.toLowerCase() + '_')
+            );
+            if (matchedByKey) return matchedByKey;
+
+            // 2. Fallbacks based on ID keywords
+            if (typeId.includes('shirt') || typeId.includes('uniform')) return 'uniform';
+            if (typeId.includes('helmet')) return 'hat';
+            if (typeId.includes('shoe') || typeId.includes('boot')) return 'boots';
+            if (typeId.includes('phone') || typeId.includes('mobile')) return 'mobile';
+            if (typeId.includes('computer') || typeId.includes('pc')) return 'pc';
+            if (typeId.includes('glass')) return 'glasses';
+            if (typeId.includes('vehicle') || typeId.includes('truck') || typeId.includes('excavator')) return 'auto_excavator';
+            if (typeId.includes('glove')) return 'glove';
+            if (typeId.includes('pendant')) return 'pendant';
+            if (typeId.includes('ring')) return 'ring';
+
+            // 3. Fallbacks based on Name (matching AccessoryIcon logic)
+            if (nameStr.includes('helmet') || nameStr.includes('หมวก')) return 'hat';
+            if (nameStr.includes('glasses') || nameStr.includes('แว่น')) return 'glasses';
+            if (nameStr.includes('uniform') || nameStr.includes('suit') || nameStr.includes('shirt') || nameStr.includes('ชุด')) return 'uniform';
+            if (nameStr.includes('bag') || nameStr.includes('เป้') || nameStr.includes('กระเป๋า')) return 'bag';
+            if (nameStr.includes('boot') || nameStr.includes('shoe') || nameStr.includes('รองเท้า')) return 'boots';
+            if (nameStr.includes('phone') || nameStr.includes('mobile') || nameStr.includes('โทรศัพท์')) return 'mobile';
+            if (nameStr.includes('pc') || nameStr.includes('computer') || nameStr.includes('คอม')) return 'pc';
+            if (nameStr.includes('excavator') || nameStr.includes('รถขุด') || nameStr.includes('รถไฟฟ้า') || nameStr.includes('truck') || nameStr.includes('รถบรรทุก')) return 'auto_excavator';
+            if (nameStr.includes('glove') || nameStr.includes('ถุงมือ')) return 'glove';
+            if (nameStr.includes('pendant') || nameStr.includes('จี้') || nameStr.includes('สร้อย')) return 'pendant';
+            if (nameStr.includes('ring') || nameStr.includes('แหวน')) return 'ring';
+
+            return null;
+        };
+
+        const seriesKey = getSeriesKey(item);
+        const configSource = seriesKey ? EQUIPMENT_UPGRADE_CONFIG[seriesKey] : UPGRADE_REQUIREMENTS;
+        const reqs = configSource[currentLevel];
 
         if (!reqs) return res.status(400).json({ message: 'Upgrade configuration not found' });
 
@@ -172,7 +217,7 @@ export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
         if (success) {
             item.level = currentLevel + 1;
             // Refined Incremental Logic:
-            const currentTarget = UPGRADE_REQUIREMENTS[currentLevel - 1]?.targetBonus || 0;
+            const currentTarget = (currentLevel > 1) ? configSource[currentLevel - 1]?.targetBonus || 0 : 0;
             const nextTarget = reqs.targetBonus || 0;
             const increase = nextTarget - currentTarget;
 

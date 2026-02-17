@@ -96,6 +96,36 @@ export const EQUIPMENT_SERIES: Record<string, { title: { th: string; en: string 
             { rarity: 'EPIC', name: { th: 'รถบรรทุก', en: 'Truck' }, stat: { th: 'Jackpot 8%', en: 'Jackpot 8%' } },
             { rarity: 'LEGENDARY', name: { th: 'โดรนขนส่ง', en: 'Transport Drone' }, stat: { th: 'Jackpot 12%', en: 'Jackpot 12%' } },
         ]
+    },
+    glove: {
+        title: { th: "ถุงมือทำงาน", en: "Work Gloves" },
+        desc: { th: "เพิ่มความเร็วในการขุด & ประสิทธิภาพ", en: "Mining Speed & Efficiency" },
+        tiers: [
+            { rarity: 'COMMON', name: { th: 'ถุงมือมาตรฐาน', en: 'Standard Gloves' }, stat: { th: 'โบนัสขุด +5%', en: 'Mining Bonus +5%' } },
+            { rarity: 'RARE', name: { th: 'ถุงมือช่างมืออาชีพ', en: 'Pro Mechanic Gloves' }, stat: { th: 'โบนัสขุด +10%', en: 'Mining Bonus +10%' } },
+            { rarity: 'EPIC', name: { th: 'ถุงมือสั่นสะเทือน', en: 'Vibration Gloves' }, stat: { th: 'โบนัสขุด +15%', en: 'Mining Bonus +15%' } },
+            { rarity: 'LEGENDARY', name: { th: 'ถุงมือพลังงานไซเบอร์', en: 'Cybernetic Gloves' }, stat: { th: 'โบนัสขุด +20%', en: 'Mining Bonus +20%' } },
+        ]
+    },
+    pendant: {
+        title: { th: "สร้อยคอโชคดี", en: "Lucky Pendant" },
+        desc: { th: "เพิ่มโอกาสพบไอเทม & โบนัส", en: "Item Drop & Bonus Chance" },
+        tiers: [
+            { rarity: 'COMMON', name: { th: 'จี้เหรียญโบราณ', en: 'Ancient Coin Pendant' }, stat: { th: 'โบนัส +2%', en: 'Bonus +2%' } },
+            { rarity: 'RARE', name: { th: 'จี้หยกนำโชค', en: 'Lucky Jade Pendant' }, stat: { th: 'โบนัส +5%', en: 'Bonus +5%' } },
+            { rarity: 'EPIC', name: { th: 'จี้คริสตัลพลังงาน', en: 'Energy Crystal Pendant' }, stat: { th: 'โบนัส +8%', en: 'Bonus +8%' } },
+            { rarity: 'LEGENDARY', name: { th: 'จี้มิติดาวตก', en: 'Meteorite Pendant' }, stat: { th: 'โบนัส +12%', en: 'Bonus +12%' } },
+        ]
+    },
+    ring: {
+        title: { th: "แหวนแห่งความมั่งคั่ง", en: "Ring of Wealth" },
+        desc: { th: "เพิ่มรายได้ & ความมั่นคง", en: "Yield & Stability" },
+        tiers: [
+            { rarity: 'COMMON', name: { th: 'แหวนนากพื้นเมือง', en: 'Local Bronze Ring' }, stat: { th: 'รายได้ +1%', en: 'Yield +1%' } },
+            { rarity: 'RARE', name: { th: 'แหวนเงินสลักลาย', en: 'Engraved Silver Ring' }, stat: { th: 'รายได้ +3%', en: 'Yield +3%' } },
+            { rarity: 'EPIC', name: { th: 'แหวนทองคำขาว', en: 'White Gold Ring' }, stat: { th: 'รายได้ +6%', en: 'Yield +6%' } },
+            { rarity: 'LEGENDARY', name: { th: 'แหวนนพเก้า', en: 'Legendary Nine Gems Ring' }, stat: { th: 'รายได้ +10%', en: 'Yield +10%' } },
+        ]
     }
 };
 
@@ -109,7 +139,7 @@ export const RENEWAL_CONFIG = {
 };
 
 export const REPAIR_CONFIG = {
-    DURABILITY_DAYS: 15,
+    DURABILITY_DAYS: 7,
     COST_DIVISOR: 5,
 };
 
@@ -189,12 +219,12 @@ export const RIG_LOOT_TABLES: Record<number, LootEntry[]> = {
 };
 
 // --- NEW ENHANCEMENT SYSTEM ---
-export const ENHANCE_RULES: Record<number, { chipAmount: number; matAmount: number; chance: number; statBonus: number; penalty: 'NONE' | 'KEEP' | 'DOWNGRADE' | 'RESET' }> = {
-    1: { chipAmount: 1, matAmount: 10, chance: 1.0, statBonus: 0.05, penalty: 'NONE' },
-    2: { chipAmount: 1, matAmount: 20, chance: 0.8, statBonus: 0.10, penalty: 'KEEP' },
-    3: { chipAmount: 2, matAmount: 40, chance: 0.6, statBonus: 0.20, penalty: 'KEEP' },
-    4: { chipAmount: 3, matAmount: 80, chance: 0.4, statBonus: 0.35, penalty: 'DOWNGRADE' },
-    5: { chipAmount: 5, matAmount: 150, chance: 0.2, statBonus: 0.50, penalty: 'RESET' },
+export const ENHANCE_RULES: Record<number, { chipAmount: number; matAmount: number; chance: number; multiplier: number; penalty: 'NONE' | 'KEEP' | 'DOWNGRADE' | 'RESET' }> = {
+    1: { chipAmount: 1, matAmount: 10, chance: 1.0, multiplier: 0.10, penalty: 'NONE' },
+    2: { chipAmount: 1, matAmount: 20, chance: 0.8, multiplier: 0.25, penalty: 'KEEP' },
+    3: { chipAmount: 2, matAmount: 40, chance: 0.6, multiplier: 0.50, penalty: 'KEEP' },
+    4: { chipAmount: 3, matAmount: 80, chance: 0.4, multiplier: 1.00, penalty: 'DOWNGRADE' },
+    5: { chipAmount: 5, matAmount: 150, chance: 0.2, multiplier: 2.50, penalty: 'RESET' },
 };
 
 export const EQUIPMENT_PRIMARY_MATERIALS: Record<string, number> = {
@@ -265,6 +295,24 @@ export const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, { matTier: 
         8: { matTier: 5, matAmount: 50, chipAmount: 60, cost: 20000, chance: 0.08, targetBonus: 40.0, risk: 'BREAK' },
         9: { matTier: 6, matAmount: 20, chipAmount: 80, cost: 50000, chance: 0.05, targetBonus: 60.0, risk: 'BREAK' },
     },
+    glove: {
+        1: { matTier: 3, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 3, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 4, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 4, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+    },
+    pendant: {
+        1: { matTier: 4, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 4, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 5, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 5, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+    },
+    ring: {
+        1: { matTier: 4, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
+        2: { matTier: 4, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
+        3: { matTier: 5, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
+        4: { matTier: 5, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+    }
 };
 export const UPGRADE_REQUIREMENTS: Record<number, { matTier: number; matAmount: number; chance: number; label: string; catalyst?: number; chipAmount?: number; maxBonus?: number; cost: number; targetBonus?: number; risk?: string }> = {
     1: { matTier: 1, matAmount: 10, chipAmount: 1, chance: 1.0, label: '+2', cost: 50, targetBonus: 0.5, risk: 'NONE' },
@@ -374,14 +422,14 @@ export const MINING_VOLATILITY_CONFIG: Record<number, {
     tagColor?: 'green' | 'orange' | 'purple' | 'red' | 'gold';
     maxQuantity: number;
 }> = {
-    1: { type: 'Stable', baseValue: 8, maxRandom: 4, jackpotChance: 0.01, jackpotMultiplier: 1.5, stabilityStars: 4, hashrateMin: 10, hashrateMax: 20, durabilityMax: 3000, durabilityDecay: 100, tag: 'Starter Choice', tagColor: 'green', maxQuantity: 10 },
-    2: { type: 'Stable', baseValue: 15, maxRandom: 7, jackpotChance: 0.02, jackpotMultiplier: 1.5, stabilityStars: 4, hashrateMin: 20, hashrateMax: 40, durabilityMax: 3000, durabilityDecay: 100, maxQuantity: 10 },
-    3: { type: 'Balanced', baseValue: 32, maxRandom: 13, jackpotChance: 0.03, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 50, hashrateMax: 80, durabilityMax: 3000, durabilityDecay: 100, tag: 'Best Value', tagColor: 'orange', maxQuantity: 50 },
-    4: { type: 'Balanced', baseValue: 50, maxRandom: 25, jackpotChance: 0.04, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 80, hashrateMax: 120, durabilityMax: 4000, durabilityDecay: 100, tag: 'Popular', tagColor: 'orange', maxQuantity: 50 },
-    5: { type: 'Balanced', baseValue: 70, maxRandom: 30, jackpotChance: 0.05, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 120, hashrateMax: 180, durabilityMax: 5000, durabilityDecay: 100, maxQuantity: 50 },
-    6: { type: 'Volatile', baseValue: 95, maxRandom: 40, jackpotChance: 0.06, jackpotMultiplier: 2.0, stabilityStars: 2, stabilityLabel: 'High Variance', hashrateMin: 150, hashrateMax: 250, durabilityMax: 6000, durabilityDecay: 100, tag: 'High Volatility', tagColor: 'purple', maxQuantity: 50 },
-    7: { type: 'Volatile', baseValue: 120, maxRandom: 60, jackpotChance: 0.08, jackpotMultiplier: 2.0, stabilityStars: 1, stabilityLabel: 'Extreme Risk', hashrateMin: 200, hashrateMax: 350, durabilityMax: 8000, durabilityDecay: 100, tag: 'Tycoon Only', tagColor: 'red', maxQuantity: 50 },
-    8: { type: 'Chaos', baseValue: 300, maxRandom: 200, jackpotChance: 0.10, jackpotMultiplier: 3.0, stabilityStars: 0, stabilityLabel: 'Danger', hashrateMin: 1000, hashrateMax: 2000, durabilityMax: 12000, durabilityDecay: 100, tag: 'God Tier', tagColor: 'gold', maxQuantity: 3 },
+    1: { type: 'Stable', baseValue: 8, maxRandom: 4, jackpotChance: 0.01, jackpotMultiplier: 1.5, stabilityStars: 4, hashrateMin: 10, hashrateMax: 20, durabilityMax: 3000, durabilityDecay: 428, tag: 'Starter Choice', tagColor: 'green', maxQuantity: 10 },
+    2: { type: 'Stable', baseValue: 15, maxRandom: 7, jackpotChance: 0.02, jackpotMultiplier: 1.5, stabilityStars: 4, hashrateMin: 20, hashrateMax: 40, durabilityMax: 3000, durabilityDecay: 428, maxQuantity: 10 },
+    3: { type: 'Balanced', baseValue: 32, maxRandom: 13, jackpotChance: 0.03, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 50, hashrateMax: 80, durabilityMax: 3000, durabilityDecay: 428, tag: 'Best Value', tagColor: 'orange', maxQuantity: 50 },
+    4: { type: 'Balanced', baseValue: 50, maxRandom: 25, jackpotChance: 0.04, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 80, hashrateMax: 120, durabilityMax: 4000, durabilityDecay: 571, tag: 'Popular', tagColor: 'orange', maxQuantity: 50 },
+    5: { type: 'Balanced', baseValue: 70, maxRandom: 30, jackpotChance: 0.05, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 120, hashrateMax: 180, durabilityMax: 5000, durabilityDecay: 714, maxQuantity: 50 },
+    6: { type: 'Volatile', baseValue: 95, maxRandom: 40, jackpotChance: 0.06, jackpotMultiplier: 2.0, stabilityStars: 2, stabilityLabel: 'High Variance', hashrateMin: 150, hashrateMax: 250, durabilityMax: 6000, durabilityDecay: 857, tag: 'High Volatility', tagColor: 'purple', maxQuantity: 50 },
+    7: { type: 'Volatile', baseValue: 120, maxRandom: 60, jackpotChance: 0.08, jackpotMultiplier: 2.0, stabilityStars: 1, stabilityLabel: 'Extreme Risk', hashrateMin: 200, hashrateMax: 350, durabilityMax: 8000, durabilityDecay: 1142, tag: 'Tycoon Only', tagColor: 'red', maxQuantity: 50 },
+    8: { type: 'Chaos', baseValue: 300, maxRandom: 200, jackpotChance: 0.10, jackpotMultiplier: 3.0, stabilityStars: 0, stabilityLabel: 'Danger', hashrateMin: 1000, hashrateMax: 2000, durabilityMax: 12000, durabilityDecay: 1714, tag: 'God Tier', tagColor: 'gold', maxQuantity: 3 },
     9: { type: 'Stable', baseValue: 2, maxRandom: 3, jackpotChance: 0, jackpotMultiplier: 1.0, stabilityStars: 5, hashrateMin: 1, hashrateMax: 5, durabilityMax: 999999, durabilityDecay: 0, tag: 'F2P Starter', tagColor: 'green', maxQuantity: 1 },
 };
 

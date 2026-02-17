@@ -7,9 +7,10 @@ interface OverclockCardProps {
     language: 'th' | 'en';
     onActivate: () => void;
     formatCountdown: (ms: number | null) => string;
+    formatCurrency: (amount: number, options?: any) => string;
 }
 
-export const OverclockCard: React.FC<OverclockCardProps> = ({ user, language, onActivate, formatCountdown }) => {
+export const OverclockCard: React.FC<OverclockCardProps> = ({ user, language, onActivate, formatCountdown, formatCurrency }) => {
     const [remainingMs, setRemainingMs] = useState<number | null>(null);
 
     useEffect(() => {
@@ -119,13 +120,13 @@ export const OverclockCard: React.FC<OverclockCardProps> = ({ user, language, on
                             </>
                         ) : (
                             <>
-                                {language === 'th' ? 'เปิด Overclock (50฿)' : 'ACTIVATE (50฿)'}
+                                {language === 'th' ? `เปิด Overclock (${formatCurrency(50)})` : `ACTIVATE (${formatCurrency(50)})`}
                             </>
                         )}
                     </button>
                     {!isActive && (
                         <div className="mt-2 text-[8px] text-center font-bold text-stone-600 uppercase tracking-tighter">
-                            {language === 'th' ? 'ราคา 50 THB ต่อ 24 ชั่วโมง' : 'Cost 50 THB per 24 Hours'}
+                            {language === 'th' ? `ราคา ${formatCurrency(50)} ต่อ 24 ชั่วโมง` : `Cost ${formatCurrency(50)} per 24 Hours`}
                         </div>
                     )}
                 </div>

@@ -233,6 +233,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const isFurnaceActiveRef = useRef(isFurnaceActive);
     const botStatusRef = useRef(botStatus);
 
+    useEffect(() => { userRef.current = user; }, [user]);
     useEffect(() => { rigsRef.current = rigs; }, [rigs]);
     useEffect(() => { isFurnaceActiveRef.current = isFurnaceActive; }, [isFurnaceActive]);
     useEffect(() => { botStatusRef.current = botStatus; }, [botStatus]);
@@ -357,11 +358,20 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                 }
 
                 // C. Auto Charge Energy
-                const energyPercent = rig.energy !== undefined ? rig.energy : 100;
+                const lastUpdate = rig.lastEnergyUpdate || rig.purchasedAt || now;
+                const elapsedMs = now - new Date(lastUpdate).getTime();
+                let drainRatePerHour = 4.166666666666667;
+                if (userRef.current?.overclockExpiresAt && new Date(userRef.current.overclockExpiresAt) > new Date()) {
+                    drainRatePerHour *= 2;
+                }
+                const elapsedHours = elapsedMs / (1000 * 60 * 60);
+                const drain = elapsedHours * drainRatePerHour;
+                const energyPercent = Math.max(0, Math.min(100, (rig.energy ?? 100) - drain));
+
                 if (energyPercent < (ROBOT_CONFIG.ENERGY_THRESHOLD || 50) && (!lastAutoRefillRef.current[rig.id] || now - lastAutoRefillRef.current[rig.id] > cooldown)) {
                     lastAutoRefillRef.current[rig.id] = now;
-                    handleChargeRigEnergy(rig);
-                    continue;
+                    handleChargeRigEnergy(rig, true);
+                    continue; // One action per cycle per rig
                 }
 
                 // D. Auto Claim Profits (Money)
@@ -557,25 +567,48 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
         }
     };
 
-    const handleChargeRigEnergy = async (rig: any) => {
+    const handleChargeRigEnergy = async (rig: any, isAuto: boolean = false) => {
         try {
             const rigId = typeof rig === 'string' ? rig : rig.id;
             const res = await api.refillRigEnergy(rigId);
             if (res.success) {
                 fetchData();
-                setSuccessModalConfig({
-                    title: language === 'th' ? 'พลังงานเต็มแล้ว!' : 'Refill Successful!',
-                    message: language === 'th' ? 'เครื่องขุดชาร์จแบตเตอรี่เต็ม 100% พร้อมทำงานต่อ!' : 'Rig battery is now 100% and ready to mine!',
-                    type: 'BATTERY'
-                });
-                setIsSuccessModalOpen(true);
+                if (!isAuto) {
+                    setSuccessModalConfig({
+                        title: language === 'th' ? 'พลังงานเต็มแล้ว!' : 'Refill Successful!',
+                        message: language === 'th' ? 'เครื่องขุดชาร์จแบตเตอรี่เต็ม 100% พร้อมทำงานต่อ!' : 'Rig battery is now 100% and ready to mine!',
+                        type: 'BATTERY'
+                    });
+                    setIsSuccessModalOpen(true);
+                } else {
+                    addNotification({
+                        id: Date.now().toString(),
+                        title: language === 'th' ? 'AI Robot: ชาร์จพลังงานสำเร็จ' : 'AI Robot: Energy Refilled',
+                        message: language === 'th' ? `เติมพลังงานสำหรับ ${rig.name?.th || 'เครื่องขุด'} เรียบร้อยแล้ว` : `Energy refilled for ${rig.name?.en || 'mining rig'}.`,
+                        type: 'SUCCESS'
+                    });
+                }
             } else {
-                alert(res.message || "Refill failed");
+                if (!isAuto) {
+                    alert(res.message || "Refill failed");
+                } else {
+                    console.warn("Auto-refill failed:", res.message);
+                    if (res.message?.includes('Insufficient balance') || res.message?.includes('ยอดเงินในวอลเลทไม่เพียงพอ')) {
+                        addNotification({
+                            id: Date.now().toString(),
+                            title: language === 'th' ? 'AI Robot: พลังงานต่ำ' : 'AI Robot: Low Energy',
+                            message: language === 'th' ? 'ไม่สามารถชาร์จพลังงานได้เนื่องจากยอดเงินไม่เพียงพอ' : 'Cannot refill energy due to insufficient balance.',
+                            type: 'ERROR'
+                        });
+                    }
+                }
             }
         } catch (err: any) {
             console.error("Refill energy failed", err);
             const errMsg = err.response?.data?.message || err.message || "Refill failed";
-            alert(`Refill failed: ${errMsg}`);
+            if (!isAuto) {
+                alert(`Refill failed: ${errMsg}`);
+            }
         }
     };
 
@@ -882,7 +915,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                         <div className="flex items-center gap-2 px-2">
                             <ShoppingBag size={14} className="text-emerald-400" />
                             <span className="text-xs font-bold text-stone-300">
-                                {language === 'th' ? 'รวม:' : 'Vol:'} {formatCurrency(globalStats?.marketVolume || 0, { hideSymbol: true })} {language === 'th' ? '฿' : '$'}
+                                {language === 'th' ? 'รวม:' : 'Vol:'} {formatCurrency(globalStats?.marketVolume || 0)}
                             </span>
                         </div>
                     </div>
@@ -989,7 +1022,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                                 <span className="text-xl lg:text-3xl font-black text-white tracking-tighter">
                                     {formatCurrency(user?.balance || 0, { hideSymbol: true })}
                                 </span>
-                                <span className="text-xs lg:text-sm font-bold text-yellow-500 italic">THB</span>
+                                <span className="text-xs lg:text-sm font-bold text-yellow-500 italic">{language === 'th' ? 'THB' : 'USD'}</span>
                             </div>
                         </div>
 
@@ -1030,13 +1063,13 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                             <div className="bg-stone-950/40 backdrop-blur-sm rounded-xl p-2 border border-stone-800/50">
                                 <span className="text-[8px] font-bold text-stone-500 uppercase block mb-0.5">{language === 'th' ? 'ขุดได้ทั้งหมด' : 'Lifetime'}</span>
                                 <div className="flex items-center gap-1">
-                                    <span className="text-[10px] font-black text-stone-200">{(user?.totalLifetimeMined || 0).toLocaleString()} ฿</span>
+                                    <span className="text-[10px] font-black text-stone-200">{formatCurrency(user?.totalLifetimeMined || 0)}</span>
                                 </div>
                             </div>
                             <div className="bg-stone-950/40 backdrop-blur-sm rounded-xl p-2 border border-stone-800/50">
                                 <span className="text-[8px] font-bold text-stone-500 uppercase block mb-0.5">{language === 'th' ? 'ถอนแล้ว' : 'Withdrawn'}</span>
                                 <div className="flex items-center gap-1">
-                                    <span className="text-[10px] font-black text-stone-200">{(user?.totalWithdrawn || 0).toLocaleString()} ฿</span>
+                                    <span className="text-[10px] font-black text-stone-200">{formatCurrency(user?.totalWithdrawn || 0)}</span>
                                 </div>
                             </div>
                         </div>
@@ -1060,7 +1093,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                                     {formatCurrency(user?.referralStats?.totalEarned || 0, { hideSymbol: true })}
                                 </span>
                                 <div className="flex flex-col text-[10px] lg:text-xs font-bold leading-none">
-                                    <span className="text-teal-500">THB</span>
+                                    <span className="text-teal-500">{language === 'th' ? 'THB' : 'USD'}</span>
                                 </div>
                             </div>
                         </div>
@@ -1082,6 +1115,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                         language={language}
                         onActivate={() => setIsConfirmRefillOpen(true)}
                         formatCountdown={formatCountdown}
+                        formatCurrency={formatCurrency}
                     />
 
                     {/* 4. Market Trends Card (Slate Theme) */}
@@ -1532,7 +1566,10 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                         onClose={() => setIsAccessoryManagerOpen(false)}
                         rig={selectedRig}
                         slotIndex={selectedSlotIndex}
-                        equippedItem={selectedRig.slots[selectedSlotIndex]}
+                        equippedItem={(() => {
+                            const itemId = selectedRig.slots[selectedSlotIndex];
+                            return user?.inventory?.find((i: any) => i.id === itemId);
+                        })()}
                         inventory={user?.inventory || []}
                         userId={user?.id}
                         onEquip={handleEquip}
@@ -1678,7 +1715,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                 onClose={() => setIsConfirmRefillOpen(false)}
                 onConfirm={handleRefillEnergy}
                 title={language === 'th' ? 'ยืนยันการ Overclock' : 'Confirm Overclock'}
-                message={language === 'th' ? 'คุณต้องการจ่าย 50 THB เพื่อเปิดระบบ Overclock เป็นเวลา 24 ชั่วโมง? (เพิ่มรายได้ 1.5x, เพิ่มโอกาส Jackpot +2%, แต่เครื่องขุดเสียหายเร็วขึ้น 2x)' : 'Do you want to pay 50 THB to Overclock for 24 hours? (1.5x Yield, +2% Jackpot, but 2x faster Durability Decay)'}
+                message={language === 'th' ? `คุณต้องการจ่าย ${formatCurrency(50)} เพื่อเปิดระบบ Overclock เป็นเวลา 24 ชั่วโมง? (เพิ่มรายได้ 1.5x, เพิ่มโอกาส Jackpot +2%, แต่เครื่องขุดเสียหายเร็วขึ้น 2x)` : `Do you want to pay ${formatCurrency(50)} to Overclock for 24 hours? (1.5x Yield, +2% Jackpot, but 2x faster Durability Decay)`}
                 confirmText={language === 'th' ? 'ยืนยันการ Overclock' : 'Confirm Overclock'}
                 cancelText={language === 'th' ? 'ยกเลิก' : 'Cancel'}
                 user={user}

@@ -8,22 +8,32 @@ import { recalculateUserIncome } from './userController';
 
 const MATERIAL_NAMES = MATERIAL_CONFIG.NAMES;
 
-// Determine rig preset ID from investment amount
+// Determine rig preset ID from investment amount or name matching
 export function getRigPresetId(rig: any): number {
     const inv = rig.investment;
-    // Match by unique investment amounts from RIG_PRESETS
-    if (inv === 300) return 1;
-    if (inv === 500) return 2;
-    if (inv === 1000) return 3;
-    if (inv === 1500) return 4;
-    if (inv === 2000) return 5;
-    if (inv === 2500) return 6;
-    if (inv === 3000) return 7;
-    // Crafted rigs and free rigs: check by name
+
+    // 1. First priority: Match by unique investment amounts (for standard paid rigs)
+    if (inv > 0) {
+        if (inv === 300) return 1;
+        if (inv === 500) return 2;
+        if (inv === 1000) return 3;
+        if (inv === 1500) return 4;
+        if (inv === 2000) return 5;
+        if (inv === 2500) return 6;
+        if (inv === 3000) return 7;
+    }
+
+    // 2. Second priority: Match by keywords in name (for special/crafted/free rigs)
     const name = typeof rig.name === 'string' ? rig.name : (rig.name?.th || rig.name?.en || '');
-    if (name.includes('ปฏิกรณ์') || name.includes('Vibranium')) return 8;
+
+    // Tier 8: Vibranium Reactor (God Tier)
+    if (name.includes('ปฏิกรณ์') || name.includes('Vibranium') || name.includes('God')) return 8;
+
+    // Tier 9: Rotten Glove (Starter)
     if (name.includes('เน่า') || name.includes('Rotten')) return 9;
-    return 9; // fallback to Tier 9 (Free)
+
+    // 3. Fallback to Tier 9 (Free)
+    return 9;
 }
 
 // Helper to aggregate accessory buffs
@@ -276,7 +286,8 @@ export const craftRig = async (req: AuthRequest, res: Response) => {
             energyCostPerDay: preset.energyCostPerDay,
             bonusProfit: 0,
             lastClaimAt: new Date(),
-            level: 1
+            level: 1,
+            tierId: preset.id
         });
 
         await user.save();
@@ -1112,7 +1123,7 @@ export const mergeRigs = async (req: AuthRequest, res: Response) => {
             lastEnergyUpdate: new Date(),
             currentDurability: maxDurability,
             status: 'ACTIVE',
-            tierId: rig1.tierId || 1
+            tierId: rig1.tierId || getRigPresetId(rig1)
         });
 
         await newRig.save();

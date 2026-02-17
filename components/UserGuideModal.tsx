@@ -4,6 +4,7 @@ import {
     Shield, ChevronRight, Zap, Battery, Wrench, Coins, Factory,
     Gamepad2, Gift, Users, Truck, AlertTriangle, Gem, Search
 } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface UserGuideModalProps {
     isOpen: boolean;
@@ -18,14 +19,15 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
 
     if (!isOpen) return null;
 
+    const { t, language, formatCurrency } = useLanguage();
     const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
-        { id: 'start', label: 'เริ่มต้นใช้งาน', icon: <BookOpen size={18} /> },
-        { id: 'mining', label: 'ระบบขุดเหมือง', icon: <Pickaxe size={18} /> },
-        { id: 'economy', label: 'เศรษฐกิจ & ตลาด', icon: <TrendingUp size={18} /> },
-        { id: 'workshop', label: 'โรงงาน & การคราฟต์', icon: <Hammer size={18} /> },
-        { id: 'adventure', label: 'ผจญภัย & มินิเกม', icon: <Gamepad2 size={18} /> },
-        { id: 'vip', label: 'VIP & สังคม', icon: <Crown size={18} /> },
-        { id: 'support', label: 'AI & ช่วยเหลือ', icon: <Bot size={18} /> },
+        { id: 'start', label: language === 'th' ? 'เริ่มต้นใช้งาน' : 'Getting Started', icon: <BookOpen size={18} /> },
+        { id: 'mining', label: language === 'th' ? 'ระบบขุดเหมือง' : 'Mining System', icon: <Pickaxe size={18} /> },
+        { id: 'economy', label: language === 'th' ? 'เศรษฐกิจ & ตลาด' : 'Economy & Market', icon: <TrendingUp size={18} /> },
+        { id: 'workshop', label: language === 'th' ? 'โรงงาน & การคราฟต์' : 'Workshop & Crafting', icon: <Hammer size={18} /> },
+        { id: 'adventure', label: language === 'th' ? 'ผจญภัย & มินิเกม' : 'Adventure & Minigames', icon: <Gamepad2 size={18} /> },
+        { id: 'vip', label: language === 'th' ? 'VIP & สังคม' : 'VIP & Social', icon: <Crown size={18} /> },
+        { id: 'support', label: language === 'th' ? 'AI & ช่วยเหลือ' : 'AI & Support', icon: <Bot size={18} /> },
     ];
 
     return (
@@ -39,7 +41,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                             <BookOpen size={20} className="sm:w-6 sm:h-6" />
                         </div>
                         <div>
-                            <h2 className="font-bold text-white text-base sm:text-lg leading-tight uppercase tracking-tight">คู่มือการเล่น</h2>
+                            <h2 className="font-bold text-white text-base sm:text-lg leading-tight uppercase tracking-tight">{language === 'th' ? 'คู่มือการเล่น' : 'User Guide'}</h2>
                             <p className="text-[9px] text-stone-500 uppercase tracking-widest font-black">Gold Rush Wiki</p>
                         </div>
                     </div>
@@ -70,7 +72,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                             onClick={onClose}
                             className="w-full py-2 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 border border-white/5 active:scale-95"
                         >
-                            <X size={14} /> ปิดคู่มือ
+                            <X size={14} /> {language === 'th' ? 'ปิดคู่มือ' : 'Close Guide'}
                         </button>
                     </div>
                 </div>
@@ -97,13 +99,13 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                     {/* Scrollable Content */}
                     <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-12 sm:py-10 pt-20 sm:pt-24 custom-scrollbar">
                         <div className="max-w-3xl mx-auto pb-10 animate-in slide-in-from-bottom-4 duration-500 fade-in">
-                            {activeTab === 'start' && <GettingStartedContent />}
-                            {activeTab === 'mining' && <MiningSystemContent />}
-                            {activeTab === 'economy' && <EconomyContent />}
-                            {activeTab === 'workshop' && <WorkshopContent />}
-                            {activeTab === 'adventure' && <AdventureContent />}
-                            {activeTab === 'vip' && <VipContent />}
-                            {activeTab === 'support' && <SupportContent />}
+                            {activeTab === 'start' && <GettingStartedContent language={language} />}
+                            {activeTab === 'mining' && <MiningSystemContent language={language} />}
+                            {activeTab === 'economy' && <EconomyContent language={language} formatCurrency={formatCurrency} />}
+                            {activeTab === 'workshop' && <WorkshopContent language={language} />}
+                            {activeTab === 'adventure' && <AdventureContent language={language} />}
+                            {activeTab === 'vip' && <VipContent language={language} />}
+                            {activeTab === 'support' && <SupportContent language={language} />}
                         </div>
                     </div>
                 </div>
@@ -116,7 +118,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
 // CONTENT COMPONENTS
 // ==========================================
 
-const GettingStartedContent = () => (
+const GettingStartedContent = ({ language }: { language: string }) => (
     <div className="space-y-8">
         <div className="bg-gradient-to-br from-yellow-500/10 to-transparent p-4 sm:p-6 rounded-2xl border border-yellow-500/20 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
@@ -156,7 +158,7 @@ const GettingStartedContent = () => (
     </div>
 );
 
-const MiningSystemContent = () => (
+const MiningSystemContent = ({ language }: { language: string }) => (
     <div className="space-y-8">
         <Section title="เครื่องจักรขุดเหมือง (Mining Rigs)" icon={<Pickaxe size={20} />}>
             <p className="text-stone-400 mb-6 leading-relaxed">
@@ -255,7 +257,7 @@ const MiningSystemContent = () => (
     </div>
 );
 
-const EconomyContent = () => (
+const EconomyContent = ({ language, formatCurrency }: { language: string; formatCurrency: any }) => (
     <div className="space-y-8">
         <div className="flex items-center gap-6 bg-gradient-to-r from-green-900/20 to-stone-900/50 p-6 rounded-2xl border border-green-500/20">
             <div className="p-4 bg-green-500/10 rounded-full border border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.2)]">
@@ -285,7 +287,7 @@ const EconomyContent = () => (
                         {[40, 60, 45, 70, 85, 60, 90, 100].map((h, i) => (
                             <div key={i} className="flex-1 bg-green-500/20 hover:bg-green-500/40 transition-colors rounded-t-sm relative group" style={{ height: `${h}%` }}>
                                 <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-stone-800 text-white text-[10px] py-0.5 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                                    {h}.00 ฿
+                                    {formatCurrency(h, { hideSymbol: true })} {language === 'th' ? '฿' : '$'}
                                 </div>
                             </div>
                         ))}
@@ -298,10 +300,10 @@ const EconomyContent = () => (
         <Section title="ระบบเงินตรา (Currency)" icon={<Coins size={20} />}>
             <div className="bg-stone-900/50 p-5 rounded-xl border border-stone-800 space-y-4">
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-yellow-500 text-black flex items-center justify-center font-black text-xl">฿</div>
+                    <div className="w-10 h-10 rounded-full bg-yellow-500 text-black flex items-center justify-center font-black text-xl">{language === 'th' ? '฿' : '$'}</div>
                     <div>
-                        <div className="text-white font-bold">THB Token</div>
-                        <div className="text-xs text-stone-500">สกุลเงินหลักในเกม 1 Token = 1 บาท (Pegged)</div>
+                        <div className="text-white font-bold">{language === 'th' ? 'THB Token' : 'USD Currency'}</div>
+                        <div className="text-xs text-stone-500">{language === 'th' ? 'สกุลเงินหลักในเกม 1 Token = 1 บาท (Pegged)' : 'Main in-game currency. 1 USD = 1 Dollar.'}</div>
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
@@ -319,7 +321,7 @@ const EconomyContent = () => (
     </div>
 );
 
-const WorkshopContent = () => (
+const WorkshopContent = ({ language }: { language: string }) => (
     <div className="space-y-8">
         <Section title="การแปรรูปวัตถุดิบ (Refining)" icon={<Factory size={20} />}>
             <p className="text-stone-400 mb-6 text-sm">
@@ -378,7 +380,7 @@ const WorkshopContent = () => (
     </div>
 );
 
-const AdventureContent = () => (
+const AdventureContent = ({ language }: { language: string }) => (
     <div className="space-y-8">
         <Section title="การสำรวจและดันเจี้ยน (Dungeons)" icon={<Map size={20} />}>
             <p className="text-stone-400 mb-6 text-sm">
@@ -430,7 +432,7 @@ const AdventureContent = () => (
     </div>
 );
 
-const VipContent = () => (
+const VipContent = ({ language }: { language: string }) => (
     <div className="space-y-8">
         <div className="bg-gradient-to-r from-yellow-600/20 to-yellow-900/20 p-8 rounded-2xl border border-yellow-500/30 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent"></div>
@@ -469,7 +471,7 @@ const VipContent = () => (
     </div>
 );
 
-const SupportContent = () => (
+const SupportContent = ({ language }: { language: string }) => (
     <div className="space-y-8">
         <Section title="Goldy: ผู้ช่วย AI อัจฉริยะ" icon={<Bot size={20} />}>
             <div className="flex items-start gap-4">

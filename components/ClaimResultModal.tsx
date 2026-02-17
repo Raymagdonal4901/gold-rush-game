@@ -48,8 +48,7 @@ export const ClaimResultModal: React.FC<ClaimResultModalProps> = ({ isOpen, onCl
                 <div className="bg-stone-800/50 border border-stone-700/50 rounded-2xl px-6 py-4 flex items-center gap-3 shadow-inner">
                     <Coins className="text-yellow-500" size={24} />
                     <span className="text-3xl font-black text-white">
-                        {formatCurrency(amount, { hideSymbol: true })}
-                        <span className="text-sm text-yellow-500 ml-1.5">{language === 'th' ? 'บาท' : 'THB'}</span>
+                        {formatCurrency(amount)}
                     </span>
                 </div>
 

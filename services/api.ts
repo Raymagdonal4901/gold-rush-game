@@ -572,7 +572,8 @@ const mapBackendRigToFrontend = (backendRig: any): OilRig => {
         lastCollectionAt: backendRig.lastCollectionAt ? new Date(backendRig.lastCollectionAt).getTime() : undefined,
         lastGiftAt: backendRig.lastGiftAt ? new Date(backendRig.lastGiftAt).getTime() : undefined,
         starLevel: backendRig.starLevel || 0,
-        level: backendRig.level || 1
+        level: backendRig.level || 1,
+        tierId: backendRig.tierId
     } as OilRig;
 };
 

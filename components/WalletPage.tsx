@@ -200,7 +200,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
                         <div className="text-center md:text-left">
                             <p className="text-stone-400 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mb-1 sm:mb-2">{t('wallet.available_balance')}</p>
                             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tighter flex flex-wrap items-baseline justify-center md:justify-start gap-1 sm:gap-2">
-                                {formatCurrency(user.balance)}
+                                {language === 'th' ? formatCurrency(user.balance) : formatCurrency(user.balance)}
                                 {language === 'th' && <span className="text-yellow-500 text-lg sm:text-xl uppercase">{t('common.thb')}</span>}
                             </h2>
                         </div>
@@ -283,7 +283,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
                         </div>
                         <form onSubmit={handleWithdraw} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-[10px] font-black text-stone-500 uppercase tracking-widest mb-1">{t('wallet.amount_placeholder')} ({t('common.thb')})</label>
+                                <label className="block text-[10px] font-black text-stone-500 uppercase tracking-widest mb-1">{t('wallet.amount_placeholder')} ({t('common.usd')})</label>
                                 <div className="relative">
                                     <input
                                         type="number"
@@ -293,7 +293,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
                                         required
                                         className="w-full bg-stone-950 border border-stone-800 rounded-xl px-4 py-3 text-sm focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/20 outline-none transition-all"
                                     />
-                                    <span className="absolute right-4 top-3 text-stone-600 font-bold text-xs">{t('common.thb')}</span>
+                                    <span className="absolute right-4 top-3 text-stone-600 font-bold text-xs">{t('common.usd')}</span>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 gap-4">

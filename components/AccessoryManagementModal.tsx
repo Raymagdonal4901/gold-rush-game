@@ -3,7 +3,7 @@ import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Spark
 import { AccessoryIcon } from './AccessoryIcon';
 import { AccessoryItem, OilRig } from '../services/types';
 import { PixelProgressBar } from './PixelProgressBar';
-import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS, REPAIR_KITS } from '../constants';
+import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS, REPAIR_KITS, RIG_UPGRADE_RULES } from '../constants';
 import { api } from '../services/api';
 import { MaterialIcon } from './MaterialIcon';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -130,7 +130,16 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             return;
         }
 
-        const oldBonus = equippedItem.dailyBonus || 0;
+        const starMult = 1 + (rig.starLevel || 0) * 0.05;
+        const upgradeRule = RIG_UPGRADE_RULES[rig.tierId || 1];
+        const levelMult = upgradeRule ? Math.pow(upgradeRule.statGrowth, (rig.level || 1) - 1) : 1;
+
+        const getEffectiveBonus = (bonus: number) => {
+            const base = (bonus < 0.5 && bonus > 0) ? bonus * 35 : bonus;
+            return base * starMult * levelMult;
+        };
+
+        const oldBonus = getEffectiveBonus(equippedItem.dailyBonus || 0);
         const itemName = equippedItem.name;
 
         setIsUpgrading(true);
@@ -156,7 +165,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                         level: res.item?.level,
                         subtext: t('blacksmith.upgrade_success'),
                         oldBonus,
-                        newBonus: res.item?.dailyBonus,
+                        newBonus: getEffectiveBonus(res.item?.dailyBonus || 0),
                         itemName: getLocalized(itemName)
                     });
                 } else {
@@ -223,18 +232,41 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
     if (!isOpen) return null;
 
-    const getSeriesKey = (typeIdRaw: string | null | undefined) => {
-        const typeId = typeIdRaw || '';
+    const getSeriesKey = (item: AccessoryItem | null | undefined) => {
+        if (!item) return null;
+        const typeId = (item.typeId || '').toLowerCase();
+        const nameRaw = item.name;
+        const enName = typeof nameRaw === 'object' ? (nameRaw as any)?.en || '' : String(nameRaw || '');
+        const thName = typeof nameRaw === 'object' ? (nameRaw as any)?.th || '' : String(nameRaw || '');
+        const nameStr = (enName + ' ' + thName).toLowerCase();
 
-        // Match by exact key or prefix
+        // 1. Match by typeId (exact key or prefix)
         const seriesKeys = Object.keys(EQUIPMENT_SERIES);
-        const series = seriesKeys.find(key => typeId === key || typeId.startsWith(key + '_') || typeId === key);
-        if (series) return series;
+        const matchedByKey = seriesKeys.find(key =>
+            typeId === key.toLowerCase() ||
+            typeId.startsWith(key.toLowerCase() + '_')
+        );
+        if (matchedByKey) return matchedByKey;
 
-        // Fallbacks for legacy/generic IDs
+        // 2. Fallbacks based on ID keywords
         if (typeId.includes('shirt') || typeId.includes('uniform')) return 'uniform';
         if (typeId.includes('helmet')) return 'hat';
-        if (typeId.includes('tool')) return 'glove';
+        if (typeId.includes('shoe') || typeId.includes('boot')) return 'boots';
+        if (typeId.includes('phone') || typeId.includes('mobile')) return 'mobile';
+        if (typeId.includes('computer') || typeId.includes('pc')) return 'pc';
+        if (typeId.includes('glass')) return 'glasses';
+        if (typeId.includes('vehicle') || typeId.includes('truck') || typeId.includes('excavator')) return 'auto_excavator';
+
+        // 3. Fallbacks based on Name (matching AccessoryIcon logic)
+        if (nameStr.includes('helmet') || nameStr.includes('หมวก')) return 'hat';
+        if (nameStr.includes('glasses') || nameStr.includes('แว่น')) return 'glasses';
+        if (nameStr.includes('uniform') || nameStr.includes('suit') || nameStr.includes('shirt') || nameStr.includes('ชุด')) return 'uniform';
+        if (nameStr.includes('bag') || nameStr.includes('เป้') || nameStr.includes('กระเป๋า')) return 'bag';
+        if (nameStr.includes('boot') || nameStr.includes('shoe') || nameStr.includes('รองเท้า')) return 'boots';
+        if (nameStr.includes('phone') || nameStr.includes('mobile') || nameStr.includes('โทรศัพท์')) return 'mobile';
+        if (nameStr.includes('pc') || nameStr.includes('computer') || nameStr.includes('คอม')) return 'pc';
+        if (nameStr.includes('excavator') || nameStr.includes('รถขุด') || nameStr.includes('รถไฟฟ้า') || nameStr.includes('truck') || nameStr.includes('รถบรรทุก')) return 'auto_excavator';
+
         return null;
     };
 
@@ -423,7 +455,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         let upgradeReq: any = null;
 
         if (equippedItem) {
-            const seriesKey = getSeriesKey(equippedItem.typeId);
+            const seriesKey = getSeriesKey(equippedItem);
             if (seriesKey && EQUIPMENT_UPGRADE_CONFIG[seriesKey]) {
                 upgradeReq = EQUIPMENT_UPGRADE_CONFIG[seriesKey][currentLevel];
             }
@@ -436,7 +468,16 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
             return isNaN(n) ? 0 : n;
         };
 
-        const currentBonus = safeBonus(equippedItem?.dailyBonus);
+        const starMult = 1 + (rig.starLevel || 0) * 0.05;
+        const upgradeRuleRig = RIG_UPGRADE_RULES[rig.tierId || 1];
+        const levelMult = upgradeRuleRig ? Math.pow(upgradeRuleRig.statGrowth, (rig.level || 1) - 1) : 1;
+
+        const getEffectiveBonus = (bonus: number) => {
+            const base = (bonus < 0.5 && bonus > 0) ? bonus * 35 : bonus;
+            return base * starMult * levelMult;
+        };
+
+        const currentBonus = getEffectiveBonus(safeBonus(equippedItem?.dailyBonus));
         let nextBonusValue = currentBonus;
 
         if (upgradeReq) {
@@ -444,19 +485,21 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                 // Determine current target based on level
                 const currentLevel = equippedItem?.level || 1;
                 // Get the series key to ensure we match correctly
-                const seriesKey = getSeriesKey(equippedItem?.typeId);
+                const seriesKey = getSeriesKey(equippedItem);
                 const config = seriesKey ? EQUIPMENT_UPGRADE_CONFIG[seriesKey] : UPGRADE_REQUIREMENTS;
 
                 const currentTarget = (config && currentLevel > 1) ? config[currentLevel - 1]?.targetBonus || 0 : 0;
                 const nextTarget = upgradeReq.targetBonus || 0;
                 const increase = nextTarget - currentTarget;
-                nextBonusValue = currentBonus + increase;
+
+                // Apply rig multipliers to the base increase
+                nextBonusValue = currentBonus + (increase * starMult * levelMult);
             } else if (upgradeReq.bonusMultiplier > 0) {
                 nextBonusValue = currentBonus * upgradeReq.bonusMultiplier;
             } else {
                 const shopConfig = SHOP_ITEMS.find(s => s.id === equippedItem?.typeId);
                 const tier = shopConfig?.tier || 1;
-                const boost = tier === 3 ? 2.0 : tier === 2 ? 1.0 : 0.5;
+                const boost = (tier === 3 ? 2.0 : tier === 2 ? 1.0 : 0.5) * starMult * levelMult;
                 nextBonusValue = currentBonus + boost;
             }
         }
@@ -484,7 +527,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                 <div className="text-[10px] text-stone-400 mt-0.5 uppercase tracking-wide opacity-80">{rarityConfig.label}</div>
                                 {equippedItem.level && equippedItem.level > 1 && (
                                     <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-sm bg-black text-cyan-400 text-xs font-bold shadow-lg border border-cyan-500/50 font-mono z-20">
-                                        +{equippedItem.level}
+                                        {equippedItem.level}
                                     </div>
                                 )}
                             </div>

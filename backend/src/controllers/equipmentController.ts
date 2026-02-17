@@ -75,8 +75,8 @@ export const enhanceEquipment = async (req: AuthRequest, res: Response) => {
                 item.baseBonus = item.dailyBonus;
             }
 
-            // New Bonus = baseBonus * (1 + bonus_from_table)
-            item.dailyBonus = item.baseBonus * (1 + rules.statBonus);
+            // New Bonus = baseBonus * (1 + multiplier)
+            item.dailyBonus = item.baseBonus * (1 + rules.multiplier);
             item.dailyBonus = Math.round(item.dailyBonus * 100) / 100;
         } else {
             // Failure Penalty
@@ -96,7 +96,7 @@ export const enhanceEquipment = async (req: AuthRequest, res: Response) => {
                     item.dailyBonus = item.baseBonus;
                 } else {
                     const prevRules = ENHANCE_RULES[newLevel];
-                    item.dailyBonus = item.baseBonus * (1 + prevRules.statBonus);
+                    item.dailyBonus = item.baseBonus * (1 + prevRules.multiplier);
                     item.dailyBonus = Math.round(item.dailyBonus * 100) / 100;
                 }
             }

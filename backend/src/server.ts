@@ -64,8 +64,12 @@ app.use('/api/upgrade', upgradeRoutes);
 app.use('/api/mines', minesRoutes);
 app.use('/api/lucky-draw', luckyDrawRoutes); // Mount Lucky Draw Routes
 // Health Check
+import { runRigTierIdMigration } from './services/migrationService';
 // เชื่อมต่อ Database และ Start Server
-connectDB().then(() => {
+connectDB().then(async () => {
+    // Run migrations
+    await runRigTierIdMigration();
+
     app.listen(Number(PORT), '0.0.0.0', () => {
         console.log(`🚀 [RENDER READY] Server running on 0.0.0.0:${PORT}`);
     });

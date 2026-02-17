@@ -34,6 +34,7 @@ export interface OilRig {
   explorationEnd?: number; // Timestamp when dungeon exploration ends
   starLevel?: number; // Level of the rig after merging
   level?: number; // Rig level (1-10) for upgrade system
+  tierId?: number; // Unique tier identifier for the rig
 }
 
 export interface AccessoryItem {

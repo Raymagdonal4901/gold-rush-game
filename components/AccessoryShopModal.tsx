@@ -1185,7 +1185,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                     <div className="flex flex-col gap-1 w-full bg-stone-950/30 px-1.5 sm:px-2 py-1 rounded">
                                         <div className="flex justify-between items-center text-[9px] sm:text-[10px] text-stone-500 uppercase tracking-tighter">
                                             <div className="flex items-center gap-1">
-                                                <span className="truncate max-w-[50px] sm:max-w-none">Hashrate ⓘ</span>
+                                                <span className="truncate max-w-[50px] sm:max-w-none">Hashrate</span>
                                                 <div className="group/tooltip relative">
                                                     <Info size={10} className="text-stone-600 cursor-help" />
                                                     <div className="absolute bottom-full left-0 mb-2 w-56 p-2 bg-stone-900 border border-stone-800 rounded shadow-xl text-[10px] text-stone-400 leading-relaxed opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-50 normal-case font-sans">
@@ -1202,7 +1202,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                                 </div>
                                             </div>
                                             <span className="text-yellow-500 font-bold font-mono text-[9px] sm:text-[10px]">
-                                                {MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMin}-{MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMax}
+                                                {MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMin}-{MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMax} MH/s
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center text-[10px] text-stone-500 uppercase tracking-tighter">

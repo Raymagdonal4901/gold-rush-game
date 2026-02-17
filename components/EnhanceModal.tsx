@@ -81,7 +81,15 @@ export const EnhanceModal: React.FC<EnhanceModalProps> = ({
         }, 2500);
     };
 
-    const nextBonus = rules ? (item.baseBonus || item.dailyBonus) * (1 + rules.statBonus) : item.dailyBonus;
+    const nextBonus = rules ? (item.baseBonus || item.dailyBonus) * (1 + rules.multiplier) : item.dailyBonus;
+
+    const getLevelColor = (level: number) => {
+        if (level <= 2) return 'text-emerald-400';
+        if (level === 3) return 'text-blue-400';
+        if (level === 4) return 'text-purple-400';
+        if (level >= 5) return 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-orange-500 to-yellow-200 animate-rainbow font-black drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]';
+        return 'text-white';
+    };
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
@@ -112,7 +120,7 @@ export const EnhanceModal: React.FC<EnhanceModalProps> = ({
                         <div className="flex flex-col items-center gap-2">
                             <div className={`w-16 h-16 rounded-lg border-2 ${(RARITY_SETTINGS[item.rarity] || RARITY_SETTINGS.COMMON).border} bg-stone-900 flex items-center justify-center p-2 relative`}>
                                 <AccessoryIcon item={item} size={40} />
-                                <div className="absolute -top-2 -right-2 bg-stone-800 px-1.5 py-0.5 rounded border border-stone-700 text-[10px] font-bold text-white">
+                                <div className={`absolute -top-2 -right-2 bg-stone-800 px-1.5 py-0.5 rounded border border-stone-700 text-[10px] font-bold ${getLevelColor(currentLevel)}`}>
                                     +{currentLevel}
                                 </div>
                             </div>
@@ -127,7 +135,7 @@ export const EnhanceModal: React.FC<EnhanceModalProps> = ({
                         <div className="flex flex-col items-center gap-2">
                             <div className={`w-16 h-16 rounded-lg border-2 ${(RARITY_SETTINGS[item.rarity] || RARITY_SETTINGS.COMMON).border} border-dashed opacity-50 bg-stone-950 flex items-center justify-center p-2 relative`}>
                                 <AccessoryIcon item={item} size={40} />
-                                <div className="absolute -top-2 -right-2 bg-purple-600 px-1.5 py-0.5 rounded border border-purple-400 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(147,51,234,0.5)]">
+                                <div className={`absolute -top-2 -right-2 bg-stone-900 px-1.5 py-0.5 rounded border border-stone-700 text-[10px] font-bold ${getLevelColor(nextLevel)} shadow-[0_0_10px_rgba(147,51,234,0.3)]`}>
                                     +{nextLevel}
                                 </div>
                             </div>
@@ -151,10 +159,17 @@ export const EnhanceModal: React.FC<EnhanceModalProps> = ({
                             </div>
                         </div>
                         <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-stone-500">{language === 'th' ? 'โบนัสรวม' : 'Total Bonus'}</span>
-                            <span className="bg-purple-900/30 text-purple-300 px-2 py-0.5 rounded-full border border-purple-800/50">
-                                +{((rules?.statBonus || 0) * 100).toFixed(0)}%
-                            </span>
+                            <span className="text-stone-500">{language === 'th' ? 'พรีวิวการอัปเกรด' : 'Enhancement Preview'}</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-stone-400">+{item.dailyBonus.toFixed(2)} ฿</span>
+                                <ArrowRight size={10} className="text-stone-600" />
+                                <span className={`font-bold ${getLevelColor(nextLevel)}`}>
+                                    +{nextBonus.toFixed(2)} ฿
+                                </span>
+                                <span className="bg-stone-800 text-stone-300 px-1.5 py-0.5 rounded border border-stone-700 text-[9px]">
+                                    +{((rules?.multiplier || 0) * 100).toFixed(0)}%
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -293,6 +308,15 @@ export const EnhanceModal: React.FC<EnhanceModalProps> = ({
                                 50% { transform: rotate(-15deg) translate(-20px, 30px); }
                                 100% { transform: rotate(45deg) translate(0, 0); }
                             }
+                            @keyframes rainbow {
+                                0% { background-position: 0% 50%; }
+                                50% { background-position: 100% 50%; }
+                                100% { background-position: 0% 50%; }
+                            }
+                            .animate-rainbow {
+                                background-size: 200% auto;
+                                animation: rainbow 3s linear infinite;
+                            }
                         `}</style>
                     </div>
                 )}
@@ -311,12 +335,12 @@ export const EnhanceModal: React.FC<EnhanceModalProps> = ({
                                 <div className="bg-stone-900 border border-stone-800 p-6 rounded-2xl w-full flex items-center justify-center gap-8 mb-8">
                                     <div className="text-center">
                                         <p className="text-[10px] text-stone-500 font-bold uppercase mb-1">Old</p>
-                                        <p className="text-2xl font-black text-stone-600">+{currentLevel}</p>
+                                        <p className={`text-2xl font-black ${getLevelColor(currentLevel)} opacity-60`}>+{currentLevel}</p>
                                     </div>
                                     <ArrowRight className="text-stone-700" size={24} />
                                     <div className="text-center">
                                         <p className="text-[10px] text-emerald-500 font-bold uppercase mb-1">New</p>
-                                        <p className="text-3xl font-black text-emerald-400">+{result.newLevel}</p>
+                                        <p className={`text-3xl font-black ${getLevelColor(result.newLevel)}`}>+{result.newLevel}</p>
                                     </div>
                                 </div>
                             </>
@@ -338,12 +362,12 @@ export const EnhanceModal: React.FC<EnhanceModalProps> = ({
                                 <div className="bg-stone-900 border border-stone-800 p-6 rounded-2xl w-full flex items-center justify-center gap-8 mb-8">
                                     <div className="text-center">
                                         <p className="text-[10px] text-stone-500 font-bold uppercase mb-1">Before</p>
-                                        <p className="text-2xl font-black text-stone-400">+{currentLevel}</p>
+                                        <p className={`text-2xl font-black ${getLevelColor(currentLevel)}`}>+{currentLevel}</p>
                                     </div>
                                     <ArrowRight className="text-stone-700" size={24} />
                                     <div className="text-center">
                                         <p className="text-[10px] text-red-500 font-bold uppercase mb-1">After</p>
-                                        <p className="text-3xl font-black text-red-500">+{result.newLevel}</p>
+                                        <p className={`text-3xl font-black ${getLevelColor(result.newLevel)}`}>+{result.newLevel}</p>
                                     </div>
                                 </div>
                             </>

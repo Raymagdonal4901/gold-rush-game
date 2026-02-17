@@ -647,9 +647,15 @@ export const RigCard: React.FC<RigCardProps> = ({
                         <div className="text-2xl font-mono font-bold text-white mb-1">
                             Lv.{currentLevel} → <span className="text-emerald-400">Lv.{currentLevel + 1}</span>
                         </div>
-                        <div className="text-[10px] text-stone-500 mb-4 flex items-center justify-center gap-1">
-                            {t('rig.cost')}: <span className="text-orange-400 font-bold">{cost}</span>
-                            <span className="text-orange-400">{typeof matName === 'object' ? (t('language') === 'th' ? matName.th : matName.en) : matName}</span>
+                        <div className="flex items-center justify-center gap-2 mb-4">
+                            <span className="text-stone-500 text-[10px] uppercase tracking-wider">{t('rig.cost')}:</span>
+                            <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded border border-white/5">
+                                <span className="text-orange-400 font-bold text-sm">{cost}</span>
+                                <MaterialIcon id={rule?.materialTier || 0} size="w-5 h-5" />
+                                <span className="text-orange-400 text-[10px] font-bold">
+                                    {typeof matName === 'object' ? (language === 'th' ? matName.th : matName.en) : matName}
+                                </span>
+                            </div>
                         </div>
                         <div className="text-[10px] text-stone-400 mb-4 italic px-4">
                             * {t('rig.upgrade_benefit')}
@@ -791,6 +797,13 @@ export const RigCard: React.FC<RigCardProps> = ({
                                                     <AccessoryIcon item={item} size={32} />
                                                 </div>
 
+                                                {/* LEVEL INDICATOR */}
+                                                {item.level && item.level > 1 && (
+                                                    <div className="absolute -bottom-1 -right-1 px-1 py-0.5 rounded-sm bg-black text-cyan-400 text-[8px] font-bold shadow-lg border border-cyan-500/50 font-mono z-20">
+                                                        {item.level}
+                                                    </div>
+                                                )}
+
                                                 {/* DURABILITY PILL */}
                                                 {durInfo && (
                                                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-1 bg-black/80 rounded-full overflow-hidden border border-white/10">
@@ -812,7 +825,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                                                             <div className="flex items-center gap-1.5 mb-1.5 opacity-80">
                                                                 <Zap size={10} className="text-yellow-500" />
                                                                 <span className="text-[10px] font-bold text-white">
-                                                                    +{item.dailyBonus < 0.5 ? formatBonus(item.dailyBonus * 35) : formatBonus(item.dailyBonus)}
+                                                                    {formatBonus(item.dailyBonus)}
                                                                 </span>
                                                             </div>
                                                             {durInfo && (

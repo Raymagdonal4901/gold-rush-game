@@ -82,8 +82,8 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
                             <button
                                 onClick={() => copyToClipboard(referralLink)}
                                 className={`px-6 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 whitespace-nowrap ${copied
-                                        ? 'bg-emerald-600 text-white'
-                                        : 'bg-yellow-600 hover:bg-yellow-500 text-stone-950 shadow-[0_4px_15px_rgba(202,138,4,0.3)]'
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-yellow-600 hover:bg-yellow-500 text-stone-950 shadow-[0_4px_15px_rgba(202,138,4,0.3)]'
                                     }`}
                             >
                                 {copied ? <TrendingUp size={18} /> : <Copy size={18} />}
@@ -117,7 +117,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
                                 <p className="text-stone-500 text-xs font-bold uppercase tracking-wider">{language === 'th' ? 'รายได้ทั้งหมด' : 'Total Earnings'}</p>
                                 <p className="text-3xl font-bold text-emerald-400 leading-tight">
                                     {(user.referralStats?.totalEarned || 0).toLocaleString()}
-                                    <span className="text-stone-600 text-sm font-normal ml-2">THB</span>
+                                    <span className="text-stone-600 text-sm font-normal ml-2">{language === 'th' ? 'THB' : 'USD'}</span>
                                 </p>
                             </div>
                         </div>
