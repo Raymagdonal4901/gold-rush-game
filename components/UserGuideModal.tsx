@@ -14,6 +14,7 @@ type TabId = 'start' | 'mining' | 'economy' | 'workshop' | 'adventure' | 'vip' |
 
 export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose }) => {
     const [activeTab, setActiveTab] = useState<TabId>('start');
+    const [showContent, setShowContent] = useState(false);
 
     if (!isOpen) return null;
 
@@ -28,35 +29,35 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
     ];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="bg-stone-950 border border-yellow-900/40 rounded-2xl w-full max-w-5xl h-[85vh] shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-200 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-stone-950 border border-yellow-900/40 rounded-2xl w-[95%] sm:w-full sm:max-w-5xl h-[85vh] shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-200 relative">
 
                 {/* Sidebar Navigation */}
-                <div className="w-full md:w-64 bg-stone-900 border-r border-white/5 flex flex-col h-full shrink-0">
-                    <div className="p-6 border-b border-white/5 flex items-center gap-3 shrink-0">
-                        <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
-                            <BookOpen size={24} />
+                <div className={`w-full md:w-60 bg-stone-900 border-r border-white/5 flex flex-col h-full shrink-0 ${showContent ? 'hidden md:flex' : 'flex'}`}>
+                    <div className="p-4 sm:p-5 border-b border-white/5 flex items-center gap-2.5 sm:gap-3 shrink-0">
+                        <div className="p-1.5 sm:p-2 bg-yellow-500/20 rounded-lg text-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                            <BookOpen size={20} className="sm:w-6 sm:h-6" />
                         </div>
                         <div>
-                            <h2 className="font-bold text-white text-lg leading-tight">คู่มือการเล่น</h2>
-                            <p className="text-[10px] text-stone-500 uppercase tracking-widest font-bold">Gold Rush Wiki</p>
+                            <h2 className="font-bold text-white text-base sm:text-lg leading-tight uppercase tracking-tight">คู่มือการเล่น</h2>
+                            <p className="text-[9px] text-stone-500 uppercase tracking-widest font-black">Gold Rush Wiki</p>
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1 custom-scrollbar">
                         {tabs.map((tab) => (
                             <button
                                 key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all relative overflow-hidden group ${activeTab === tab.id
-                                    ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-bold shadow-lg shadow-yellow-500/20 translate-x-1'
+                                onClick={() => { setActiveTab(tab.id); setShowContent(true); }}
+                                className={`w-full flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all relative overflow-hidden group ${activeTab === tab.id
+                                    ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-black shadow-lg shadow-yellow-500/20 translate-x-1'
                                     : 'text-stone-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
                                     }`}
                             >
                                 <div className={`relative z-10 p-1 rounded-md ${activeTab === tab.id ? 'bg-black/10' : 'bg-transparent'}`}>
-                                    {tab.icon}
+                                    {React.cloneElement(tab.icon as React.ReactElement, { size: 16 })}
                                 </div>
-                                <span className="text-sm relative z-10">{tab.label}</span>
+                                <span className="text-[13px] sm:text-sm relative z-10">{tab.label}</span>
                                 {activeTab === tab.id && (
                                     <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/20"></div>
                                 )}
@@ -64,33 +65,38 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
                         ))}
                     </div>
 
-                    <div className="p-4 border-t border-white/5 bg-stone-900/50 shrink-0">
+                    <div className="p-3 sm:p-4 border-t border-white/5 bg-stone-900/50 shrink-0">
                         <button
                             onClick={onClose}
-                            className="w-full py-2 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                            className="w-full py-2 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 border border-white/5 active:scale-95"
                         >
-                            <X size={16} /> ปิดคู่มือ
+                            <X size={14} /> ปิดคู่มือ
                         </button>
                     </div>
                 </div>
 
                 {/* Main Content Area */}
-                <div className="flex-1 flex flex-col h-full overflow-hidden bg-stone-950/[0.95] relative">
+                <div className={`flex-1 flex flex-col h-full overflow-hidden bg-stone-950/[0.95] relative ${!showContent ? 'hidden md:flex' : 'flex'}`}>
                     {/* Header */}
-                    <div className="p-4 md:px-8 border-b border-white/5 flex justify-between items-center bg-stone-900/80 backdrop-blur-xl absolute top-0 left-0 right-0 z-10 shadow-lg">
-                        <h3 className="text-xl font-black text-white flex items-center gap-3">
-                            <div className="p-1.5 bg-yellow-500/10 rounded-lg text-yellow-500 border border-yellow-500/20">
-                                {tabs.find(t => t.id === activeTab)?.icon}
-                            </div>
-                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-stone-400">
-                                {tabs.find(t => t.id === activeTab)?.label}
-                            </span>
-                        </h3>
+                    <div className="p-3 sm:px-8 border-b border-white/5 flex justify-between items-center bg-stone-900/80 backdrop-blur-xl absolute top-0 left-0 right-0 z-10 shadow-lg shrink-0">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <button onClick={() => setShowContent(false)} className="md:hidden p-1.5 bg-stone-800 rounded-lg text-stone-400 hover:text-white transition-colors shrink-0">
+                                <ChevronRight size={18} className="rotate-180" />
+                            </button>
+                            <h3 className="text-base sm:text-xl font-black text-white flex items-center gap-2 sm:gap-3 truncate">
+                                <div className="p-1 sm:p-1.5 bg-yellow-500/10 rounded-lg text-yellow-500 border border-yellow-500/20 shrink-0">
+                                    {tabs.find(t => t.id === activeTab)?.icon}
+                                </div>
+                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-stone-400 truncate">
+                                    {tabs.find(t => t.id === activeTab)?.label}
+                                </span>
+                            </h3>
+                        </div>
                     </div>
 
                     {/* Scrollable Content */}
-                    <div className="flex-1 overflow-y-auto px-6 py-8 md:px-12 md:py-10 pt-24 custom-scrollbar">
-                        <div className="max-w-4xl mx-auto pb-20 animate-in slide-in-from-bottom-4 duration-500 fade-in">
+                    <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-12 sm:py-10 pt-20 sm:pt-24 custom-scrollbar">
+                        <div className="max-w-3xl mx-auto pb-10 animate-in slide-in-from-bottom-4 duration-500 fade-in">
                             {activeTab === 'start' && <GettingStartedContent />}
                             {activeTab === 'mining' && <MiningSystemContent />}
                             {activeTab === 'economy' && <EconomyContent />}
@@ -112,22 +118,22 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({ isOpen, onClose 
 
 const GettingStartedContent = () => (
     <div className="space-y-8">
-        <div className="bg-gradient-to-br from-yellow-500/10 to-transparent p-6 rounded-2xl border border-yellow-500/20 relative overflow-hidden">
+        <div className="bg-gradient-to-br from-yellow-500/10 to-transparent p-4 sm:p-6 rounded-2xl border border-yellow-500/20 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12">
-                <Pickaxe size={120} />
+                <Pickaxe size={80} className="sm:w-[120px] sm:h-[120px]" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2 relative z-10">ยินดีต้อนรับนักขุดหน้าใหม่!</h2>
-            <p className="text-stone-300 leading-relaxed max-w-2xl relative z-10">
+            <h2 className="text-xl sm:text-2xl font-black text-white mb-1.5 sm:mb-2 relative z-10 leading-tight">ยินดีต้อนรับนักขุดหน้าใหม่!</h2>
+            <p className="text-stone-400 text-[13px] sm:text-base leading-relaxed max-w-2xl relative z-10">
                 Gold Rush คือเกมจำลองสถานการณ์ที่คุณจะได้สร้างอาณาจักรเหมืองแร่ เป้าหมายของคุณเรียบง่ายมาก: ขุดหาทรัพยากร, แปรรูปเป็นวัสดุล้ำค่า, และก้าวสู่การเป็นมหาเศรษฐีที่ร่ำรวยที่สุดในโลก
             </p>
         </div>
 
-        <Section title="วงจรการเล่นพื้นฐาน (The Core Loop)" icon={<Zap size={20} />}>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-                <StepCard step="1" title="ซื้อเครื่องขุด" desc="เลือกซื้อเครื่องจักรขุดแร่จากร้านค้า" icon={<Pickaxe />} />
-                <StepCard step="2" title="ขุดแร่" desc="รอเวลาให้เครื่องทำงานและเก็บผลผลิต" icon={<TrendingUp />} />
-                <StepCard step="3" title="แปรรูป" desc="นำแร่ดิบเข้าโรงงานเพื่อเพิ่มมูลค่า" icon={<Factory />} />
-                <StepCard step="4" title="ทำกำไร" desc="ขายในตลาดกลางหรือลงทุนต่อ" icon={<Coins />} />
+        <Section title="วงจรการเล่นพื้นฐาน" icon={<Zap size={18} />}>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mt-3 sm:mt-4">
+                <StepCard step="1" title="ซื้อเครื่องขุด" desc="เลือกซื้อเหมืองจากร้านค้า" icon={<Pickaxe size={16} />} />
+                <StepCard step="2" title="ขุดแร่" desc="รอเก็บผลผลิตตามรอบ" icon={<TrendingUp size={16} />} />
+                <StepCard step="3" title="แปรรูป" desc="เพิ่มมูลค่าในโรงงาน" icon={<Factory size={16} />} />
+                <StepCard step="4" title="ทำกำไร" desc="ขายหรือลงทุนต่อ" icon={<Coins size={16} />} />
             </div>
         </Section>
 
@@ -504,7 +510,7 @@ const SupportContent = () => (
 
 const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2 border-b border-white/5 pb-2">
+        <h3 className="text-base sm:text-lg font-black text-white mb-3 sm:mb-4 flex items-center gap-2 border-b border-white/5 pb-1.5 sm:pb-2 uppercase tracking-tight">
             <span className="text-yellow-500">{icon}</span>
             {title}
         </h3>
@@ -513,13 +519,13 @@ const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.
 );
 
 const StepCard: React.FC<{ step: string; title: string; desc: string; icon: React.ReactNode }> = ({ step, title, desc, icon }) => (
-    <div className="bg-stone-900/50 p-4 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-all group relative overflow-hidden">
-        <div className="absolute top-0 right-0 text-[40px] font-black text-white/5 group-hover:text-yellow-500/10 transition-colors leading-none -mr-2 -mt-2">
+    <div className="bg-stone-900/50 p-3 sm:p-4 rounded-xl border border-white/5 hover:border-yellow-500/30 transition-all group relative overflow-hidden">
+        <div className="absolute top-0 right-0 text-[32px] sm:text-[40px] font-black text-white/5 group-hover:text-yellow-500/10 transition-colors leading-none -mr-1 -mt-1 sm:-mr-2 sm:-mt-2">
             {step}
         </div>
-        <div className="text-yellow-500 mb-3 group-hover:scale-110 transition-transform duration-300">{icon}</div>
-        <h4 className="font-bold text-white text-sm mb-1">{title}</h4>
-        <p className="text-xs text-stone-500 group-hover:text-stone-400 transition-colors">{desc}</p>
+        <div className="text-yellow-500 mb-2 sm:mb-3 group-hover:scale-110 transition-transform duration-300">{icon}</div>
+        <h4 className="font-black text-white text-[13px] sm:text-sm mb-0.5 sm:mb-1">{title}</h4>
+        <p className="text-[11px] sm:text-xs text-stone-500 group-hover:text-stone-400 transition-colors leading-tight">{desc}</p>
     </div>
 );
 
@@ -533,9 +539,9 @@ const InfoBox: React.FC<{ title: string; color: 'blue' | 'red' | 'green' | 'yell
     };
 
     return (
-        <div className={`p-5 rounded-xl border ${colors[color]}`}>
-            <h5 className="font-bold text-sm uppercase tracking-wider mb-2 opacity-90">{title}</h5>
-            <p className="text-stone-300 text-sm leading-relaxed opacity-80">{children}</p>
+        <div className={`p-4 sm:p-5 rounded-xl border ${colors[color]}`}>
+            <h5 className="font-black text-[11px] sm:text-sm uppercase tracking-wider mb-1.5 sm:mb-2 opacity-90">{title}</h5>
+            <p className="text-stone-400 text-[12px] sm:text-[13px] leading-relaxed opacity-80 font-medium">{children}</p>
         </div>
     );
 };

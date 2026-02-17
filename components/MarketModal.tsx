@@ -207,28 +207,25 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
     return (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 overflow-y-auto">
             <div className="bg-stone-950 border border-stone-800 w-[95%] sm:w-full sm:max-w-5xl rounded-xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
-                <div className="flex justify-between items-center p-4 bg-stone-900 border-b border-stone-800 shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-blue-900/20 p-2 rounded text-blue-400">
-                            <BarChart2 size={24} />
+                <div className="flex justify-between items-center p-3 sm:p-4 bg-stone-900 border-b border-stone-800 shrink-0">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="bg-blue-900/20 p-1.5 sm:p-2 rounded text-blue-400">
+                            <BarChart2 size={20} className="sm:w-6 sm:h-6" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-display font-bold text-white">{t('market.title')}</h2>
-                            <div className="flex items-center gap-2 text-xs text-stone-500">
-                                <span className="flex items-center gap-1"><RefreshCw size={10} /> {t('market.reset_note')} {MARKET_CONFIG.UPDATE_INTERVAL_HOURS} {t('time.hours')}</span>
-                                <span>•</span>
+                            <h2 className="text-lg sm:text-xl font-display font-bold text-white leading-tight">{t('market.title')}</h2>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] sm:text-xs text-stone-500">
+                                <span className="flex items-center gap-1"><RefreshCw size={8} /> {t('market.reset_note')} {MARKET_CONFIG.UPDATE_INTERVAL_HOURS} {t('time.hours')}</span>
+                                <span className="hidden sm:inline">•</span>
                                 <span className={userMastery >= 1000 ? "text-cyan-400 font-bold" : "text-yellow-500"}>{t('market.fee_note')} {spreadLabel}% ({t('market.buy_side')})</span>
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
                         <div className="flex bg-stone-950 p-1 rounded-lg border border-stone-800">
-                            <button onClick={() => setActiveTab('TRADE')} className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'TRADE' ? 'bg-stone-800 text-white shadow' : 'text-stone-500 hover:text-stone-300'}`}>{t('market.trade_tab')}</button>
-                            <button onClick={() => setActiveTab('HISTORY')} className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${activeTab === 'HISTORY' ? 'bg-stone-800 text-white shadow' : 'text-stone-500 hover:text-stone-300'}`}>{t('market.history_tab')}</button>
+                            <button onClick={() => setActiveTab('TRADE')} className={`px-2.5 sm:px-4 py-1 sm:py-1.5 rounded text-[10px] sm:text-xs font-bold transition-all ${activeTab === 'TRADE' ? 'bg-stone-800 text-white shadow' : 'text-stone-500 hover:text-stone-300'}`}>{t('market.trade_tab')}</button>
+                            <button onClick={() => setActiveTab('HISTORY')} className={`px-2.5 sm:px-4 py-1 sm:py-1.5 rounded text-[10px] sm:text-xs font-bold transition-all ${activeTab === 'HISTORY' ? 'bg-stone-800 text-white shadow' : 'text-stone-500 hover:text-stone-300'}`}>{t('market.history_tab')}</button>
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-stone-800 rounded-full text-stone-500 hover:text-white ml-2">
-                            <X size={24} />
-                        </button>
                     </div>
                 </div>
 
@@ -250,33 +247,33 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                     <button
                                         key={tier}
                                         onClick={() => { setSelectedTier(tier); setAmount(0); setShowConfirm(false); }}
-                                        className={`w-full p-4 border-b border-stone-800 flex justify-between items-center transition-all ${isSelected ? 'bg-stone-800 border-l-4 border-l-blue-500 pl-3' : 'hover:bg-stone-900 border-l-4 border-l-transparent'} ${isClosed ? 'opacity-60 grayscale-[0.2]' : ''}`}
+                                        className={`w-full p-2.5 sm:p-4 border-b border-stone-800 flex justify-between items-center transition-all ${isSelected ? 'bg-stone-800 border-l-4 border-l-blue-500 pl-2 sm:pl-3' : 'hover:bg-stone-900 border-l-4 border-l-transparent'} ${isClosed ? 'opacity-60 grayscale-[0.2]' : ''}`}
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <MaterialIcon id={tier} size="w-8 h-8" iconSize={16} />
+                                        <div className="flex items-center gap-2 sm:gap-3">
+                                            <MaterialIcon id={tier} size="w-7 h-7 sm:w-8 sm:h-8" iconSize={14} />
                                             <div className="text-left">
-                                                <div className={`font-bold text-sm flex items-center gap-1 ${isSelected ? 'text-white' : 'text-stone-400'}`}>
+                                                <div className={`font-bold text-[13px] sm:text-sm flex items-center gap-1 ${isSelected ? 'text-white' : 'text-stone-400'}`}>
                                                     {name[language as keyof typeof name]}
-                                                    {isClosed && <span className="text-[10px] bg-red-600/20 text-red-500 border border-red-500/30 px-1 rounded font-black ml-1 animate-pulse uppercase">{t('common.close')}</span>}
-                                                    {itemBot && <Bot size={12} className="text-emerald-400 animate-pulse" title={t('market.bot_active')} />}
+                                                    {isClosed && <span className="text-[9px] bg-red-600/20 text-red-500 border border-red-500/30 px-1 rounded font-black ml-1 animate-pulse uppercase">{t('common.close')}</span>}
+                                                    {itemBot && <Bot size={10} className="text-emerald-400 animate-pulse" title={t('market.bot_active')} />}
                                                 </div>
-                                                <div className="text-[10px] text-stone-500">
+                                                <div className="text-[9px] sm:text-[10px] text-stone-500">
                                                     {t('market.available')}: <span className={count > 0 ? "text-white font-bold" : "text-stone-600"}>{count}</span>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="font-mono font-bold text-white text-sm">
+                                            <div className="font-mono font-bold text-white text-[13px] sm:text-sm">
                                                 {formatCurrency(data.currentPrice)}
                                             </div>
-                                            <div className="text-[10px] text-stone-500 font-mono">
+                                            <div className="text-[9px] sm:text-[10px] text-stone-500 font-mono">
                                                 {language === 'th' ?
                                                     `(${formatCurrency(data.currentPrice, { forceUSD: true })})` :
                                                     `(${formatCurrency(data.currentPrice, { forceTHB: true })})`
                                                 }
                                             </div>
-                                            <div className={`text-[10px] flex items-center justify-end gap-1 ${data.trend === 'UP' ? 'text-emerald-400' : data.trend === 'DOWN' ? 'text-red-400' : 'text-stone-500'}`}>
-                                                {data.trend === 'UP' ? <TrendingUp size={10} /> : data.trend === 'DOWN' ? <TrendingDown size={10} /> : <Minus size={10} />}
+                                            <div className={`text-[9px] sm:text-[10px] flex items-center justify-end gap-1 ${data.trend === 'UP' ? 'text-emerald-400' : data.trend === 'DOWN' ? 'text-red-400' : 'text-stone-500'}`}>
+                                                {data.trend === 'UP' ? <TrendingUp size={9} /> : data.trend === 'DOWN' ? <TrendingDown size={9} /> : <Minus size={9} />}
                                                 {Math.abs((data.multiplier - 1) * 100).toFixed(1)}%
                                             </div>
                                         </div>
@@ -359,78 +356,76 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                     </div>
                                 )}
 
-                                <div className="h-auto p-4 border-b border-stone-800 relative">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-2 bg-stone-900 border border-stone-800 rounded-lg"><MaterialIcon id={selectedTier} size="w-10 h-10" iconSize={20} /></div>
-                                            <div>
-                                                <h3 className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
+                                <div className="h-auto p-3 sm:p-4 border-b border-stone-800 relative">
+                                    <div className="flex justify-between items-start mb-1.5 sm:mb-2 text-xs sm:text-base">
+                                        <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
+                                            <div className="p-1.5 sm:p-2 bg-stone-900 border border-stone-800 rounded-lg shrink-0"><MaterialIcon id={selectedTier} size="w-8 h-8 sm:w-10 sm:h-10" iconSize={16} /></div>
+                                            <div className="overflow-hidden">
+                                                <h3 className="text-xl sm:text-2xl font-bold text-white mb-0.5 sm:mb-1 flex items-center gap-2 truncate">
                                                     {matName[language as keyof typeof matName]}
-                                                    <span className="text-sm font-normal text-stone-500">/ {CURRENCY}</span>
-                                                    {isBotActive && <div className="bg-emerald-900/40 text-emerald-400 text-[10px] px-2 py-0.5 rounded flex items-center gap-1 border border-emerald-500/30 animate-pulse"><Bot size={10} /> {t('market.bot_active')}</div>}
+                                                    <span className="text-xs sm:text-sm font-normal text-stone-500">/ {CURRENCY}</span>
                                                 </h3>
-                                                <div className="flex gap-4 text-sm">
-                                                    <div className="flex gap-4 text-sm">
-                                                        <span className="text-stone-500">Base: {formatCurrency(item.basePrice)}</span>
-                                                        <span className={item.trend === 'UP' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>Last: {formatCurrency(item.currentPrice)}</span>
-                                                    </div>
+                                                <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] sm:text-sm">
+                                                    <span className="text-stone-500">Base: {formatCurrency(item.basePrice)}</span>
+                                                    <span className={item.trend === 'UP' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>Last: {formatCurrency(item.currentPrice)}</span>
+                                                    {isBotActive && <div className="bg-emerald-900/40 text-emerald-400 text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 border border-emerald-500/30 animate-pulse"><Bot size={8} /> {t('market.bot_active')}</div>}
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex gap-1 bg-stone-900 p-1 rounded-lg border border-stone-800">
+                                        <div className="flex gap-1 bg-stone-900 p-0.5 sm:p-1 rounded-lg border border-stone-800 shrink-0">
                                             {['1H', '4H', '1D'].map(t => (
-                                                <button key={t} onClick={() => setTimeframe(t as any)} className={`text-xs px-3 py-1 rounded transition-colors font-bold ${timeframe === t ? 'bg-blue-600 text-white ring-2 ring-white ring-inset' : 'text-stone-500 hover:text-stone-300'}`}>{t}</button>
+                                                <button key={t} onClick={() => setTimeframe(t as any)} className={`text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded transition-colors font-bold ${timeframe === t ? 'bg-blue-600 text-white shadow-sm' : 'text-stone-500 hover:text-stone-300'}`}>{t}</button>
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="h-24 sm:h-32 w-full relative group">{renderGraph(item.history)}<div className="absolute top-2 right-2 text-[10px] text-stone-600 opacity-0 group-hover:opacity-100 transition-opacity">{t('market.realtime_data')}</div></div>
+                                    <div className="h-20 sm:h-32 w-full relative group">{renderGraph(item.history)}<div className="absolute top-2 right-2 text-[9px] text-stone-600 opacity-0 group-hover:opacity-100 transition-opacity">{t('market.realtime_data')}</div></div>
                                 </div>
 
-                                <div className="flex-1 p-4 flex flex-col justify-between overflow-y-auto custom-scrollbar">
-                                    <div className="grid grid-cols-2 gap-3 mb-4 bg-stone-900 p-1 rounded-xl border border-stone-800">
-                                        <button onClick={() => setAction('BUY')} disabled={selectedTier === 7} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'} disabled:opacity-30 disabled:grayscale`}>
-                                            <ArrowRight size={16} className="rotate-45" /> {t('market.buy_action')}
+                                <div className="flex-1 p-3 sm:p-4 flex flex-col justify-between overflow-y-auto custom-scrollbar">
+                                    <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-2 sm:mb-3 bg-stone-900 p-1 rounded-xl border border-stone-800">
+                                        <button onClick={() => setAction('BUY')} disabled={selectedTier === 7} className={`py-1.5 sm:py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-[12px] sm:text-base ${action === 'BUY' ? 'bg-emerald-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'} disabled:opacity-30 disabled:grayscale`}>
+                                            <ArrowRight size={13} className="sm:w-4 sm:h-4 rotate-45" /> {t('market.buy_action')}
                                         </button>
-                                        <button onClick={() => setAction('SELL')} disabled={selectedTier === 7} className={`py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${action === 'SELL' ? 'bg-red-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'} disabled:opacity-30 disabled:grayscale`}>
-                                            <ArrowRight size={16} className="-rotate-[135deg]" /> {t('market.sell_action')}
+                                        <button onClick={() => setAction('SELL')} disabled={selectedTier === 7} className={`py-1.5 sm:py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-[12px] sm:text-base ${action === 'SELL' ? 'bg-red-600 text-white shadow-lg' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'} disabled:opacity-30 disabled:grayscale`}>
+                                            <ArrowRight size={13} className="sm:w-4 sm:h-4 -rotate-[135deg]" /> {t('market.sell_action')}
                                         </button>
                                     </div>
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between text-xs text-stone-400 bg-stone-900/50 p-2.5 rounded-lg border border-stone-800"><span>{t('common.your_balance')}:</span><span className="font-bold text-white">{action === 'SELL' ? `${maxSell} Units` : `${userBalance.toLocaleString()} ${CURRENCY}`}</span></div>
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center"><label className="text-xs text-stone-500 uppercase font-bold">{t('market.amount_label')}</label><span className="text-xs text-blue-400 cursor-pointer hover:underline" onClick={() => setAmount(action === 'SELL' ? maxSell : maxBuy)}>{t('market.max_available')}</span></div>
+                                    <div className="space-y-2 sm:space-y-3">
+                                        <div className="flex justify-between text-[11px] sm:text-xs text-stone-400 bg-stone-900/50 p-1.5 sm:p-2.5 rounded-lg border border-stone-800"><span>{t('common.your_balance')}:</span><span className="font-bold text-white">{action === 'SELL' ? `${maxSell} Units` : `${userBalance.toLocaleString()} ${CURRENCY}`}</span></div>
+                                        <div className="space-y-1 sm:space-y-1.5">
+                                            <div className="flex justify-between items-center"><label className="text-[10px] sm:text-xs text-stone-500 uppercase font-bold">{t('market.amount_label')}</label><span className="text-[10px] sm:text-xs text-blue-400 cursor-pointer hover:underline" onClick={() => setAmount(action === 'SELL' ? maxSell : maxBuy)}>{t('market.max_available')}</span></div>
                                             <div className="relative">
                                                 <input
                                                     type="number"
                                                     value={amount === 0 ? '' : amount}
                                                     onChange={(e) => { const val = e.target.value === '' ? 0 : parseInt(e.target.value); setAmount(isNaN(val) ? 0 : val); }}
                                                     disabled={selectedTier === 7}
-                                                    className="w-full bg-stone-900 border border-stone-700 rounded-xl p-3 text-white font-mono text-base focus:border-blue-500 outline-none transition-colors disabled:opacity-50"
+                                                    className="w-full bg-stone-900 border border-stone-700 rounded-xl p-2.5 sm:p-3 text-white font-mono text-sm sm:text-base focus:border-blue-500 outline-none transition-colors disabled:opacity-50"
                                                     placeholder={selectedTier === 7 ? t('market.suspended') : t('market.enter_amount')}
                                                 />
-                                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 text-[10px] font-bold">UNITS</span>
+                                                <span className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-stone-500 text-[9px] sm:text-[10px] font-bold">UNITS</span>
                                             </div>
                                         </div>
-                                        <div className="bg-stone-900 p-4 rounded-xl border border-stone-800 space-y-2">
-                                            <div className="flex justify-between text-sm"><span className="text-stone-400">{t('market.market_price')}</span><span className="text-white font-mono">
+                                        <div className="bg-stone-900 p-2.5 sm:p-4 rounded-xl border border-stone-800 space-y-0.5 sm:space-y-1.5">
+                                            <div className="flex justify-between text-[12px] sm:text-sm"><span className="text-stone-400">{t('market.market_price')}</span><span className="text-white font-mono">
                                                 {language === 'th' ?
-                                                    <>{formatCurrency(item.currentPrice)} <span className="text-[10px] text-stone-500">({formatCurrency(item.currentPrice, { forceUSD: true })})</span></> :
-                                                    <>{formatCurrency(item.currentPrice)} <span className="text-[10px] text-stone-500">({formatCurrency(item.currentPrice, { forceTHB: true })})</span></>
+                                                    <>{formatCurrency(item.currentPrice)} <span className="text-[9px] sm:text-[10px] text-stone-500">({formatCurrency(item.currentPrice, { forceUSD: true })})</span></> :
+                                                    <>{formatCurrency(item.currentPrice)} <span className="text-[9px] sm:text-[10px] text-stone-500">({formatCurrency(item.currentPrice, { forceTHB: true })})</span></>
                                                 }
                                             </span></div>
-                                            <div className="flex justify-between text-sm">
+                                            <div className="flex justify-between text-[12px] sm:text-sm">
                                                 <span className="text-stone-400">{action === 'BUY' ? t('market.spread') : t('market.tax')}</span>
                                                 <span className={action === 'BUY' && userMastery >= 1000 ? "text-cyan-400 font-bold font-mono" : "text-stone-500 font-mono"}>
                                                     {action === 'BUY' ? `+${spreadLabel}%` : '-15%'}
                                                 </span>
                                             </div>
-                                            <div className="h-px bg-stone-800 my-2"></div>
-                                            <div className="flex justify-between text-lg font-bold"><span className="text-stone-200">{t('market.total_price')}</span>
+                                            <div className="h-px bg-stone-800 my-1 sm:my-2"></div>
+                                            <div className="flex justify-between text-sm sm:text-lg font-bold"><span className="text-stone-200">{t('market.total_price')}</span>
                                                 <span className={action === 'BUY' ? 'text-red-400' : 'text-emerald-400'}>
                                                     {formatCurrency(totalPrice)}
                                                 </span>
                                             </div>
-                                            <div className="text-right text-xs text-stone-500 font-mono mt-1 opacity-60">
+                                            <div className="text-right text-[10px] sm:text-xs text-stone-500 font-mono mt-0.5 sm:mt-1 opacity-60">
                                                 {language === 'th' ?
                                                     `(${formatCurrency(totalPrice, { forceUSD: true })})` :
                                                     `(${formatCurrency(totalPrice, { forceTHB: true })})`
@@ -440,9 +435,9 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                         <button
                                             onClick={() => setShowConfirm(true)}
                                             disabled={loading || selectedTier === 7 || amount <= 0 || (action === 'SELL' && amount > maxSell) || (action === 'BUY' && totalPrice > userBalance)}
-                                            className={`w-full py-3 rounded-xl font-bold text-base shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-stone-800`}
+                                            className={`w-full py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 ${action === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-stone-800`}
                                         >
-                                            {loading ? <RefreshCw className="animate-spin" size={20} /> : (
+                                            {loading ? <RefreshCw className="animate-spin" size={18} sm:size={20} /> : (
                                                 <>
                                                     {selectedTier === 7 ? t('market.suspended') :
                                                         action === 'BUY' && totalPrice > userBalance ? t('market.insufficient_funds') :
@@ -464,19 +459,26 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                     ) : (
                                         <div className="divide-y divide-stone-800">
                                             {history.map(tx => (
-                                                <div key={tx.id} className="p-4 hover:bg-stone-900 transition-colors flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${tx.type === 'MATERIAL_BUY' ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-500' : 'bg-red-900/20 border-red-500/30 text-red-500'}`}>{tx.type === 'MATERIAL_BUY' ? <ShoppingCart size={14} /> : <DollarSign size={14} />}</div>
-                                                        <div>
-                                                            <div className="text-sm font-bold text-stone-200 flex items-center gap-2">{tx.type === 'MATERIAL_BUY' ? t('market.buy_side') : t('market.sell_action')}<span className="text-[10px] bg-stone-800 text-stone-400 px-1.5 rounded">{tx.description.split(':')[1]?.split('x')[0]?.trim()}</span></div>
-                                                            <div className="text-xs text-stone-500 font-mono">{new Date(tx.timestamp).toLocaleString()}</div>
+                                                <div key={tx.id} className="p-2.5 sm:p-4 hover:bg-stone-900 transition-colors flex items-center justify-between border-b border-stone-800 last:border-0">
+                                                    <div className="flex items-center gap-2 sm:gap-3 overflow-hidden">
+                                                        <div className={`w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-full flex items-center justify-center border ${tx.type === 'MATERIAL_BUY' ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-500' : 'bg-red-900/20 border-red-500/30 text-red-500'}`}>
+                                                            {tx.type === 'MATERIAL_BUY' ? <ShoppingCart size={12} className="sm:w-3.5 sm:h-3.5" /> : <DollarSign size={12} className="sm:w-3.5 sm:h-3.5" />}
+                                                        </div>
+                                                        <div className="overflow-hidden">
+                                                            <div className="text-[11px] sm:text-sm font-bold text-stone-200 flex items-center gap-1.5 truncate">
+                                                                {tx.type === 'MATERIAL_BUY' ? t('market.buy_side') : t('market.sell_action')}
+                                                                <span className="text-[9px] sm:text-[10px] bg-stone-800 text-stone-400 px-1.5 py-0.5 rounded shrink-0">
+                                                                    {tx.description.split(':')[1]?.split('(')[0]?.trim() || tx.description}
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-[9px] sm:text-xs text-stone-500 font-mono truncate">{new Date(tx.timestamp).toLocaleString()}</div>
                                                         </div>
                                                     </div>
-                                                    <div className={`font-mono font-bold text-sm ${tx.type === 'MATERIAL_SELL' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                    <div className={`font-mono font-bold text-xs sm:text-sm shrink-0 pl-2 text-right ${tx.type === 'MATERIAL_SELL' ? 'text-emerald-400' : 'text-red-400'}`}>
                                                         {tx.type === 'MATERIAL_SELL' ? '+' : ''}
                                                         {language === 'th' ?
-                                                            <>{formatCurrency(tx.amount)} <div className="text-[10px] font-normal opacity-50 text-right">{formatCurrency(tx.amount, { forceUSD: true })}</div></> :
-                                                            <>{formatCurrency(tx.amount)} <div className="text-[10px] font-normal opacity-50 text-right">{formatCurrency(tx.amount, { forceTHB: true })}</div></>
+                                                            <>{formatCurrency(tx.amount)} <div className="text-[8px] sm:text-[10px] font-normal opacity-50">{formatCurrency(tx.amount, { forceUSD: true })}</div></> :
+                                                            <>{formatCurrency(tx.amount)} <div className="text-[8px] sm:text-[10px] font-normal opacity-50">{formatCurrency(tx.amount, { forceTHB: true })}</div></>
                                                         }
                                                     </div>
                                                 </div>

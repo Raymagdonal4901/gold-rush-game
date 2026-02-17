@@ -321,17 +321,17 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
 
                 <div className={`h-1 w-full bg-gradient-to-r ${rarityStyle.bgGradient} rounded-t-xl`}></div>
 
-                <div className={`flex items-center justify-center relative overflow-visible bg-stone-950/50 ${isSpecial ? 'p-6' : 'p-8'}`}>
+                <div className={`flex items-center justify-center relative overflow-visible bg-stone-950/50 ${isSpecial ? 'p-3' : 'p-4'}`}>
                     <div className={`absolute inset-0 bg-gradient-to-b ${rarityStyle.bgGradient} opacity-5 group-hover:opacity-10 transition-opacity rounded-t-xl`}></div>
 
-                    <div className={`group/icon relative rounded-full border-2 ${rarityStyle.border} bg-stone-900 flex items-center justify-center shadow-inner z-10 group-hover:scale-110 transition-transform duration-500 cursor-help ${isSpecial ? 'w-20 h-20' : 'w-24 h-24'}`}>
-                        <AccessoryIcon item={{ typeId: item.id, name: item.name }} size={isSpecial ? 40 : 48} />
+                    <div className={`group/icon relative rounded-full border-2 ${rarityStyle.border} bg-stone-900 flex items-center justify-center shadow-inner z-10 group-hover:scale-110 transition-transform duration-500 cursor-help ${isSpecial ? 'w-16 h-16' : 'w-20 h-20'}`}>
+                        <AccessoryIcon item={{ typeId: item.id, name: item.name }} size={isSpecial ? 32 : 40} />
                         {renderTooltip(item)}
                     </div>
                 </div>
 
-                <div className="p-4 flex-1 flex flex-col items-center text-center border-t border-stone-800">
-                    <h3 className={`font-display font-bold text-lg mb-1 text-white`}>{getItemDisplayName(item)}</h3>
+                <div className="p-3 flex-1 flex flex-col items-center text-center border-t border-stone-800">
+                    <h3 className={`font-display font-bold text-sm sm:text-lg mb-1 text-white truncate w-full px-1`}>{getItemDisplayName(item)}</h3>
 
                     <div className="text-xs text-stone-400 mb-1 flex flex-col items-center gap-1">
                         {item.id === 'NOT_A_ROBOT' ? (
@@ -349,12 +349,8 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                         ) : (
                             <div className="flex items-center justify-center gap-1">
                                 {(item.id === 'insurance_card' || item.id.includes('hourglass') || item.id === 'upgrade_chip' || item.id === 'chest_key' || item.id === 'mixer' || item.id === 'magnifying_glass' || item.id === 'repair_kit' || item.id === 'time_skip_ticket' || item.id === 'construction_nanobot' || item.id === 'ai_robot') ? (
-                                    <span className="text-stone-500 font-medium">
-                                        {item.id === 'ai_robot' ? '' : (item.id.includes('hourglass')
-                                            ? (language === 'th' ? 'ใช้ลงเหมืองลับ' : 'Use in Secret Mine')
-                                            : (['time_skip_ticket', 'construction_nanobot'].includes(item.id)
-                                                ? (language === 'th' ? 'ไอเทมใช้งาน' : t('item_shop.consumable'))
-                                                : t('item_shop.consumable')))}
+                                    <span className="text-stone-500 font-medium h-4">
+                                        {item.id === 'ai_robot' ? '' : getLocalized(item.description)}
                                     </span>
                                 ) : (
                                     <div className="w-full px-2">
@@ -402,20 +398,20 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                     </div>
                 </div>
 
-                <div className="p-4 pt-0">
+                <div className="p-3 pt-0">
                     {/* Only show quantity for special bulk items, hide for equipment and robot */}
                     {isSpecial && item.id !== 'ai_robot' && (
-                        <div className="flex items-center justify-between mb-3 bg-stone-950 p-1 rounded-lg border border-stone-800">
-                            <button onClick={() => handleQuantityChange(item.id, -1)} className="p-2 hover:bg-stone-800 rounded text-stone-400 hover:text-white transition-colors">-</button>
-                            <span className="font-mono font-bold text-white text-sm">{buyQuantities[item.id] || 1}</span>
-                            <button onClick={() => handleQuantityChange(item.id, 1)} className="p-2 hover:bg-stone-800 rounded text-stone-400 hover:text-white transition-colors">+</button>
+                        <div className="flex items-center justify-between mb-2 bg-stone-950 p-0.5 rounded-lg border border-stone-800">
+                            <button onClick={() => handleQuantityChange(item.id, -1)} className="p-1.5 hover:bg-stone-800 rounded text-stone-400 hover:text-white transition-colors">-</button>
+                            <span className="font-mono font-bold text-white text-xs">{buyQuantities[item.id] || 1}</span>
+                            <button onClick={() => handleQuantityChange(item.id, 1)} className="p-1.5 hover:bg-stone-800 rounded text-stone-400 hover:text-white transition-colors">+</button>
                         </div>
                     )}
 
                     {isBulkItem && (
-                        <div className="flex gap-1 mb-3 justify-center">
-                            <button onClick={() => setQuantity(item.id, 10)} className="px-2 py-1 bg-stone-800 hover:bg-stone-700 rounded text-[10px] text-stone-400 hover:text-white border border-stone-700">x10</button>
-                            <button onClick={() => setQuantity(item.id, 50)} className="px-2 py-1 bg-stone-800 hover:bg-stone-700 rounded text-[10px] text-stone-400 hover:text-white border border-stone-700">x50</button>
+                        <div className="flex gap-1 mb-2 justify-center">
+                            <button onClick={() => setQuantity(item.id, 10)} className="px-1.5 py-0.5 bg-stone-800 hover:bg-stone-700 rounded text-[9px] text-stone-400 hover:text-white border border-stone-700">x10</button>
+                            <button onClick={() => setQuantity(item.id, 50)} className="px-1.5 py-0.5 bg-stone-800 hover:bg-stone-700 rounded text-[9px] text-stone-400 hover:text-white border border-stone-700">x50</button>
                         </div>
                     )}
 
@@ -427,14 +423,14 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                         if (isOwned && existingBot) {
                             const remainingMs = existingBot.expireAt ? existingBot.expireAt - Date.now() : 0;
                             const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
-                            buttonText = language === 'th' ? `ครอบครองแล้ว: ${remainingDays} วัน` : `Owned: ${remainingDays} Days`;
+                            buttonText = language === 'th' ? `ครอบครองแล้ว: ${remainingDays} ว.` : `Owned: ${remainingDays} d.`;
                         }
 
                         return (
                             <button
                                 onClick={() => handleBuyClick(item.id, item.price, getItemDisplayName(item))}
                                 disabled={!canAfford || isBuying || isCooldown || isOwned}
-                                className={`w-full py-3 rounded-lg font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 transition-all
+                                className={`w-full py-2 rounded-lg font-bold uppercase tracking-wider text-[11px] sm:text-xs flex items-center justify-center gap-2 transition-all
                                 ${isBuying ? 'bg-stone-700 text-stone-400 cursor-wait' :
                                         isCooldown ? 'bg-red-900/20 text-red-500 border border-red-900 cursor-not-allowed' :
                                             isOwned ? 'bg-stone-800 text-stone-500 border border-stone-700 cursor-not-allowed' :
@@ -656,10 +652,10 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
         return (
             <div key={item.id} className={`bg-stone-900 border ${rarityStyle.border} rounded-xl overflow-hidden flex flex-col gap-4 relative shadow-lg`}>
                 <div className={`h-1 w-full bg-gradient-to-r ${rarityStyle.bgGradient}`}></div>
-                <div className="p-4 flex flex-col gap-4">
-                    <div className="flex gap-4">
-                        <div className={`group/icon relative w-16 h-16 rounded-lg border-2 ${rarityStyle.border} bg-stone-950 flex items-center justify-center shrink-0 cursor-help`}>
-                            <AccessoryIcon item={item} size={32} />
+                <div className="p-3 flex flex-col gap-3">
+                    <div className="flex flex-col xs:flex-row gap-3">
+                        <div className={`group/icon relative w-14 h-14 rounded-lg border-2 ${rarityStyle.border} bg-stone-950 flex items-center justify-center shrink-0 cursor-help`}>
+                            <AccessoryIcon item={item} size={28} />
                             {renderTooltip(item)}
                         </div>
 
@@ -667,7 +663,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                             <div className="flex justify-between items-start mb-1">
                                 <div>
                                     <h3 className="text-base font-bold text-white leading-tight">{getItemDisplayName(item)}</h3>
-                                    {item.lifespanDays && (
+                                    {(item.lifespanDays ?? 0) > 0 && (
                                         <div className="flex items-center gap-1 text-[10px] text-yellow-500 mt-0.5">
                                             <Star size={10} />
                                             <span>{t('item_shop.bonus')}: {formatBonus(item.maxBonus, item.id)} / {t('time.day')}</span>
@@ -727,14 +723,14 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
 
                     <div className="bg-stone-950 p-3 rounded-lg border border-stone-800 space-y-2">
                         <div className="text-[10px] text-stone-500 uppercase font-bold tracking-wider">{t('item_shop.materials_required')}</div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 gap-1.5">
                             {matsList.map((m, i) => (
-                                <div key={i} className="flex items-center justify-between text-xs bg-stone-900 p-1.5 rounded">
-                                    <div className="flex items-center gap-2">
-                                        <MaterialIcon id={m.tier} size="w-4 h-4" iconSize={12} />
-                                        <span className="text-stone-300">{getLocalized(MATERIAL_CONFIG.NAMES[m.tier as keyof typeof MATERIAL_CONFIG.NAMES])}</span>
+                                <div key={i} className="flex items-center justify-between text-[11px] bg-stone-900 p-1.5 rounded">
+                                    <div className="flex items-center gap-1.5">
+                                        <MaterialIcon id={m.tier} size="w-3.5 h-3.5" iconSize={10} />
+                                        <span className="text-stone-300 truncate max-w-[60px]">{getLocalized(MATERIAL_CONFIG.NAMES[m.tier as keyof typeof MATERIAL_CONFIG.NAMES])}</span>
                                     </div>
-                                    <span className={m.owned >= m.needed ? 'text-green-400' : 'text-red-400'}>
+                                    <span className={m.owned >= m.needed ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>
                                         {m.owned}/{m.needed}
                                     </span>
                                 </div>
@@ -765,14 +761,14 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                     <button
                         onClick={() => handleStartCraft(item.id)}
                         disabled={!canCraftActual}
-                        className={`w-full py-2.5 rounded font-bold text-sm flex items-center justify-center gap-2 transition-all
+                        className={`w-full py-2 rounded font-bold text-xs flex items-center justify-center gap-2 transition-all
                       ${canCraftActual ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg' : 'bg-stone-800 text-stone-600 cursor-not-allowed border border-stone-700'}
                   `}
                     >
                         {isAlreadyCrafting ? (
-                            <>{language === 'th' ? 'รอสักครู่' : 'Wait a moment'}</>
+                            <>{language === 'th' ? 'รอ...' : 'Wait...'}</>
                         ) : (
-                            <><Hammer size={16} /> {t('item_shop.start_craft')}</>
+                            <><Hammer size={12} /> {t('item_shop.start_craft')}</>
                         )}
                     </button>
                 </div>
@@ -1115,7 +1111,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                         </div>
                     )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xxl:grid-cols-5 gap-3 sm:gap-4">
                     {RIG_PRESETS.map((preset) => {
                         // Special logic: Hide Rotten Glove (Tier 9) if already owned
                         if (preset.id === 9) {
@@ -1165,11 +1161,11 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
 
                         return (
                             <div key={preset.id} className={`bg-stone-900/60 backdrop-blur border rounded-lg overflow-hidden flex flex-col transition-all duration-300 group relative hover:bg-stone-900 ${styles.border}`}>
-                                <div className={`p-3 flex items-center gap-3 bg-gradient-to-r ${styles.bg} border-b border-stone-800/50`}>
+                                <div className={`p-2 sm:p-3 flex items-center gap-2 sm:gap-3 bg-gradient-to-r ${styles.bg} border-b border-stone-800/50`}>
                                     {renderTierIcon(preset.id)}
                                     <div className="min-w-0">
-                                        <div className="text-xs font-black text-white uppercase tracking-widest mb-0.5">{t('machine_shop.stats.tier')} {preset.id}</div>
-                                        <h3 className={`font-display font-bold text-sm leading-tight truncate ${styles.text}`}>{getLocalized(preset.name)}</h3>
+                                        <div className="text-[10px] font-black text-white uppercase tracking-widest mb-0.5">{t('machine_shop.stats.tier')} {preset.id}</div>
+                                        <h3 className={`font-display font-bold text-xs sm:text-sm leading-tight truncate ${styles.text}`}>{getLocalized(preset.name)}</h3>
                                     </div>
                                     {/* Recommendation Badge */}
                                     {MINING_VOLATILITY_CONFIG[preset.id]?.tag && (
@@ -1184,12 +1180,12 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                         </div>
                                     )}
                                 </div>
-                                <div className="p-3 flex-1 flex flex-col gap-2 text-xs">
+                                <div className="p-2 sm:p-3 flex-1 flex flex-col gap-1.5 sm:gap-2 text-[10px] sm:text-xs">
                                     {/* Hashrate & {t('machine_shop.stats.stability')} (Volatility Model) */}
-                                    <div className="flex flex-col gap-1 w-full bg-stone-950/30 px-2 py-1.5 rounded">
-                                        <div className="flex justify-between items-center text-[10px] text-stone-500 uppercase tracking-tighter">
+                                    <div className="flex flex-col gap-1 w-full bg-stone-950/30 px-1.5 sm:px-2 py-1 rounded">
+                                        <div className="flex justify-between items-center text-[9px] sm:text-[10px] text-stone-500 uppercase tracking-tighter">
                                             <div className="flex items-center gap-1">
-                                                <span>Hashrate ⓘ</span>
+                                                <span className="truncate max-w-[50px] sm:max-w-none">Hashrate ⓘ</span>
                                                 <div className="group/tooltip relative">
                                                     <Info size={10} className="text-stone-600 cursor-help" />
                                                     <div className="absolute bottom-full left-0 mb-2 w-56 p-2 bg-stone-900 border border-stone-800 rounded shadow-xl text-[10px] text-stone-400 leading-relaxed opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-50 normal-case font-sans">
@@ -1205,8 +1201,8 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                                     </div>
                                                 </div>
                                             </div>
-                                            <span className="text-yellow-500 font-bold font-mono">
-                                                {MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMin} - {MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMax} MH/s
+                                            <span className="text-yellow-500 font-bold font-mono text-[9px] sm:text-[10px]">
+                                                {MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMin}-{MINING_VOLATILITY_CONFIG[preset.id]?.hashrateMax}
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center text-[10px] text-stone-500 uppercase tracking-tighter">
@@ -1246,30 +1242,28 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                             {tierOwnedCount} / {tierMax}
                                         </span>
                                     </div>
-                                    {isCrafting && (
-                                        <div className="mt-auto pt-2 border-t border-dashed border-stone-800">
-                                            <div className="text-[10px] text-stone-400 mb-1">{t('machine_shop.craft_req')}:</div>
-                                            <div className="flex flex-wrap gap-1">
-                                                {preset.craftingRecipe?.materials && Object.entries(preset.craftingRecipe.materials).map(([tierStr, amt]) => {
-                                                    const tier = parseInt(tierStr);
-                                                    const has = materials[tier] || 0;
-                                                    const enough = has >= amt;
-                                                    return (
-                                                        <div key={`mat-${tier}`} className={`flex items-center gap-1 px-1 py-0.5 rounded border ${enough ? 'bg-emerald-900/30 border-emerald-800' : 'bg-red-900/30 border-red-800'}`}>
-                                                            <MaterialIcon id={tier} size="w-4 h-4" iconSize={10} />
-                                                            <span className={`text-[9px] font-mono ${enough ? 'text-emerald-400' : 'text-red-400'}`}>{has}/{amt}</span>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
+                                    <div className="mt-auto pt-1.5 border-t border-dashed border-stone-800">
+                                        <div className="text-[9px] text-stone-400 mb-1">{t('machine_shop.craft_req')}:</div>
+                                        <div className="flex flex-wrap gap-1">
+                                            {preset.craftingRecipe?.materials && Object.entries(preset.craftingRecipe.materials).map(([tierStr, amt]) => {
+                                                const tier = parseInt(tierStr);
+                                                const has = materials[tier] || 0;
+                                                const enough = has >= amt;
+                                                return (
+                                                    <div key={`mat-${tier}`} className={`flex items-center gap-1 px-1 py-0.5 rounded border ${enough ? 'bg-emerald-900/30 border-emerald-800' : 'bg-red-900/30 border-red-800'}`}>
+                                                        <MaterialIcon id={tier} size="w-3 h-3" iconSize={8} />
+                                                        <span className={`text-[8px] font-mono ${enough ? 'text-emerald-400' : 'text-red-400'}`}>{has}/{amt}</span>
+                                                    </div>
+                                                )
+                                            })}
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
-                                <div className="p-3 pt-0 mt-auto">
+                                <div className="p-2 sm:p-3 pt-0 mt-auto">
                                     <button
                                         onClick={() => onBuyRig && onBuyRig(preset)}
                                         disabled={!canBuy}
-                                        className={`w-full py-2 rounded font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all text-xs
+                                        className={`w-full py-2 rounded font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all text-[10px] sm:text-xs
                                                 ${canBuy
                                                 ? 'bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white shadow-lg'
                                                 : 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'
@@ -1277,9 +1271,9 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                             `}
                                     >
                                         {isWarehouseFull
-                                            ? (language === 'th' ? 'โกดังเต็ม' : 'Warehouse Full')
+                                            ? (language === 'th' ? 'โกดังเต็ม' : 'Full')
                                             : isTierLimitReached
-                                                ? (language === 'th' ? `ครบจำกัด (${tierMax})` : `Limit Reached (${tierMax})`)
+                                                ? (language === 'th' ? `จำกัด (${tierMax})` : `Limit (${tierMax})`)
                                                 : isCrafting
                                                     ? t('shop.craft_action')
                                                     : formatCurrency(preset.price)}
@@ -1532,7 +1526,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                             <button onClick={onClose} className="text-stone-500 hover:text-white bg-stone-900 p-2 rounded-full hover:bg-stone-800"><X size={24} /></button>
                         </div>
                     </div>
-                    <div className="flex px-4 gap-4 overflow-x-auto custom-scrollbar no-scrollbar py-1">
+                    <div className="flex flex-wrap px-4 gap-1 sm:gap-4 py-1">
                         <button
                             onClick={() => setActiveTab('RIGS')}
                             className={`pb-3 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 shrink-0 ${activeTab === 'RIGS' ? 'text-yellow-500 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
@@ -1578,7 +1572,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                     <Star className="text-yellow-500" size={20} />
                                     <h3 className="text-lg font-bold text-stone-200 uppercase tracking-wider">{t('item_shop.recommended')}</h3>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xxl:grid-cols-5 gap-3 sm:gap-6">
                                     {specialItems.map(item => renderItemCard(item, true))}
                                 </div>
                             </div>
@@ -1590,7 +1584,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                 <Hammer className="text-orange-500" size={20} />
                                 <h3 className="text-lg font-bold text-stone-200 uppercase tracking-wider">{t('item_shop.workshop_tab')}</h3>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xxl:grid-cols-5 gap-3 sm:gap-6 mb-8">
                                 {craftableItems.map(item => renderCraftCard(item))}
                             </div>
                         </div>
@@ -1604,7 +1598,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                     <Wrench className="text-green-500" size={20} />
                                     <h3 className="text-lg font-bold text-stone-200 uppercase tracking-wider">{language === 'th' ? 'กล่องชุดซ่อมอุปกรณ์' : 'Repair Kit Sets'}</h3>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xxl:grid-cols-5 gap-3 sm:gap-6">
                                     {REPAIR_KITS.map(kit => renderCraftCard(kit as any))}
                                 </div>
                             </div>

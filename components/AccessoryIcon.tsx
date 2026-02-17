@@ -15,7 +15,7 @@ interface AccessoryIconProps {
 }
 
 export const AccessoryIcon: React.FC<AccessoryIconProps> = ({ item, size = 24, className = '', showGlow = true }) => {
-    if (!item) return <Briefcase size={size} className={className} />;
+    if (!item) return <HardHat size={size} className={className} />;
 
     // --- TYPE DETECTION ---
     let typeId = item.typeId || '';
@@ -29,6 +29,7 @@ export const AccessoryIcon: React.FC<AccessoryIconProps> = ({ item, size = 24, c
     else if (nameStr.includes('key') || nameStr.includes('กุญแจ')) typeId = 'chest_key';
     else if (nameStr.includes('mixer') || nameStr.includes('โต๊ะช่างสกัดแร่') || nameStr.includes('เครื่องผสม')) typeId = 'mixer';
     else if (nameStr.includes('magnifying') || nameStr.includes('แว่นขยาย')) typeId = 'magnifying_glass';
+    else if (nameStr.includes('blueprint') || nameStr.includes('พิมพ์เขียว')) typeId = 'slot_blueprint';
     else if (nameStr.includes('insurance') || nameStr.includes('ใบประกัน')) typeId = 'insurance_card';
     else if (nameStr.includes('hourglass') || nameStr.includes('นาฬิกาทราย')) typeId = 'hourglass_small';
     else if (nameStr.includes('mystery ore') || nameStr.includes('แร่ปริศนา') || nameStr.includes('วัสดุปริศนา')) typeId = 'mystery_ore';
@@ -37,14 +38,6 @@ export const AccessoryIcon: React.FC<AccessoryIconProps> = ({ item, size = 24, c
     else if (nameStr.includes('robot') || nameStr.includes('หุ่นยนต์')) typeId = 'ai_robot';
     else if (nameStr.includes('helmet') || nameStr.includes('หมวก')) typeId = 'hat';
     else if (nameStr.includes('glasses') || nameStr.includes('แว่น')) typeId = 'glasses';
-    else if (nameStr.includes('uniform') || nameStr.includes('suit') || nameStr.includes('shirt') || nameStr.includes('ชุด')) typeId = 'uniform';
-    else if (nameStr.includes('bag') || nameStr.includes('backpack') || nameStr.includes('กระเป๋า')) typeId = 'bag';
-    else if (nameStr.includes('boots') || nameStr.includes('รองเท้า')) typeId = 'boots';
-    else if (nameStr.includes('mobile') || nameStr.includes('phone') || nameStr.includes('มือถือ')) typeId = 'mobile';
-    else if (nameStr.includes('pc') || nameStr.includes('computer') || nameStr.includes('คอม')) typeId = 'pc';
-    else if (nameStr.includes('time skip ticket') || nameStr.includes('ตั๋วเร่งเวลา')) typeId = 'time_skip_ticket';
-    else if (nameStr.includes('construction nanobot') || nameStr.includes('นาโนบอทก่อสร้าง')) typeId = 'construction_nanobot';
-    else if (nameStr.includes('vip') || nameStr.includes('บัตร')) typeId = 'vip_withdrawal_card';
     else if (nameStr.includes('repair kit') || nameStr.includes('ชุดซ่อม')) {
         if (nameStr.includes('basic') || nameStr.includes('พื้นฐาน')) typeId = 'repair_kit_1';
         else if (nameStr.includes('standard') || nameStr.includes('มาตรฐาน')) typeId = 'repair_kit_2';
@@ -52,6 +45,7 @@ export const AccessoryIcon: React.FC<AccessoryIconProps> = ({ item, size = 24, c
         else if (nameStr.includes('mechanic') || nameStr.includes('เครื่องจักร')) typeId = 'repair_kit_4';
         else typeId = 'repair_kit_1';
     }
+    else if (nameStr.includes('uniform') || nameStr.includes('suit') || nameStr.includes('shirt') || nameStr.includes('ชุด')) typeId = 'uniform';
 
     // --- RARITY STYLING ---
     const rarity = item.rarity || 'COMMON';
@@ -84,6 +78,7 @@ export const AccessoryIcon: React.FC<AccessoryIconProps> = ({ item, size = 24, c
         if (tid.startsWith('pc') || tid.startsWith('computer')) return <Monitor {...props} className={`${props.className} text-rose-400 ${showGlow ? 'drop-shadow-[0_0_12px_rgba(251,113,133,0.8)]' : ''}`} />;
         if (tid.startsWith('auto_excavator') || tid.startsWith('truck')) return <TrainFront {...props} className={`${props.className} text-amber-500 ${showGlow ? 'drop-shadow-[0_0_12px_rgba(245,158,11,0.8)]' : ''}`} />;
 
+        if (tid.startsWith('slot_blueprint')) return <FileText {...props} className={`${props.className} text-blue-400 ${showGlow ? 'drop-shadow-[0_0_12px_rgba(96,165,250,0.8)]' : ''}`} />;
         if (tid.startsWith('upgrade_chip') || tid.startsWith('chip')) return <Cpu {...props} className={`${props.className} text-blue-500 ${showGlow ? 'drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]' : ''}`} />;
         if (tid.startsWith('chest_key') || tid.startsWith('key')) return <Key {...props} className={`${props.className} text-yellow-400 ${showGlow ? 'drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]' : ''}`} />;
         if (tid.startsWith('mixer')) return <Factory {...props} className={`${props.className} text-pink-500 ${showGlow ? 'drop-shadow-[0_0_12px_rgba(236,72,153,0.8)]' : ''}`} />;
@@ -140,7 +135,7 @@ export const AccessoryIcon: React.FC<AccessoryIconProps> = ({ item, size = 24, c
         }
 
         // Default fallback handling
-        return <Briefcase {...props} className={`${props.className} text-stone-500`} />;
+        return <HardHat {...props} className={`${props.className} text-stone-500`} />;
     };
 
     return (

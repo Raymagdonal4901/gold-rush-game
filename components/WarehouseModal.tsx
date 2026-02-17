@@ -532,11 +532,11 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                 <X size={20} className="relative z-10 transition-transform group-hover:rotate-90" />
                             </button>
                         </div>
-                        <div className="flex px-5 gap-8 overflow-x-auto no-scrollbar">
-                            <button onClick={() => setActiveTab('MATERIALS')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'MATERIALS' ? 'text-blue-400 border-blue-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>{t('warehouse.materials_tab')}</button>
-                            <button onClick={() => setActiveTab('ITEMS')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'ITEMS' ? 'text-yellow-500 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>{t('warehouse.items_tab')}</button>
-                            <button onClick={() => setActiveTab('EQUIPMENT')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'EQUIPMENT' ? 'text-emerald-500 border-emerald-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>{t('warehouse.equipment_tab')}</button>
-                            <button onClick={() => setActiveTab('REPAIR_KITS')} className={`pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'REPAIR_KITS' ? 'text-red-400 border-red-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>
+                        <div className="flex px-5 gap-4 sm:gap-8 overflow-x-auto no-scrollbar">
+                            <button onClick={() => setActiveTab('MATERIALS')} className={`pb-3 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'MATERIALS' ? 'text-blue-400 border-blue-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>{t('warehouse.materials_tab')}</button>
+                            <button onClick={() => setActiveTab('ITEMS')} className={`pb-3 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'ITEMS' ? 'text-yellow-500 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>{t('warehouse.items_tab')}</button>
+                            <button onClick={() => setActiveTab('EQUIPMENT')} className={`pb-3 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'EQUIPMENT' ? 'text-emerald-500 border-emerald-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>{t('warehouse.equipment_tab')}</button>
+                            <button onClick={() => setActiveTab('REPAIR_KITS')} className={`pb-3 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'REPAIR_KITS' ? 'text-red-400 border-red-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>
                                 <Wrench size={16} /> {t('warehouse.repair_kits_tab')}
                             </button>
                         </div>
@@ -544,7 +544,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
                         {activeTab === 'MATERIALS' && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                                 {displayTiers.map((tier) => {
                                     const count = materials[tier] || 0;
                                     const name = getLocalized(MATERIAL_CONFIG.NAMES[tier as keyof typeof MATERIAL_CONFIG.NAMES]);
@@ -553,63 +553,46 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                     const currentPrice = (marketState?.trends?.[tier]?.currentPrice || MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES]) || 0;
 
                                     return (
-                                        <div key={tier} className={`bg-stone-900/80 border border-stone-800 rounded-2xl p-5 flex flex-col gap-4 relative transition-all hover:border-stone-700`}>
-                                            <div className="flex items-center gap-4">
+                                        <div key={tier} className={`bg-stone-900/80 border border-stone-800 rounded-xl p-3 flex flex-col gap-3 relative transition-all hover:border-stone-700`}>
+                                            <div className="flex flex-col xs:flex-row items-center xs:items-start gap-2 xs:gap-3">
                                                 <div className="shrink-0 relative">
-                                                    <MaterialIcon id={tier} size="w-14 h-14" iconSize={28} />
-                                                    <div className="absolute -top-2 -right-2 bg-stone-950 border border-stone-800 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">{count.toLocaleString()}</div>
+                                                    <MaterialIcon id={tier} size="w-12 h-12" iconSize={24} />
+                                                    <div className="absolute -top-1.5 -right-1.5 bg-stone-950 border border-stone-800 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md">{count.toLocaleString()}</div>
                                                 </div>
-                                                <div className="flex-1">
-                                                    <h3 className={`font-bold text-lg leading-tight ${getTierColor(tier)}`}>{name}</h3>
+                                                <div className="flex-1 min-w-0 text-center xs:text-left">
+                                                    <h3 className={`font-bold text-sm leading-tight truncate ${getTierColor(tier)}`}>{name}</h3>
                                                     {tier > 0 && tier < 8 && (
-                                                        <div className="space-y-1 mt-1">
-                                                            <div className="flex items-center justify-between text-[10px] text-stone-500 font-bold uppercase tracking-wider">
-                                                                <span>{t('warehouse.base_price')}</span>
+                                                        <div className="mt-1 space-y-0.5">
+                                                            <div className="flex items-center justify-center xs:justify-between text-[8px] text-stone-500 font-bold uppercase tracking-wider">
+                                                                <span className="hidden xs:inline">{t('warehouse.base_price')}</span>
                                                                 <span>{formatCurrency(MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES] || 0)}</span>
                                                             </div>
                                                             <div
-                                                                className="flex items-center justify-between cursor-pointer hover:bg-stone-800/50 p-1 -mx-1 rounded transition-colors group/price"
+                                                                className="flex items-center justify-center xs:justify-between cursor-pointer hover:bg-stone-800/50 p-0.5 rounded transition-colors group/price"
                                                                 onClick={() => onOpenMarket?.(tier)}
-                                                                title={t('warehouse.click_stats')}
                                                             >
                                                                 {tier === 7 ? (
-                                                                    <div className="w-full flex items-center justify-center py-1 bg-red-900/30 border border-red-500/30 rounded-lg">
-                                                                        <span className="text-[10px] text-red-400 font-black uppercase tracking-widest animate-pulse">
-                                                                            {language === 'th' ? 'ปิดการซื้อขายชั่วคราว' : 'Market Closed'}
+                                                                    <div className="w-full text-center">
+                                                                        <span className="text-[8px] text-red-400 font-bold uppercase animate-pulse">
+                                                                            {language === 'th' ? 'ปิดชั่วคราว' : 'Closed'}
                                                                         </span>
                                                                     </div>
                                                                 ) : (
                                                                     <>
-                                                                        <div className="flex flex-col">
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <Tag size={10} className="text-stone-500 group-hover/price:text-emerald-400" />
-                                                                                {formatCurrency(currentPrice)}
-                                                                                <span className="text-[9px] text-stone-500 font-normal ml-1">
-                                                                                    ({formatCurrency(currentPrice, { forceTHB: language === 'en', forceUSD: language === 'th' })})
-                                                                                </span>
+                                                                        <div className="flex flex-col items-center xs:items-start">
+                                                                            <div className="flex items-center gap-1">
+                                                                                <Tag size={8} className="text-stone-500" />
+                                                                                <span className="text-[9px] font-bold text-white">{formatCurrency(currentPrice)}</span>
                                                                             </div>
-                                                                            {marketState?.trends?.[tier]?.history && renderSparkline(marketState.trends[tier].history)}
                                                                         </div>
-                                                                        <div className="text-right">
+                                                                        <div className="text-right hidden xs:block">
                                                                             {(() => {
                                                                                 const base = MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES] || 0;
                                                                                 const diffFromBase = currentPrice - base;
                                                                                 const percent = (base > 0) ? (diffFromBase / base) * 100 : 0;
-
-                                                                                if (percent >= 0) return (
-                                                                                    <div className="flex flex-col items-end">
-                                                                                        <div className="flex items-center text-[10px] text-emerald-500 font-bold animate-pulse">
-                                                                                            <TrendingUp size={10} className="mr-0.5" /> {t('warehouse.market_up')}
-                                                                                        </div>
-                                                                                        <div className="text-[9px] text-emerald-400 font-bold">+{percent.toFixed(1)}%</div>
-                                                                                    </div>
-                                                                                );
                                                                                 return (
-                                                                                    <div className="flex flex-col items-end">
-                                                                                        <div className="flex items-center text-[10px] text-red-500 font-bold animate-pulse">
-                                                                                            <TrendingDown size={10} className="mr-0.5" /> {t('warehouse.market_down')}
-                                                                                        </div>
-                                                                                        <div className="text-[9px] text-red-400 font-bold">{percent.toFixed(1)}%</div>
+                                                                                    <div className={`text-[8px] font-bold ${percent >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                                                        {percent >= 0 ? '+' : ''}{percent.toFixed(1)}%
                                                                                     </div>
                                                                                 );
                                                                             })()}
@@ -621,23 +604,18 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="mt-auto pt-2">
+                                            <div className="mt-auto">
                                                 {recipe ? (
                                                     <button
                                                         onClick={() => handleCraftClick(tier)}
-                                                        className={`w-full text-xs font-bold py-2.5 rounded-xl border transition-all uppercase tracking-widest flex items-center justify-center gap-2 ${canCraft ? 'bg-stone-800 hover:bg-purple-900/40 text-purple-400 border-purple-500/50' : 'bg-stone-950 text-stone-700 border-stone-900'}`}
+                                                        className={`w-full text-[10px] font-bold py-2 rounded-lg border transition-all uppercase tracking-widest flex items-center justify-center gap-1.5 ${canCraft ? 'bg-stone-800 hover:bg-purple-900/40 text-purple-400 border-purple-500/50' : 'bg-stone-950 text-stone-700 border-stone-900'}`}
                                                     >
-                                                        <Hammer size={14} /> {t('warehouse.extract')}
+                                                        <Hammer size={12} /> {t('warehouse.extract')}
                                                     </button>
                                                 ) : (
-                                                    // Collection Items (Tier 8, 9) or Max Tier
-                                                    tier >= 8 ? (
-                                                        <div className={`text-[10px] text-center uppercase tracking-widest font-bold py-2.5 ${tier === 8 ? 'text-fuchsia-500 animate-pulse' : 'text-yellow-500 animate-pulse'}`}>
-                                                            {tier === 8 ? '✨ COLLECTION ✨' : '👑 LEGENDARY 👑'}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="text-[10px] text-stone-600 text-center uppercase tracking-widest font-bold py-2.5">{t('warehouse.max_tier')}</div>
-                                                    )
+                                                    <div className={`text-[8px] text-center uppercase tracking-widest font-bold py-2 ${tier === 8 ? 'text-fuchsia-500' : tier === 9 ? 'text-yellow-500' : 'text-stone-600'}`}>
+                                                        {tier === 8 ? '✨ COLLECTION ✨' : tier === 9 ? '👑 LEGENDARY 👑' : t('warehouse.max_tier')}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -969,20 +947,20 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                         )}
                     </div>
 
-                    <div className="p-4 bg-stone-900 border-t border-stone-800 shrink-0 flex justify-between items-center px-8">
-                        <div className="flex items-center gap-2">
-                            <Coins className="text-yellow-500" size={18} />
-                            <span className="text-sm text-stone-400 font-bold uppercase tracking-widest">{t('common.balance')}:</span>
-                            <span className="text-lg font-mono font-bold text-white">
+                    <div className="p-2.5 sm:p-4 bg-stone-900 border-t border-stone-800 shrink-0 flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4 px-4 sm:px-8">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Coins className="text-yellow-500" size={16} />
+                            <span className="text-[11px] sm:text-sm text-stone-400 font-bold uppercase tracking-widest">{t('common.balance')}:</span>
+                            <span className="text-base sm:text-lg font-mono font-bold text-white flex items-baseline gap-1.5">
                                 {formatCurrency(balance)}
-                                <span className="text-sm font-normal opacity-50 ml-2">
+                                <span className="text-[10px] sm:text-sm font-normal opacity-50 whitespace-nowrap">
                                     ({formatCurrency(balance, { forceTHB: language === 'en', forceUSD: language === 'th' })})
                                 </span>
                             </span>
                         </div>
-                        <div className="flex items-center gap-2 bg-stone-950 px-3 py-1 rounded-lg border border-stone-800">
-                            <span className="text-[10px] font-bold text-stone-600 uppercase tracking-widest">{t('warehouse.extractor_status')}</span>
-                            <span className={hasMixer ? "text-emerald-500 text-xs font-bold" : "text-red-500 text-xs font-bold"}>{hasMixer ? t('warehouse.connected') : t('warehouse.not_installed')}</span>
+                        <div className="flex items-center gap-2 bg-stone-950 px-2 sm:px-3 py-1 rounded-lg border border-stone-800 shrink-0">
+                            <span className="text-[9px] sm:text-[10px] font-bold text-stone-600 uppercase tracking-widest">{t('warehouse.extractor_status')}</span>
+                            <span className={hasMixer ? "text-emerald-500 text-[10px] sm:text-xs font-bold" : "text-red-500 text-[10px] sm:text-xs font-bold"}>{hasMixer ? t('warehouse.connected') : t('warehouse.not_installed')}</span>
                         </div>
                     </div>
                 </div>

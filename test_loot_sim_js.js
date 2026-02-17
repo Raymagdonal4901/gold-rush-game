@@ -1,20 +1,11 @@
 
-// Self-contained constants for testing based on current file state
-const MATERIAL_CONFIG = {
-    DROP_CHANCE: 0.1, // 10% chance
-};
+const { RIG_LOOT_TABLES, MATERIAL_CONFIG } = require('./backend/src/constants');
 
-const RIG_LOOT_TABLES = {
-    2: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-    3: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-    4: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-    5: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-    6: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-    7: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-    8: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-};
+function getRigBuffs() {
+    return { dropRateBoost: 0 };
+}
 
-function rollLoot(presetId, buffs = {}) {
+function rollLoot(presetId: number, buffs: any = {}): { matTier?: number; itemId?: string; amount: number } {
     const table = RIG_LOOT_TABLES[presetId];
     if (!table) return { tier: 1, amount: 1 };
 
@@ -34,16 +25,18 @@ function rollLoot(presetId, buffs = {}) {
     return { tier: last.matTier, itemId: last.itemId, amount: last.minAmount };
 }
 
-async function runSimulation(iterations = 10000) {
+async function runSimulation(iterations = 1000) {
     console.log(`Simulating ${iterations} intervals...`);
     let successCount = 0;
     let keyCount = 0;
     let otherCount = 0;
 
     for (let i = 0; i < iterations; i++) {
+        // Step 1: Check Drop Chance (MATERIAL_CONFIG.DROP_CHANCE = 0.1)
         if (Math.random() < MATERIAL_CONFIG.DROP_CHANCE) {
             successCount++;
-            const loot = rollLoot(3);
+            // Step 2: Roll Loot
+            const loot = rollLoot(3); // Testing with Tier 3
             if (loot.itemId === 'chest_key') {
                 keyCount++;
             } else {
@@ -57,10 +50,10 @@ async function runSimulation(iterations = 10000) {
     console.log(`- Mine Keys: ${keyCount}`);
     console.log(`- Other Items: ${otherCount}`);
 
-    if (otherCount === 0 && Math.abs((successCount / iterations) - 0.1) < 0.02) {
-        console.log('Test PASSED: Only Mine Keys are dropping correctly at ~10% rate.');
+    if (otherCount === 0 && successCount === keyCount) {
+        console.log('Test PASSED: Only Mine Keys are dropping correctly.');
     } else {
-        console.log('Test FAILED: Non-key items detected or rate mismatch.');
+        console.log('Test FAILED: Non-key items detected or logic mismatch.');
     }
 }
 

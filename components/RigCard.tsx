@@ -847,10 +847,12 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <div className="flex-1 flex flex-col relative min-h-[160px]">
                         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 bg-black/60 px-2 py-0.5 rounded-full border border-white/5 flex items-center gap-1.5">
                             <Wrench size={10} className={healthPercent <= 20 ? 'text-red-500' : 'text-stone-300'} />
-                            <div className="flex gap-[2px]">
-                                {Array.from({ length: 10 }).map((_, i) => <div key={i} className={`h-1.5 w-2 rounded-[1px] ${healthPercent >= (i + 1) * 10 ? (healthPercent > 20 ? 'bg-green-500' : 'bg-red-500 animate-pulse') : 'bg-stone-800'}`} />)}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <div className="flex gap-[1.5px]">
+                                    {Array.from({ length: 10 }).map((_, i) => <div key={i} className={`h-1 w-1.5 sm:w-2 rounded-[1px] ${healthPercent >= (i + 1) * 10 ? (healthPercent > 20 ? 'bg-green-500' : 'bg-red-500 animate-pulse') : 'bg-stone-800'}`} />)}
+                                </div>
+                                <span className="text-[8px] sm:text-[9px] text-stone-400 font-mono">{Math.ceil(healthPercent)}%</span>
                             </div>
-                            <span className="text-[9px] text-stone-400 font-mono">{Math.ceil(healthPercent)}%</span>
                         </div>
                         <div className="flex-1 flex items-center justify-center relative">
                             {/* Floating Stars Animation */}
@@ -895,49 +897,49 @@ export const RigCard: React.FC<RigCardProps> = ({
                 <div className="mt-auto z-10 p-3 pt-0 space-y-2.5">
                     {!isExpired && (
                         <div className="space-y-2 mb-2">
-                            <div className={`flex items-center justify-between p-1.5 rounded-lg border-2 ${currentMaterials > 0 ? 'bg-stone-950 border-yellow-600' : 'bg-stone-950/30 border-stone-800'}`}>
+                            <div className={`flex items-center justify-between p-1 rounded-lg border ${currentMaterials > 0 ? 'bg-stone-950 border-yellow-600/50' : 'bg-stone-950/30 border-stone-800'}`}>
                                 <div className="flex items-center gap-2">
-                                    <div className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center ${currentMaterials > 0 ? 'border-yellow-500 bg-stone-900' : 'border-stone-800 bg-stone-950'}`}>
-                                        <Key size={18} className={currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-800'} />
+                                    <div className={`w-8 h-8 rounded border flex items-center justify-center ${currentMaterials > 0 ? 'border-yellow-500/50 bg-stone-900' : 'border-stone-800 bg-stone-950'}`}>
+                                        <Key size={14} className={currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-800'} />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className={`text-[10px] font-bold uppercase ${currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-400'}`}>{currentMaterials > 0 ? t('rig.mining_key') : t('rig.waiting_discovery')}</span>
-                                        <div className="text-[10px] mt-0.5">{currentMaterials > 0 ? <span className="text-red-500 font-extrabold">{language === 'th' ? 'เต็ม (FULL)' : 'FULL'}</span> : <span className="text-stone-500">{t('rig.capacity')} 1</span>}</div>
+                                        <span className={`text-[9px] font-bold uppercase ${currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-400'}`}>{currentMaterials > 0 ? t('rig.mining_key') : t('rig.waiting_discovery')}</span>
+                                        <div className="text-[8px] mt-0.5">{currentMaterials > 0 ? <span className="text-red-500 font-extrabold">{language === 'th' ? 'เต็ม (FULL)' : 'FULL'}</span> : <span className="text-stone-500">{t('rig.capacity')} 1</span>}</div>
                                     </div>
                                 </div>
                                 {currentMaterials > 0 && !isExploring && (
-                                    <button onClick={handleCollectMaterialsClick} className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1"><ArrowDownToLine size={14} /> {t('rig.collect')}</button>
+                                    <button onClick={handleCollectMaterialsClick} className="bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-bold px-2 py-1 rounded flex items-center gap-1"><ArrowDownToLine size={12} /> {t('rig.collect')}</button>
                                 )}
                             </div>
 
                             {isGiftAvailable && !isExploring && (
-                                <div className="flex items-center justify-between p-1.5 rounded-lg border-2 bg-emerald-950/20 border-emerald-500/50 animate-pulse">
+                                <div className="flex items-center justify-between p-1 rounded-lg border bg-emerald-950/20 border-emerald-500/50 animate-pulse">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-10 h-10 rounded-lg border-2 border-emerald-500 bg-emerald-900/30 flex items-center justify-center">
-                                            <Gift size={18} className="text-emerald-400" />
+                                        <div className="w-8 h-8 rounded border border-emerald-500/50 bg-emerald-900/30 flex items-center justify-center">
+                                            <Gift size={14} className="text-emerald-400" />
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] font-black uppercase text-emerald-400">{language === 'th' ? 'ของขวัญประจำวัน' : 'DAILY GIFT'}</span>
-                                            <span className="text-[9px] text-stone-400">{language === 'th' ? 'กุญแจเหมืองรออยู่!' : 'Mining Key is ready!'}</span>
+                                            <span className="text-[9px] font-black uppercase text-emerald-400">{language === 'th' ? 'ของขวัญประจำวัน' : 'DAILY GIFT'}</span>
+                                            <span className="text-[8px] text-stone-400">{language === 'th' ? 'กุญแจเหมืองรออยู่!' : 'Mining Key is ready!'}</span>
                                         </div>
                                     </div>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); onClaimGift(rig); }}
-                                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1"
+                                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-bold px-2 py-1 rounded flex items-center gap-1"
                                     >
-                                        <Download size={14} /> {t('rig.claim')}
+                                        <Download size={12} /> {t('rig.claim')}
                                     </button>
                                 </div>
                             )}
                         </div>
                     )}
 
-                    <div className="flex justify-between items-end px-1 border-t border-stone-800 pt-3">
+                    <div className="flex justify-between items-end px-1 border-t border-stone-800 pt-2">
                         <div className="text-right w-full">
-                            <div className="text-xl font-mono font-bold text-white flex items-center justify-end gap-1">
-                                {isOverclockActive && <span className="text-emerald-400 text-xs animate-pulse">x1.5</span>}
+                            <div className="text-lg font-mono font-bold text-white flex items-center justify-end gap-1">
+                                {isOverclockActive && <span className="text-emerald-400 text-[10px] animate-pulse">x1.5</span>}
                                 <span className="text-yellow-400 tracking-widest">{displayAmount}</span>
-                                <Sparkles size={12} className={!isExpired && !isBroken && isPowered && !isExploring && (isRolling || isIdleRolling) ? "text-yellow-500 animate-spin" : "hidden"} />
+                                <Sparkles size={10} className={!isExpired && !isBroken && isPowered && !isExploring && (isRolling || isIdleRolling) ? "text-yellow-500 animate-spin" : "hidden"} />
                             </div>
                         </div>
                     </div>
@@ -956,39 +958,39 @@ export const RigCard: React.FC<RigCardProps> = ({
                     )}
 
                     {!rig.isDead && (
-                        <div className="mb-2">
-                            <div className="grid grid-cols-2 gap-2 mb-2">
+                        <div className="mb-1">
+                            <div className="grid grid-cols-2 gap-2 mb-1.5">
                                 {rig.investment > 0 && (
-                                    <button onClick={handleRenewClick} disabled={!isExpired} className={`px-3 py-2 rounded-lg font-bold uppercase text-[12px] flex items-center justify-center gap-1.5 border h-10 ${!isExpired ? 'bg-stone-800 text-stone-600 border-stone-700' : 'bg-blue-600 text-white border-blue-500 hover:bg-blue-500'}`}><RefreshCw size={14} /> {language === 'th' ? 'ต่อสัญญา' : 'Renew'}</button>
+                                    <button onClick={handleRenewClick} disabled={!isExpired} className={`px-2 py-1.5 rounded-lg font-bold uppercase text-[11px] flex items-center justify-center gap-1 border h-9 ${!isExpired ? 'bg-stone-800 text-stone-600 border-stone-700' : 'bg-blue-600 text-white border-blue-500 hover:bg-blue-500'}`}><RefreshCw size={12} /> {language === 'th' ? 'ต่อสัญญา' : 'Renew'}</button>
                                 )}
-                                <button onClick={handleScrapClick} className={`px-3 py-2 rounded-lg font-bold uppercase text-[12px] flex items-center justify-center gap-1.5 bg-red-600 text-white border border-red-500 hover:bg-red-500 h-10 ${(rig.investment <= 0 || preset?.id === 9) && !onOpenMerge ? 'col-span-2' : (preset?.id === 9 ? 'col-span-2' : '')}`}><Trash2 size={14} /> {t('rig.destroy')}</button>
+                                <button onClick={handleScrapClick} className={`px-2 py-1.5 rounded-lg font-bold uppercase text-[11px] flex items-center justify-center gap-1 bg-red-600 text-white border border-red-500 hover:bg-red-500 h-9 ${(rig.investment <= 0 || preset?.id === 9) && !onOpenMerge ? 'col-span-2' : (preset?.id === 9 ? 'col-span-2' : '')}`}><Trash2 size={12} /> {t('rig.destroy')}</button>
                             </div>
 
                             {!isExpired && !isBroken && !isExploring && onOpenMerge && !preset?.specialProperties?.cannotMerge && (
                                 <button
                                     onClick={() => onOpenMerge(rig)}
-                                    className="w-full mb-2 bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white font-bold py-2 rounded border border-yellow-500/50 flex items-center justify-center gap-2 h-10 shadow-lg shadow-yellow-900/20"
+                                    className="w-full mb-1.5 bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-500 text-white font-bold py-1.5 rounded border border-yellow-500/50 flex items-center justify-center gap-2 h-9 shadow-lg shadow-yellow-900/20"
                                 >
-                                    <Sparkles size={16} className="text-yellow-200" />
-                                    <span className="uppercase text-xs tracking-wider">Merge / Evolve</span>
+                                    <Sparkles size={14} className="text-yellow-200" />
+                                    <span className="uppercase text-[10px] tracking-wider">Merge / Evolve</span>
                                 </button>
                             )}
 
                             <button
                                 onClick={handleClaimClick}
                                 disabled={(isExpired || !effectiveIsPowered || isExploring || globalCooldownSeconds > 0) && currentAmount <= 0}
-                                className={`w-full font-bold py-2 rounded border flex items-center justify-center gap-2 h-10 transition-all
+                                className={`w-full font-bold py-1.5 rounded border flex items-center justify-center gap-2 h-9 transition-all
                                     ${(isExpired || !effectiveIsPowered || isExploring || globalCooldownSeconds > 0)
                                         ? 'bg-stone-800 text-stone-500 border-stone-700 cursor-not-allowed'
                                         : (currentTier >= 5 && preset?.id !== 9) ? 'bg-yellow-600 text-white border-yellow-500 hover:bg-yellow-500' : 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-500'
                                     }`}
                             >
                                 {isExploring ? (
-                                    <><Skull size={18} /> {language === 'th' ? 'กำลังสำรวจ...' : 'Exploring...'}</>
+                                    <><Skull size={16} /> <span className="text-[11px] font-black">{language === 'th' ? 'กำลังสำรวจ...' : 'Exploring...'}</span></>
                                 ) : globalCooldownSeconds > 0 ? (
-                                    <><Timer size={18} className="text-orange-400" /> <span className="text-orange-400 font-mono text-xs">{language === 'th' ? 'รับได้อีกใน:' : 'Next Claim:'} {formatGlobalCooldown(globalCooldownSeconds)}</span></>
+                                    <><Timer size={16} className="text-orange-400" /> <span className="text-orange-400 font-mono text-[10px]">{language === 'th' ? 'รับได้อีกใน:' : 'Next Claim:'} {formatGlobalCooldown(globalCooldownSeconds)}</span></>
                                 ) : (
-                                    <><Coins size={18} className={isRolling ? "animate-spin" : "animate-pulse"} /> {isExpired ? t('rig.expired') : t('rig.claim_rent')}</>
+                                    <><Coins size={16} className={isRolling ? "animate-spin" : "animate-pulse"} /> <span className="text-[11px] font-black">{isExpired ? t('rig.expired') : t('rig.claim_rent')}</span></>
                                 )}
                             </button>
                         </div>

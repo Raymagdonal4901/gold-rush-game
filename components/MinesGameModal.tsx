@@ -23,7 +23,7 @@ interface GameState {
 }
 
 export const MinesGameModal: React.FC<MinesGameModalProps> = ({ isOpen, onClose, user, onRefresh }) => {
-    const { t, formatCurrency } = useTranslation();
+    const { t, formatCurrency, language } = useTranslation();
     const [betAmount, setBetAmount] = useState<number>(10);
     const [minesCount, setMinesCount] = useState<number>(3);
     const [game, setGame] = useState<GameState | null>(null);
@@ -123,31 +123,68 @@ export const MinesGameModal: React.FC<MinesGameModalProps> = ({ isOpen, onClose,
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 overflow-y-auto">
-            <div className="bg-stone-950 border border-stone-800 w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-auto md:h-[650px] relative">
+            <div className="bg-stone-950 border border-stone-800 w-full max-w-[360px] md:max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col-reverse md:flex-row h-auto md:h-[650px] relative">
 
-                {/* Close Button */}
-                <button onClick={onClose} className="absolute top-4 right-4 z-10 text-stone-500 hover:text-white transition-colors">
+                {/* Back Button */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 left-4 z-10 flex items-center gap-1 text-stone-500 hover:text-white transition-colors group"
+                >
+                    <RefreshCw size={16} className="rotate-[-90deg] group-hover:rotate-[-180deg] transition-transform duration-300" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{language === 'th' ? 'กลับ' : 'Back'}</span>
+                </button>
+
+                {/* Close Button - Hidden on mobile, use Back button instead */}
+                <button onClick={onClose} className="hidden md:block absolute top-4 right-4 z-10 text-stone-500 hover:text-white transition-colors">
                     <X size={24} />
                 </button>
 
                 {/* Left Panel: Controls */}
-                <div className="w-full md:w-80 bg-stone-900/50 border-r border-stone-800 p-6 flex flex-col justify-between shrink-0">
+                <div className="w-full md:w-80 bg-stone-900/50 border-t md:border-t-0 md:border-r border-stone-800 p-4 sm:p-6 flex flex-col justify-between shrink-0">
                     <div>
                         {/* User Balance Display */}
-                        <div className="mb-6 p-4 bg-stone-950/50 rounded-xl border border-stone-800/50 flex flex-col gap-1 shadow-inner">
-                            <span className="text-[9px] uppercase tracking-widest text-stone-500 font-bold leading-none opacity-70">{t('common.balance')}</span>
-                            <div className="text-xl font-mono font-black text-emerald-400 leading-none">{formatCurrency(user.balance)}</div>
+                        <div className="mb-3 p-2.5 bg-stone-950/50 rounded-xl border border-stone-800/50 flex flex-col gap-0.5 shadow-inner">
+                            <span className="text-[7px] uppercase tracking-widest text-stone-500 font-bold leading-none opacity-70">{t('common.balance')}</span>
+                            <div className="text-base font-mono font-black text-emerald-400 leading-none">{formatCurrency(user.balance)}</div>
                         </div>
 
-                        <div className="flex items-center gap-2 text-yellow-500 mb-6">
-                            <Bomb size={24} />
-                            <h2 className="text-xl font-display font-bold text-white uppercase tracking-wider">{t('mines.title')}</h2>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-1.5 text-yellow-500">
+                                <Bomb size={16} />
+                                <h2 className="text-sm font-display font-bold text-white uppercase tracking-wider">{t('mines.title')}</h2>
+                            </div>
+
+                            {/* Action Button in Header */}
+                            <div className="shrink-0">
+                                {game?.status === 'ACTIVE' ? (
+                                    <button
+                                        onClick={handleCashOut}
+                                        disabled={game.revealed.length === 0 || loading}
+                                        className={`px-4 py-1.5 sm:px-5 sm:py-2 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95 border
+                                            ${game.revealed.length === 0 || loading
+                                                ? 'bg-stone-800 text-stone-500 border-stone-700 cursor-not-allowed'
+                                                : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]'}`}
+                                    >
+                                        {loading ? <RefreshCw className="animate-spin w-4 h-4" /> : <Trophy size={16} />}
+                                        {t('mines.cash_out')}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={game?.status ? resetGame : handleStartGame}
+                                        disabled={loading}
+                                        className="px-4 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95 border border-yellow-500 shadow-[0_0_20px_rgba(202,138,4,0.4)]"
+                                    >
+                                        {loading ? <RefreshCw className="animate-spin w-4 h-4" /> : <ShieldCheck size={16} />}
+                                        {game?.status ? t('mines.play_again_short') : t('mines.start_game')}
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-3 md:space-y-6">
                             {/* Bet Amount */}
                             <div>
-                                <label className="block text-[10px] uppercase tracking-widest text-stone-500 font-bold mb-2">{t('mines.bet_amount')}</label>
+                                <label className="block text-[9px] uppercase tracking-widest text-stone-500 font-bold mb-1">{t('mines.bet_amount')}</label>
                                 <div className="relative">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 font-bold">฿</span>
                                     <input
@@ -155,7 +192,7 @@ export const MinesGameModal: React.FC<MinesGameModalProps> = ({ isOpen, onClose,
                                         value={betAmount}
                                         onChange={(e) => setBetAmount(Math.max(1, Number(e.target.value)))}
                                         disabled={game?.status === 'ACTIVE'}
-                                        className="w-full bg-stone-950 border border-stone-700 rounded-lg py-3 pl-8 pr-4 text-white font-mono focus:border-yellow-500 outline-none transition-colors"
+                                        className="w-full bg-stone-950 border border-stone-700 rounded-lg py-2 pl-8 pr-4 text-white font-mono text-sm focus:border-yellow-500 outline-none transition-colors"
                                     />
                                 </div>
                                 <div className="flex gap-2 mt-2">
@@ -174,12 +211,12 @@ export const MinesGameModal: React.FC<MinesGameModalProps> = ({ isOpen, onClose,
 
                             {/* Mines Count */}
                             <div>
-                                <label className="block text-[10px] uppercase tracking-widest text-stone-500 font-bold mb-2">{t('mines.mines_count')}</label>
+                                <label className="block text-[10px] uppercase tracking-widest text-stone-500 font-bold mb-1.5">{t('mines.mines_count')}</label>
                                 <select
                                     value={minesCount}
                                     onChange={(e) => setMinesCount(Number(e.target.value))}
                                     disabled={game?.status === 'ACTIVE'}
-                                    className="w-full bg-stone-950 border border-stone-700 rounded-lg py-3 px-4 text-white font-mono focus:border-yellow-500 outline-none transition-colors appearance-none cursor-pointer"
+                                    className="w-full bg-stone-950 border border-stone-700 rounded-lg py-1.5 px-4 text-white font-mono text-xs focus:border-yellow-500 outline-none transition-colors appearance-none cursor-pointer"
                                 >
                                     {[1, 3, 5, 10, 24].map(num => (
                                         <option key={num} value={num}>{num} {t('mines.mines_label')}</option>
@@ -189,30 +226,8 @@ export const MinesGameModal: React.FC<MinesGameModalProps> = ({ isOpen, onClose,
                         </div>
                     </div>
 
-                    <div className="mt-8 space-y-3">
-                        {game?.status === 'ACTIVE' ? (
-                            <button
-                                onClick={handleCashOut}
-                                disabled={game.revealed.length === 0 || loading}
-                                className={`w-full py-4 rounded-xl font-black text-xl flex items-center justify-center gap-2 transition-all active:scale-95 border
-                                    ${game.revealed.length === 0 || loading
-                                        ? 'bg-stone-800 text-stone-500 border-stone-700 cursor-not-allowed'
-                                        : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]'}`}
-                            >
-                                {loading ? <RefreshCw className="animate-spin" /> : <Trophy size={20} />}
-                                {t('mines.cash_out')}
-                            </button>
-                        ) : (
-                            <button
-                                onClick={game?.status ? resetGame : handleStartGame}
-                                disabled={loading}
-                                className="w-full py-4 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white font-black text-xl flex items-center justify-center gap-2 transition-all active:scale-95 border border-yellow-500 shadow-[0_0_20px_rgba(202,138,4,0.3)]"
-                            >
-                                {loading ? <RefreshCw className="animate-spin" /> : <ShieldCheck size={20} />}
-                                {game?.status ? t('mines.play_again') : t('mines.start_game')}
-                            </button>
-                        )}
-                        <p className="text-[10px] text-stone-600 text-center uppercase tracking-tighter">{t('mines.secure_logic')}</p>
+                    <div className="mt-2 md:mt-8">
+                        <p className="text-[8px] text-stone-600 text-center uppercase tracking-tighter opacity-50">{t('mines.secure_logic')}</p>
                     </div>
                 </div>
 
@@ -223,9 +238,9 @@ export const MinesGameModal: React.FC<MinesGameModalProps> = ({ isOpen, onClose,
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(234,179,8,0.05),transparent_70%)] pointer-events-none"></div>
 
                     {/* Potential Win Info */}
-                    <div className="mb-8 text-center animate-in fade-in slide-in-from-top-4 duration-500">
-                        <div className="text-stone-500 text-[10px] uppercase tracking-widest font-bold mb-1">{t('mines.potential_win')}</div>
-                        <div className="text-4xl font-display font-black text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.3)]">
+                    <div className="mb-2 md:mb-6 text-center animate-in fade-in slide-in-from-top-4 duration-500 flex flex-col items-center">
+                        <div className="text-stone-500 text-[6px] md:text-[10px] uppercase tracking-widest font-bold mb-0.5">{t('mines.potential_win')}</div>
+                        <div className="text-lg md:text-3xl font-display font-black text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.3)] leading-none mb-1">
                             {formatCurrency(game?.potentialWin || 0)}
                         </div>
                         {game && (
@@ -236,7 +251,7 @@ export const MinesGameModal: React.FC<MinesGameModalProps> = ({ isOpen, onClose,
                     </div>
 
                     {/* 5x5 Grid */}
-                    <div className="grid grid-cols-5 gap-2 md:gap-3 w-full max-w-[400px] aspect-square">
+                    <div className="grid grid-cols-5 gap-0.5 md:gap-3 w-full max-w-[220px] md:max-w-[400px] aspect-square">
                         {Array.from({ length: 25 }).map((_, i) => {
                             const isRevealed = game?.revealed.includes(i);
                             const isMine = allMines.includes(i) || (explodingIndex === i);
@@ -248,20 +263,20 @@ export const MinesGameModal: React.FC<MinesGameModalProps> = ({ isOpen, onClose,
                                     key={i}
                                     onClick={() => handleTileClick(i)}
                                     className={`
-                                        relative rounded-lg flex items-center justify-center transition-all duration-300 cursor-pointer
-                                        ${isRevealed && !isMine ? 'bg-emerald-900/40 border-2 border-emerald-500/50 scale-[0.98]' : 'bg-stone-900 border border-stone-800'}
-                                        ${isMine ? 'bg-red-900/40 border-2 border-red-500/50 scale-[1.05]' : ''}
+                                        relative rounded-md md:rounded-lg flex items-center justify-center transition-all duration-300 cursor-pointer
+                                        ${isRevealed && !isMine ? 'bg-emerald-900/40 border-[1.5px] border-emerald-500/50 scale-[0.98]' : 'bg-stone-900 border border-stone-800'}
+                                        ${isMine ? 'bg-red-900/40 border-[1.5px] border-red-500/50 scale-[1.05]' : ''}
                                         ${isExploded ? 'animate-bounce shadow-[0_0_30px_rgba(239,68,68,0.5)]' : ''}
                                         ${isClickable ? 'hover:bg-stone-800 hover:border-stone-600 hover:scale-[1.02] shadow-xl' : ''}
                                         ${!game ? 'opacity-50 grayscale' : ''}
                                     `}
                                 >
-                                    {isRevealed && !isMine && <Gem className="text-emerald-400 animate-in zoom-in spin-in-12 duration-500" size={24} />}
-                                    {isMine && <Bomb className={`text-red-500 animate-in zoom-in duration-300 ${isExploded ? 'animate-pulse' : ''}`} size={24} />}
-                                    {revealingIndex === i && <RefreshCw className="animate-spin text-stone-500" size={18} />}
+                                    {isRevealed && !isMine && <Gem className="text-emerald-400 animate-in zoom-in spin-in-12 duration-500" size={18} />}
+                                    {isMine && <Bomb className={`text-red-500 animate-in zoom-in duration-300 ${isExploded ? 'animate-pulse' : ''}`} size={18} />}
+                                    {revealingIndex === i && <RefreshCw className="animate-spin text-stone-500" size={14} />}
 
                                     {!isRevealed && !isMine && revealingIndex !== i && (
-                                        <div className="w-1.5 h-1.5 bg-stone-700 rounded-full"></div>
+                                        <div className="w-1 h-1 bg-stone-700 rounded-full"></div>
                                     )}
                                 </div>
                             );

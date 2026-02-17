@@ -1,4 +1,4 @@
-export const CURRENCY = '฿';
+export const CURRENCY = '$';
 export const EXCHANGE_RATE_USD_THB = 1;
 export const EXCHANGE_RATE_USDT_THB = 31;
 export const BASE_CLAIM_AMOUNT = 0;
@@ -131,7 +131,7 @@ export const UPGRADE_CONFIG = {
 
 export const MATERIAL_CONFIG = {
     MAX_CAPACITY: 1,
-    DROP_CHANCE: 1.0, // Guaranteed drop when interval hits
+    DROP_CHANCE: 0.1, // 10% chance to drop when interval hits
     DROP_INTERVAL_MS: 14400000, // 4 Hours (4 * 60 * 60 * 1000)
     NAMES: {
         0: { th: 'เศษหิน', en: 'Stone Shards' },
@@ -558,11 +558,11 @@ export interface ShopItemConfig {
 }
 
 export const SHOP_ITEMS: ShopItemConfig[] = [
-    { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 5, icon: 'Cpu', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้สำหรับอัปเกรดเครื่องจักรเพื่อเพิ่มกำลังการขุด', en: 'Used for upgrading rigs to increase mining power' } },
+    { id: 'upgrade_chip', name: { th: 'ชิปอัปเกรด', en: 'Upgrade Chip' }, price: 5, icon: 'Cpu', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้ตีบวกอุปกรณ์', en: 'Used for upgrading rigs to increase mining power' } },
     { id: 'chest_key', name: { th: 'กุญแจเข้าเหมือง', en: 'Mine Key' }, price: 5, icon: 'Key', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้เปิดถ้ำสำรวจเพื่อลุ้นรับไอเทมหายาก', en: 'Used to open exploration caves for rare items' }, buyable: false },
-    { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 5, icon: 'Factory', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้สำหรับสกัดแร่ระดับต่ำให้เป็นแร่ระดับสูง', en: 'Used for refining low tier materials' } },
+    { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 5, icon: 'Factory', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้สกัดแร่/สร้างพิมพ์เขียว', en: 'Used for refining low tier materials' } },
     { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 5, icon: 'Search', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้ตรวจสอบหาแร่หายากโดยอัตโนมัติ', en: 'Automatically detects rare minerals' } },
-    { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 300, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ป้องกันระดับเครื่องจักรลดระดับเมื่ออัปเกรดล้มเหลว', en: 'Prevents rig downgrade upon upgrade failure' }, buyable: true },
+    { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 300, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ใช้ป้องกันอุปกรณ์แตก', en: 'Prevents rig downgrade upon upgrade failure' }, buyable: true },
     { id: 'vip_withdrawal_card', name: { th: 'บัตร VIP ปลดล็อกถอนเงิน', en: 'VIP Withdrawal Card' }, price: 199, icon: 'CreditCard', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ใช้สำหรับปลดล็อกการถอนเงินถาวร', en: 'Unlocks permanent withdrawals' } },
     { id: 'ancient_blueprint', name: { th: 'แผนที่ขุดทองโบราณ', en: 'Ancient Blueprint' }, price: 10000, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้แทนวัสดุหายากในการสร้างแท่นขุดระดับสูง', en: 'Substitute for rare materials in crafting high-tier rigs' }, buyable: false },
     {
@@ -578,21 +578,21 @@ export const SHOP_ITEMS: ShopItemConfig[] = [
         description: { th: 'ระบบอัตโนมัติ: เก็บของขวัญ, เติมพลังงาน, ซ่อมแซมอุปกรณ์', en: 'Auto-collect, Energy Refill, Repair' },
         buyable: true
     },
-    { id: 'hourglass_small', name: { th: 'นาฬิกาทราย (เล็ก)', en: 'Hourglass (Small)' }, price: 5, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 30 นาที', en: 'Speed up exploration by 30 mins' } },
-    { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Hourglass (Medium)' }, price: 20, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 2 ชั่วโมง', en: 'Speed up exploration by 2 hours' } },
-    { id: 'hourglass_large', name: { th: 'นาฬิกาทราย (ใหญ่)', en: 'Hourglass (Large)' }, price: 60, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 6 ชั่วโมง', en: 'Speed up exploration by 6 hours' } },
-    { id: 'time_skip_ticket', name: { th: 'ตั๋วเร่งเวลา', en: 'Time Skip Ticket' }, price: 5, icon: 'Timer', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ลดเวลาการคราฟต์ 1 ชั่วโมง (กดซ้ำได้)', en: 'Reduce crafting time by 1 hour (stackable)' } },
+    { id: 'hourglass_small', name: { th: 'นาฬิกาทราย (เล็ก)', en: 'Hourglass (Small)' }, price: 5, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาสำรวจ 30 นาที', en: 'Speed up exploration by 30 mins' } },
+    { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Hourglass (Medium)' }, price: 20, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาสำรวจ 2 ชั่วโมง', en: 'Speed up exploration by 2 hours' } },
+    { id: 'hourglass_large', name: { th: 'นาฬิกาทราย (ใหญ่)', en: 'Hourglass (Large)' }, price: 60, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาสำรวจ 6 ชั่วโมง', en: 'Speed up exploration by 6 hours' } },
+    { id: 'time_skip_ticket', name: { th: 'ตั๋วเร่งเวลา', en: 'Time Skip Ticket' }, price: 5, icon: 'Timer', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ลดเวลาคราฟต์ 1 ชั่วโมง', en: 'Reduce crafting time by 1 hour (stackable)' } },
     {
         id: 'construction_nanobot', name: { th: 'นาโนบอทก่อสร้าง', en: 'Construction Nanobot' }, price: 99, icon: 'Cpu',
         minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0,
-        description: { th: 'สร้างอุปกรณ์เสร็จทันที 100%', en: 'Instantly finish crafting (100%)' }
+        description: { th: 'สร้างเสร็จทันที', en: 'Instantly finish crafting (100%)' }
     },
     {
         id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' },
         price: 0,
         icon: 'Search',
         minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0,
-        description: { th: 'อุปกรณ์จำเป็นสำหรับการอัปเกรดอุปกรณ์', en: 'Essential tool for equipment upgrades' },
+        description: { th: 'ใช้สกัดแร่ไวเบรเนียม', en: 'Essential tool for equipment upgrades' },
         craftingRecipe: { 2: 2, 8: 5 }, // 2 Copper, 5 Dirt
         craftingFee: 5,
         craftDurationMinutes: 5,

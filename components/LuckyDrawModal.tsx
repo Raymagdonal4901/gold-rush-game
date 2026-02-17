@@ -129,18 +129,18 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                 <div className="bg-stone-950 border border-stone-800 w-[95%] sm:w-full sm:max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] relative ring-1 ring-white/10">
 
                     {/* Header with Premium Gradient */}
-                    <div className="bg-gradient-to-r from-stone-900 via-yellow-900/10 to-stone-950 p-5 border-b border-stone-800 flex justify-between items-center shrink-0">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-yellow-900/20 p-2.5 rounded-xl border border-yellow-700/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
-                                <Pickaxe size={24} className="animate-pulse" />
+                    <div className="bg-gradient-to-r from-stone-900 via-yellow-900/10 to-stone-950 p-3 sm:p-5 border-b border-stone-800 flex justify-between items-center shrink-0">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="bg-yellow-900/20 p-2 sm:p-2.5 rounded-xl border border-yellow-700/30 text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
+                                <Pickaxe size={20} className="sm:w-6 sm:h-6 animate-pulse" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-600 uppercase tracking-widest leading-tight">
+                                <h2 className="text-lg sm:text-xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-600 uppercase tracking-widest leading-tight">
                                     {t('lucky_draw.title')}
                                 </h2>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-stone-500 uppercase tracking-wider font-bold">{t('lucky_draw.subtitle')}</span>
-                                    <span className="bg-yellow-500/10 text-yellow-500 text-[10px] px-2 py-0.5 rounded-full border border-yellow-500/20 font-black animate-pulse">
+                                    <span className="text-[10px] text-stone-500 uppercase tracking-wider font-bold">{t('lucky_draw.subtitle')}</span>
+                                    <span className="bg-yellow-500/10 text-yellow-500 text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded-full border border-yellow-500/20 font-black animate-pulse">
                                         WIN 500 ฿!
                                     </span>
                                 </div>
@@ -151,14 +151,11 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                                 <span className="text-[10px] text-stone-500 uppercase font-black">{t('wallet.balance_label')}</span>
                                 <span className="text-sm font-mono font-black text-emerald-400 leading-none">{formatCurrency(user.balance)}</span>
                             </div>
-                            <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors bg-stone-900/50 p-2 rounded-lg hover:bg-stone-800">
-                                <X size={24} />
-                            </button>
                         </div>
                     </div>
 
                     {/* Game Area - Cave Background */}
-                    <div className="flex-1 flex flex-col items-center justify-center relative p-6 min-h-[500px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-stone-900 via-stone-950 to-black">
+                    <div className="flex-1 flex flex-col items-center justify-center relative p-3 sm:p-6 min-h-[400px] sm:min-h-[500px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-stone-900 via-stone-950 to-black">
 
                         {/* Ambient Particles */}
                         <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
@@ -168,15 +165,15 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                         </div>
 
                         {/* Probabilities Table (Styled as Tablet/Hologram) */}
-                        <div className="bg-stone-900/80 border border-stone-700 rounded-xl p-3 shadow-2xl mb-8 transform hover:scale-105 transition-transform duration-300 w-full max-w-sm">
-                            <h4 className="font-bold text-stone-300 text-[10px] uppercase tracking-widest mb-2 border-b border-stone-700 pb-1 flex items-center gap-2">
-                                <Sparkles size={10} className="text-yellow-500" />
+                        <div className="bg-stone-900/80 border border-stone-700 rounded-xl p-2 sm:p-3 shadow-2xl mb-4 sm:mb-8 transform hover:scale-105 transition-transform duration-300 w-full max-w-sm">
+                            <h4 className="font-bold text-stone-300 text-[8px] sm:text-[10px] uppercase tracking-widest mb-1.5 sm:mb-2 border-b border-stone-700 pb-1 flex items-center gap-2">
+                                <Sparkles size={8} className="sm:w-2.5 sm:h-2.5 text-yellow-500" />
                                 {t('lucky_draw.chance_label')}
                             </h4>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                            <div className="grid grid-cols-2 gap-x-2 sm:gap-x-4 gap-y-0.5 sm:gap-y-1">
                                 {LUCKY_DRAW_CONFIG.PROBABILITIES.map((p, i) => (
-                                    <div key={i} className="flex justify-between items-center text-[10px] group">
-                                        <span className="text-stone-400 group-hover:text-stone-200 transition-colors truncate mr-2">{getLocalized(p.label)}</span>
+                                    <div key={i} className="flex justify-between items-center text-[8px] sm:text-[10px] group">
+                                        <span className="text-stone-400 group-hover:text-stone-200 transition-colors truncate mr-1.5 sm:mr-2">{getLocalized(p.label)}</span>
                                         <span className="font-mono text-yellow-500 font-bold shrink-0">{p.chance}%</span>
                                     </div>
                                 ))}
@@ -203,7 +200,7 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                                         key={idx}
                                         onClick={() => canMine && handleMineRock(idx)}
                                         className={`
-                                            relative w-24 h-24 sm:w-28 sm:h-28 transition-all duration-300
+                                            relative w-20 h-20 sm:w-28 sm:h-28 transition-all duration-300
                                             ${canMine ? 'cursor-pointer hover:scale-110 active:scale-95 group' : 'cursor-default'}
                                             ${isSelected ? 'scale-110' : ''}
                                             ${isOther ? 'opacity-30 blur-sm scale-90 grayscale' : ''}
@@ -255,7 +252,7 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                                     onClick={handleStart}
                                     disabled={!canPlayFree && user.balance < LUCKY_DRAW_CONFIG.COST}
                                     className={`
-                                        relative overflow-hidden px-12 py-5 rounded-2xl font-black text-xl uppercase tracking-widest transition-all active:scale-95 shadow-[0_0_40px_rgba(0,0,0,0.5)] border-2
+                                        relative overflow-hidden px-8 py-3.5 sm:px-12 sm:py-5 rounded-2xl font-black text-base sm:text-xl uppercase tracking-widest transition-all active:scale-95 shadow-[0_0_40px_rgba(0,0,0,0.5)] border-2
                                         ${canPlayFree
                                             ? 'bg-gradient-to-b from-emerald-600 to-emerald-800 border-emerald-400 text-white hover:brightness-110 shadow-emerald-900/50'
                                             : user.balance < LUCKY_DRAW_CONFIG.COST
@@ -267,7 +264,7 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                                     <div className="relative flex items-center gap-3">
                                         {canPlayFree ? (
                                             <>
-                                                <Sparkles className="text-emerald-200 animate-pulse" size={24} />
+                                                <Sparkles className="text-emerald-200 animate-pulse w-5 h-5 sm:w-6 sm:h-6" />
                                                 <span>{t('lucky_draw.free_spin')}</span>
                                             </>
                                         ) : (
@@ -276,8 +273,8 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
                                                     <span>{t('lucky_draw.insufficient_funds')}</span>
                                                 ) : (
                                                     <>
-                                                        <Wallet className="text-yellow-200" size={24} />
-                                                        <span>Spin Now (10 ฿)</span>
+                                                        <Wallet className="text-yellow-200 w-5 h-5 sm:w-6 sm:h-6" />
+                                                        <span>Spin 10 ฿</span>
                                                     </>
                                                 )}
                                             </>
@@ -288,10 +285,10 @@ export const LuckyDrawModal: React.FC<LuckyDrawModalProps> = ({ isOpen, onClose,
 
                             {gameState === 'MINING' && (
                                 <div className="flex flex-col items-center animate-bounce-slow">
-                                    <div className="text-yellow-400 font-display text-3xl font-black uppercase tracking-[0.2em] drop-shadow-[0_4px_0_rgba(0,0,0,0.5)]">
+                                    <div className="text-yellow-400 font-display text-2xl sm:text-3xl font-black uppercase tracking-[0.2em] drop-shadow-[0_4px_0_rgba(0,0,0,0.5)]">
                                         {t('lucky_draw.pick_card').replace('Card', 'Geode')}
                                     </div>
-                                    <p className="text-stone-400 text-sm mt-1 font-bold bg-black/50 px-4 py-1 rounded-full border border-stone-700">Select a rock to crack open!</p>
+                                    <p className="text-stone-400 text-xs sm:text-sm mt-1 font-bold bg-black/50 px-4 py-1 rounded-full border border-stone-700">Select a rock to crack open!</p>
                                 </div>
                             )}
                         </div>

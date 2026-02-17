@@ -131,7 +131,7 @@ export const UPGRADE_CONFIG = {
 
 export const MATERIAL_CONFIG = {
     MAX_CAPACITY: 1,
-    DROP_CHANCE: 1.0, // Guaranteed drop when interval hits
+    DROP_CHANCE: 0.1, // 10% chance to drop when interval hits
     DROP_INTERVAL_MS: 14400000, // 4 Hours (matching frontend)
     NAMES: {
         0: { th: 'เศษหิน', en: 'Stone Shards' },
@@ -178,53 +178,14 @@ export interface LootEntry {
 }
 
 export const RIG_LOOT_TABLES: Record<number, LootEntry[]> = {
-    // Tier 2: สว่านพกพา (Portable Drill)
-    2: [
-        { matTier: 0, minAmount: 3, maxAmount: 5, chance: 50 },
-        { matTier: 1, minAmount: 1, maxAmount: 1, chance: 35 },
-        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 10 },
-        { itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 5 },
-    ],
-    // Tier 3: เครื่องขุดถ่านหิน (Coal Excavator)
-    3: [
-        { matTier: 0, minAmount: 5, maxAmount: 8, chance: 20 },
-        { matTier: 1, minAmount: 1, maxAmount: 2, chance: 50 },
-        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 15 },
-        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 10 },
-        { itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 5 },
-    ],
-    // Tier 4: เครื่องขุดทองแดง (Copper Excavator)
-    4: [
-        { matTier: 1, minAmount: 2, maxAmount: 3, chance: 50 },
-        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 35 },
-        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 10 },
-        { itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 5 },
-    ],
-    // Tier 5: เครื่องขุดเหล็ก (Iron Excavator)
-    5: [
-        { matTier: 2, minAmount: 2, maxAmount: 2, chance: 40 },
-        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 50 },
-        { matTier: 4, minAmount: 1, maxAmount: 1, chance: 10 },
-    ],
-    // Tier 6: เครื่องขุดทองคำ (Gold Excavator)
-    6: [
-        { matTier: 3, minAmount: 2, maxAmount: 2, chance: 40 },
-        { matTier: 4, minAmount: 1, maxAmount: 1, chance: 55 },
-        { matTier: 5, minAmount: 1, maxAmount: 1, chance: 5 },
-    ],
-    // Tier 7: เครื่องขุดเพชร (Diamond Excavator)
-    7: [
-        { matTier: 4, minAmount: 2, maxAmount: 2, chance: 40 },
-        { matTier: 5, minAmount: 1, maxAmount: 1, chance: 50 },
-        { matTier: 6, minAmount: 1, maxAmount: 1, chance: 10 },
-    ],
-    // Tier 8: เครื่องขุดปฏิกรณ์ (Reactor)
-    8: [
-        { matTier: 5, minAmount: 1, maxAmount: 2, chance: 55 },
-        { matTier: 6, minAmount: 1, maxAmount: 1, chance: 30 },
-        { matTier: 7, minAmount: 1, maxAmount: 1, chance: 5 },
-        { itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 10 },
-    ],
+    // All rigs now only drop the Mine Key
+    2: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
+    3: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
+    4: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
+    5: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
+    6: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
+    7: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
+    8: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
 };
 
 // --- NEW ENHANCEMENT SYSTEM ---

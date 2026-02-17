@@ -187,23 +187,21 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
                         </div>
                         <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">{t('common.back_to_mine')}</span>
                     </button>
-                    <div className="text-center truncate">
-                        <h1 className="text-xs sm:text-sm font-black text-yellow-500 tracking-[0.3em] uppercase">{t('wallet.title')}</h1>
-                    </div>
-                    <div className="w-10 sm:w-24 shrink-0"></div> {/* Spacer */}
+                    <div className="flex-1"></div> {/* Spacer to keep layout balanced if needed, or just let it be */}
+                    <div className="w-10 sm:w-24 shrink-0"></div>
                 </div>
             </div>
 
-            <main className="max-w-4xl mx-auto px-4 py-8 overflow-hidden w-full">
+            <main className="max-w-4xl mx-auto px-4 py-4 sm:py-8 overflow-hidden w-full">
                 {/* Balance Card */}
-                <div className="relative overflow-hidden group mb-8">
+                <div className="relative overflow-hidden group mb-4 sm:mb-8">
                     <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 to-orange-600/20 opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    <div className="relative p-8 rounded-2xl bg-stone-900/40 border border-yellow-500/30 backdrop-blur-sm flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="relative p-4 sm:p-8 rounded-2xl bg-stone-900/40 border border-yellow-500/30 backdrop-blur-sm flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
                         <div className="text-center md:text-left">
-                            <p className="text-stone-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">{t('wallet.available_balance')}</p>
-                            <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter flex flex-wrap items-baseline justify-center md:justify-start gap-2">
+                            <p className="text-stone-400 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mb-1 sm:mb-2">{t('wallet.available_balance')}</p>
+                            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tighter flex flex-wrap items-baseline justify-center md:justify-start gap-1 sm:gap-2">
                                 {formatCurrency(user.balance)}
-                                {language === 'th' && <span className="text-yellow-500 text-2xl uppercase">{t('common.thb')}</span>}
+                                {language === 'th' && <span className="text-yellow-500 text-lg sm:text-xl uppercase">{t('common.thb')}</span>}
                             </h2>
                         </div>
                         {/* Withdraw Button Moved to Dashboard */}
@@ -212,8 +210,8 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
 
                 {/* History Section */}
                 <div className="bg-stone-900/30 rounded-2xl border border-stone-800/50 overflow-hidden">
-                    <div className="p-6 border-b border-stone-800/50 flex flex-wrap items-center justify-between gap-4 bg-stone-900/20">
-                        <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                    <div className="p-4 sm:p-6 border-b border-stone-800/50 flex flex-wrap items-center justify-between gap-4 bg-stone-900/20">
+                        <h3 className="text-[10px] sm:text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
                             <i className="fas fa-history text-yellow-500"></i>
                             {t('wallet.transaction_history')}
                         </h3>
@@ -223,14 +221,13 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
                     </div>
 
                     <div className="overflow-x-auto w-full custom-scrollbar">
-                        <table className="w-full text-left min-w-[700px]">
+                        <table className="w-full text-left">
                             <thead>
-                                <tr className="text-[10px] font-black text-stone-500 uppercase tracking-widest bg-stone-900/40">
-                                    <th className="px-6 py-4">{t('wallet.date_time')}</th>
-                                    <th className="px-6 py-4">{t('wallet.type')}</th>
-                                    <th className="px-6 py-4">{t('wallet.description')}</th>
-                                    <th className="px-6 py-4 text-right">{t('common.amount')}</th>
-                                    <th className="px-6 py-4 text-center">{t('wallet.status')}</th>
+                                <tr className="text-[8px] sm:text-[10px] font-black text-stone-500 uppercase tracking-widest bg-stone-900/40">
+                                    <th className="px-3 py-3 sm:px-6 sm:py-4">{t('wallet.date_time')}</th>
+                                    <th className="px-3 py-3 sm:px-6 sm:py-4">{t('wallet.description')}</th>
+                                    <th className="px-3 py-3 sm:px-6 sm:py-4 text-right">{t('common.amount')}</th>
+                                    <th className="px-3 py-3 sm:px-6 sm:py-4 text-center">{t('wallet.status')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-800/40">
@@ -248,21 +245,18 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
                                     </tr>
                                 ) : (
                                     transactions.map((tx) => (
-                                        <tr key={tx.id} className="hover:bg-white/5 transition-colors group">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-xs font-medium text-stone-400">{new Date(tx.timestamp).toLocaleDateString()}</div>
-                                                <div className="text-[10px] text-stone-600">{new Date(tx.timestamp).toLocaleTimeString()}</div>
+                                        <tr key={tx.id} className="hover:bg-white/5 transition-colors group border-b border-stone-800/20 last:border-0">
+                                            <td className="px-3 py-3 sm:px-6 sm:py-4 whitespace-nowrap">
+                                                <div className="text-[10px] sm:text-xs font-medium text-stone-400">{new Date(tx.timestamp).toLocaleDateString()}</div>
+                                                <div className="text-[8px] sm:text-[10px] text-stone-600">{new Date(tx.timestamp).toLocaleTimeString()}</div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-[10px] font-black tracking-widest uppercase text-yellow-500/70">{tx.type}</span>
+                                            <td className="px-3 py-3 sm:px-6 sm:py-4">
+                                                <p className="text-[10px] sm:text-xs text-stone-300 max-w-[120px] sm:max-w-xs truncate">{getLocalizedDescription(tx.description)}</p>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-xs text-stone-300 max-w-[200px] sm:max-w-xs truncate">{getLocalizedDescription(tx.description)}</p>
-                                            </td>
-                                            <td className={`px-6 py-4 text-right font-bold text-sm ${tx.amount < 0 || tx.type === 'WITHDRAWAL' ? 'text-red-400' : 'text-green-400'}`}>
+                                            <td className={`px-3 py-3 sm:px-6 sm:py-4 text-right font-bold text-xs sm:text-sm whitespace-nowrap ${tx.amount < 0 || tx.type === 'WITHDRAWAL' ? 'text-red-400' : 'text-green-400'}`}>
                                                 {(tx.type === 'WITHDRAWAL' || tx.amount < 0) ? '-' : '+'}{formatCurrency(Math.abs(tx.amount))}
                                             </td>
-                                            <td className="px-6 py-4 text-center">
+                                            <td className="px-3 py-3 sm:px-6 sm:py-4 text-center uppercase tracking-tighter sm:tracking-normal">
                                                 {getStatusBadge(tx.status)}
                                             </td>
                                         </tr>
