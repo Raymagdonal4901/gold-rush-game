@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Shield, ArrowUpCircle, Cpu, CheckCircle2, AlertTriangle, Plus, Sparkles, XCircle, Hammer, Backpack, Glasses, Monitor, Smartphone, Truck, Footprints, Zap, TrendingUp, Rocket, Flame, CloudFog, Anvil, FileText, HardHat, Shirt, Bot, Key, Factory, Search, Hourglass, Gem, Lock, Wrench, Clock, Timer, Ticket, Briefcase, Settings, TrainFront } from 'lucide-react';
+import { AccessoryIcon } from './AccessoryIcon';
 import { AccessoryItem, OilRig } from '../services/types';
 import { PixelProgressBar } from './PixelProgressBar';
 import { CURRENCY, RARITY_SETTINGS, EQUIPMENT_UPGRADE_CONFIG, MATERIAL_CONFIG, EQUIPMENT_SERIES, UPGRADE_REQUIREMENTS, SHOP_ITEMS, REPAIR_KITS } from '../constants';
@@ -20,10 +21,57 @@ interface AccessoryManagementModalProps {
     onRefresh: () => void;
     materials?: Record<number, number>;
     addNotification?: (n: any) => void;
+    equippedItemIds?: string[];
 }
 
+
+
+export const getItemDisplayName = (item: any, t: any, getLocalized: any) => {
+    if (!item) return '';
+    const typeId = item.typeId || '';
+    const nameRaw = item.name;
+
+    // 1. Match by configuration names (centralized)
+    if (typeId === 'chest_key' || (typeof nameRaw === 'string' && (nameRaw.includes('กุญแจ') || nameRaw.includes('Key')))) return t('items.mining_key');
+    if (typeId === 'upgrade_chip' || (typeof nameRaw === 'string' && (nameRaw.includes('ชิป') || nameRaw.includes('Chip')))) return t('items.upgrade_chip');
+    if (typeId === 'mixer' || (typeof nameRaw === 'string' && (nameRaw.includes('โต๊ะช่าง') || nameRaw.includes('Mixer')))) return t('items.material_mixer');
+    if (typeId === 'magnifying_glass' || (typeof nameRaw === 'string' && (nameRaw.includes('แว่นขยาย') || nameRaw.includes('Search')))) return t('items.magnifying_glass');
+    if (typeId === 'robot' || typeId === 'ai_robot') return t('items.ai_robot');
+
+    // 2. User localization helper or raw name
+    return getLocalized(nameRaw);
+};
+
+// --- EQUIPMENT DURABILITY HELPERS ---
+export const getDurabilityInfo = (item: any) => {
+    if (!item) return null;
+    // HP-based system
+    if (item.currentDurability !== undefined && item.maxDurability) {
+        const current = item.currentDurability;
+        const max = item.maxDurability;
+        const percent = Math.round((current / max) * 100);
+        const isExpired = current <= 0;
+        const isWarning = !isExpired && percent <= 20;
+        return { current, max, percent, isExpired, isWarning };
+    }
+    // Fallback: old expireAt system → convert to HP
+    if (item.expireAt) {
+        const now = Date.now();
+        const msLeft = item.expireAt - now;
+        const daysLeft = Math.max(0, msLeft / (24 * 60 * 60 * 1000));
+        const current = Math.round(daysLeft * 100);
+        const shopConfig = SHOP_ITEMS.find(s => s.id === item.typeId);
+        const max = (shopConfig as any)?.maxDurability || (item.lifespanDays || 30) * 100;
+        const percent = max > 0 ? Math.round((current / max) * 100) : 0;
+        const isExpired = current <= 0;
+        const isWarning = !isExpired && percent <= 20;
+        return { current, max, percent, isExpired, isWarning };
+    }
+    return null;
+};
+
 export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> = ({
-    isOpen, onClose, rig, slotIndex, equippedItem, inventory, userId, onEquip, onUnequip, onRefresh, materials = {}, addNotification
+    isOpen, onClose, rig, slotIndex, equippedItem, inventory, userId, onEquip, onUnequip, onRefresh, materials = {}, addNotification, equippedItemIds = []
 }) => {
     const { t, language, getLocalized, formatBonus, formatCurrency } = useTranslation();
     const [view, setView] = useState<'MANAGE' | 'SELECT'>('MANAGE');
@@ -157,33 +205,6 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         setSelectedRepairKit(null);
     };
 
-    // --- EQUIPMENT DURABILITY HELPERS ---
-    const getDurabilityInfo = (item: any) => {
-        if (!item) return null;
-        // HP-based system
-        if (item.currentDurability !== undefined && item.maxDurability) {
-            const current = item.currentDurability;
-            const max = item.maxDurability;
-            const percent = Math.round((current / max) * 100);
-            const isExpired = current <= 0;
-            const isWarning = !isExpired && percent <= 20;
-            return { current, max, percent, isExpired, isWarning };
-        }
-        // Fallback: old expireAt system → convert to HP
-        if (item.expireAt) {
-            const now = Date.now();
-            const msLeft = item.expireAt - now;
-            const daysLeft = Math.max(0, msLeft / (24 * 60 * 60 * 1000));
-            const current = Math.round(daysLeft * 100);
-            const shopConfig = SHOP_ITEMS.find(s => s.id === item.typeId);
-            const max = (shopConfig as any)?.maxDurability || (item.lifespanDays || 30) * 100;
-            const percent = max > 0 ? Math.round((current / max) * 100) : 0;
-            const isExpired = current <= 0;
-            const isWarning = !isExpired && percent <= 20;
-            return { current, max, percent, isExpired, isWarning };
-        }
-        return null;
-    };
 
     // Find available repair kits for the equipped item
     const getAvailableRepairKits = () => {
@@ -243,6 +264,8 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
     const availableItems = inventory.filter(item => {
         if (!item) return false;
+        // Hide if already equipped on ANY rig
+        if (equippedItemIds.includes(item.id)) return false;
         return isEquipable(item);
     }).filter(item => {
         // HP-based check
@@ -253,179 +276,6 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
 
 
-    const getItemDisplayName = (item: any) => {
-        if (!item) return '';
-        const typeId = item.typeId || '';
-        const rarity = item.rarity || 'COMMON';
-        const nameRaw = item.name;
-
-        // 1. Hardware/Software Series Name Resolution
-        const seriesKey = getSeriesKey(typeId);
-        if (seriesKey) {
-        }
-
-        // 2. Fallback to generic config-based names
-        if (typeId === 'chest_key' || (typeof nameRaw === 'string' && (nameRaw.includes('กุญแจ') || nameRaw.includes('Key')))) return t('items.mining_key');
-        if (typeId === 'upgrade_chip' || (typeof nameRaw === 'string' && (nameRaw.includes('ชิป') || nameRaw.includes('Chip')))) return t('items.upgrade_chip');
-        if (typeId === 'mixer' || (typeof nameRaw === 'string' && (nameRaw.includes('โต๊ะช่าง') || nameRaw.includes('Mixer')))) return t('items.material_mixer');
-        if (typeId === 'magnifying_glass' || (typeof nameRaw === 'string' && (nameRaw.includes('แว่นขยาย') || nameRaw.includes('Search')))) return t('items.magnifying_glass');
-        if (typeId === 'robot') return null;
-
-        // 3. User localization helper or raw name
-        return getLocalized(nameRaw);
-    };
-
-    const getAccessoryIcon = (item: AccessoryItem, size: number = 64) => {
-        if (!item) return <Briefcase size={size} />;
-
-        // Fix: Force detecting type by name if typeId is generic or missing specific handling
-        let typeId = item.typeId || '';
-        const nameRaw = item.name;
-        // Safely extract string for .includes() check
-        const enName = typeof nameRaw === 'object' ? (nameRaw as any)?.en || '' : String(nameRaw || '');
-        const thName = typeof nameRaw === 'object' ? (nameRaw as any)?.th || '' : String(nameRaw || '');
-
-        if (enName.includes('Chip') || thName.includes('ชิป')) typeId = 'upgrade_chip';
-        else if (enName.includes('Key') || thName.includes('กุญแจ')) typeId = 'chest_key';
-        else if (enName.includes('Mixer') || thName.includes('เครื่องผสม')) typeId = 'mixer';
-        else if (enName.includes('Magnifying') || thName.includes('แว่นขยาย')) typeId = 'magnifying_glass';
-        else if (enName.includes('Insurance') || thName.includes('ใบประกัน')) typeId = 'insurance_card';
-        else if (enName.includes('Hourglass') || thName.includes('นาฬิกาทราย')) typeId = 'hourglass_small';
-        else if (enName.includes('Mystery Ore') || thName.includes('แร่ปริศนา')) typeId = 'mystery_ore';
-        else if (enName.includes('Legendary Ore') || thName.includes('แร่ในตำนาน')) typeId = 'legendary_ore';
-        else if (enName.includes('Excavator') || thName.includes('รถขุด') || thName.includes('รถไฟฟ้า') || enName.includes('Electric Vehicle')) typeId = 'auto_excavator';
-        else if (enName.includes('Robot') || thName.includes('หุ่นยนต์')) typeId = 'ai_robot';
-        // Classic Equipment Fallbacks
-        else if (enName.includes('Helmet') || thName.includes('หมวก')) typeId = 'hat';
-        else if (enName.includes('Glasses') || thName.includes('แว่น')) typeId = 'glasses'; // Note: Magnifying Glass handled above
-        else if (enName.includes('Uniform') || enName.includes('Suit') || thName.includes('ชุด')) typeId = 'uniform';
-        else if (enName.includes('Bag') || enName.includes('Backpack') || thName.includes('กระเป๋า')) typeId = 'bag';
-        else if (enName.includes('Boots') || thName.includes('รองเท้า')) typeId = 'boots';
-        else if (enName.includes('Mobile') || enName.includes('Phone') || thName.includes('มือถือ')) typeId = 'mobile';
-        else if (enName.includes('PC') || enName.includes('Computer') || thName.includes('คอม')) typeId = 'pc';
-        else if (enName.includes('Time Skip Ticket') || thName.includes('ตั๋วเร่งเวลา')) typeId = 'time_skip_ticket';
-        else if (enName.includes('Construction Nanobot') || thName.includes('นาโนบอทก่อสร้าง')) typeId = 'construction_nanobot';
-        else if (enName.includes('Repair Kit') || thName.includes('ชุดซ่อม')) {
-            if (enName.includes('Basic') || thName.includes('พื้นฐาน')) typeId = 'repair_kit_1';
-            else if (enName.includes('Standard') || thName.includes('มาตรฐาน')) typeId = 'repair_kit_2';
-            else if (enName.includes('Electronic') || thName.includes('อิเล็กทรอนิกส์')) typeId = 'repair_kit_3';
-            else if (enName.includes('Mechanic') || thName.includes('เครื่องจักร')) typeId = 'repair_kit_4';
-            else typeId = 'repair_kit_1';
-        }
-
-
-        const getNeonIcon = (typeId: string) => {
-            if (!typeId) return <Briefcase size={size} />;
-            const props = { size, className: "relative z-10" };
-
-            if (typeId.startsWith('glasses')) {
-                return <Glasses {...props} className={`${props.className} text-blue-400 drop-shadow-[0_0_12px_rgba(96,165,250,0.8)]`} />;
-            }
-            if (typeId.startsWith('uniform') || typeId.startsWith('shirt')) {
-                return <Shirt {...props} className={`${props.className} text-orange-400 drop-shadow-[0_0_12px_rgba(251,146,60,0.8)]`} />;
-            }
-            if (typeId.startsWith('bag')) {
-                return <Backpack {...props} className={`${props.className} text-purple-400 drop-shadow-[0_0_12px_rgba(192,132,252,0.8)]`} />;
-            }
-            if (typeId.startsWith('boots')) {
-                return <Footprints {...props} className={`${props.className} text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]`} />;
-            }
-            if (typeId.startsWith('mobile')) {
-                return <Smartphone {...props} className={`${props.className} text-cyan-400 drop-shadow-[0_0_12px_rgba(34,211,238,0.8)]`} />;
-            }
-            if (typeId.startsWith('pc')) {
-                return <Monitor {...props} className={`${props.className} text-rose-400 drop-shadow-[0_0_12px_rgba(251,113,133,0.8)]`} />;
-            }
-            if (typeId === 'auto_excavator' || typeId.startsWith('truck')) {
-                return <TrainFront {...props} className={`${props.className} text-amber-500 drop-shadow-[0_0_12px_rgba(245,158,11,0.8)]`} />;
-            }
-            if (typeId === 'upgrade_chip' || typeId.startsWith('chip')) {
-                return <Cpu {...props} className={`${props.className} text-blue-500 drop-shadow-[0_0_12px_rgba(59,130,246,0.8)]`} />;
-            }
-            if (typeId === 'chest_key' || typeId.startsWith('key')) {
-                return <Key {...props} className={`${props.className} text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)]`} />;
-            }
-            if (typeId === 'mixer') {
-                return <Factory {...props} className={`${props.className} text-pink-500 drop-shadow-[0_0_12px_rgba(236,72,153,0.8)]`} />;
-            }
-            if (typeId === 'magnifying_glass') {
-                return <Search {...props} className={`${props.className} text-cyan-300 drop-shadow-[0_0_12px_rgba(103,232,249,0.8)]`} />;
-            }
-            if (typeId === 'insurance_card' || typeId.includes('insurance')) {
-                return <FileText {...props} className={`${props.className} text-emerald-300 drop-shadow-[0_0_8px_rgba(110,231,183,0.5)]`} />;
-            }
-            if (typeId.startsWith('hourglass')) {
-                return <Hourglass {...props} className={`${props.className} text-yellow-300 drop-shadow-[0_0_12px_rgba(253,224,71,0.8)]`} />;
-            }
-            if (typeId === 'mystery_ore') {
-                return <Sparkles {...props} className={`${props.className} text-purple-300 drop-shadow-[0_0_12px_rgba(216,180,254,0.8)]`} />;
-            }
-            if (typeId === 'legendary_ore') {
-                return <Gem {...props} className={`${props.className} text-red-400 drop-shadow-[0_0_12px_rgba(248,113,113,0.8)]`} />;
-            }
-            if (typeId === 'time_skip_ticket') {
-                return (
-                    <div className="relative flex items-center justify-center">
-                        <div className="absolute inset-0 bg-blue-500/20 rounded-lg scale-125 blur-md animate-pulse"></div>
-                        <div className="absolute -top-3 -right-3">
-                            <Timer size={14} className="text-blue-300 animate-[spin_3s_linear_infinite]" />
-                        </div>
-                        <Ticket {...props} className={`${props.className} text-blue-400 -rotate-12 relative z-10`} />
-                    </div>
-                );
-            }
-            if (typeId === 'construction_nanobot') {
-                return (
-                    <div className="relative flex items-center justify-center">
-                        <div className="absolute inset-0 bg-cyan-500/30 rounded-full scale-[1.5] blur-xl animate-pulse"></div>
-                        <div className="absolute inset-0 border border-cyan-400/30 rounded-full scale-110 animate-[spin_8s_linear_infinite]"></div>
-                        <div className="absolute -top-3 -right-3 bg-cyan-500 text-white rounded-full p-1">
-                            <Zap size={10} className="animate-pulse" />
-                        </div>
-                        <Bot {...props} className={`${props.className} text-cyan-300 relative z-10`} />
-                    </div>
-                );
-            }
-            if (typeId === 'ai_robot' || typeId.includes('robot')) {
-                return (
-                    <div className="relative flex items-center justify-center">
-                        <div className="absolute inset-0 bg-purple-500/20 rounded-full scale-125 blur-md animate-pulse"></div>
-                        <Bot {...props} className={`${props.className} text-purple-400 relative z-10`} />
-                    </div>
-                );
-            }
-
-            if (typeId.startsWith('repair_kit')) {
-                let glowColor = 'bg-emerald-500';
-                let IconComp = Wrench;
-
-                if (typeId === 'repair_kit_1') {
-                    glowColor = 'bg-emerald-500';
-                    IconComp = Hammer;
-                } else if (typeId === 'repair_kit_2') {
-                    glowColor = 'bg-purple-500';
-                    IconComp = Briefcase;
-                } else if (typeId === 'repair_kit_3') {
-                    glowColor = 'bg-yellow-500';
-                    IconComp = Cpu;
-                } else if (typeId === 'repair_kit_4') {
-                    glowColor = 'bg-red-600';
-                    IconComp = Settings;
-                }
-
-                return (
-                    <div className="relative flex items-center justify-center">
-                        <div className={`absolute inset-0 ${glowColor} rounded-full scale-125 blur-md opacity-20 animate-pulse`}></div>
-                        <IconComp {...props} className={`${props.className} relative z-10`} />
-                    </div>
-                );
-            }
-
-            return <Briefcase size={size} className={props.className} />;
-        };
-
-        return getNeonIcon(typeId);
-    };
 
     // Cartoon Mining Animation Overlay
     const renderMiningAnimation = () => {
@@ -450,7 +300,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                         ${upgradePhase === 'HEATING' ? 'animate-pulse drop-shadow-[0_0_15px_rgba(255,69,0,0.8)] saturate-200' : ''}
                         ${upgradePhase === 'HAMMERING' ? 'animate-[bounce_0.2s_infinite]' : ''}
                     `}>
-                        {equippedItem && getAccessoryIcon(equippedItem, 80)}
+                        {equippedItem && <AccessoryIcon item={equippedItem} size={80} />}
                     </div>
 
                     {/* Hammer Animation */}
@@ -627,10 +477,10 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
 
                             <div className={`absolute inset-0 bg-gradient-to-br ${rarityConfig.bgGradient} opacity-20`}></div>
                             <div className="relative z-10 mb-2 scale-100 drop-shadow-lg">
-                                {getAccessoryIcon(equippedItem, 48)}
+                                <AccessoryIcon item={equippedItem} size={48} />
                             </div>
                             <div className="relative z-10 text-center px-2">
-                                <h3 className={`font-bold text-sm leading-tight ${rarityConfig.color} drop-shadow-sm`}>{getItemDisplayName(equippedItem)}</h3>
+                                <h3 className={`font-bold text-sm leading-tight ${rarityConfig.color} drop-shadow-sm`}>{getItemDisplayName(equippedItem, t, getLocalized)}</h3>
                                 <div className="text-[10px] text-stone-400 mt-0.5 uppercase tracking-wide opacity-80">{rarityConfig.label}</div>
                                 {equippedItem.level && equippedItem.level > 1 && (
                                     <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-sm bg-black text-cyan-400 text-xs font-bold shadow-lg border border-cyan-500/50 font-mono z-20">
@@ -919,7 +769,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                 <div className={`w-16 h-16 shrink-0 rounded-lg bg-stone-950 border ${rarityConfig.border} flex items-center justify-center relative overflow-hidden`}>
                                     <div className={`absolute inset-0 bg-gradient-to-br ${rarityConfig.bgGradient} opacity-20`}></div>
                                     <div className="relative z-10 scale-90">
-                                        {getAccessoryIcon(item, 40)}
+                                        <AccessoryIcon item={item} size={40} />
                                     </div>
                                     {item.level && item.level > 1 && (
                                         <div className="absolute top-0.5 right-0.5 z-20 px-1 py-[1px] rounded-sm bg-black text-cyan-400 text-[9px] font-bold border border-cyan-500/50 font-mono shadow-sm leading-none">
@@ -932,7 +782,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
                                 <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
                                     <div className="flex justify-between items-start">
                                         <div className={`text-sm font-bold ${rarityConfig.color} truncate pr-2`}>
-                                            {getItemDisplayName(item)}
+                                            {getItemDisplayName(item, t, getLocalized)}
                                         </div>
                                         <div className="text-xs font-mono text-emerald-400 font-bold whitespace-nowrap bg-emerald-950/30 px-1.5 py-0.5 rounded border border-emerald-900/50">
                                             +{formatCurrency(isNaN(Number(item.dailyBonus)) ? 0 : Number(item.dailyBonus))}/d
@@ -972,7 +822,7 @@ export const AccessoryManagementModal: React.FC<AccessoryManagementModalProps> =
         if (!showRepairConfirm || !selectedRepairKit || !equippedItem) return null;
         const kitConfig = getRepairKitConfigForEquipment(equippedItem.typeId || '');
         const kitName = getLocalized(selectedRepairKit.name || kitConfig?.name);
-        const equipName = getItemDisplayName(equippedItem);
+        const equipName = getItemDisplayName(equippedItem, t, getLocalized);
         const durInfo = getDurabilityInfo(equippedItem);
         const repairHP = selectedRepairKit.repairValue || (kitConfig as any)?.repairValue || 3000;
 

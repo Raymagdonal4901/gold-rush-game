@@ -22,6 +22,7 @@ export interface UserStats {
     };
 }
 import { User, OilRig, AccessoryItem, ClaimRequest, WithdrawalRequest, Withdrawal, DepositRequest, Transaction, ChatMessage, MarketState, CraftingQueueItem } from './types';
+// Note: We'll add avatarUrl to types.ts as well, but for now we'll ensure the API handles it.
 
 const isProd = (import.meta as any).env.PROD;
 const API_URL = (import.meta as any).env.VITE_API_URL ||
@@ -493,7 +494,7 @@ export const api = {
             const res = await client.post('/users/overclock/deactivate');
             return res.data;
         },
-        updateProfile: async (data: { walletAddress?: string }): Promise<any> => {
+        updateProfile: async (data: { walletAddress?: string; avatarUrl?: string }): Promise<any> => {
             const res = await client.post('/users/profile', data);
             return res.data;
         },

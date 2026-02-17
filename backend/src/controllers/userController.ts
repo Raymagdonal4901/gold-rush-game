@@ -226,6 +226,7 @@ export const getLeaderboard = async (req: Request, res: Response) => {
                     _id: 1,
                     username: 1,
                     totalDailyIncome: 1,
+                    avatarUrl: 1,
                     rigCount: { $size: '$rigs' },
                     aceRig: { $arrayElemAt: ['$rigs', 0] },
                 }
@@ -243,6 +244,7 @@ export const getLeaderboard = async (req: Request, res: Response) => {
                 tierId: u.aceRig.tierId || 1,
                 name: u.aceRig.name,
             } : null,
+            avatarUrl: u.avatarUrl,
             rank: index + 1
         }));
 

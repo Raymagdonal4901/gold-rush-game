@@ -4,6 +4,7 @@ import { X, Factory, Package, Search, TrendingUp, TrendingDown, Minus, Clock, Ho
 import { MATERIAL_CONFIG, CURRENCY, MARKET_CONFIG, RARITY_SETTINGS, SHOP_ITEMS, MATERIAL_RECIPES, EXCHANGE_RATE_USD_THB, UPGRADE_REQUIREMENTS } from '../constants';
 import { MarketState, MarketItemData, AccessoryItem } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
+import { AccessoryIcon } from './AccessoryIcon';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface WarehouseModalProps {
@@ -243,132 +244,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         return getLocalized(item.name);
     };
 
-    const getIcon = (item: any, className: string) => {
-        let typeId = item.typeId || '';
 
-        // Safely extract name string for internal mapping
-        let nameStr = '';
-        if (item.name && typeof item.name === 'object') {
-            nameStr = (item.name as any).en || '';
-        } else if (typeof item.name === 'string') {
-            nameStr = item.name;
-        }
-
-        const rarity = (item.rarity && RARITY_SETTINGS[item.rarity]) ? item.rarity : 'COMMON';
-
-        // Name-based overrides
-        if (nameStr.includes('ชิป') || nameStr.includes('Chip')) typeId = 'upgrade_chip';
-        else if (nameStr.includes('กุญแจ') || nameStr.includes('Key')) typeId = 'chest_key';
-        else if (nameStr.includes('โต๊ะช่าง') || nameStr.includes('Mixer')) typeId = 'mixer';
-        else if (nameStr.includes('แว่นขยาย') || nameStr.includes('Magnifying')) typeId = 'magnifying_glass';
-        else if (nameStr.includes('ใบประกัน') || nameStr.includes('Insurance')) typeId = 'insurance_card';
-        else if (nameStr.includes('นาฬิกาทราย') || nameStr.includes('Hourglass')) typeId = 'hourglass_small';
-        else if (nameStr.includes('วัสดุปริศนา') || nameStr.includes('Mystery Item')) typeId = 'mystery_ore';
-        else if (nameStr.includes('วัสดุหายาก') || nameStr.includes('Legendary Item')) typeId = 'legendary_ore';
-        else if (nameStr.includes('รถกอล์ฟ') || nameStr.includes('Golf Cart') || nameStr.includes('รถไฟฟ้า') || nameStr.includes('Electric Vehicle')) typeId = 'auto_excavator';
-        else if (nameStr.includes('หุ่นยนต์') || nameStr.includes('Robot')) typeId = 'ai_robot';
-        // Classic Equipment
-        else if (nameStr.includes('หมวก') || nameStr.includes('Helmet')) typeId = null;
-        else if (nameStr.includes('แว่น') || nameStr.includes('Glasses')) typeId = 'glasses';
-        else if (nameStr.includes('ชุด') || nameStr.includes('Uniform') || nameStr.includes('Suit')) typeId = 'uniform';
-        else if (nameStr.includes('กระเป๋า') || nameStr.includes('Bag') || nameStr.includes('Backpack')) typeId = 'bag';
-        else if (nameStr.includes('รองเท้า') || nameStr.includes('Boots')) typeId = 'boots';
-        else if (nameStr.includes('มือถือ') || nameStr.includes('Mobile') || nameStr.includes('Phone')) typeId = 'mobile';
-        else if (nameStr.includes('คอม') || nameStr.includes('PC') || nameStr.includes('Computer')) typeId = 'pc';
-        else if (nameStr.includes('ตั๋วเร่งเวลา') || nameStr.includes('Time Skip Ticket')) typeId = 'time_skip_ticket';
-        else if (nameStr.includes('นาโนบอทก่อสร้าง') || nameStr.includes('Construction Nanobot')) typeId = 'construction_nanobot';
-        else if (nameStr.includes('Repair Kit') || nameStr.includes('ชุดซ่อม')) {
-            if (nameStr.includes('Basic') || nameStr.includes('พื้นฐาน')) typeId = 'repair_kit_1';
-            else if (nameStr.includes('Standard') || nameStr.includes('มาตรฐาน')) typeId = 'repair_kit_2';
-            else if (nameStr.includes('Electronic') || nameStr.includes('อิเล็กทรอนิกส์')) typeId = 'repair_kit_3';
-            else if (nameStr.includes('Mechanic') || nameStr.includes('เครื่องจักร')) typeId = 'repair_kit_4';
-            else typeId = 'repair_kit_1';
-        }
-
-        if (typeId === 'vip_withdrawal_card' || nameStr.includes('บัตร VIP')) {
-            return (
-                <div className={`relative ${className.includes('w-') ? className : 'w-full h-full'} aspect-[1.58/1] bg-gradient-to-br from-yellow-100 via-yellow-500 to-yellow-800 rounded-[4px] border border-yellow-200/50 shadow-[0_0_15px_rgba(234,179,8,0.4)] flex items-center justify-center overflow-hidden group/card`}>
-                    {/* Glossy Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-60"></div>
-                    {/* Magnetic Stripe Detail */}
-                    <div className="absolute top-[20%] left-0 w-full h-[15%] bg-stone-900/40"></div>
-                    {/* Chip Detail */}
-                    <div className="absolute top-[45%] left-[10%] w-[15%] h-[20%] bg-gradient-to-br from-yellow-200 to-yellow-600 rounded-sm border border-yellow-100/30"></div>
-                    {/* VIP Text */}
-                    <div className="absolute bottom-[10%] right-[10%] text-[8px] font-black italic text-black/40 tracking-tighter">VIP</div>
-                    <CreditCard className="text-yellow-950 w-1/2 h-1/2 relative z-10 drop-shadow-sm opacity-60" />
-                </div>
-            );
-        }
-
-        if (!typeId) return <Briefcase className={className} />;
-        if (typeId.includes('glove')) return <Briefcase className={className} />;
-
-        if (typeId.includes('hat')) return <HardHat className={className} />;
-        if (typeId.includes('glasses')) return <Glasses className={className} />;
-        if (typeId.includes('uniform') || typeId.includes('shirt')) return <Shirt className={className} />;
-        if (typeId.includes('bag') || typeId.includes('backpack')) return <Backpack className={className} />;
-        if (typeId.includes('boots')) return <Footprints className={className} />;
-        if (typeId.includes('mobile') || typeId.includes('phone')) return <Smartphone className={className} />;
-        if (typeId.includes('pc') || typeId.includes('monitor')) return <Monitor className={className} />;
-        if (typeId.includes('auto_excavator') || typeId.includes('truck')) return <TrainFront className={className} />;
-        if (typeId.includes('upgrade_chip') || typeId.includes('chip')) return <Cpu className={className} />;
-        if (typeId.includes('hourglass')) return <Hourglass className={className} />;
-        if (typeId.includes('chest_key') || typeId.includes('key')) return <Key className={className} />;
-        if (typeId.includes('mixer')) return <Factory className={className} />;
-        if (typeId === 'ai_robot' || typeId.includes('robot')) return <Bot className={className} />;
-        if (typeId.includes('magnifying_glass') || typeId.includes('search')) return <Search className={className} />;
-        if (typeId.includes('insurance_card') || typeId.includes('filetext')) return <FileText className={className} />;
-        if (typeId.includes('vip') || typeId.includes('credit')) return <CreditCard className={className} />;
-
-        if (typeId.startsWith('repair_kit')) {
-            let IconComp = Wrench;
-            if (typeId === 'repair_kit_1') IconComp = Hammer;
-            else if (typeId === 'repair_kit_2') IconComp = Briefcase;
-            else if (typeId === 'repair_kit_3') IconComp = Cpu;
-            else if (typeId === 'repair_kit_4') IconComp = Settings;
-
-            return (
-                <div className="relative flex items-center justify-center">
-                    <div className={`absolute inset-0 opacity-20 blur-md rounded-full scale-125 animate-pulse ${typeId === 'repair_kit_4' ? 'bg-red-500' :
-                        typeId === 'repair_kit_3' ? 'bg-yellow-500' :
-                            typeId === 'repair_kit_2' ? 'bg-purple-500' : 'bg-emerald-500'
-                        }`}></div>
-                    <IconComp className={`${className} relative z-10`} />
-                </div>
-            );
-        }
-        if (typeId === 'FileText') return <FileText className={className} />;
-        if (typeId.includes('mystery_ore')) return <Sparkles className={className} />;
-        if (typeId.includes('legendary_ore')) return <Gem className={className} />;
-
-        if (typeId === 'time_skip_ticket') {
-            return (
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-blue-500/20 rounded-lg scale-125 blur-md animate-pulse"></div>
-                    <div className="absolute -top-1 -right-1">
-                        <Timer size={10} className="text-blue-300 animate-[spin_3s_linear_infinite]" />
-                    </div>
-                    <Ticket className={`${className} text-blue-400 -rotate-12 relative z-10`} />
-                </div>
-            );
-        }
-
-        if (typeId === 'construction_nanobot') {
-            return (
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-cyan-500/30 rounded-full scale-[1.5] blur-xl animate-pulse"></div>
-                    <div className="absolute inset-0 border border-cyan-400/30 rounded-full scale-110 animate-[spin_8s_linear_infinite]"></div>
-                    <div className="absolute -top-1 -right-1 bg-cyan-500 text-white rounded-full p-0.5">
-                        <Zap size={8} className="animate-pulse" />
-                    </div>
-                    <Bot className={`${className} text-cyan-300 relative z-10`} />
-                </div>
-            );
-        }
-
-        return <Briefcase className={className} />;
-    };
 
     const handleUpgradeEquipment = async () => {
         if (!selectedEquipmentGroup || !onUpgradeEquipment) return;
@@ -583,7 +459,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                 return (
                                     <div className="flex justify-between items-center text-xs">
                                         <span className="text-stone-500 font-bold uppercase tracking-wider flex items-center gap-2">
-                                            {getIcon({ typeId: reqId, name: itemInfo?.name || reqId }, "text-stone-400")}
+                                            <AccessoryIcon item={{ typeId: reqId, name: itemInfo?.name || reqId }} size={16} className="text-stone-400" showGlow={false} />
                                             {t('warehouse.req_item')} {itemInfo ? getLocalized(itemInfo.name) : reqId}
                                         </span>
                                         <span className={hasItem ? "text-emerald-500 font-bold flex items-center gap-1" : "text-red-500 font-bold flex items-center gap-1"}>
@@ -814,7 +690,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
 
                                                     <div className="flex items-center gap-3 relative z-10 min-w-0 flex-1">
                                                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 ${isSpecial ? 'bg-stone-900 border-purple-500/50' : `bg-stone-950 ${rarityStyle.border}`}`}>
-                                                            {getIcon(item, `w-6 h-6 ${isMystery ? 'text-fuchsia-400 animate-pulse' : isLegendary ? 'text-yellow-400 animate-pulse' : rarityStyle.color}`)}
+                                                            <AccessoryIcon item={item} size={24} className={isMystery ? 'text-fuchsia-400 animate-pulse' : isLegendary ? 'text-yellow-400 animate-pulse' : ''} />
                                                         </div>
                                                         <div className="min-w-0">
                                                             <div className={`text-sm font-bold truncate ${isMystery ? 'text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-pink-400 to-yellow-300' : isLegendary ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]' : item.isHandmade ? 'text-yellow-400' : 'text-white'}`}>
@@ -856,7 +732,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                 <div key={idx} className={`bg-stone-900/80 border ${rarityStyle.border} rounded-xl p-4 flex items-center justify-between relative overflow-hidden group`}>
                                                     <div className="flex items-center gap-3 relative z-10 min-w-0 flex-1">
                                                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 bg-stone-950 ${rarityStyle.border}`}>
-                                                            {getIcon(item, `w-6 h-6 ${rarityStyle.color}`)}
+                                                            <AccessoryIcon item={item} size={24} />
                                                         </div>
                                                         <div className="min-w-0">
                                                             <div className={`text-sm font-bold truncate ${rarityStyle.color}`}>
@@ -898,7 +774,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
 
                                                 <div className="flex flex-col items-center text-center mb-8">
                                                     <div className={`w-32 h-32 rounded-3xl border-4 ${RARITY_SETTINGS[selectedEquipmentGroup.representative.rarity || 'COMMON']?.border || 'border-stone-700'} bg-stone-950 flex items-center justify-center shadow-2xl mb-4 relative group-hover:scale-105 transition-transform duration-500`}>
-                                                        {getIcon(selectedEquipmentGroup.representative, `w-20 h-20 ${RARITY_SETTINGS[selectedEquipmentGroup.representative.rarity || 'COMMON']?.color || 'text-stone-400'}`)}
+                                                        <AccessoryIcon item={selectedEquipmentGroup.representative} size={80} />
                                                         {selectedEquipmentGroup.representative.level && selectedEquipmentGroup.representative.level > 1 && (
                                                             <div className="absolute -bottom-3 bg-yellow-600 text-white text-xs font-black px-3 py-1 rounded-full border-2 border-stone-950 shadow-lg">
                                                                 Lv. {selectedEquipmentGroup.representative.level}
@@ -1066,7 +942,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                 >
                                                     <div className="flex items-center gap-3 relative z-10 min-w-0 flex-1">
                                                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 bg-stone-950 border-stone-800 group-hover:scale-110 transition-transform`}>
-                                                            {getIcon(item, `w-6 h-6 ${RARITY_SETTINGS[safeRarity].color}`)}
+                                                            <AccessoryIcon item={item} size={24} />
                                                         </div>
                                                         <div className="min-w-0">
                                                             <div className={`text-sm font-bold truncate ${item.isHandmade ? 'text-yellow-400' : 'text-white'}`}>

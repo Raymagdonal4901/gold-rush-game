@@ -3,11 +3,13 @@ import { RigLootModal } from './RigLootModal';
 import { OilRig, AccessoryItem } from '../services/types';
 import { OilRigAnimation } from './OilRigAnimation';
 import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, MINING_VOLATILITY_CONFIG, RIG_UPGRADE_RULES, MAX_RIG_LEVEL, RIG_LEVEL_STYLES } from '../constants';
-import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star, Settings, TrainFront, Clover } from 'lucide-react';
+import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star, Settings, TrainFront, Clover, Download } from 'lucide-react';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
 import { AutomatedBotOverlay } from './AutomatedBotOverlay';
+import { AccessoryIcon } from './AccessoryIcon';
+import { getItemDisplayName, getDurabilityInfo } from './AccessoryManagementModal';
 
 interface RigCardProps {
     rig: OilRig;
@@ -221,38 +223,6 @@ export const RigCard: React.FC<RigCardProps> = ({
     };
     const currentTier = tier(rig.investment);
 
-    const getAccessoryIcon = (item: AccessoryItem, className: string) => {
-        const getNeonIcon = (typeId: string) => {
-            if (!typeId) return <Briefcase className={className} />;
-            if (typeId.startsWith('hat')) return <HardHat className={`${className} text-yellow-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]`} />;
-            if (typeId.startsWith('glasses')) return <Glasses className={`${className} text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]`} />;
-            if (typeId.startsWith('uniform') || typeId.startsWith('shirt')) return <Shirt className={`${className} text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]`} />;
-            if (typeId.startsWith('bag')) return <Backpack className={`${className} text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]`} />;
-            if (typeId.startsWith('boots')) return <Footprints className={`${className} text-orange-400 drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]`} />;
-            if (typeId.startsWith('mobile')) return <Smartphone className={`${className} text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]`} />;
-            if (typeId.startsWith('pc')) return <Monitor className={`${className} text-rose-400 drop-shadow-[0_0_8px_rgba(251,113,133,0.8)]`} />;
-            if (typeId === 'auto_excavator') return <Truck className={`${className} text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]`} />;
-            if (typeId === 'upgrade_chip') return <Cpu className={`${className} text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]`} />;
-            if (typeId === 'chest_key') return <Key className={`${className} text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]`} />;
-
-            if (typeId.startsWith('repair_kit')) {
-                let glowColor = 'bg-emerald-500';
-                let IconComp = Wrench;
-                if (typeId === 'repair_kit_1') { glowColor = 'bg-emerald-500'; IconComp = Hammer; }
-                else if (typeId === 'repair_kit_2') { glowColor = 'bg-purple-500'; IconComp = Briefcase; }
-                else if (typeId === 'repair_kit_3') { glowColor = 'bg-yellow-500'; IconComp = Cpu; }
-                else if (typeId === 'repair_kit_4') { glowColor = 'bg-red-600'; IconComp = Settings; }
-                return (
-                    <div className="relative flex items-center justify-center">
-                        <div className={`absolute inset-0 ${glowColor} rounded-full scale-125 blur-md opacity-20 animate-pulse`}></div>
-                        <IconComp className={`${className} relative z-10`} />
-                    </div>
-                );
-            }
-            return <Briefcase className={className} />;
-        };
-        return getNeonIcon(item.typeId || '');
-    };
 
     const isInfiniteDurability = preset?.specialProperties?.infiniteDurability;
     const isZeroEnergy = preset?.specialProperties?.zeroEnergy;
@@ -581,7 +551,7 @@ export const RigCard: React.FC<RigCardProps> = ({
             `}></div>
 
             {isConfirming && (
-                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 sm:p-6 text-center">
                     <Coins className="text-yellow-500 animate-pulse mb-3" size={24} />
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_claim')}</h4>
                     {(() => {
@@ -613,7 +583,7 @@ export const RigCard: React.FC<RigCardProps> = ({
             )}
 
             {isExploring && (
-                <div className="absolute inset-0 z-50 bg-purple-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                <div className="absolute inset-0 z-50 bg-purple-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 sm:p-6 text-center">
                     <Skull className="text-purple-400 animate-pulse mb-4" size={32} />
                     <h4 className="text-purple-300 font-bold text-lg uppercase tracking-wider mb-2">{t('dungeon.exploring')}</h4>
                     <p className="text-purple-200/60 text-xs px-4">{t('rig.exploring_desc')}</p>
@@ -621,7 +591,7 @@ export const RigCard: React.FC<RigCardProps> = ({
             )}
 
             {isRenewConfirming && (
-                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 sm:p-6 text-center">
                     <RefreshCw className="text-blue-500 animate-spin-slow mb-3" size={24} />
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_renew')}</h4>
                     <div className="text-2xl font-mono font-bold text-white mb-1">-{formatCurrency(renewalCost)}</div>
@@ -633,7 +603,7 @@ export const RigCard: React.FC<RigCardProps> = ({
             )}
 
             {isRepairConfirming && (
-                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 sm:p-6 text-center">
                     <Wrench className="text-red-500 animate-bounce mb-3" size={24} />
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_repair')}</h4>
                     <div className="text-2xl font-mono font-bold text-white mb-1">-{formatCurrency(repairCost)}</div>
@@ -652,7 +622,7 @@ export const RigCard: React.FC<RigCardProps> = ({
             )}
 
             {isChargeConfirming && (
-                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 sm:p-6 text-center">
                     <Zap className="text-emerald-500 animate-pulse mb-3" size={24} />
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_refill')}</h4>
                     <div className="text-xl font-mono text-white mb-4">-{formatCurrency(((100 - energyPercent) / 100) * effectiveEnergyCostPerDay)}</div>
@@ -671,7 +641,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                 const matName = MATERIAL_CONFIG.NAMES[rule?.materialTier as keyof typeof MATERIAL_CONFIG.NAMES] || { th: 'แร่', en: 'Ore' };
 
                 return (
-                    <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                    <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 sm:p-6 text-center">
                         <ArrowDownToLine className="text-blue-400 animate-bounce mb-3" size={24} />
                         <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_upgrade')}</h4>
                         <div className="text-2xl font-mono font-bold text-white mb-1">
@@ -705,7 +675,7 @@ export const RigCard: React.FC<RigCardProps> = ({
             )}
 
             {isScrapConfirming && (
-                <div className="absolute inset-0 z-50 bg-red-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center border-2 border-red-900/50 rounded-xl">
+                <div className="absolute inset-0 z-50 bg-red-950/95 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center border-2 border-red-900/50 rounded-xl">
                     <Trash2 className="text-red-500 animate-bounce mb-4" size={32} />
                     <h4 className="text-red-400 text-sm uppercase tracking-[0.2em] font-black mb-2">{t('rig.confirm_demolish')}</h4>
                     <p className="text-stone-300 text-xs mb-4 leading-relaxed">
@@ -792,7 +762,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                     </div>
                 </div>
 
-                <div className={`flex z-10 flex-1 ${isExpired || isBroken || !isPowered ? 'opacity-50 grayscale' : ''} relative p-3 gap-3`}>
+                <div className={`flex z-10 flex-1 ${isExpired || isBroken || !isPowered ? 'opacity-50 grayscale' : ''} relative p-2 sm:p-3 gap-2 sm:gap-3`}>
                     <div className="flex flex-col items-center gap-3 pr-2 border-r border-stone-800/30">
                         <BatteryUI percent={energyPercent} colorClass="" isEnergy={true} />
                         {!isZeroEnergy && (
@@ -802,24 +772,75 @@ export const RigCard: React.FC<RigCardProps> = ({
                             </button>
                         )}
                         <div className="flex flex-col gap-2.5 mt-4">
-                            {equippedItems.slice(1, 5).map((item, index) => (
-                                <div key={index} onClick={(e) => { e.stopPropagation(); if (!isExploring && onManageAccessory) onManageAccessory(rig.id, index + 1); }} className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-all ${item ? 'border-yellow-400 bg-stone-800' : 'border-white/10 border-dashed bg-black/40'}`}>
-                                    {item ? (
-                                        (() => {
-                                            const thName = getLocalized(item.name);
-                                            let IconComp = Briefcase;
-                                            if (thName.includes('หมวก') || thName.includes('HardHat')) IconComp = HardHat;
-                                            else if (thName.includes('แว่น')) IconComp = Glasses;
-                                            else if (thName.includes('ชุด')) IconComp = Shirt;
-                                            else if (thName.includes('กระเป๋า')) IconComp = Backpack;
-                                            else if (thName.includes('รองเท้า')) IconComp = Footprints;
-                                            else if (thName.includes('มือซื้อ')) IconComp = Smartphone;
-                                            else if (thName.includes('คอม')) IconComp = Monitor;
-                                            return <IconComp size={20} className="text-yellow-100" />;
-                                        })()
-                                    ) : <Plus size={12} className="text-white/10" />}
-                                </div>
-                            ))}
+                            {equippedItems.slice(1, 5).map((item, index) => {
+                                const realSlotIndex = index + 1;
+                                const durInfo = item ? getDurabilityInfo(item) : null;
+                                const rarityConfig = item ? RARITY_SETTINGS[item.rarity as keyof typeof RARITY_SETTINGS] || RARITY_SETTINGS.COMMON : null;
+
+                                return (
+                                    <div
+                                        key={index}
+                                        onClick={(e) => { e.stopPropagation(); if (!isExploring && onManageAccessory) onManageAccessory(rig.id, realSlotIndex); }}
+                                        className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-all group relative
+                                            ${item ? `${rarityConfig?.border} bg-stone-800` : 'border-white/10 border-dashed bg-black/40 hover:border-white/30'}
+                                        `}
+                                    >
+                                        {item ? (
+                                            <>
+                                                <div className="scale-75">
+                                                    <AccessoryIcon item={item} size={32} />
+                                                </div>
+
+                                                {/* DURABILITY PILL */}
+                                                {durInfo && (
+                                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-1 bg-black/80 rounded-full overflow-hidden border border-white/10">
+                                                        <div
+                                                            className={`h-full ${durInfo.isExpired ? 'bg-red-500' : durInfo.percent <= 20 ? 'bg-red-500 animate-pulse' : durInfo.percent <= 50 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
+                                                            style={{ width: `${durInfo.percent}%` }}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* TOOLTIP */}
+                                                <div className="absolute left-full ml-3 hidden group-hover:block z-[100] pointer-events-none">
+                                                    <div className="bg-stone-900 border-2 border-stone-800 rounded-lg p-2.5 shadow-2xl min-w-[140px] relative">
+                                                        <div className="absolute -left-2 top-4 w-4 h-4 bg-stone-900 border-l-2 border-b-2 border-stone-800 rotate-45"></div>
+                                                        <div className="relative z-10">
+                                                            <div className={`text-[10px] font-black uppercase tracking-widest ${rarityConfig?.color} mb-0.5`}>
+                                                                {getItemDisplayName(item, t, getLocalized)}
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 mb-1.5 opacity-80">
+                                                                <Zap size={10} className="text-yellow-500" />
+                                                                <span className="text-[10px] font-bold text-white">
+                                                                    +{item.dailyBonus < 0.5 ? formatBonus(item.dailyBonus * 35) : formatBonus(item.dailyBonus)}
+                                                                </span>
+                                                            </div>
+                                                            {durInfo && (
+                                                                <div className="space-y-1 pt-1 border-t border-stone-800/50">
+                                                                    <div className="flex justify-between items-center text-[8px] font-bold text-stone-500 uppercase">
+                                                                        <span>{language === 'th' ? 'ความทนทาน' : 'Durability'}</span>
+                                                                        <span className={durInfo.isExpired ? 'text-red-500' : durInfo.percent <= 20 ? 'text-yellow-500' : 'text-emerald-500'}>
+                                                                            {durInfo.percent}%
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="w-full h-1 bg-stone-950 rounded-full overflow-hidden">
+                                                                        <div
+                                                                            className={`h-full ${durInfo.isExpired ? 'bg-red-500' : durInfo.percent <= 20 ? 'bg-red-500' : durInfo.percent <= 50 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
+                                                                            style={{ width: `${durInfo.percent}%` }}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <Plus size={12} className="text-white/10 group-hover:text-white/30 transition-colors" />
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -873,18 +894,40 @@ export const RigCard: React.FC<RigCardProps> = ({
 
                 <div className="mt-auto z-10 p-3 pt-0 space-y-2.5">
                     {!isExpired && (
-                        <div className={`mb-2 flex items-center justify-between p-1.5 rounded-lg border-2 ${currentMaterials > 0 ? 'bg-stone-950 border-yellow-600' : 'bg-stone-950/30 border-stone-800'}`}>
-                            <div className="flex items-center gap-2">
-                                <div className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center ${currentMaterials > 0 ? 'border-yellow-500 bg-stone-900' : 'border-stone-800 bg-stone-950'}`}>
-                                    <Key size={18} className={currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-800'} />
+                        <div className="space-y-2 mb-2">
+                            <div className={`flex items-center justify-between p-1.5 rounded-lg border-2 ${currentMaterials > 0 ? 'bg-stone-950 border-yellow-600' : 'bg-stone-950/30 border-stone-800'}`}>
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center ${currentMaterials > 0 ? 'border-yellow-500 bg-stone-900' : 'border-stone-800 bg-stone-950'}`}>
+                                        <Key size={18} className={currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-800'} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className={`text-[10px] font-bold uppercase ${currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-400'}`}>{currentMaterials > 0 ? t('rig.mining_key') : t('rig.waiting_discovery')}</span>
+                                        <div className="text-[10px] mt-0.5">{currentMaterials > 0 ? <span className="text-red-500 font-extrabold">{language === 'th' ? 'เต็ม (FULL)' : 'FULL'}</span> : <span className="text-stone-500">{t('rig.capacity')} 1</span>}</div>
+                                    </div>
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className={`text-[10px] font-bold uppercase ${currentMaterials > 0 ? 'text-yellow-400' : 'text-stone-400'}`}>{currentMaterials > 0 ? t('rig.mining_key') : t('rig.waiting_discovery')}</span>
-                                    <div className="text-[10px] mt-0.5">{currentMaterials > 0 ? <span className="text-red-500 font-extrabold">{language === 'th' ? 'เต็ม (FULL)' : 'FULL'}</span> : <span className="text-stone-500">{t('rig.capacity')} 1</span>}</div>
-                                </div>
+                                {currentMaterials > 0 && !isExploring && (
+                                    <button onClick={handleCollectMaterialsClick} className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1"><ArrowDownToLine size={14} /> {t('rig.collect')}</button>
+                                )}
                             </div>
-                            {currentMaterials > 0 && !isExploring && (
-                                <button onClick={handleCollectMaterialsClick} className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1"><ArrowDownToLine size={14} /> {t('rig.collect')}</button>
+
+                            {isGiftAvailable && !isExploring && (
+                                <div className="flex items-center justify-between p-1.5 rounded-lg border-2 bg-emerald-950/20 border-emerald-500/50 animate-pulse">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-10 h-10 rounded-lg border-2 border-emerald-500 bg-emerald-900/30 flex items-center justify-center">
+                                            <Gift size={18} className="text-emerald-400" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black uppercase text-emerald-400">{language === 'th' ? 'ของขวัญประจำวัน' : 'DAILY GIFT'}</span>
+                                            <span className="text-[9px] text-stone-400">{language === 'th' ? 'กุญแจเหมืองรออยู่!' : 'Mining Key is ready!'}</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onClaimGift(rig); }}
+                                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1"
+                                    >
+                                        <Download size={14} /> {t('rig.claim')}
+                                    </button>
+                                </div>
                             )}
                         </div>
                     )}

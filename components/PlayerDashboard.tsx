@@ -4,7 +4,7 @@ import { api } from '../services/api';
 // import { MockDB } from '../services/db'; // Not using MockDB directly for now unless needed
 import { useLanguage } from '../contexts/LanguageContext';
 import { translations } from '../services/translations';
-import { ROBOT_CONFIG, SHOP_ITEMS, MATERIAL_CONFIG, REPAIR_CONFIG, ENERGY_CONFIG, MAX_RIGS_PER_USER } from '../constants';
+import { ROBOT_CONFIG, SHOP_ITEMS, MATERIAL_CONFIG, REPAIR_CONFIG, ENERGY_CONFIG, MAX_RIGS_PER_USER, RIG_PRESETS, RIG_UPGRADE_RULES } from '../constants';
 import { MaterialIcon } from './MaterialIcon';
 
 // Utility functions moved here since utils folder is missing
@@ -100,6 +100,41 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+    // --- UNIVERSAL NAVIGATION ---
+    const handleGeneralBack = () => {
+        // Close modals in reverse priority
+        if (isMobileMenuOpen) { setIsMobileMenuOpen(false); return; }
+        if (isShopOpen) { setIsShopOpen(false); return; }
+        if (isUpgradeOpen) { setIsUpgradeOpen(false); return; }
+        if (isLeaderboardOpen) { setIsLeaderboardOpen(false); return; }
+        if (isInventoryOpen) { setIsInventoryOpen(false); return; }
+        if (isDailyBonusOpen) { setIsDailyBonusOpen(false); return; }
+        if (isMissionOpen) { setIsMissionOpen(false); return; }
+        if (isLootBoxOpen) { setIsLootBoxOpen(false); return; }
+        if (isDungeonOpen) { setIsDungeonOpen(false); return; }
+        if (isVipOpen) { setIsVipOpen(false); return; }
+        if (isMarketOpen) { setIsMarketOpen(false); return; }
+        if (isAccessoryManagerOpen) { setIsAccessoryManagerOpen(false); return; }
+        if (isSlotUnlockOpen) { setIsSlotUnlockOpen(false); return; }
+        if (isWarehouseOpen) { setIsWarehouseOpen(false); return; }
+        if (isMaterialRevealOpen) { setIsMaterialRevealOpen(false); return; }
+        if (isMailOpen) { setIsMailOpen(false); return; }
+        if (isReferralOpen) { setIsReferralOpen(false); return; }
+        if (isSettingsOpen) { setIsSettingsOpen(false); return; }
+        if (isUserGuideOpen) { setIsUserGuideOpen(false); return; }
+        if (isHistoryOpen) { setIsHistoryOpen(false); return; }
+        if (isAccessoryShopOpen) { setIsAccessoryShopOpen(false); return; }
+        if (isWithdrawOpen) { setIsWithdrawOpen(false); return; }
+        if (isDepositOpen) { setIsDepositOpen(false); return; }
+        if (isBotModalOpen) { setIsBotModalOpen(false); return; }
+        if (isMinesOpen) { setIsMinesOpen(false); return; }
+        if (isLuckyDrawOpen) { setIsLuckyDrawOpen(false); return; }
+        if (isMergeModalOpen) { setIsMergeModalOpen(false); return; }
+
+        // If no modals are open, call the standard onBack
+        if (onBack) onBack();
+    };
     const [isAccessoryShopOpen, setIsAccessoryShopOpen] = useState(false);
     const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
     const [isDepositOpen, setIsDepositOpen] = useState(false);
@@ -175,6 +210,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const lastAutoKeyCollectRef = useRef<Record<string, number>>({});
     const lastAutoBatteryRefillRef = useRef<number>(0);
     const lastAutoRepairRef = useRef<Record<string, number>>({});
+    const lastAutoGiftCollectRef = useRef<Record<string, number>>({});
 
     // --- ROBOT STATE ---
     const [botStatus, setBotStatus] = useState<'ACTIVE' | 'PAUSED'>('ACTIVE');
@@ -268,44 +304,74 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
         const checkAutomation = async () => {
             const currentUser = userRef.current;
             const currentRigs = rigsRef.current;
-            const currentIsFurnaceActive = isFurnaceActiveRef.current;
             const currentBotStatus = botStatusRef.current;
 
             // --- BOT CYCLE LOGIC ---
-            if (!userRef.current?.inventory?.some((item: any) => item.typeId === 'ai_robot' && (!item.expireAt || item.expireAt > Date.now())) || currentBotStatus === 'PAUSED') {
+            const activeBot = currentUser?.inventory?.find((item: any) =>
+                item.typeId === 'ai_robot' && (!item.expireAt || item.expireAt > Date.now())
+            );
+
+            if (!activeBot || currentBotStatus === 'PAUSED') {
                 return; // Do nothing if not owned, expired, or paused
             }
 
-            // --- 1. AUTOMATION LOGIC (AI ROBOT - ACTIVE STATE) ---
-
-            // Auto Repair
-            for (const rig of currentRigs) {
-                // Calculate durability based on repairCost and Rigs Config? 
-                // Simplified: If backend doesn't send "durability", we use lastRepair timestamp logic or assume constant decay?
-                // For this demo, let's assume we check for "BROKEN" or low health if available.
-                // Since frontend doesn't track health % explicitly in `rig` object here (it's in RigCard logic), 
-                // we'll use a placeholder check or assume if status is 'maintenance' ref repair.
-                // BUT, user asked for "Working Robot". We will simulate it working.
-
-                // Auto Collect (Claim)
-                // Collect every 10 minutes or if pending rewards > threshold?
-                // Let's claim if unclaimed for > 1 hour
-                const now = Date.now();
-                if (now - rig.lastClaimAt > 3600000) { // 1 Hour
-                    // Don't actually call API too often in loop without flags, this is just visual simulation of logic
-                    // to actually claim, we need to be careful not to spam API.
-                    // For "Visual", we just show the robot.
-                }
-            }
-
-            // Real Automation Implementation (Throttled)
             const now = Date.now();
 
-            // A. Auto Refill Overclock (Removed from Robot in fixed model)
-            // Robot no longer auto-spends money for fixed-duration buffs without explicit user action or separate setting
+            // --- 1. AUTOMATION LOGIC (AI ROBOT - ACTIVE STATE) ---
+            for (const rig of currentRigs) {
+                // Throttling: 30 seconds per action per rig
+                const cooldown = 30000;
 
-            // --- 2. FURNACE ENERGY DRAIN (DEPRECATED) ---
-            // Energy-based drain is replaced by fixed-duration timer
+                // A. Auto Repair
+                // Check if rig is broken (health logic is usually backend or calculated in RigCard)
+                // For safety, we check if rig status is 'maintenance' or if health is 0 (if tracked)
+                const isBroken = rig.status === 'maintenance' || (rig.durability !== undefined && rig.durability <= (ROBOT_CONFIG.REPAIR_THRESHOLD || 0));
+                if (isBroken && (!lastAutoRepairRef.current[rig.id] || now - lastAutoRepairRef.current[rig.id] > cooldown)) {
+                    lastAutoRepairRef.current[rig.id] = now;
+                    handleRepair(rig);
+                    continue; // One action per cycle per rig
+                }
+
+                // B. Auto Collect Materials (Mine Key)
+                // If rig has materials waiting to be collected
+                if (rig.currentMaterials > 0 && (!lastAutoKeyCollectRef.current[rig.id] || now - lastAutoKeyCollectRef.current[rig.id] > cooldown)) {
+                    lastAutoKeyCollectRef.current[rig.id] = now;
+                    handleCollectMaterials(rig);
+                    continue;
+                }
+
+                // B2. Auto Collect 24h Gift (Mine Key)
+                const preset = RIG_PRESETS.find(p => p.id === rig.tierId);
+                const isOverclockActive = currentUser?.isOverclockActive && new Date(currentUser?.overclockExpiresAt).getTime() > now;
+                const overclockMultiplier = ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST || 1.5;
+                const overclockBoost = isOverclockActive ? overclockMultiplier : ENERGY_CONFIG.BOX_DROP_SPEED_BOOST || 1.1;
+                const giftIntervalMs = (1 * 24 * 60 * 60 * 1000) / overclockBoost;
+                const lastGiftTimestamp = rig.lastGiftAt ? new Date(rig.lastGiftAt).getTime() : (rig.purchasedAt ? new Date(rig.purchasedAt).getTime() : now);
+                const nextGiftTime = lastGiftTimestamp + giftIntervalMs;
+                const isGiftAvailable = now >= nextGiftTime && !preset?.specialProperties?.noGift;
+
+                if (isGiftAvailable && (!lastAutoGiftCollectRef.current[rig.id] || now - lastAutoGiftCollectRef.current[rig.id] > cooldown)) {
+                    lastAutoGiftCollectRef.current[rig.id] = now;
+                    handleClaimGift(rig);
+                    continue;
+                }
+
+                // C. Auto Charge Energy
+                const energyPercent = rig.energy !== undefined ? rig.energy : 100;
+                if (energyPercent < (ROBOT_CONFIG.ENERGY_THRESHOLD || 50) && (!lastAutoRefillRef.current[rig.id] || now - lastAutoRefillRef.current[rig.id] > cooldown)) {
+                    lastAutoRefillRef.current[rig.id] = now;
+                    handleChargeRigEnergy(rig);
+                    continue;
+                }
+
+                // D. Auto Claim Profits (Money)
+                // If last claim was more than 1 hour ago (Throttled per rig)
+                if (now - rig.lastClaimAt > 3600000 && (!lastAutoCollectRef.current[rig.id] || now - lastAutoCollectRef.current[rig.id] > cooldown)) {
+                    lastAutoCollectRef.current[rig.id] = now;
+                    handleClaim(rig.id, 0);
+                    continue;
+                }
+            }
         };
 
         const interval = setInterval(checkAutomation, 1000);
@@ -787,28 +853,21 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             <nav className="fixed top-0 left-0 right-0 z-[90] bg-stone-950/80 backdrop-blur-md border-b border-stone-800 h-16">
                 <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
                     {/* Logo & Mobile Menu */}
-                    <div className="flex items-center gap-3">
+                    {/* Logo & Navigation */}
+                    <div className="flex items-center gap-2">
                         <button
-                            className="lg:hidden p-2 text-stone-400 hover:text-white"
-                            onClick={() => setIsMobileMenuOpen(true)}
+                            onClick={handleGeneralBack}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-stone-800 bg-stone-900/50 hover:bg-stone-800 text-[10px] font-black tracking-widest text-stone-400 hover:text-yellow-500 transition-all"
                         >
-                            <Menu size={24} />
+                            <ArrowRight size={14} className="rotate-180" />
+                            <span className="hidden sm:inline">{language === 'th' ? 'กลับ' : 'BACK'}</span>
                         </button>
-                        <div className="flex items-center gap-2">
-                            <Pickaxe className="text-yellow-500" size={24} />
-                            <span className="font-display font-black text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600">
+                        <div className="flex items-center gap-2 ml-2">
+                            <Pickaxe className="text-yellow-500" size={20} />
+                            <span className="font-display font-black text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 hidden xs:inline">
                                 GOLD RUSH
                             </span>
                         </div>
-                        {onBack && (
-                            <button
-                                onClick={onBack}
-                                className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border border-stone-800 bg-stone-900/50 hover:bg-stone-800 text-[10px] font-black tracking-widest text-stone-400 hover:text-yellow-500 transition-all ml-2"
-                            >
-                                <ArrowRight size={14} className="rotate-180" />
-                                {language === 'th' ? 'หน้าหลัก' : 'HOME'}
-                            </button>
-                        )}
                     </div>
 
                     {/* Desktop Stats */}
@@ -849,7 +908,11 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                         <div className="relative group cursor-pointer" onClick={() => setIsVipOpen(true)}>
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-600 to-yellow-800 p-0.5">
                                 <div className="w-full h-full rounded-full bg-stone-900 flex items-center justify-center overflow-hidden">
-                                    <User size={20} className="text-yellow-500" />
+                                    {user?.avatarUrl ? (
+                                        <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User size={20} className="text-yellow-500" />
+                                    )}
                                 </div>
                             </div>
                             <div className="absolute -bottom-1 -right-1 bg-stone-900 rounded-full p-0.5">
@@ -871,9 +934,9 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
 
                         <button
                             className="p-2 text-stone-400 hover:text-white transition-colors"
-                            onClick={() => setIsSettingsOpen(true)}
+                            onClick={() => setIsMobileMenuOpen(true)}
                         >
-                            <Settings size={20} />
+                            <Menu size={24} />
                         </button>
 
                         {(user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') && (
@@ -1364,17 +1427,30 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                             </div>
 
                             <div className="flex flex-col gap-4">
-                                <button onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-4 p-4 rounded-xl bg-stone-900 border border-stone-800 text-stone-200">
-                                    <Settings size={20} />
-                                    <span className="font-bold">Settings</span>
+                                <button onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-4 p-4 rounded-xl bg-stone-900 border border-stone-800 text-stone-200 hover:bg-stone-800 transition-colors">
+                                    <Settings size={20} className="text-yellow-500" />
+                                    <div className="text-left">
+                                        <p className="font-bold text-sm tracking-widest uppercase">{t('settings.title') || 'Settings'}</p>
+                                        <p className="text-[10px] text-stone-500 uppercase font-bold tracking-tighter">Security & Profile</p>
+                                    </div>
                                 </button>
-                                <button onClick={() => { setIsHistoryOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-4 p-4 rounded-xl bg-stone-900 border border-stone-800 text-stone-200">
-                                    <History size={20} />
-                                    <span className="font-bold">History</span>
+                                <button onClick={() => { setIsHistoryOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-4 p-4 rounded-xl bg-stone-900 border border-stone-800 text-stone-200 hover:bg-stone-800 transition-colors">
+                                    <History size={20} className="text-blue-500" />
+                                    <div className="text-left">
+                                        <p className="font-bold text-sm tracking-widest uppercase">{language === 'th' ? 'ประวัติ' : 'History'}</p>
+                                        <p className="text-[10px] text-stone-500 uppercase font-bold tracking-tighter">Activity Logs</p>
+                                    </div>
                                 </button>
-                                <button onClick={onLogout} className="flex items-center gap-4 p-4 rounded-xl bg-red-900/20 border border-red-900/50 text-red-400 mt-auto">
+                                <button onClick={() => { setIsUserGuideOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center gap-4 p-4 rounded-xl bg-stone-900 border border-stone-800 text-stone-200 hover:bg-stone-800 transition-colors">
+                                    <BookOpen size={20} className="text-emerald-500" />
+                                    <div className="text-left">
+                                        <p className="font-bold text-sm tracking-widest uppercase">{t('user_guide.title') || 'Guide'}</p>
+                                        <p className="text-[10px] text-stone-500 uppercase font-bold tracking-tighter">How to play</p>
+                                    </div>
+                                </button>
+                                <button onClick={onLogout} className="flex items-center gap-4 p-4 rounded-xl bg-red-900/10 border border-red-900/40 text-red-500 mt-auto hover:bg-red-900/20 transition-colors">
                                     <LogOut size={20} />
-                                    <span className="font-bold">Logout</span>
+                                    <span className="font-bold uppercase tracking-widest">Logout</span>
                                 </button>
                             </div>
                         </div>
@@ -1463,6 +1539,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                         onUnequip={handleUnequip}
                         onRefresh={fetchData}
                         materials={user?.materials}
+                        equippedItemIds={rigs.flatMap(r => r.slots || []).filter(id => id !== null) as string[]}
                     />
                 )
             }

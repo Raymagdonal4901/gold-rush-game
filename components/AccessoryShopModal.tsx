@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, ShoppingBag, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Coins, Zap, Clock, CalendarDays, Key, Star, Factory, Search, Truck, Cpu, Hammer, Timer, ArrowRight, ChevronRight, Hourglass, Sparkles, FileText, Fan, Wifi, Server, Grid, BoxSelect, Briefcase, CreditCard, Ticket, Shield, Wrench, Settings, StarHalf, Pickaxe, AlertCircle, TrainFront, Info, Clover, Flame } from 'lucide-react';
+import { AccessoryIcon } from './AccessoryIcon';
 import { SHOP_ITEMS, CURRENCY, RARITY_SETTINGS, MATERIAL_CONFIG, EQUIPMENT_SERIES, REPAIR_KITS, RIG_PRESETS, MINING_VOLATILITY_CONFIG } from '../constants';
 import { CraftingQueueItem } from '../services/types';
 import { MaterialIcon } from './MaterialIcon';
@@ -239,135 +240,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
         return item.name || '';
     };
 
-    const getIcon = (iconName: string, className: string, itemId?: string) => {
-        if (itemId === 'time_skip_ticket') {
-            return (
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-blue-500/20 rounded-lg scale-125 blur-md animate-pulse"></div>
-                    <div className="absolute -top-1 -right-1">
-                        <Timer size={14} className="text-blue-300 animate-[spin_3s_linear_infinite]" />
-                    </div>
-                    <Ticket className={`${className} text-blue-400 -rotate-12 relative z-10 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]`} />
-                </div>
-            );
-        }
 
-        if (itemId === 'construction_nanobot') {
-            return (
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-cyan-500/30 rounded-full scale-[1.5] blur-xl animate-pulse"></div>
-                    <div className="absolute inset-0 border border-cyan-400/30 rounded-full scale-125 animate-[spin_8s_linear_infinite]"></div>
-                    <div className="absolute inset-0 border border-white/20 rounded-full scale-110 animate-[spin_5s_linear_infinite_reverse] border-dashed"></div>
-                    <div className="absolute -top-2 -right-2 bg-cyan-500 text-white rounded-full p-0.5 shadow-[0_0_10px_cyan]">
-                        <Zap size={10} className="animate-pulse" />
-                    </div>
-                    <Bot className={`${className} text-cyan-300 relative z-10 drop-shadow-[0_0_15px_rgba(34,211,238,0.8)]`} />
-                </div>
-            );
-        }
-
-        if (itemId === 'auto_excavator') {
-            return (
-                <div className="relative">
-                    <TrainFront className={className} />
-                    <Star size={14} className="absolute -top-1 -right-1 text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse" />
-                </div>
-            );
-        }
-
-        // Special handling for Hourglasses to make them distinct
-        if (itemId === 'hourglass_small') {
-            return (
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-blue-500/10 rounded-full scale-125 blur-sm"></div>
-                    <Hourglass className={`${className} text-blue-400 relative z-10`} />
-                </div>
-            );
-        }
-        if (itemId === 'hourglass_medium') {
-            return (
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-purple-500/20 rounded-full scale-150 blur-md animate-pulse"></div>
-                    <div className="absolute inset-0 border border-purple-500/30 rounded-full scale-125"></div>
-                    <Sparkles className="absolute -top-2 -right-2 text-purple-300 animate-pulse" size={14} />
-                    <Hourglass className={`${className} text-purple-400 relative z-10`} />
-                </div>
-            );
-        }
-        if (itemId === 'hourglass_large') {
-            return (
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-yellow-500/30 rounded-full scale-[1.8] blur-xl animate-pulse"></div>
-                    <div className="absolute inset-0 border-2 border-yellow-500/20 rounded-full scale-[1.4] animate-[spin_10s_linear_infinite] border-dashed"></div>
-                    <div className="absolute inset-0 border border-white/20 rounded-full scale-[1.6] animate-[spin_15s_linear_infinite_reverse] border-dotted"></div>
-                    <Sparkles className="absolute -top-4 -right-4 text-yellow-300 animate-bounce" size={20} />
-                    <Hourglass className={`${className} text-yellow-400 drop-shadow-[0_0_15px_gold] relative z-10`} />
-                </div>
-            );
-        }
-
-        if (iconName === 'Key' || itemId === 'chest_key') return <Key className={className} />;
-        if (iconName === 'Factory') return <Hammer className={className} />;
-        if (iconName === 'Search') return <Search className={className} />;
-        if (iconName === 'HardHat' || (itemId && itemId.startsWith('hat'))) return <HardHat className={className} />;
-        if (iconName === 'Glasses' || (itemId && itemId.startsWith('glasses'))) return <Glasses className={className} />;
-        if (iconName === 'Shirt' || (itemId && itemId.startsWith('uniform'))) return <Shirt className={className} />;
-        if (iconName === 'Backpack' || (itemId && itemId.startsWith('bag'))) return <Backpack className={className} />;
-        if (iconName === 'Footprints' || (itemId && itemId.startsWith('boots'))) return <Footprints className={className} />;
-        if (iconName === 'Smartphone' || (itemId && itemId.startsWith('mobile'))) return <Smartphone className={className} />;
-        if (iconName === 'Monitor' || (itemId && itemId.startsWith('pc'))) return <Monitor className={className} />;
-        if (iconName === 'Bot') return <Bot className={className} />;
-        if (iconName === 'Truck' || iconName === 'TrainFront' || (itemId && itemId === 'auto_excavator')) return <TrainFront className={className} />;
-        if (iconName === 'Zap') return <Zap className={className} />;
-        if (iconName === 'Cpu' || itemId === 'upgrade_chip') return <Cpu className={className} />;
-        if (iconName === 'Hourglass' || (itemId && itemId.startsWith('hourglass'))) return <Hourglass className={className} />;
-        if (iconName === 'Shield' || iconName === 'FileText' || itemId === 'insurance_card') return <FileText className={className} />;
-        if (iconName === 'CreditCard' || itemId === 'vip_withdrawal_card') {
-            const isGold = false;
-            return (
-                <div className={`relative ${className.includes('w-') ? className : 'w-full h-full'} aspect-[1.58/1] ${isGold ? 'bg-gradient-to-br from-yellow-200 via-yellow-400 to-yellow-600 border-2 border-yellow-300 shadow-[0_0_20px_rgba(250,204,21,0.6)]' : 'bg-gradient-to-br from-yellow-100 via-yellow-500 to-yellow-800 border border-yellow-200/50 shadow-[0_0_15px_rgba(234,179,8,0.4)]'} rounded-[4px] flex items-center justify-center overflow-hidden group/card`}>
-                    <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-60"></div>
-                    {isGold && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover/card:animate-[shimmer_2s_infinite] pointer-events-none"></div>
-                    )}
-                    <div className="absolute top-[20%] left-0 w-full h-[15%] bg-stone-900/40"></div>
-                    <div className="absolute top-[45%] left-[10%] w-[15%] h-[20%] bg-gradient-to-br from-yellow-200 to-yellow-600 rounded-sm border border-yellow-100/30"></div>
-                    <div className="absolute bottom-[10%] right-[10%] text-[8px] font-black italic text-black/40 tracking-tighter">
-                        {isGold ? 'GOLD VIP' : 'VIP'}
-                    </div>
-                    <CreditCard className={`${isGold ? 'text-yellow-950/80 scale-110' : 'text-yellow-950'} w-1/2 h-1/2 relative z-10 drop-shadow-sm opacity-60`} />
-                    {isGold && (
-                        <div className="absolute top-1 right-1">
-                            <Sparkles size={12} className="text-yellow-200 animate-pulse" />
-                        </div>
-                    )}
-                </div>
-            );
-        }
-
-        if (itemId && itemId.startsWith('repair_kit')) {
-            let glowColor = 'bg-emerald-500';
-            if (itemId?.includes('2')) glowColor = 'bg-purple-500';
-            if (itemId?.includes('3')) glowColor = 'bg-yellow-500';
-            if (itemId?.includes('4')) glowColor = 'bg-red-600';
-
-            let IconComp = Wrench;
-            if (iconName === 'Hammer') IconComp = Hammer;
-            else if (iconName === 'Briefcase') IconComp = Briefcase;
-            else if (iconName === 'Cpu') IconComp = Cpu;
-            else if (iconName === 'Settings') IconComp = Settings;
-
-            return (
-                <div className="relative flex items-center justify-center">
-                    <div className={`absolute inset-0 ${glowColor} rounded-full scale-125 blur-md opacity-20 animate-pulse`}></div>
-                    <IconComp className={`${className} relative z-10 transition-transform duration-500 group-hover:rotate-12`} />
-                </div>
-            );
-        }
-
-        if (iconName === 'Wrench') return <Wrench className={className} />;
-        return <Briefcase className={className} />;
-    };
 
     const renderTooltip = (item: typeof SHOP_ITEMS[0]) => {
         if (!item) return null; // Defensive check
@@ -452,7 +325,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                     <div className={`absolute inset-0 bg-gradient-to-b ${rarityStyle.bgGradient} opacity-5 group-hover:opacity-10 transition-opacity rounded-t-xl`}></div>
 
                     <div className={`group/icon relative rounded-full border-2 ${rarityStyle.border} bg-stone-900 flex items-center justify-center shadow-inner z-10 group-hover:scale-110 transition-transform duration-500 cursor-help ${isSpecial ? 'w-20 h-20' : 'w-24 h-24'}`}>
-                        {getIcon(item.icon, `${isSpecial ? 'w-10 h-10' : 'w-12 h-12'} ${rarityStyle.color} drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]`, item.id)}
+                        <AccessoryIcon item={{ typeId: item.id, name: item.name }} size={isSpecial ? 40 : 48} />
                         {renderTooltip(item)}
                     </div>
                 </div>
@@ -615,7 +488,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                     <div className={`absolute -inset-4 bg-gradient-to-r ${rarityStyle.bgGradient} opacity-30 blur-xl group-hover:opacity-50 transition-opacity`}></div>
                                     <div className={`relative w-32 h-32 bg-stone-950 rounded-2xl border-2 ${rarityStyle.border} flex items-center justify-center shadow-2xl overflow-hidden`}>
                                         <div className={`absolute inset-0 bg-gradient-to-b ${rarityStyle.bgGradient} opacity-10`}></div>
-                                        {getIcon(shopItem?.icon || 'Box', "w-16 h-16 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]", confirmItem.id)}
+                                        <AccessoryIcon item={{ typeId: confirmItem.id, name: shopItem?.name || confirmItem.id }} size={64} />
                                     </div>
                                 </div>
 
@@ -713,7 +586,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                 <div className={`absolute -inset-6 bg-gradient-to-r ${rarityStyle.bgGradient} opacity-40 blur-2xl rounded-full`}></div>
                                 <div className={`relative w-40 h-40 bg-stone-950 rounded-3xl border-4 ${rarityStyle.border} flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden group`}>
                                     <div className={`absolute inset-0 bg-gradient-to-tr ${rarityStyle.bgGradient} opacity-20`}></div>
-                                    {getIcon(shopItem?.icon || 'Box', "w-24 h-24 text-white drop-shadow-[0_0_20px_white]", purchasedItem.typeId)}
+                                    <AccessoryIcon item={purchasedItem} size={96} />
 
                                     {/* Shimmer Effect */}
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
@@ -786,7 +659,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                 <div className="p-4 flex flex-col gap-4">
                     <div className="flex gap-4">
                         <div className={`group/icon relative w-16 h-16 rounded-lg border-2 ${rarityStyle.border} bg-stone-950 flex items-center justify-center shrink-0 cursor-help`}>
-                            {getIcon(item.icon, `w-8 h-8 ${rarityStyle.color}`, item.id)}
+                            <AccessoryIcon item={item} size={32} />
                             {renderTooltip(item)}
                         </div>
 
@@ -878,7 +751,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                             {requiredItemConfig && (
                                 <div className="flex items-center justify-between text-xs bg-stone-900 p-1.5 rounded col-span-2 border border-blue-500/20">
                                     <div className="flex items-center gap-2">
-                                        {getIcon(requiredItemConfig.icon, "w-4 h-4 text-blue-400", requiredItemConfig.id)}
+                                        <AccessoryIcon item={requiredItemConfig} size={16} />
                                         <span className="text-blue-300 font-bold">{getItemDisplayName(requiredItemConfig)}</span>
                                     </div>
                                     <span className={hasRequiredItem ? 'text-green-400' : 'text-red-400 font-black animate-pulse'}>
@@ -982,7 +855,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                             <div className="relative">
                                                 <div className={`absolute inset-0 bg-green-500 rounded-full blur-xl opacity-40 animate-pulse`}></div>
                                                 <div className={`w-20 h-20 rounded-xl bg-stone-950 border-2 border-green-500 flex items-center justify-center shadow-lg relative overflow-hidden`}>
-                                                    {getIcon(item.icon, `w-10 h-10 ${rarityStyle.color}`, item.id)}
+                                                    <AccessoryIcon item={item} size={40} />
                                                     <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent animate-[shimmer_2s_infinite]"></div>
                                                 </div>
                                                 <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1 shadow-lg animate-bounce">
@@ -1479,7 +1352,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                         {targetItem ? (
                             <div className="relative group cursor-pointer" onClick={() => setUpgradeTargetId(null)}>
                                 <div className={`w-32 h-32 bg-stone-950 rounded-xl border-2 ${RARITY_SETTINGS[targetItem.rarity]?.border || 'border-stone-700'} flex items-center justify-center relative overflow-hidden`}>
-                                    {getIcon(SHOP_ITEMS.find(i => i.id === targetItem.typeId)?.icon || 'Box', `w-16 h-16 ${RARITY_SETTINGS[targetItem.rarity]?.color}`, targetItem.typeId)}
+                                    <AccessoryIcon item={targetItem} size={64} />
 
                                     {/* STAR RATING SYSTEM - VERTICAL LEFT */}
                                     <div className="absolute left-1 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 z-20">
@@ -1539,7 +1412,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                         <div key={item.id} onClick={() => { setUpgradeTargetId(item.id); setUpgradeMaterialId(null); }}
                                             className={`flex items-center gap-3 p-3 rounded-lg border border-stone-800 bg-stone-900/80 hover:bg-stone-800 cursor-pointer transition-all ${RARITY_SETTINGS[item.rarity]?.border ? 'hover:' + RARITY_SETTINGS[item.rarity].border : ''}`}>
                                             <div className={`w-10 h-10 rounded bg-stone-950 flex items-center justify-center border ${RARITY_SETTINGS[item.rarity]?.border}`}>
-                                                {getIcon(SHOP_ITEMS.find(i => i.id === item.typeId)?.icon || 'Box', `w-6 h-6 ${RARITY_SETTINGS[item.rarity]?.color}`, item.typeId)}
+                                                <AccessoryIcon item={item} size={24} />
                                             </div>
                                             <div className="flex-1">
                                                 <div className={`text-sm font-bold ${RARITY_SETTINGS[item.rarity]?.color}`}>{getItemDisplayName(item)}</div>
@@ -1597,7 +1470,11 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                         {materialItem ? (
                             <div className="relative group cursor-pointer" onClick={() => setUpgradeMaterialId(null)}>
                                 <div className={`w-32 h-32 bg-stone-950 rounded-xl border-2 border-stone-600 border-dashed flex items-center justify-center relative overflow-hidden opacity-80 hover:opacity-100 transition-opacity`}>
-                                    {getIcon(SHOP_ITEMS.find(i => i.id === materialItem.typeId)?.icon || 'Box', `w-16 h-16 ${RARITY_SETTINGS[materialItem.rarity]?.color} grayscale`, materialItem.typeId)}
+                                    <AccessoryIcon
+                                        item={{ typeId: materialItem.typeId, name: materialItem.name, rarity: materialItem.rarity }}
+                                        size={64}
+                                        className="grayscale opacity-50"
+                                    />
                                 </div>
                                 <div className="text-center mt-4">
                                     <div className={`font-bold text-stone-400`}>{getItemDisplayName(materialItem)}</div>
@@ -1613,7 +1490,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                         <div key={item.id} onClick={() => setUpgradeMaterialId(item.id)}
                                             className={`flex items-center gap-3 p-3 rounded-lg border border-stone-800 bg-stone-900/80 hover:bg-stone-800 cursor-pointer transition-all opacity-75 hover:opacity-100`}>
                                             <div className={`w-10 h-10 rounded bg-stone-950 flex items-center justify-center border border-stone-700`}>
-                                                {getIcon(SHOP_ITEMS.find(i => i.id === item.typeId)?.icon || 'Box', `w-6 h-6 ${RARITY_SETTINGS[item.rarity]?.color}`, item.typeId)}
+                                                <AccessoryIcon item={item} size={24} />
                                             </div>
                                             <div className="flex-1">
                                                 <div className={`text-sm font-bold text-stone-400`}>{getItemDisplayName(item)}</div>
@@ -1718,11 +1595,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                             </div>
                         </div>
                     ) : activeTab === 'UPGRADE' ? (
-                        <div className="flex flex-col items-center justify-center h-full py-20 text-stone-500">
-                            <AlertCircle size={48} className="text-stone-700 mb-4" />
-                            <h3 className="text-xl font-bold uppercase tracking-widest">{language === 'th' ? 'ระบบปิดปรับปรุงชั่วคราว' : 'Maintenance in Progress'}</h3>
-                            <p className="mt-2 text-sm">{language === 'th' ? 'สถานีอัปเกรดปิดเพื่อปรับปรุงระบบ' : 'The upgrade station is currently closed for maintenance.'}</p>
-                        </div>
+                        renderUpgradeStation()
                     ) : (
                         <div className="flex flex-col h-full">
                             {renderQueue()}
@@ -1753,7 +1626,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
 
                         <div className="w-32 h-32 bg-stone-950 rounded-full border-4 border-yellow-600/50 flex items-center justify-center mb-6 shadow-inner relative group">
                             <div className="absolute inset-0 bg-yellow-500/10 rounded-full animate-pulse"></div>
-                            {getIcon(SHOP_ITEMS.find(i => i.id === claimedItem.typeId)?.icon || 'Box', "w-16 h-16 text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]", claimedItem.typeId)}
+                            <AccessoryIcon item={claimedItem} size={64} />
                             <Sparkles className="absolute top-0 right-0 text-yellow-200 animate-bounce" />
                         </div>
 

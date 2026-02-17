@@ -173,6 +173,7 @@ export interface User {
   // Overclock
   overclockExpiresAt?: number;
   walletAddress?: string; // BSC Wallet Address for USDT
+  avatarUrl?: string; // Base64 or URL of user avatar
   miningSlots: number;
   warehouseCapacity: number;
 }

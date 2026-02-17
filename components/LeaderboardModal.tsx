@@ -16,6 +16,7 @@ interface LeaderEntry {
     dailyIncome: number;
     rigCount: number;
     aceRig: { tierId: number; name: any } | null;
+    avatarUrl?: string;
     rank: number;
 }
 
@@ -178,8 +179,12 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
 
                                         {/* Avatar + Name */}
                                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                            <div className={`w-9 h-9 rounded-full ${getAvatarBorder(player.rank)} flex items-center justify-center bg-gradient-to-br from-stone-700 to-stone-800 shrink-0 text-sm font-bold text-stone-300 uppercase`}>
-                                                {player.username.charAt(0)}
+                                            <div className={`w-9 h-9 rounded-full ${getAvatarBorder(player.rank)} flex items-center justify-center bg-gradient-to-br from-stone-700 to-stone-800 shrink-0 text-sm font-bold text-stone-300 uppercase overflow-hidden`}>
+                                                {player.avatarUrl ? (
+                                                    <img src={player.avatarUrl} alt={player.username} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    player.username.charAt(0)
+                                                )}
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <div className={`font-bold truncate ${player.rank === 1 ? 'text-yellow-200 text-base' : 'text-stone-200 text-sm'}`}>

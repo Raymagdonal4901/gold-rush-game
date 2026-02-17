@@ -222,6 +222,29 @@ export const RIG_LOOT_TABLES: Record<number, LootEntry[]> = {
     ],
 };
 
+// --- NEW ENHANCEMENT SYSTEM ---
+export const ENHANCE_RULES: Record<number, { chipAmount: number; matAmount: number; chance: number; statBonus: number; penalty: 'NONE' | 'KEEP' | 'DOWNGRADE' | 'RESET' }> = {
+    1: { chipAmount: 1, matAmount: 10, chance: 1.0, statBonus: 0.05, penalty: 'NONE' },
+    2: { chipAmount: 1, matAmount: 20, chance: 0.8, statBonus: 0.10, penalty: 'KEEP' },
+    3: { chipAmount: 2, matAmount: 40, chance: 0.6, statBonus: 0.20, penalty: 'KEEP' },
+    4: { chipAmount: 3, matAmount: 80, chance: 0.4, statBonus: 0.35, penalty: 'DOWNGRADE' },
+    5: { chipAmount: 5, matAmount: 150, chance: 0.2, statBonus: 0.50, penalty: 'RESET' },
+};
+
+export const EQUIPMENT_PRIMARY_MATERIALS: Record<string, number> = {
+    hat: 1,      // Coal
+    uniform: 1,  // Coal
+    boots: 2,    // Copper
+    bag: 2,      // Copper
+    glove: 3,    // Iron
+    pendant: 4,  // Gold
+    ring: 4,     // Gold
+    glasses: 3,  // Iron
+    mobile: 5,   // Diamond
+    pc: 6,       // Crude Oil
+    auto_excavator: 7 // Vibranium
+};
+
 export const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, { matTier: number; matAmount: number; chance: number; chipAmount: number; cost: number; targetBonus: number; risk: string }>> = {
     hat: {
         1: { matTier: 1, matAmount: 10, chipAmount: 1, cost: 50, chance: 1.0, targetBonus: 0.5, risk: 'NONE' },
@@ -270,6 +293,11 @@ export const EQUIPMENT_UPGRADE_CONFIG: Record<string, Record<number, { matTier: 
         2: { matTier: 1, matAmount: 20, chipAmount: 5, cost: 100, chance: 0.8, targetBonus: 1.5, risk: 'DROP' },
         3: { matTier: 2, matAmount: 20, chipAmount: 10, cost: 300, chance: 0.5, targetBonus: 3.0, risk: 'DROP' },
         4: { matTier: 2, matAmount: 40, chipAmount: 20, cost: 1000, chance: 0.25, targetBonus: 6.0, risk: 'BREAK' },
+        5: { matTier: 3, matAmount: 40, chipAmount: 30, cost: 2000, chance: 0.20, targetBonus: 10.0, risk: 'BREAK' },
+        6: { matTier: 3, matAmount: 80, chipAmount: 40, cost: 5000, chance: 0.15, targetBonus: 15.0, risk: 'BREAK' },
+        7: { matTier: 4, matAmount: 100, chipAmount: 50, cost: 10000, chance: 0.10, targetBonus: 25.0, risk: 'BREAK' },
+        8: { matTier: 5, matAmount: 50, chipAmount: 60, cost: 20000, chance: 0.08, targetBonus: 40.0, risk: 'BREAK' },
+        9: { matTier: 6, matAmount: 20, chipAmount: 80, cost: 50000, chance: 0.05, targetBonus: 60.0, risk: 'BREAK' },
     },
 };
 export const UPGRADE_REQUIREMENTS: Record<number, { matTier: number; matAmount: number; chance: number; label: string; catalyst?: number; chipAmount?: number; maxBonus?: number; cost: number; targetBonus?: number; risk?: string }> = {
@@ -277,6 +305,11 @@ export const UPGRADE_REQUIREMENTS: Record<number, { matTier: number; matAmount: 
     2: { matTier: 1, matAmount: 20, chipAmount: 5, chance: 0.8, label: '+3', cost: 100, targetBonus: 1.5, risk: 'DROP' },
     3: { matTier: 2, matAmount: 20, chipAmount: 10, chance: 0.5, label: '+4', cost: 300, targetBonus: 3.0, risk: 'DROP' },
     4: { matTier: 2, matAmount: 40, chipAmount: 20, chance: 0.25, label: '+5', cost: 1000, targetBonus: 6.0, risk: 'BREAK' },
+    5: { matTier: 3, matAmount: 40, chipAmount: 30, chance: 0.20, label: '+6', cost: 2000, targetBonus: 10.0, risk: 'BREAK' },
+    6: { matTier: 3, matAmount: 80, chipAmount: 40, chance: 0.15, label: '+7', cost: 5000, targetBonus: 15.0, risk: 'BREAK' },
+    7: { matTier: 4, matAmount: 100, chipAmount: 50, chance: 0.10, label: '+8', cost: 10000, targetBonus: 25.0, risk: 'BREAK' },
+    8: { matTier: 5, matAmount: 50, chipAmount: 60, chance: 0.08, label: '+9', cost: 20000, targetBonus: 40.0, risk: 'BREAK' },
+    9: { matTier: 6, matAmount: 20, chipAmount: 80, chance: 0.05, label: '+10', cost: 50000, targetBonus: 60.0, risk: 'BREAK' },
 };
 
 // สูตรการแปรรูปวัตถุดิบ (Tier ทรัพยากรหลักที่กด -> สูตรและผลลัพธ์)
@@ -784,7 +817,7 @@ export const DUNGEON_CONFIG: DungeonLevel[] = [
                 { tier: 2, minAmount: 3, maxAmount: 8, chance: 100 }   // ทองแดง (Copper) 3-8
             ],
             salt: [
-                { tier: 1, minAmount: 3, maxAmount: 5, chance: 100 } // ถ่านหิน (Coal) 3-5 (Salt)
+                { tier: 0, minAmount: 30, maxAmount: 30, chance: 100 } // เศษหิน (Stone Shards) x30 (Salt)
             ],
             rare: [
                 { itemId: 'hourglass_medium', amount: 1, chance: 100 } // Jackpot: Hourglass Medium

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Transaction, User, AccessoryItem } from '../services/types';
 import { useLanguage } from '../contexts/LanguageContext';
-import { CreditCard, Wallet as WalletIcon } from 'lucide-react';
+import { CreditCard, Wallet as WalletIcon, ArrowLeft } from 'lucide-react';
 
 interface WalletPageProps {
     user: User;
@@ -11,7 +11,7 @@ interface WalletPageProps {
 }
 
 export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBack }) => {
-    const { t, formatCurrency, language } = useLanguage();
+    const { t, formatCurrency, language, getLocalized } = useLanguage();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,6 +21,102 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
     const [bankName, setBankName] = useState('');
     const [accountNumber, setAccountNumber] = useState('');
     const [accountName, setAccountName] = useState('');
+
+    // Legacy translations for old records (Synced from HistoryModal.tsx)
+    const LEGACY_TRANSLATIONS: Record<string, string> = {
+        "ฝากเงินผ่านระบบ": "Deposit via System",
+        "ซื้อเครื่องจักร: เครื่องขุดถ่านหิน": "Purchase Rig: Coal Miner",
+        "เร่งพลังการผลิต (Overclock 48 ชม.)": "Overclock (48 Hours)",
+        "เติมพลังงาน": "Energy Refill",
+        "ซ่อมแซมเครื่องขุด": "Repair Rig",
+        "ขายไอเทม": "Sell Item",
+        "อัพเกรดไอเทม": "Upgrade Item",
+        "สร้างไอเทม": "Craft Item",
+        "รางวัลภารกิจ": "Mission Reward",
+        "รางวัลจัดอันดับ": "Rank Reward",
+        "สุ่มกาชา": "Lucky Draw",
+        "เข้าดันเจี้ยน": "Dungeon Entry",
+        "รางวัลจากดันเจี้ยน": "Dungeon Reward",
+        "รับของขวัญ": "Claim Gift",
+        "เก็บแร่": "Collect Material",
+        "ภาษีตลาด": "Market Tax",
+        "อัพเกรด": "Upgrade",
+        "เป็น": "to",
+        "ใช้": "Using",
+        "ชิ้น": "Units",
+        "เก็บผลผลิตจากเครื่องขุด": "Claim Mining Yield",
+        "รวมเครื่องขุด": "Merge Rigs",
+        "ซ่อมบำรุงเครื่องขุด": "Repair Rig",
+        "ซื้อแร่": "Buy Material",
+        "ค่าธรรมเนียมตลาดจากการซื้อ": "Market Tax (Purchase)"
+    };
+
+    const getLocalizedDescription = (desc: string) => {
+        try {
+            // 1. Try parsing dictionary JSON (New format)
+            if (desc.trim().startsWith('{') && desc.includes('"th":') && desc.includes('"en":')) {
+                const obj = JSON.parse(desc);
+                return getLocalized ? getLocalized(obj) : obj[language] || obj.en;
+            }
+        } catch (e) {
+            // Ignore parse error
+        }
+
+        // 2. Fallback to Legacy Mapping (If English is selected but desc is Thai)
+        if (language === 'en') {
+            let result = desc;
+
+            // Handle dynamic patterns with regex first
+            // 2.1 Upgrade: "อัพเกรด [NAME] เป็น Lv.[X] (ใช้ [MATERIAL] x[Y])"
+            if (result.includes("อัพเกรด") && result.includes("เป็น Lv.")) {
+                result = result.replace(/อัพเกรด/g, "Upgrade")
+                    .replace(/เป็น/g, "to")
+                    .replace(/ใช้/g, "Using");
+            }
+
+            // 2.2 Material units: "(X ชิ้น)"
+            if (result.includes("ชิ้น")) {
+                result = result.replace(/(\d+)\s*ชิ้น/g, "$1 Units");
+            }
+
+            // 2.3 Store patterns: "ซื้อแร่: [NAME] (X Units)"
+            if (result.includes("ซื้อแร่")) {
+                result = result.replace(/ซื้อแร่/g, "Buy Material");
+            }
+
+            // 2.4 Claim Yield: "เก็บผลผลิตจากเครื่องขุด: [NAME] (X THB)"
+            if (result.includes("เก็บผลผลิตจากเครื่องขุด")) {
+                result = result.replace(/เก็บผลผลิตจากเครื่องขุด/g, "Claim Mining Yield");
+            }
+
+            // 2.5 Repair: "ซ่อมบำรุงเครื่องขุด: [NAME]"
+            if (result.includes("ซ่อมบำรุงเครื่องขุด")) {
+                result = result.replace(/ซ่อมบำรุงเครื่องขุด/g, "Repair Rig");
+            }
+
+            // 2.6 Market Fee: "ค่าธรรมเนียมตลาดจากการซื้อ: [NAME] (X Units)"
+            if (result.includes("ค่าธรรมเนียมตลาดจากการซื้อ")) {
+                result = result.replace(/ค่าธรรมเนียมตลาดจากการซื้อ/g, "Market Fee (Purchase)");
+            }
+
+            // 2.7 Merge: "รวมเครื่องขุด: [NAME] Rank X (Fee: Y)"
+            if (result.includes("รวมเครื่องขุด")) {
+                result = result.replace(/รวมเครื่องขุด/g, "Merge Rigs");
+            }
+
+            // Use the dictionary for remaining replacements
+            for (const [key, val] of Object.entries(LEGACY_TRANSLATIONS)) {
+                if (result.includes(key)) {
+                    result = result.replace(new RegExp(key, 'g'), val);
+                }
+            }
+
+            return result;
+        }
+
+        // 3. Return original for TH or unknown
+        return desc;
+    };
 
     useEffect(() => {
         fetchHistory();
@@ -81,32 +177,33 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
         <div className="min-h-screen bg-stone-950 text-stone-200 font-sans selection:bg-yellow-500/30">
             {/* Header */}
             <div className="bg-stone-900/50 border-b border-stone-800/50 sticky top-0 z-30 backdrop-blur-md">
-                <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+                <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
                     <button
                         onClick={onBack}
-                        className="flex items-center gap-2 text-stone-400 hover:text-yellow-500 transition-colors group"
+                        className="flex items-center gap-2 text-stone-400 hover:text-yellow-500 transition-colors group shrink-0"
                     >
-                        <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center group-hover:bg-yellow-500/10 transition-colors">
-                            <i className="fas fa-arrow-left text-xs"></i>
+                        <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center group-hover:bg-yellow-500/10 transition-all border border-stone-700/50 group-hover:border-yellow-500/30">
+                            <ArrowLeft size={18} />
                         </div>
-                        <span className="text-xs font-bold uppercase tracking-widest">{t('common.back_to_mine')}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">{t('common.back_to_mine')}</span>
                     </button>
-                    <div className="text-center">
-                        <h1 className="text-sm font-black text-yellow-500 tracking-[0.3em] uppercase">{t('wallet.title')}</h1>
+                    <div className="text-center truncate">
+                        <h1 className="text-xs sm:text-sm font-black text-yellow-500 tracking-[0.3em] uppercase">{t('wallet.title')}</h1>
                     </div>
-                    <div className="w-24"></div> {/* Spacer */}
+                    <div className="w-10 sm:w-24 shrink-0"></div> {/* Spacer */}
                 </div>
             </div>
 
-            <main className="max-w-4xl mx-auto px-4 py-8">
+            <main className="max-w-4xl mx-auto px-4 py-8 overflow-hidden w-full">
                 {/* Balance Card */}
                 <div className="relative overflow-hidden group mb-8">
                     <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 to-orange-600/20 opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>
                     <div className="relative p-8 rounded-2xl bg-stone-900/40 border border-yellow-500/30 backdrop-blur-sm flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div>
-                            <p className="text-stone-400 text-xs font-black uppercase tracking-[0.2em] mb-2">{t('wallet.available_balance')}</p>
-                            <h2 className="text-5xl md:text-6xl font-black text-white tracking-tighter">
-                                {formatCurrency(user.balance)} <span className="text-yellow-500 text-2xl">{t('common.thb')}</span>
+                        <div className="text-center md:text-left">
+                            <p className="text-stone-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">{t('wallet.available_balance')}</p>
+                            <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter flex flex-wrap items-baseline justify-center md:justify-start gap-2">
+                                {formatCurrency(user.balance)}
+                                {language === 'th' && <span className="text-yellow-500 text-2xl uppercase">{t('common.thb')}</span>}
                             </h2>
                         </div>
                         {/* Withdraw Button Moved to Dashboard */}
@@ -115,7 +212,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
 
                 {/* History Section */}
                 <div className="bg-stone-900/30 rounded-2xl border border-stone-800/50 overflow-hidden">
-                    <div className="p-6 border-b border-stone-800/50 flex items-center justify-between bg-stone-900/20">
+                    <div className="p-6 border-b border-stone-800/50 flex flex-wrap items-center justify-between gap-4 bg-stone-900/20">
                         <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
                             <i className="fas fa-history text-yellow-500"></i>
                             {t('wallet.transaction_history')}
@@ -125,8 +222,8 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
                         </button>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
+                    <div className="overflow-x-auto w-full custom-scrollbar">
+                        <table className="w-full text-left min-w-[700px]">
                             <thead>
                                 <tr className="text-[10px] font-black text-stone-500 uppercase tracking-widest bg-stone-900/40">
                                     <th className="px-6 py-4">{t('wallet.date_time')}</th>
@@ -160,7 +257,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
                                                 <span className="text-[10px] font-black tracking-widest uppercase text-yellow-500/70">{tx.type}</span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <p className="text-xs text-stone-300 max-w-xs truncate">{tx.description}</p>
+                                                <p className="text-xs text-stone-300 max-w-[200px] sm:max-w-xs truncate">{getLocalizedDescription(tx.description)}</p>
                                             </td>
                                             <td className={`px-6 py-4 text-right font-bold text-sm ${tx.amount < 0 || tx.type === 'WITHDRAWAL' ? 'text-red-400' : 'text-green-400'}`}>
                                                 {(tx.type === 'WITHDRAWAL' || tx.amount < 0) ? '-' : '+'}{formatCurrency(Math.abs(tx.amount))}

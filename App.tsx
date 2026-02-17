@@ -36,10 +36,15 @@ const AppContent: React.FC = () => {
   }, [user]);
 
   useEffect(() => {
-    // Handle direct routing to verify page
+    // Handle direct routing to verify or register pages
     const params = new URLSearchParams(window.location.search);
-    if (window.location.pathname === '/verify' || params.has('token')) {
+    const path = window.location.pathname;
+
+    if (path === '/verify' || params.has('token')) {
       setAuthView('verify');
+      setShowLanding(false);
+    } else if (path === '/register' || params.has('ref')) {
+      setAuthView('register');
       setShowLanding(false);
     }
 

@@ -383,7 +383,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({ isOpen, onClose, userI
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="h-32 w-full relative group">{renderGraph(item.history)}<div className="absolute top-2 right-2 text-[10px] text-stone-600 opacity-0 group-hover:opacity-100 transition-opacity">{t('market.realtime_data')}</div></div>
+                                    <div className="h-24 sm:h-32 w-full relative group">{renderGraph(item.history)}<div className="absolute top-2 right-2 text-[10px] text-stone-600 opacity-0 group-hover:opacity-100 transition-opacity">{t('market.realtime_data')}</div></div>
                                 </div>
 
                                 <div className="flex-1 p-4 flex flex-col justify-between overflow-y-auto custom-scrollbar">

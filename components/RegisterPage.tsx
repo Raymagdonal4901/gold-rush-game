@@ -19,6 +19,14 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin, onB
     const [isSuccess, setIsSuccess] = useState(false);
     const { language, setLanguage, t } = useLanguage();
 
+    React.useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const ref = params.get('ref');
+        if (ref) {
+            setReferralCode(ref);
+        }
+    }, []);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');

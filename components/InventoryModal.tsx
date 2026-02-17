@@ -2,11 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Backpack, DollarSign, ArrowUpCircle, Cpu, Hammer, HardHat, Glasses, Shirt, Footprints, Smartphone, Monitor, Bot, Truck, ShoppingBag, Sparkles, AlertTriangle, Hourglass, Search, Factory, Key, FileText, Timer, Shield, Gem, Star, TrendingUp, TrendingDown, Ticket, Zap, TrainFront, CreditCard, Briefcase } from 'lucide-react';
+import { AccessoryIcon } from './AccessoryIcon';
 import { AccessoryItem } from '../services/types';
 import { CURRENCY, RARITY_SETTINGS, UPGRADE_REQUIREMENTS, MATERIAL_CONFIG, SHOP_ITEMS } from '../constants';
 import { MaterialIcon } from './MaterialIcon';
 import { useTranslation } from '../contexts/LanguageContext';
 import { api } from '../services/api';
+import { EnhanceModal } from './EnhanceModal';
+import { EQUIPMENT_PRIMARY_MATERIALS } from '../constants';
+
 
 interface InventoryModalProps {
     isOpen: boolean;
@@ -22,10 +26,12 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
     const { t, language, getLocalized, formatCurrency, formatBonus } = useTranslation();
     const [selectedItem, setSelectedItem] = useState<AccessoryItem | null>(null);
     const [action, setAction] = useState<'DETAILS' | 'UPGRADE' | 'SELL'>('DETAILS');
+    const [isUpgrading, setIsUpgrading] = useState(false);
     const [msg, setMsg] = useState('');
 
     const [animationStep, setAnimationStep] = useState<'IDLE' | 'PREPARE' | 'HAMMER' | 'IMPACT' | 'RESULT'>('IDLE');
     const [upgradeResult, setUpgradeResult] = useState<{ success: boolean, newItem?: AccessoryItem } | null>(null);
+    const [showEnhanceModal, setShowEnhanceModal] = useState(false);
     const [rigs, setRigs] = useState<any[]>([]);
 
     useEffect(() => {
@@ -86,120 +92,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
         return '';
     };
 
-    const getIcon = (item: AccessoryItem, className: string) => {
-        let typeId = item.typeId || '';
-        // Use English name for checking if available, or fallback to name string
-        let nameToCheck = '';
-        if (item.name && typeof item.name === 'object') {
-            nameToCheck = (item.name as any).en || '';
-        } else if (typeof item.name === 'string') {
-            nameToCheck = item.name;
-        }
-
-        // Name-based overrides to consistent with AccessoryManagementModal
-        if (nameToCheck.includes('Chip')) typeId = 'upgrade_chip';
-        else if (nameToCheck.includes('Key')) typeId = 'chest_key';
-        else if (nameToCheck.includes('Mixer')) typeId = 'mixer';
-        else if (nameToCheck.includes('Magnifying')) typeId = 'magnifying_glass';
-        else if (nameToCheck.includes('Insurance')) typeId = 'insurance_card';
-        else if (nameToCheck.includes('Hourglass')) typeId = 'hourglass_small';
-        else if (nameToCheck.includes('Mystery Material')) typeId = 'mystery_ore';
-        else if (nameToCheck.includes('Legendary Material')) typeId = 'legendary_ore';
-        else if (nameToCheck.includes('Auto Lock')) typeId = 'auto_excavator';
-        else if (nameToCheck.includes('Robot')) typeId = 'ai_robot';
-        // Classic Equipment Fallbacks
-        else if (nameToCheck.includes('Helmet')) typeId = 'hat';
-        else if (nameToCheck.includes('Glasses')) typeId = 'glasses';
-        else if (nameToCheck.includes('Uniform') || nameToCheck.includes('Suit')) typeId = 'uniform';
-        else if (nameToCheck.includes('Bag') || nameToCheck.includes('Backpack')) typeId = 'bag';
-        else if (nameToCheck.includes('Boots')) typeId = 'boots';
-        else if (nameToCheck.includes('Mobile') || nameToCheck.includes('Phone')) typeId = 'mobile';
-        else if (nameToCheck.includes('PC') || nameToCheck.includes('Computer')) typeId = 'pc';
-        else if (nameToCheck.includes('Time Skip Ticket') || nameToCheck.includes('ตั๋วเร่งเวลา')) typeId = 'time_skip_ticket';
-        else if (nameToCheck.includes('Construction Nanobot') || nameToCheck.includes('นาโนบอทก่อสร้าง')) typeId = 'construction_nanobot';
-        else if (nameToCheck.includes('VIP')) typeId = 'vip_withdrawal_card';
-
-        // Also check Thai if English check failed and we have it (for legacy or direct string)
-        if (!typeId && typeof item.name === 'string') {
-            if (item.name.includes('ชิป')) typeId = 'upgrade_chip';
-            else if (item.name.includes('กุญแจ')) typeId = 'chest_key';
-            else if (item.name.includes('เครื่องผสม')) typeId = 'mixer';
-            else if (item.name.includes('แว่นขยาย')) typeId = 'magnifying_glass';
-            else if (item.name.includes('ใบประกัน')) typeId = 'insurance_card';
-            else if (item.name.includes('นาฬิกาทราย')) typeId = 'hourglass_small';
-            else if (item.name.includes('วัสดุปริศนา')) typeId = 'mystery_ore';
-            else if (item.name.includes('วัสดุในตำนาน')) typeId = 'legendary_ore';
-            else if (item.name.includes('ระบบล็อค')) typeId = 'auto_excavator';
-            else if (item.name.includes('หุ่นยนต์')) typeId = 'ai_robot';
-            else if (item.name.includes('หมวก')) typeId = 'hat';
-            else if (item.name.includes('แว่น')) typeId = 'glasses';
-            else if (item.name.includes('ชุด')) typeId = 'uniform';
-            else if (item.name.includes('กระเป๋า')) typeId = 'bag';
-            else if (item.name.includes('รองเท้า')) typeId = 'boots';
-            else if (item.name.includes('มือถือ')) typeId = 'mobile';
-            else if (item.name.includes('คอม')) typeId = 'pc';
-        }
 
 
-        const rarity = (item.rarity && RARITY_SETTINGS[item.rarity]) ? item.rarity : 'COMMON';
-
-        if (!typeId) return <Briefcase className={className} />;
-
-        if (typeId.startsWith('hat')) return <HardHat className={className} />;
-        if (typeId.startsWith('glasses')) return <Glasses className={className} />;
-        if (typeId.startsWith('uniform') || typeId.startsWith('shirt')) return <Shirt className={className} />;
-        if (typeId.startsWith('bag')) return <Backpack className={className} />;
-        if (typeId.startsWith('boots')) return <Footprints className={className} />;
-        if (typeId.startsWith('mobile')) return <Smartphone className={className} />;
-        if (typeId === 'ai_robot' || typeId.includes('robot')) return <Bot className={className} />;
-        if (typeId.startsWith('pc')) return <Monitor className={className} />;
-        if (typeId.startsWith('robot')) return null;
-        if (typeId === 'auto_excavator' || typeId.startsWith('truck')) return <TrainFront className={className} />;
-        if (typeId === 'upgrade_chip' || typeId.startsWith('chip')) return <Cpu className={className} />;
-        if (typeId.startsWith('hourglass')) return <Hourglass className={className} />;
-        if (typeId === 'chest_key' || typeId.startsWith('key')) return <Key className={className} />;
-        if (typeId === 'mixer') return <Factory className={className} />;
-        if (typeId === 'magnifying_glass') return <Search className={className} />;
-        if (typeId === 'insurance_card') return <FileText className={className} />;
-        if (typeId === 'FileText') return <FileText className={className} />;
-        if (typeId === 'mystery_ore') return <Sparkles className={className} />;
-        if (typeId === 'legendary_ore') return <Gem className={className} />;
-        if (typeId.includes('vip') || typeId.includes('credit')) return <CreditCard className={className} />;
-
-        if (typeId === 'time_skip_ticket') {
-            return (
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-blue-500/20 rounded-lg scale-125 blur-md animate-pulse"></div>
-                    <div className="absolute -top-1 -right-1">
-                        <Timer size={10} className="text-blue-300 animate-[spin_3s_linear_infinite]" />
-                    </div>
-                    <Ticket className={`${className} text-blue-400 -rotate-12 relative z-10`} />
-                </div>
-            );
-        }
-
-        if (typeId === 'construction_nanobot') {
-            return (
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-cyan-500/30 rounded-full scale-[1.5] blur-xl animate-pulse"></div>
-                    <div className="absolute inset-0 border border-cyan-400/30 rounded-full scale-110 animate-[spin_8s_linear_infinite]"></div>
-                    <div className="absolute -top-1 -right-1 bg-cyan-500 text-white rounded-full p-0.5">
-                        <Zap size={8} className="animate-pulse" />
-                    </div>
-                    <Bot className={`${className} text-cyan-300 relative z-10`} />
-                </div>
-            );
-        }
-
-        switch (typeId) {
-            case 'miner_card_bronze':
-            case 'miner_card_silver':
-            case 'miner_card_gold':
-                return <Shield className={className} />;
-            default:
-                return <Briefcase className={className} />;
-        }
-    };
 
     const handleSell = async () => {
         try {
@@ -281,7 +175,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
             <div className="p-4 bg-stone-900 border border-stone-800 rounded-xl relative overflow-hidden">
                 <div className="flex justify-between items-start mb-4 relative z-10">
                     <div className={`w-16 h-16 rounded-lg border-2 ${RARITY_SETTINGS[selectedItem.rarity || 'COMMON']?.border || 'border-stone-600'} bg-stone-800 flex items-center justify-center`}>
-                        {getIcon(selectedItem, `w-8 h-8 ${RARITY_SETTINGS[selectedItem.rarity || 'COMMON']?.color || 'text-stone-400'}`)}
+                        <AccessoryIcon item={selectedItem} size={32} />
                     </div>
                     <div className="text-right">
                         <div className={`font-bold ${selectedItem.isHandmade ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' : 'text-white'}`}>{getItemDisplayName(selectedItem)}</div>
@@ -353,14 +247,18 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                             <DollarSign size={16} /> {t('inventory.sell_back')}
                         </button>
                         <button
-                            onClick={() => { }}
-                            disabled={true}
-                            className="py-2 bg-stone-800 text-stone-600 rounded cursor-not-allowed opacity-75 flex flex-col items-center justify-center gap-0.5"
+                            onClick={() => {
+                                const isEnhanceable = Object.keys(EQUIPMENT_PRIMARY_MATERIALS).some(type => selectedItem.typeId.startsWith(type));
+                                if (isEnhanceable) {
+                                    setShowEnhanceModal(true);
+                                } else {
+                                    setAction('UPGRADE');
+                                }
+                            }}
+                            disabled={isEquipped || isMaxLevel}
+                            className="py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded hover:from-purple-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
                         >
-                            <div className="flex items-center justify-center gap-2">
-                                <ArrowUpCircle size={16} /> {t('inventory.upgrade')}
-                            </div>
-                            <span className="text-[8px] text-red-500 font-bold">ระบบตีบวกปิดปรับปรุงชั่วคราว</span>
+                            <ArrowUpCircle size={16} /> {t('inventory.upgrade')}
                         </button>
                     </div>
                 )}
@@ -384,7 +282,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                 <div className="text-sm text-stone-300 mb-2 font-bold">{t('inventory.upgrade_req')}</div>
                                 <div className="flex justify-center items-center gap-2 mb-2">
                                     <div className="w-10 h-10 border border-stone-700 bg-stone-800 rounded flex items-center justify-center relative">
-                                        {getIcon(selectedItem, `w-6 h-6 ${(RARITY_SETTINGS[selectedItem.rarity] || RARITY_SETTINGS.COMMON).color}`)}
+                                        <AccessoryIcon item={selectedItem} size={24} />
                                     </div>
                                     <span className="text-stone-500">+</span>
                                     <div className="w-10 h-10 border border-purple-500 bg-purple-900/20 rounded flex items-center justify-center" title="ชิปอัปเกรด">
@@ -408,13 +306,10 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                             <button onClick={() => setAction('DETAILS')} className="flex-1 py-2 bg-stone-800 rounded text-stone-300">{t('common.cancel')}</button>
                             <button
                                 onClick={handleUpgrade}
-                                disabled={true}
-                                className="flex-1 py-2 bg-stone-800 text-stone-600 rounded font-bold flex flex-col items-center justify-center gap-0.5 shadow-lg border border-stone-700 cursor-not-allowed opacity-75"
+                                disabled={isUpgrading || isMaxLevel}
+                                className="flex-1 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded font-bold flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <div className="flex items-center justify-center gap-2">
-                                    <Hammer size={14} /> {t('inventory.upgrade')}
-                                </div>
-                                <span className="text-[10px] text-red-500 font-bold">ระบบตีบวกปิดปรับปรุงชั่วคราว</span>
+                                <Hammer size={14} /> {t('inventory.upgrade')}
                             </button>
                         </div>
                     </div>
@@ -434,7 +329,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                 <div className="absolute top-20 left-1/2 -translate-x-1/2 w-32 h-10 bg-stone-800 rounded-full blur-xl opacity-50"></div>
                                 <div className={`relative z-10 transition-transform duration-100 ${animationStep === 'IMPACT' ? 'scale-90 translate-y-2' : 'scale-150 animate-[float-gold_2s_infinite]'}`}>
                                     <div className={`w-32 h-32 rounded-xl border-4 ${(RARITY_SETTINGS[selectedItem.rarity] || RARITY_SETTINGS.COMMON).border} bg-stone-900 flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.5)]`}>
-                                        {getIcon(selectedItem, `w-20 h-20 ${(RARITY_SETTINGS[selectedItem.rarity] || RARITY_SETTINGS.COMMON).color}`)}
+                                        <AccessoryIcon item={selectedItem} size={80} />
                                     </div>
                                 </div>
                                 {animationStep === 'PREPARE' && (
@@ -475,7 +370,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                         <div className="relative mb-8">
                                             <div className="absolute inset-0 bg-yellow-500/30 blur-[60px] animate-pulse"></div>
                                             <div className="relative z-10 w-40 h-40 rounded-full border-4 border-yellow-400 bg-gradient-to-br from-yellow-900 to-black flex items-center justify-center shadow-[0_0_50px_rgba(234,179,8,0.6)] animate-[bounce_2s_infinite]">
-                                                {getIcon(selectedItem, "w-24 h-24 text-yellow-300")}
+                                                <AccessoryIcon item={selectedItem} size={96} />
                                                 <div className="absolute -bottom-2 bg-yellow-600 text-white font-black px-4 py-1 rounded-full border-2 border-yellow-300 shadow-lg text-xl">
                                                     Lv. {selectedItem.level ? selectedItem.level + 1 : 2}
                                                 </div>
@@ -493,7 +388,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                                         <div className="relative mb-8">
                                             <div className="absolute inset-0 bg-red-500/20 blur-[50px]"></div>
                                             <div className="relative z-10 w-32 h-32 rounded-full border-4 border-red-900 bg-black flex items-center justify-center shadow-[0_0_30px_rgba(220,38,38,0.5)] grayscale opacity-80 animate-[shake_0.5s_ease-in-out]">
-                                                {getIcon(selectedItem, "w-16 h-16 text-stone-600")}
+                                                <AccessoryIcon item={selectedItem} size={64} />
                                             </div>
                                             <AlertTriangle className="absolute -top-2 -right-2 text-red-500 animate-pulse" size={40} />
                                         </div>
@@ -524,8 +419,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                     </button>
                 </div>
 
-                <div className="flex flex-1 overflow-hidden">
-                    <div className="w-1/2 sm:w-2/3 border-r border-stone-800 overflow-y-auto custom-scrollbar p-4">
+                <div className="flex flex-col sm:flex-row flex-1 overflow-hidden">
+                    <div className="w-full sm:w-2/3 border-b sm:border-b-0 sm:border-r border-stone-800 overflow-y-auto custom-scrollbar p-4">
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                             {/* Render Grouped (Stacked) Inventory */}
                             {groupedInventory.map((group, idx) => {
@@ -541,7 +436,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
 `}
                                     >
                                         <div className="relative">
-                                            {getIcon(item, `w-8 h-8 ${(RARITY_SETTINGS[safeRarity] || RARITY_SETTINGS.COMMON).color} group-hover:scale-110 transition-transform`)}
+                                            <AccessoryIcon item={item} size={32} />
 
                                             {/* Quantity Badge */}
                                             {group.count > 1 && (
@@ -602,7 +497,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
                             </div>
                         )}
                     </div>
-                    <div className="w-1/2 sm:w-1/3 bg-stone-950 p-4 overflow-y-auto">
+                    <div className="w-full sm:w-1/3 bg-stone-950 p-4 overflow-y-auto">
                         {renderDetailView()}
                     </div>
                 </div>
@@ -617,6 +512,19 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
     100% { transform: translateX(-8rem) scale(0); opacity: 0; }
 }
 `}</style>
+                {showEnhanceModal && selectedItem && (
+                    <EnhanceModal
+                        item={selectedItem}
+                        materials={materials as any}
+                        inventory={inventory}
+                        language={language}
+                        onClose={() => setShowEnhanceModal(false)}
+                        onSuccess={(updated) => {
+                            // Update the item in the local view if possible, or just refresh
+                            onRefresh();
+                        }}
+                    />
+                )}
             </div>
         </div>
     );

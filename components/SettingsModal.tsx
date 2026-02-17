@@ -13,13 +13,14 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user, onSuccess }) => {
     const { t } = useTranslation();
-    const [activeTab, setActiveTab] = useState<'PASSWORD' | 'PIN' | 'BANK'>('PASSWORD');
+    const [activeTab, setActiveTab] = useState<'PASSWORD' | 'PIN' | 'BANK' | 'PROFILE'>('PASSWORD');
 
     // Form State
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [newPin, setNewPin] = useState('');
     const [qrImage, setQrImage] = useState<string | null>(user.bankQrCode || null);
+    const [avatarImage, setAvatarImage] = useState<string | null>(user.avatarUrl || null);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -28,9 +29,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
     React.useEffect(() => {
         if (isOpen) {
             setQrImage(user.bankQrCode || null);
+            setAvatarImage(user.avatarUrl || null);
             setStatus(null);
         }
-    }, [isOpen, user.bankQrCode]);
+    }, [isOpen, user.bankQrCode, user.avatarUrl]);
 
     if (!isOpen) return null;
 
@@ -51,6 +53,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                 if (!qrImage) throw new Error(t('settings.error_qr_missing'));
                 await api.user.updateBankQr(qrImage);
                 setStatus({ type: 'SUCCESS', msg: t('settings.success_bank') });
+            } else if (activeTab === 'PROFILE') {
+                await api.user.updateProfile({ avatarUrl: avatarImage || '' });
+                setStatus({ type: 'SUCCESS', msg: t('settings.success_profile') || 'Profile updated successfully' });
             }
             if (onSuccess) onSuccess();
             // Clear inputs except QR
@@ -63,6 +68,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
         }
     };
 
+    const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Size check: 1MB limit for Base64 (approx 750KB original)
+        if (file.size > 1024 * 1024) {
+            setStatus({ type: 'ERROR', msg: t('settings.error_file_size') || 'Image too large (Max 1MB)' });
+            return;
+        }
+
+        setIsUploading(true);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setAvatarImage(reader.result as string);
+            setIsUploading(false);
+        };
+        reader.readAsDataURL(file);
+    };
+
     const handleQrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -73,7 +97,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
             const base64String = reader.result as string;
             setQrImage(base64String);
             setIsUploading(false);
-            setStatus({ type: 'SUCCESS', msg: t('settings.upload_notice') });
+            setStatus({ type: 'SUCCESS', msg: t('settings.upload_notice') || 'QR Uploaded' });
         };
         reader.readAsDataURL(file);
     };
@@ -115,6 +139,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                         <KeyRound size={16} /> {t('settings.pin_tab')}
                     </button>
                     <button
+                        onClick={() => { setActiveTab('PROFILE'); setStatus(null); }}
+                        className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2
+                ${activeTab === 'PROFILE' ? 'bg-stone-900 text-yellow-500 border-b-2 border-yellow-500' : 'text-stone-500 hover:text-stone-300'}`}
+                    >
+                        <Save size={16} /> {t('settings.profile_tab')}
+                    </button>
+                    <button
                         onClick={() => { setActiveTab('BANK'); setStatus(null); }}
                         className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2
                 ${activeTab === 'BANK' ? 'bg-stone-900 text-yellow-500 border-b-2 border-yellow-500' : 'text-stone-500 hover:text-stone-300'}`}
@@ -137,7 +168,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                             <label className="text-xs font-bold text-stone-500 uppercase">{t('settings.current_password')}</label>
                             <input
                                 type="password"
-                                required
+                                required={activeTab !== 'PROFILE'}
                                 value={currentPassword}
                                 onChange={e => setCurrentPassword(e.target.value)}
                                 className="w-full bg-stone-900 border border-stone-700 rounded p-3 text-white focus:border-yellow-500 outline-none transition-colors"
@@ -175,6 +206,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                                     className="w-full bg-stone-900 border border-stone-700 rounded p-3 text-white focus:border-yellow-500 outline-none transition-colors text-center tracking-[0.5em] font-mono"
                                     placeholder={t('settings.pin_placeholder')}
                                 />
+                            </div>
+                        ) : activeTab === 'PROFILE' ? (
+                            <div className="space-y-4">
+                                <label className="text-xs font-bold text-stone-500 uppercase">{t('settings.avatar_label')}</label>
+                                <div className="flex flex-col items-center gap-4">
+                                    <div
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="w-32 h-32 bg-stone-900 border-2 border-stone-800 border-dashed rounded-full flex flex-col items-center justify-center cursor-pointer hover:border-yellow-500/50 hover:bg-stone-800/50 transition-all overflow-hidden relative group"
+                                    >
+                                        {avatarImage ? (
+                                            <>
+                                                <img src={avatarImage} alt="Avatar" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                    <span className="text-white text-[10px] font-bold uppercase">{t('settings.avatar_upload_hint')}</span>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center text-stone-500 mb-1">
+                                                    <Save size={20} />
+                                                </div>
+                                                <span className="text-[10px] text-stone-500 font-bold uppercase">{t('settings.avatar_empty_hint')}</span>
+                                            </>
+                                        )}
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            ref={fileInputRef}
+                                            accept="image/*"
+                                            onChange={handleAvatarUpload}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-stone-500 text-center px-4 uppercase">
+                                        {t('settings.avatar_desc')}
+                                    </p>
+                                </div>
                             </div>
                         ) : (
                             <div className="space-y-4">

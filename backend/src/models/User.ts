@@ -51,6 +51,7 @@ export interface IUser extends Document {
     warehouseCapacity: number;
     lastClaimedAt?: Date;
     isBanned: boolean;
+    avatarUrl?: string; // Base64 or URL of user avatar
 }
 
 const UserSchema = new Schema<IUser>({
@@ -104,7 +105,8 @@ const UserSchema = new Schema<IUser>({
     lastClaimedAt: { type: Date },
     miningSlots: { type: Number, default: 3 },
     warehouseCapacity: { type: Number, default: 3 },
-    isBanned: { type: Boolean, default: false }
+    isBanned: { type: Boolean, default: false },
+    avatarUrl: { type: String }
 }, {
     timestamps: true
 });

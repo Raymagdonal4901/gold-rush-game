@@ -109,7 +109,7 @@ export const upgradeAccessory = async (req: AuthRequest, res: Response) => {
         const item = user.inventory[itemIndex];
         const currentLevel = item.level || 1;
 
-        if (currentLevel >= 5) return res.status(400).json({ message: 'Item is already at max level' });
+        if (currentLevel >= 10) return res.status(400).json({ message: 'Item is already at max level' });
 
         // Insurance Check
         if (useInsurance) {
