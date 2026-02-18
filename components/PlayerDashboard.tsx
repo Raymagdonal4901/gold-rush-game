@@ -1689,6 +1689,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                 materials={user?.materials || {}}
                 inventory={user?.inventory || []}
                 rigs={rigs}
+                purchasedRigIds={user?.purchasedRigIds || []}
             />
 
             <WithdrawModal

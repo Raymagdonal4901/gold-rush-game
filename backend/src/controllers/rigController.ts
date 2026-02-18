@@ -339,9 +339,24 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
             });
         }
 
+        // --- ENFORCE ONE-TIME PURCHASE LIMIT ---
+        if (presetId === 9 && user.purchasedRigIds && user.purchasedRigIds.includes(9)) {
+            return res.status(403).json({
+                message: `คุณได้ซื้อเครื่องขุดรุ่นนี้ไปแล้ว (จำกัดการซื้อ 1 ครั้งต่อบัญชี)`,
+                code: 'PURCHASE_LIMIT_REACHED'
+            });
+        }
 
         // Deduct balance
         user.balance -= investment;
+
+        // Record purchase for one-time rigs
+        if (presetId === 9) {
+            if (!user.purchasedRigIds) user.purchasedRigIds = [];
+            if (!user.purchasedRigIds.includes(9)) {
+                user.purchasedRigIds.push(9);
+            }
+        }
 
         await user.save();
 

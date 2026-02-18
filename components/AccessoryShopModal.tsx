@@ -23,11 +23,13 @@ interface AccessoryShopModalProps {
     materials?: Record<number, number>;
     inventory?: any[];
     rigs?: any[];
+    purchasedRigIds?: number[];
 }
 
 export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
     isOpen, onClose, walletBalance, onBuy, onBuyRig, onRefresh, addNotification, userId,
-    currentRigCount = 0, maxRigs = 3, materials = {}, inventory = [], rigs = []
+    currentRigCount = 0, maxRigs = 3, materials = {}, inventory = [], rigs = [],
+    purchasedRigIds = []
 }) => {
     const { t, getLocalized, formatCurrency, language, formatBonus } = useTranslation();
     const [activeTab, setActiveTab] = useState<'RIGS' | 'SHOP' | 'WORKSHOP' | 'REPAIR' | 'UPGRADE'>('RIGS');
@@ -1113,14 +1115,9 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xxl:grid-cols-5 gap-3 sm:gap-4">
                     {RIG_PRESETS.map((preset) => {
-                        // Special logic: Hide Rotten Glove (Tier 9) if already owned
-                        if (preset.id === 9) {
-                            const isOwned = rigs.some(r => {
-                                const name = typeof r.name === 'string' ? r.name : (r.name?.th || r.name?.en);
-                                return r.tierId === 9 || name?.includes('เน่า') || name?.includes('Rotten');
-                            });
-                            if (isOwned) return null;
-                        }
+                        // Special logic: Handle Rotten Glove (Tier 9) one-time purchase
+                        const isRottenGlove = preset.id === 9;
+                        const hasEverPurchased = isRottenGlove && purchasedRigIds?.includes(9);
 
                         let isMaxReached = false;
                         if (preset.specialProperties?.maxAllowed) {
@@ -1153,7 +1150,7 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                         const isTierLimitReached = tierOwnedCount >= tierMax;
                         const isWarehouseFull = rigs.length >= userMiningSlots;
 
-                        const canBuy = isAffordable && !isWarehouseFull && !isTierLimitReached;
+                        const canBuy = isAffordable && !isWarehouseFull && !isTierLimitReached && !hasEverPurchased;
                         const durationDays = preset.durationDays || (preset.durationMonths || 1) * 30;
                         const netProfit = preset.bonusProfit !== undefined ? preset.bonusProfit : (preset.dailyProfit * durationDays) - preset.price;
                         const styles = getTierStyles(preset.id);
@@ -1270,13 +1267,15 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
                                             }
                                             `}
                                     >
-                                        {isWarehouseFull
-                                            ? (language === 'th' ? 'โกดังเต็ม' : 'Full')
-                                            : isTierLimitReached
-                                                ? (language === 'th' ? `จำกัด (${tierMax})` : `Limit (${tierMax})`)
-                                                : isCrafting
-                                                    ? t('shop.craft_action')
-                                                    : formatCurrency(preset.price)}
+                                        {hasEverPurchased
+                                            ? (language === 'th' ? 'ซื้อแล้ว' : 'Purchased')
+                                            : isWarehouseFull
+                                                ? (language === 'th' ? 'โกดังเต็ม' : 'Full')
+                                                : isTierLimitReached
+                                                    ? (language === 'th' ? `จำกัด (${tierMax})` : `Limit (${tierMax})`)
+                                                    : isCrafting
+                                                        ? t('shop.craft_action')
+                                                        : formatCurrency(preset.price)}
                                     </button>
                                 </div>
                             </div>
