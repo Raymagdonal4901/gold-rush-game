@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, KeyRound, Save, Shield } from 'lucide-react';
+import { X, Lock, Save, Shield } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../services/types';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -13,12 +13,11 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, user, onSuccess }) => {
     const { t } = useTranslation();
-    const [activeTab, setActiveTab] = useState<'PASSWORD' | 'PIN' | 'BANK' | 'PROFILE'>('PASSWORD');
+    const [activeTab, setActiveTab] = useState<'PASSWORD' | 'BANK' | 'PROFILE'>('PASSWORD');
 
     // Form State
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
-    const [newPin, setNewPin] = useState('');
     const [qrImage, setQrImage] = useState<string | null>(user.bankQrCode || null);
     const [avatarImage, setAvatarImage] = useState<string | null>(user.avatarUrl || null);
     const [isUploading, setIsUploading] = useState(false);
@@ -45,10 +44,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                 if (newPassword.length < 4) throw new Error(t('settings.error_password_length'));
                 await api.user.updatePassword(currentPassword, newPassword);
                 setStatus({ type: 'SUCCESS', msg: t('settings.success_password') });
-            } else if (activeTab === 'PIN') {
-                if (!/^\d{4}$/.test(newPin)) throw new Error(t('settings.error_pin_format'));
-                await api.user.updatePin(currentPassword, newPin);
-                setStatus({ type: 'SUCCESS', msg: t('settings.success_pin') });
             } else if (activeTab === 'BANK') {
                 if (!qrImage) throw new Error(t('settings.error_qr_missing'));
                 await api.user.updateBankQr(qrImage);
@@ -61,7 +56,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
             // Clear inputs except QR
             setCurrentPassword('');
             setNewPassword('');
-            setNewPin('');
         } catch (err: any) {
             console.error("Security update failed:", err);
             setStatus({ type: 'ERROR', msg: err.response?.data?.message || err.message });
@@ -132,13 +126,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                         <Lock size={16} /> {t('settings.password_tab')}
                     </button>
                     <button
-                        onClick={() => { setActiveTab('PIN'); setStatus(null); }}
-                        className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2
-                ${activeTab === 'PIN' ? 'bg-stone-900 text-yellow-500 border-b-2 border-yellow-500' : 'text-stone-500 hover:text-stone-300'}`}
-                    >
-                        <KeyRound size={16} /> {t('settings.pin_tab')}
-                    </button>
-                    <button
                         onClick={() => { setActiveTab('PROFILE'); setStatus(null); }}
                         className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2
                 ${activeTab === 'PROFILE' ? 'bg-stone-900 text-yellow-500 border-b-2 border-yellow-500' : 'text-stone-500 hover:text-stone-300'}`}
@@ -187,24 +174,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
                                     className="w-full bg-stone-900 border border-stone-700 rounded p-3 text-white focus:border-yellow-500 outline-none transition-colors"
                                     placeholder={t('settings.new_password_placeholder')}
                                     minLength={4}
-                                />
-                            </div>
-                        ) : activeTab === 'PIN' ? (
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-stone-500 uppercase">{t('settings.new_pin')}</label>
-                                <input
-                                    type="password"
-                                    required
-                                    maxLength={4}
-                                    pattern="\d{4}"
-                                    value={newPin}
-                                    onChange={e => {
-                                        if (e.target.value === '' || /^\d+$/.test(e.target.value)) {
-                                            setNewPin(e.target.value);
-                                        }
-                                    }}
-                                    className="w-full bg-stone-900 border border-stone-700 rounded p-3 text-white focus:border-yellow-500 outline-none transition-colors text-center tracking-[0.5em] font-mono"
-                                    placeholder={t('settings.pin_placeholder')}
                                 />
                             </div>
                         ) : activeTab === 'PROFILE' ? (

@@ -992,7 +992,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                     </div>
 
                     {/* User Profile & Actions */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
                         <div className="hidden sm:flex flex-col items-end mr-2">
                             <span className="text-sm font-bold text-white">{user?.username || 'User'}</span>
                             <span className="text-xs text-stone-400">ID: {user?.id || '...'}</span>
@@ -1033,7 +1033,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                         </div>
 
                         <button
-                            className="p-2 text-stone-400 hover:text-white transition-colors relative"
+                            className="p-1.5 text-stone-400 hover:text-white transition-colors relative"
                             onClick={() => setIsMailOpen(true)}
                         >
                             <Mail size={20} />
@@ -1043,7 +1043,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                         </button>
 
                         <button
-                            className="p-2 text-stone-400 hover:text-white transition-colors shrink-0"
+                            className="p-1.5 text-stone-400 hover:text-white transition-colors shrink-0"
                             onClick={() => setIsMobileMenuOpen(true)}
                         >
                             <Menu size={24} />
