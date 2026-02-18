@@ -18,7 +18,7 @@ export const AccessoryIcon: React.FC<AccessoryIconProps> = ({ item, size = 24, c
     if (!item) return <HardHat size={size} className={className} />;
 
     // --- TYPE DETECTION ---
-    let typeId = item.typeId || '';
+    let typeId = item.typeId || item.id || '';
     const nameRaw = item.name;
     const enName = typeof nameRaw === 'object' ? (nameRaw as any)?.en || '' : String(nameRaw || '');
     const thName = typeof nameRaw === 'object' ? (nameRaw as any)?.th || '' : String(nameRaw || '');
@@ -39,6 +39,10 @@ export const AccessoryIcon: React.FC<AccessoryIconProps> = ({ item, size = 24, c
         else if (nameStr.includes('robot') || nameStr.includes('หุ่นยนต์')) typeId = 'ai_robot';
         else if (nameStr.includes('helmet') || nameStr.includes('หมวก')) typeId = 'hat';
         else if (nameStr.includes('glasses') || nameStr.includes('แว่น')) typeId = 'glasses';
+        else if (nameStr.includes('bag') || nameStr.includes('backpack') || nameStr.includes('เป้')) typeId = 'bag';
+        else if (nameStr.includes('phone') || nameStr.includes('mobile') || nameStr.includes('smartphone') || nameStr.includes('สมาทโฟน') || nameStr.includes('สมาร์ทโฟน')) typeId = 'mobile';
+        else if (nameStr.includes('pc') || nameStr.includes('computer') || nameStr.includes('laptop') || nameStr.includes('notebook') || nameStr.includes('โน้ตบุ๊ก') || nameStr.includes('โน๊ตบุ๊ค')) typeId = 'pc';
+        else if (nameStr.includes('boots') || nameStr.includes('รองเท้า')) typeId = 'boots';
         else if (nameStr.includes('repair kit') || nameStr.includes('ชุดซ่อม')) {
             if (nameStr.includes('basic') || nameStr.includes('พื้นฐาน')) typeId = 'repair_kit_1';
             else if (nameStr.includes('standard') || nameStr.includes('มาตรฐาน')) typeId = 'repair_kit_2';
