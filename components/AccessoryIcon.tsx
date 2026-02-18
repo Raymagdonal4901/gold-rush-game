@@ -24,28 +24,30 @@ export const AccessoryIcon: React.FC<AccessoryIconProps> = ({ item, size = 24, c
     const thName = typeof nameRaw === 'object' ? (nameRaw as any)?.th || '' : String(nameRaw || '');
     const nameStr = (enName + ' ' + thName).toLowerCase();
 
-    // Map names to typeIds for robust detection
-    if (nameStr.includes('chip') || nameStr.includes('ชิป')) typeId = 'upgrade_chip';
-    else if (nameStr.includes('key') || nameStr.includes('กุญแจ')) typeId = 'chest_key';
-    else if (nameStr.includes('mixer') || nameStr.includes('โต๊ะช่างสกัดแร่') || nameStr.includes('เครื่องผสม')) typeId = 'mixer';
-    else if (nameStr.includes('magnifying') || nameStr.includes('แว่นขยาย')) typeId = 'magnifying_glass';
-    else if (nameStr.includes('blueprint') || nameStr.includes('พิมพ์เขียว')) typeId = 'slot_blueprint';
-    else if (nameStr.includes('insurance') || nameStr.includes('ใบประกัน')) typeId = 'insurance_card';
-    else if (nameStr.includes('hourglass') || nameStr.includes('นาฬิกาทราย')) typeId = 'hourglass_small';
-    else if (nameStr.includes('mystery ore') || nameStr.includes('แร่ปริศนา') || nameStr.includes('วัสดุปริศนา')) typeId = 'mystery_ore';
-    else if (nameStr.includes('legendary ore') || nameStr.includes('แร่ในตำนาน') || nameStr.includes('วัสดุในตำนาน')) typeId = 'legendary_ore';
-    else if (nameStr.includes('excavator') || nameStr.includes('รถขุด') || nameStr.includes('รถไฟฟ้า') || nameStr.includes('electric vehicle') || nameStr.includes('truck') || nameStr.includes('รถบรรทุก')) typeId = 'auto_excavator';
-    else if (nameStr.includes('robot') || nameStr.includes('หุ่นยนต์')) typeId = 'ai_robot';
-    else if (nameStr.includes('helmet') || nameStr.includes('หมวก')) typeId = 'hat';
-    else if (nameStr.includes('glasses') || nameStr.includes('แว่น')) typeId = 'glasses';
-    else if (nameStr.includes('repair kit') || nameStr.includes('ชุดซ่อม')) {
-        if (nameStr.includes('basic') || nameStr.includes('พื้นฐาน')) typeId = 'repair_kit_1';
-        else if (nameStr.includes('standard') || nameStr.includes('มาตรฐาน')) typeId = 'repair_kit_2';
-        else if (nameStr.includes('electronic') || nameStr.includes('อิเล็กทรอนิกส์')) typeId = 'repair_kit_3';
-        else if (nameStr.includes('mechanic') || nameStr.includes('เครื่องจักร')) typeId = 'repair_kit_4';
-        else typeId = 'repair_kit_1';
+    // Map names to typeIds for robust detection — only if typeId is not already known
+    if (!typeId) {
+        if (nameStr.includes('chip') || nameStr.includes('ชิป')) typeId = 'upgrade_chip';
+        else if (nameStr.includes('key') || nameStr.includes('กุญแจ')) typeId = 'chest_key';
+        else if (nameStr.includes('mixer') || nameStr.includes('โต๊ะช่างสกัดแร่') || nameStr.includes('เครื่องผสม')) typeId = 'mixer';
+        else if (nameStr.includes('magnifying') || nameStr.includes('แว่นขยาย')) typeId = 'magnifying_glass';
+        else if (nameStr.includes('blueprint') || nameStr.includes('พิมพ์เขียว')) typeId = 'slot_blueprint';
+        else if (nameStr.includes('insurance') || nameStr.includes('ใบประกัน')) typeId = 'insurance_card';
+        else if (nameStr.includes('hourglass') || nameStr.includes('นาฬิกาทราย')) typeId = 'hourglass_small';
+        else if (nameStr.includes('mystery ore') || nameStr.includes('แร่ปริศนา') || nameStr.includes('วัสดุปริศนา')) typeId = 'mystery_ore';
+        else if (nameStr.includes('legendary ore') || nameStr.includes('แร่ในตำนาน') || nameStr.includes('วัสดุในตำนาน')) typeId = 'legendary_ore';
+        else if (nameStr.includes('excavator') || nameStr.includes('รถขุด') || nameStr.includes('รถไฟฟ้า') || nameStr.includes('electric vehicle') || nameStr.includes('truck') || nameStr.includes('รถบรรทุก')) typeId = 'auto_excavator';
+        else if (nameStr.includes('robot') || nameStr.includes('หุ่นยนต์')) typeId = 'ai_robot';
+        else if (nameStr.includes('helmet') || nameStr.includes('หมวก')) typeId = 'hat';
+        else if (nameStr.includes('glasses') || nameStr.includes('แว่น')) typeId = 'glasses';
+        else if (nameStr.includes('repair kit') || nameStr.includes('ชุดซ่อม')) {
+            if (nameStr.includes('basic') || nameStr.includes('พื้นฐาน')) typeId = 'repair_kit_1';
+            else if (nameStr.includes('standard') || nameStr.includes('มาตรฐาน')) typeId = 'repair_kit_2';
+            else if (nameStr.includes('electronic') || nameStr.includes('อิเล็กทรอนิกส์')) typeId = 'repair_kit_3';
+            else if (nameStr.includes('mechanic') || nameStr.includes('เครื่องจักร')) typeId = 'repair_kit_4';
+            else typeId = 'repair_kit_1';
+        }
+        else if (nameStr.includes('uniform') || nameStr.includes('suit') || nameStr.includes('shirt') || nameStr.includes('ชุด')) typeId = 'uniform';
     }
-    else if (nameStr.includes('uniform') || nameStr.includes('suit') || nameStr.includes('shirt') || nameStr.includes('ชุด')) typeId = 'uniform';
 
     // --- RARITY STYLING ---
     const rarity = item.rarity || 'COMMON';

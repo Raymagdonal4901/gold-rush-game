@@ -298,6 +298,7 @@ export const getProfile = async (req: any, res: Response) => {
             claimedRanks: user.claimedRanks || [],
             checkInStreak: user.checkInStreak || 0,
             lastCheckIn: user.lastCheckIn,
+            avatarUrl: user.avatarUrl, // Include avatarUrl to persist frontend state
             bankQrCode: user.bankQrCode,
             notifications: user.notifications || [],
             activeExpedition: user.activeExpedition,

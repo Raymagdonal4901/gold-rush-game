@@ -107,7 +107,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
                             <div>
                                 <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">{language === 'th' ? 'เพื่อนที่แนะนำ' : 'Network'}</p>
                                 <p className="text-xl font-bold text-white leading-tight">
-                                    {referralData?.stats.totalTeam || 0}
+                                    {referralData?.stats?.totalTeam || 0}
                                     <span className="text-stone-600 text-xs font-normal ml-1">PAX</span>
                                 </p>
                             </div>
@@ -169,9 +169,9 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
                         <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest flex items-center justify-between">
                             <span>{language === 'th' ? 'ลำดับชั้นสายงาน' : 'Network Hierarchy'}</span>
                             <div className="flex gap-2">
-                                <span className="text-[10px] px-2 py-0.5 bg-stone-800 text-stone-500 rounded uppercase font-mono">L1: {referralData?.stats.l1Count || 0}</span>
-                                <span className="text-[10px] px-2 py-0.5 bg-stone-800 text-stone-500 rounded uppercase font-mono">L2: {referralData?.stats.l2Count || 0}</span>
-                                <span className="text-[10px] px-2 py-0.5 bg-stone-800 text-stone-500 rounded uppercase font-mono">L3: {referralData?.stats.l3Count || 0}</span>
+                                <span className="text-[10px] px-2 py-0.5 bg-stone-800 text-stone-500 rounded uppercase font-mono">L1: {referralData?.stats?.l1Count || 0}</span>
+                                <span className="text-[10px] px-2 py-0.5 bg-stone-800 text-stone-500 rounded uppercase font-mono">L2: {referralData?.stats?.l2Count || 0}</span>
+                                <span className="text-[10px] px-2 py-0.5 bg-stone-800 text-stone-500 rounded uppercase font-mono">L3: {referralData?.stats?.l3Count || 0}</span>
                             </div>
                         </h3>
 
@@ -186,14 +186,14 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
                                         <div className="flex items-center gap-3">
                                             <div className="relative">
                                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold tracking-tighter shadow-sm ${ref.level === 1 ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
-                                                        ref.level === 2 ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                                                            'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                                                    ref.level === 2 ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                                        'bg-purple-500/10 text-purple-400 border border-purple-500/20'
                                                     }`}>
                                                     {ref.username.charAt(0)}
                                                 </div>
                                                 <div className={`absolute -bottom-1 -right-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full border shadow-sm ${ref.level === 1 ? 'bg-yellow-500 text-stone-950 border-yellow-600' :
-                                                        ref.level === 2 ? 'bg-blue-500 text-white border-blue-600' :
-                                                            'bg-purple-500 text-white border-purple-600'
+                                                    ref.level === 2 ? 'bg-blue-500 text-white border-blue-600' :
+                                                        'bg-purple-500 text-white border-purple-600'
                                                     }`}>
                                                     L{ref.level}
                                                 </div>

@@ -18,7 +18,8 @@ router.post('/profile', authenticate, async (req: any, res) => {
     const { walletAddress, avatarUrl } = req.body;
     try {
         const User = (await import('../models/User')).default;
-        const user = await User.findById(req.user.userId);
+        // Fix: Use req.userId directly (attached by authenticate middleware) instead of req.user.userId
+        const user = await User.findById(req.userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         if (walletAddress !== undefined) {
