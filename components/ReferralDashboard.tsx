@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, Users, Gift, Crown, Share2, TrendingUp, Handshake } from 'lucide-react';
+import { X, Copy, Users, Gift, Crown, Share2, TrendingUp, Handshake, Zap, Timer, ArrowLeft } from 'lucide-react';
 import { useTranslation } from '../contexts/LanguageContext';
 import { api } from '../services/api';
 import { User } from '../services/types';
@@ -19,9 +19,9 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
     } | null>(null);
     const [loading, setLoading] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [activeTab, setActiveTab] = useState<number>(0); // 0: Overview, 1: L1, 2: L2, 3: L3
 
     const referralCode = user.referralCode || user.username;
-    // Base URL should ideally come from config, using window.location.origin as fallback
     const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
 
     useEffect(() => {
@@ -50,190 +50,236 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
-            <div className="bg-[#0f0f0f] border border-yellow-600/30 rounded-2xl w-full max-w-2xl shadow-[0_0_100px_rgba(0,0,0,1)] overflow-hidden relative animate-in zoom-in-95 duration-500">
-                {/* Visual Flair */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent"></div>
+    const filteredReferrals = referralData?.referrals.filter(ref =>
+        activeTab === 0 ? true : ref.level === activeTab
+    ) || [];
 
-                {/* Header */}
-                <div className="bg-gradient-to-b from-stone-900 to-transparent p-6 flex justify-between items-center">
+    return (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+            <div className="bg-[#0a0a0a]/90 border border-yellow-600/20 rounded-[2rem] w-full max-w-2xl shadow-[0_0_80px_-20px_rgba(234,179,8,0.3)] overflow-hidden relative animate-in zoom-in-95 duration-500">
+                {/* Premium Background Effects */}
+                <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-yellow-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+                <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-blue-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+
+                {/* Header Section */}
+                <div className="p-8 pb-4 relative flex justify-between items-start">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-yellow-500/10 rounded-xl border border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
-                            <Handshake className="text-yellow-500" size={32} />
-                        </div>
+                        <button
+                            onClick={onClose}
+                            className="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/5 border border-white/5 text-stone-400 hover:text-white hover:bg-white/10 transition-all active:scale-90 shadow-lg"
+                            title={language === 'th' ? 'กลับ' : 'Back'}
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
                         <div>
-                            <h2 className="text-2xl font-bold text-white tracking-tight">Referral Empire</h2>
-                            <p className="text-xs text-yellow-500 font-mono tracking-widest uppercase opacity-70">Expand Your Network</p>
+                            <div className="flex items-center gap-3 mb-1">
+                                <Crown className="text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]" size={24} />
+                                <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase whitespace-nowrap">
+                                    Referral <span className="text-yellow-500">Empire</span>
+                                </h2>
+                            </div>
+                            <p className="text-stone-500 text-xs font-bold tracking-[0.2em] uppercase opacity-60">
+                                Build Your Kingdom • Command Your Wealth
+                            </p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="text-stone-500 hover:text-white transition-all hover:rotate-90 p-2 bg-stone-900 rounded-lg">
-                        <X size={24} />
+                    <button
+                        onClick={onClose}
+                        className="w-10 h-10 flex items-center justify-center rounded-2xl bg-stone-900/50 border border-white/5 text-stone-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/30 transition-all active:scale-95"
+                    >
+                        <X size={20} />
                     </button>
                 </div>
 
-                <div className="p-8 space-y-8 overflow-y-auto max-h-[80vh]">
-                    {/* Share Section */}
-                    <div className="bg-stone-900/40 p-6 rounded-2xl border border-stone-800 space-y-4">
-                        <p className="text-stone-400 text-sm font-bold uppercase tracking-widest flex items-center gap-2">
-                            <Share2 size={16} className="text-yellow-500" />
-                            {language === 'th' ? 'ลิงก์แนะนำของคุณ' : 'Your Referral Link'}
-                        </p>
-                        <div className="flex flex-col md:flex-row gap-3">
-                            <div className="flex-1 bg-black/60 p-4 rounded-xl border border-stone-800 font-mono text-yellow-500/90 text-sm overflow-hidden text-ellipsis whitespace-nowrap">
-                                {referralLink}
+                <div className="px-8 pb-8 space-y-6 max-h-[85vh] overflow-y-auto overflow-x-hidden custom-scrollbar relative">
+
+                    {/* Share Section - High Contrast */}
+                    <div className="relative group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 blur-xl opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="relative bg-gradient-to-r from-stone-900 to-stone-950 p-6 rounded-3xl border border-yellow-500/20 flex flex-col items-center gap-4 text-center overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 blur-3xl rounded-full"></div>
+
+                            <div>
+                                <h3 className="text-white font-bold text-lg mb-1">{language === 'th' ? 'เชิญเพื่อนร่วมทีม' : 'Expand Your Network'}</h3>
+                                <p className="text-stone-400 text-xs">{language === 'th' ? 'แชร์ลิงก์นี้เพื่อรับผลประโยชน์จากการขุดของลูกทีม' : 'Share this link to earn passive income from your team'}</p>
                             </div>
-                            <button
-                                onClick={() => copyToClipboard(referralLink)}
-                                className={`px-6 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 whitespace-nowrap ${copied
-                                    ? 'bg-emerald-600 text-white'
-                                    : 'bg-yellow-600 hover:bg-yellow-500 text-stone-950 shadow-[0_4px_15px_rgba(202,138,4,0.3)]'
-                                    }`}
-                            >
-                                {copied ? <TrendingUp size={18} /> : <Copy size={18} />}
-                                {copied
-                                    ? (language === 'th' ? 'คัดลอกแล้ว!' : 'Copied!')
-                                    : (language === 'th' ? 'คัดลอกลิงก์' : 'Copy Link')}
-                            </button>
+
+                            <div className="w-full flex bg-black/40 backdrop-blur-md rounded-2xl border border-white/5 p-1">
+                                <div className="flex-1 px-4 py-3 font-mono text-yellow-500/80 text-sm overflow-hidden text-ellipsis whitespace-nowrap opacity-60">
+                                    {referralLink}
+                                </div>
+                                <button
+                                    onClick={() => copyToClipboard(referralLink)}
+                                    className={`px-6 py-3 rounded-xl font-black text-sm uppercase transition-all flex items-center gap-2 ${copied
+                                        ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]'
+                                        : 'bg-yellow-500 text-stone-950 hover:bg-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.2)]'
+                                        }`}
+                                >
+                                    {copied ? <TrendingUp size={16} /> : <Share2 size={16} />}
+                                    {copied ? (language === 'th' ? 'สำเร็จ' : 'Done') : (language === 'th' ? 'คัดลอก' : 'Copy')}
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-gradient-to-br from-stone-900 to-black p-4 rounded-2xl border border-stone-800 flex items-center gap-3 group">
-                            <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20 group-hover:scale-110 transition-transform">
-                                <Users className="text-blue-400" size={20} />
+                    {/* Stats Grid - Glassmorphism */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2 bg-gradient-to-r from-stone-900/40 to-black/40 backdrop-blur-md p-6 rounded-3xl border border-white/5 flex items-center justify-between group">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-[inset_0_0_20px_rgba(59,130,246,0.1)] group-hover:scale-110 transition-transform">
+                                    <Users size={28} />
+                                </div>
+                                <div>
+                                    <p className="text-stone-500 text-[10px] font-black uppercase tracking-[0.2em]">{language === 'th' ? 'เครือข่ายทั้งหมด' : 'Global Network'}</p>
+                                    <h4 className="text-3xl font-black text-white leading-none mt-1">
+                                        {referralData?.stats?.totalTeam || 0}
+                                        <span className="text-stone-500 text-sm font-bold ml-2 italic">MINERS</span>
+                                    </h4>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">{language === 'th' ? 'เพื่อนที่แนะนำ' : 'Network'}</p>
-                                <p className="text-xl font-bold text-white leading-tight">
-                                    {referralData?.stats?.totalTeam || 0}
-                                    <span className="text-stone-600 text-xs font-normal ml-1">PAX</span>
-                                </p>
+                            <div className="flex gap-2 mr-2">
+                                {[
+                                    { label: 'L1', count: referralData?.stats?.l1Count || 0, color: 'text-yellow-500' },
+                                    { label: 'L2', count: referralData?.stats?.l2Count || 0, color: 'text-blue-400' },
+                                    { label: 'L3', count: referralData?.stats?.l3Count || 0, color: 'text-purple-400' }
+                                ].map((l, i) => (
+                                    <div key={i} className="px-3 py-1 bg-white/5 rounded-lg border border-white/5 text-center min-w-[3rem]">
+                                        <p className={`text-[9px] font-black ${l.color}`}>{l.label}</p>
+                                        <p className="text-white text-xs font-bold">{l.count}</p>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-br from-stone-900 to-black p-4 rounded-2xl border border-stone-800 flex items-center gap-3 group">
-                            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 group-hover:scale-110 transition-transform">
-                                <TrendingUp className="text-emerald-400" size={20} />
-                            </div>
-                            <div>
-                                <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wider">{language === 'th' ? 'รายได้ทั้งหมด' : 'Total Earnings'}</p>
-                                <p className="text-xl font-bold text-emerald-400 leading-tight">
+                        <div className="bg-gradient-to-br from-emerald-500/10 to-transparent backdrop-blur-md p-6 rounded-3xl border border-emerald-500/20 group overflow-hidden relative">
+                            <TrendingUp className="absolute -bottom-4 -right-4 w-20 h-20 text-emerald-500/5 rotate-12" />
+                            <div className="relative z-10">
+                                <p className="text-emerald-500/70 text-[10px] font-black uppercase tracking-[0.2em]">{language === 'th' ? 'ปันผลสะสม' : 'Net Accrual'}</p>
+                                <h4 className="text-2xl font-black text-white mt-1">
                                     {(user.referralStats?.totalEarned || 0).toLocaleString()}
-                                    <span className="text-stone-600 text-xs font-normal ml-1">฿</span>
-                                </p>
+                                    <span className="text-stone-600 text-sm ml-1">฿</span>
+                                </h4>
+                                <div className="mt-4 flex items-center gap-2 text-[10px] text-emerald-400 font-bold bg-emerald-400/10 w-fit px-2 py-1 rounded-lg">
+                                    <TrendingUp size={10} />
+                                    <span>Lifetime Growth</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-br from-yellow-500/10 to-transparent p-4 rounded-2xl border border-yellow-500/20 flex items-center gap-3 group">
-                            <div className="p-3 bg-yellow-500/10 rounded-xl border border-yellow-500/30 shadow-[0_0_10px_rgba(234,179,8,0.1)] group-hover:scale-110 transition-transform">
-                                <Gift className="text-yellow-500" size={20} />
-                            </div>
-                            <div>
-                                <p className="text-yellow-500/70 text-[10px] font-bold uppercase tracking-wider">{language === 'th' ? 'รายได้รวมทีม/วัน' : 'Team Daily Yield'}</p>
-                                <p className="text-xl font-bold text-white leading-tight">
+                        <div className="bg-gradient-to-br from-yellow-500/10 to-transparent backdrop-blur-md p-6 rounded-3xl border border-yellow-500/20 group overflow-hidden relative">
+                            <Gift className="absolute -bottom-4 -right-4 w-20 h-20 text-yellow-500/5 -rotate-12" />
+                            <div className="relative z-10">
+                                <p className="text-yellow-500/70 text-[10px] font-black uppercase tracking-[0.2em]">{language === 'th' ? 'ประมาณการรายวัน' : 'Team Daily Est.'}</p>
+                                <h4 className="text-2xl font-black text-white mt-1">
                                     {(referralData?.teamDailyIncome || 0).toLocaleString()}
-                                    <span className="text-stone-600 text-xs font-normal ml-1">฿</span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Bonus Explanation */}
-                    <div className="bg-yellow-600/5 p-6 rounded-2xl border border-yellow-600/10">
-                        <h3 className="text-sm font-bold text-yellow-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <Crown size={16} />
-                            {language === 'th' ? 'สิทธิประโยชน์ของคุณ' : 'Your Tier Benefits'}
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div className="flex items-start gap-4 p-4 bg-stone-900/50 rounded-xl border border-stone-800">
-                                <div className="text-2xl font-bold text-yellow-500">5%</div>
-                                <div>
-                                    <p className="text-white font-bold">{language === 'th' ? 'โบนัสแนะนำซื้อ' : 'Active Bonus'}</p>
-                                    <p className="text-stone-500 text-xs mt-1">{language === 'th' ? 'รับทันทีเมื่อเพื่อนซื้อเครื่องขุด' : 'Earn immediately when friends buy rigs'}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-4 p-4 bg-stone-900/50 rounded-xl border border-stone-800">
-                                <div className="text-2xl font-bold text-emerald-500">1%</div>
-                                <div>
-                                    <p className="text-white font-bold">{language === 'th' ? 'รายได้จากการขุด' : 'Passive Income'}</p>
-                                    <p className="text-stone-500 text-xs mt-1">{language === 'th' ? 'รายได้ Passive จากทุกยอดเคลมของเพื่อน' : 'Earn from every claim your friends make'}</p>
+                                    <span className="text-stone-600 text-sm ml-1">฿</span>
+                                </h4>
+                                <div className="mt-4 flex items-center gap-2 text-[10px] text-yellow-400 font-bold bg-yellow-400/10 w-fit px-2 py-1 rounded-lg">
+                                    <Zap size={10} />
+                                    <span>Passive Flow</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Referrals List */}
+                    {/* Hierarchy Selector & List */}
                     <div className="space-y-4">
-                        <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest flex items-center justify-between">
-                            <span>{language === 'th' ? 'ลำดับชั้นสายงาน' : 'Network Hierarchy'}</span>
-                            <div className="flex gap-2">
-                                <span className="text-[10px] px-2 py-0.5 bg-stone-800 text-stone-500 rounded uppercase font-mono">L1: {referralData?.stats?.l1Count || 0}</span>
-                                <span className="text-[10px] px-2 py-0.5 bg-stone-800 text-stone-500 rounded uppercase font-mono">L2: {referralData?.stats?.l2Count || 0}</span>
-                                <span className="text-[10px] px-2 py-0.5 bg-stone-800 text-stone-500 rounded uppercase font-mono">L3: {referralData?.stats?.l3Count || 0}</span>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-stone-400 text-[10px] font-black uppercase tracking-[0.3em]">Empire Records</h3>
+                            <div className="flex bg-stone-900/50 p-1 rounded-xl border border-white/5">
+                                {[
+                                    { id: 0, label: 'ALL' },
+                                    { id: 1, label: 'L1' },
+                                    { id: 2, label: 'L2' },
+                                    { id: 3, label: 'L3' }
+                                ].map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${activeTab === tab.id
+                                            ? 'bg-yellow-500 text-stone-950 shadow-[0_0_10px_rgba(234,179,8,0.2)]'
+                                            : 'text-stone-500 hover:text-white'
+                                            }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
                             </div>
-                        </h3>
+                        </div>
 
                         {loading ? (
-                            <div className="py-12 flex justify-center">
-                                <div className="w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                            <div className="py-20 flex flex-col items-center justify-center gap-4">
+                                <div className="w-12 h-12 border-4 border-yellow-500/10 border-t-yellow-500 rounded-full animate-spin shadow-[0_0_20px_rgba(234,179,8,0.1)]"></div>
+                                <p className="text-stone-500 text-xs font-black uppercase tracking-widest animate-pulse">Syncing Network...</p>
                             </div>
-                        ) : (referralData?.referrals || []).length > 0 ? (
-                            <div className="bg-stone-900/20 rounded-2xl border border-stone-800 divide-y divide-stone-800 max-h-80 overflow-y-auto custom-scrollbar">
-                                {(referralData?.referrals || []).map((ref, idx) => (
-                                    <div key={idx} className={`p-4 flex justify-between items-center group hover:bg-stone-900/40 transition-all ${ref.level === 2 ? 'pl-8' : ref.level === 3 ? 'pl-12' : 'pl-4'}`}>
-                                        <div className="flex items-center gap-3">
+                        ) : filteredReferrals.length > 0 ? (
+                            <div className="grid gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                {filteredReferrals.map((ref, idx) => (
+                                    <div key={idx} className="bg-stone-900/30 border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:border-yellow-500/30 transition-all group overflow-hidden relative">
+                                        <div className="flex items-center gap-4 relative z-10">
                                             <div className="relative">
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold tracking-tighter shadow-sm ${ref.level === 1 ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
-                                                    ref.level === 2 ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                                                        'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg transition-transform group-hover:scale-105 shadow-lg ${ref.level === 1 ? 'bg-gradient-to-br from-yellow-500/20 to-yellow-600/40 text-yellow-500 border border-yellow-500/20' :
+                                                    ref.level === 2 ? 'bg-gradient-to-br from-blue-500/10 to-blue-600/30 text-blue-400 border border-blue-500/10' :
+                                                        'bg-gradient-to-br from-purple-500/10 to-purple-600/30 text-purple-400 border border-purple-500/10'
                                                     }`}>
-                                                    {ref.username.charAt(0)}
+                                                    {ref.username.charAt(0).toUpperCase()}
                                                 </div>
-                                                <div className={`absolute -bottom-1 -right-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full border shadow-sm ${ref.level === 1 ? 'bg-yellow-500 text-stone-950 border-yellow-600' :
-                                                    ref.level === 2 ? 'bg-blue-500 text-white border-blue-600' :
-                                                        'bg-purple-500 text-white border-purple-600'
-                                                    }`}>
+                                                <div className="absolute -bottom-1 -right-1 flex items-center justify-center w-5 h-5 rounded-lg bg-stone-950 border border-white/10 text-[9px] font-black text-white shadow-xl">
                                                     L{ref.level}
                                                 </div>
                                             </div>
                                             <div>
-                                                <p className="text-white font-medium text-sm flex items-center gap-2">
-                                                    {ref.username}
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-white font-black tracking-tight">{ref.username}</p>
+                                                    {ref.level === 1 && <Crown size={10} className="text-yellow-500" />}
+                                                </div>
+                                                <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mt-0.5 opacity-60">
+                                                    Enrolled {new Date(ref.joinedAt).toLocaleDateString()}
                                                 </p>
-                                                <p className="text-[10px] text-stone-500 uppercase tracking-tight">Joined {new Date(ref.joinedAt).toLocaleDateString()}</p>
                                             </div>
                                         </div>
-                                        <div className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold rounded-full border border-emerald-500/20 shadow-[0_2px_10px_rgba(16,185,129,0.1)]">
-                                            ACTIVE
+                                        <div className="flex flex-col items-end gap-1 relative z-10">
+                                            <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[9px] font-black rounded-lg border border-emerald-500/20 tracking-[0.1em]">
+                                                • ACTIVE
+                                            </div>
+                                            {ref.userId && (
+                                                <p className="text-[9px] font-mono text-stone-700 uppercase tracking-tighter">UID: {ref.userId.substring(0, 8)}</p>
+                                            )}
                                         </div>
+
+                                        {/* Row Subtle Background Polish */}
+                                        <div className={`absolute top-0 right-0 w-32 h-full opacity-5 pointer-events-none transition-opacity group-hover:opacity-10 ${ref.level === 1 ? 'bg-yellow-500' : ref.level === 2 ? 'bg-blue-500' : 'bg-purple-500'
+                                            }`} style={{ borderRadius: '0 1rem 1rem 0' }}></div>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="bg-stone-900/10 border-2 border-dashed border-stone-800 p-12 rounded-3xl text-center">
-                                <Users size={48} className="mx-auto text-stone-800 mb-4 opacity-20" />
-                                <p className="text-stone-600 font-medium text-sm italic">
-                                    {language === 'th' ? 'ยังไม่มีผู้ได้รับการแนะนำ' : 'No miners referred yet.'}
+                            <div className="bg-stone-900/10 border-2 border-dashed border-stone-800/50 p-16 rounded-[2.5rem] text-center flex flex-col items-center">
+                                <div className="w-20 h-20 rounded-full bg-stone-900/50 flex items-center justify-center mb-6 border border-white/5 opacity-50">
+                                    <Users size={32} className="text-stone-400" />
+                                </div>
+                                <h3 className="text-white font-bold text-lg mb-2">{language === 'th' ? 'อาณาจักรยังว่างเปล่า' : 'Empire Unclaimed'}</h3>
+                                <p className="text-stone-500 text-sm max-w-[250px] mx-auto mb-8">
+                                    {language === 'th' ? 'เริ่มแนะนำสมาชิกใหม่เพื่อปลดล็อกรายได้รายวันแบบ Passive' : 'Start recruiting new members to unlock your passive growth potential.'}
                                 </p>
                                 <button
                                     onClick={() => copyToClipboard(referralLink)}
-                                    className="mt-4 text-yellow-500 hover:text-yellow-400 font-bold text-xs tracking-widest uppercase p-3 hover:bg-yellow-500/5 rounded-xl border border-yellow-500/20 transition-all active:scale-95"
+                                    className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-black text-xs tracking-[0.2em] uppercase rounded-2xl border border-white/5 transition-all active:scale-95"
                                 >
-                                    {language === 'th' ? 'เริ่มแนะนำเลย' : 'Start Inviting Now'}
+                                    {language === 'th' ? 'ริเริ่มการขยาย' : 'Initiate Expansion'}
                                 </button>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Footer */}
-                <div className="bg-stone-950 p-4 text-center border-t border-stone-900/50">
-                    <p className="text-[10px] text-stone-600 uppercase tracking-widest flex items-center justify-center gap-2">
-                        <Crown size={12} className="text-yellow-500/50" />
-                        Gold Rush Digital Referral Network Layer-3 Graph
-                    </p>
+                {/* Footer Insight */}
+                <div className="px-8 py-4 bg-stone-950/80 border-t border-white/5 flex justify-between items-center relative z-10">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                        <p className="text-[9px] text-stone-500 font-black uppercase tracking-widest">Global Node Sync: Active</p>
+                    </div>
+                    <p className="text-[9px] text-stone-700 font-bold uppercase tracking-[0.2em]">Gold Rush Empire Protocol v2.5</p>
                 </div>
             </div>
         </div>

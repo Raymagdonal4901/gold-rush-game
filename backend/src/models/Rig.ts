@@ -28,7 +28,7 @@ export interface IRig extends Document {
     totalMined?: number;
 }
 const RigSchema = new Schema<IRig>({
-    ownerId: { type: String, required: true },
+    ownerId: { type: String, required: true, index: true },
     name: { type: Schema.Types.Mixed, required: true },
     investment: { type: Number, required: true },
     dailyProfit: { type: Number, required: true },

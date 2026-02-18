@@ -16,10 +16,10 @@ export interface ITransaction extends Document {
 }
 
 const TransactionSchema: Schema = new Schema({
-    userId: { type: String, required: true },
+    userId: { type: String, required: true, index: true },
     type: { type: String, required: true },
     amount: { type: Number, required: true },
-    timestamp: { type: Date, default: Date.now },
+    timestamp: { type: Date, default: Date.now, index: true },
     status: { type: String, enum: ['PENDING', 'COMPLETED', 'REJECTED', 'FAILED'], default: 'COMPLETED' },
     description: { type: String, required: true },
     refId: { type: Schema.Types.ObjectId },

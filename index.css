@@ -198,6 +198,13 @@
   transition: all 0.3s ease;
 }
 
+.premium-silver-card {
+  background: rgba(10, 10, 10, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  animation: silver-glow 4s ease-in-out infinite;
+  box-shadow: 0 0 20px -5px rgba(148, 163, 184, 0.2);
+}
+
 @keyframes sparkle {
 
   0%,

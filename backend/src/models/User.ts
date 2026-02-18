@@ -96,7 +96,7 @@ const UserSchema = new Schema<IUser>({
 
     // Referral System
     referralCode: { type: String, unique: true, sparse: true },
-    referrerId: { type: Schema.Types.ObjectId, ref: 'User' },
+    referrerId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     referralStats: {
         totalInvited: { type: Number, default: 0 },
         totalEarned: { type: Number, default: 0 },

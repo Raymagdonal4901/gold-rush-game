@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, BookOpen, Wallet, Download, CheckCircle, ArrowRight, Package, RefreshCw, Zap, Hammer, Sparkles, AlertTriangle, Key, Cpu, ShieldCheck, Wrench, Pickaxe, ArrowUp, Info, Activity, Menu, Users, ShoppingBag, User, Mail, Settings, Coins, CreditCard, Banknote, Power, BarChart2, ChevronRight, ArrowDown, Flame, Target, Trophy, History, LogOut, Plus, Lock, CalendarCheck, Ghost, Truck, ArrowDownLeft, ArrowUpRight, Play, Pause, Bomb, Dices, Upload } from 'lucide-react';
+import { X, BookOpen, Wallet, Download, CheckCircle, ArrowRight, Package, RefreshCw, Zap, Hammer, Sparkles, AlertTriangle, Key, Cpu, ShieldCheck, Wrench, Pickaxe, ArrowUp, Info, Activity, Menu, Users, ShoppingBag, User, Mail, Settings, Coins, CreditCard, Banknote, Power, BarChart2, ChevronRight, ArrowDown, Flame, Target, Trophy, History, LogOut, Plus, Lock, CalendarCheck, Ghost, Truck, ArrowDownLeft, ArrowUpRight, Play, Pause, Bomb, Dices, Upload, Crown } from 'lucide-react';
 import { api } from '../services/api';
 // import { MockDB } from '../services/db'; // Not using MockDB directly for now unless needed
 import { useLanguage } from '../contexts/LanguageContext';
@@ -154,16 +154,50 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
         fileInputRef.current?.click();
     };
 
+    // Helper to compress image before uploading to avoid server payload limit
+    const compressImage = (base64Str: string, maxWidth: number = 400, maxHeight: number = 400): Promise<string> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = base64Str;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width *= maxHeight / height;
+                        height = maxHeight;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compress to JPEG with 70% quality
+            };
+        });
+    };
+
     const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onloadend = async () => {
-                const base64String = reader.result as string;
+                const rawBase64 = reader.result as string;
                 try {
-                    const res = await api.user.updateProfile({ avatarUrl: base64String });
+                    // Compress image before sending to backend
+                    const compressedBase64 = await compressImage(rawBase64);
+
+                    const res = await api.user.updateProfile({ avatarUrl: compressedBase64 });
                     if (res) {
-                        setUser({ ...user, avatarUrl: base64String });
+                        setUser({ ...user, avatarUrl: compressedBase64 });
                         addNotification({
                             id: Date.now().toString(),
                             userId: user.id,
@@ -1119,44 +1153,71 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                         </div>
                     </div>
 
-                    {/* 2. Referral System Card (Teal Theme) */}
+                    {/* 2. Referral System Card - PREMIUM SILVER REDESIGN */}
                     <div
                         onClick={() => setIsReferralOpen(true)}
-                        className="col-span-1 lg:col-span-1 card-teal-production rounded-2xl p-3 lg:p-5 flex flex-col justify-between relative min-h-[160px] lg:min-h-[200px] cursor-pointer group hover:scale-[1.02] transition-all duration-300">
-                        <div className="absolute top-2 right-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Users size={48} className="text-teal-400" />
+                        className="col-span-1 lg:col-span-1 premium-silver-card rounded-2xl p-3 lg:p-5 flex flex-col justify-between relative min-h-[160px] lg:min-h-[200px] cursor-pointer group hover:scale-[1.02] hover:border-slate-400/50 transition-all duration-300 overflow-hidden"
+                    >
+                        {/* Premium Background Accents */}
+                        <div className="shimmer-layer opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                        <div className="absolute top-2 right-2 opacity-20 group-hover:opacity-40 transition-opacity flex gap-2">
+                            <Sparkles size={20} className="text-yellow-500 animate-pulse" />
+                            <Crown size={32} className="text-yellow-500" />
                         </div>
+
                         <div className="relative z-10">
-                            <div className="flex items-center gap-4">
+                            <h2 className="text-[10px] lg:text-xs font-black text-white tracking-[0.1em] uppercase mb-4 italic flex items-center gap-1.5 flex-wrap">
+                                <Zap size={12} className="text-yellow-500 fill-yellow-500 shrink-0" />
+                                <span className="whitespace-nowrap">Referral <span className="text-yellow-500">Empire</span></span>
+                            </h2>
+
+                            <div className="grid grid-cols-2 gap-2 lg:gap-4 mb-4">
                                 <div className="flex flex-col">
-                                    <span className="text-teal-500 text-[10px] font-bold uppercase tracking-wider">{language === 'th' ? 'รายได้สะสม' : 'Total Earnings'}</span>
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-xl lg:text-3xl font-black text-teal-400 tracking-tighter">
+                                    <span className="text-stone-500 text-[8px] font-bold uppercase tracking-wider truncate">{language === 'th' ? 'รายได้สะสม' : 'Total Earned'}</span>
+                                    <div className="flex items-center gap-0.5">
+                                        <span className="text-base lg:text-2xl font-black text-white tracking-tighter">
                                             {formatCurrency(user?.referralStats?.totalEarned || 0, { hideSymbol: true })}
                                         </span>
-                                        <span className="text-teal-600 text-[10px] lg:text-xs font-bold leading-none">{language === 'th' ? '฿' : 'USD'}</span>
+                                        <span className="text-yellow-500 text-[10px] font-bold leading-none">฿</span>
                                     </div>
                                 </div>
-                                <div className="h-8 w-px bg-teal-500/20"></div>
                                 <div className="flex flex-col">
-                                    <span className="text-teal-500 text-[10px] font-bold uppercase tracking-wider">{language === 'th' ? 'รายได้รวมทีม/วัน' : 'Team Daily Yield'}</span>
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-xl lg:text-3xl font-black text-white tracking-tighter">
+                                    <span className="text-stone-500 text-[8px] font-bold uppercase tracking-wider truncate">{language === 'th' ? 'รายได้ทีม/วัน' : 'Daily Yield'}</span>
+                                    <div className="flex items-center gap-0.5">
+                                        <span className="text-base lg:text-2xl font-black text-yellow-500 tracking-tighter">
                                             {formatCurrency(referralData?.teamDailyIncome || 0, { hideSymbol: true })}
                                         </span>
-                                        <span className="text-teal-600 text-[10px] lg:text-xs font-bold leading-none">{language === 'th' ? '฿' : 'USD'}</span>
+                                        <span className="text-yellow-600 text-[10px] font-bold leading-none">฿</span>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Network Hierarchy Grid */}
+                            <div className="flex gap-2">
+                                <div className="flex-1 bg-white/5 border border-white/5 rounded-xl p-1.5 flex flex-col items-center">
+                                    <span className="text-[7px] font-black text-yellow-500 uppercase opacity-60">L1</span>
+                                    <span className="text-xs font-black text-white">{referralData?.stats?.l1Count || 0}</span>
+                                </div>
+                                <div className="flex-1 bg-white/5 border border-white/5 rounded-xl p-1.5 flex flex-col items-center">
+                                    <span className="text-[7px] font-black text-blue-400 uppercase opacity-60">L2</span>
+                                    <span className="text-xs font-black text-white">{referralData?.stats?.l2Count || 0}</span>
+                                </div>
+                                <div className="flex-1 bg-white/5 border border-white/5 rounded-xl p-1.5 flex flex-col items-center">
+                                    <span className="text-[7px] font-black text-purple-400 uppercase opacity-60">L3</span>
+                                    <span className="text-xs font-black text-white">{referralData?.stats?.l3Count || 0}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between">
-                            <div className="flex items-center gap-1 bg-stone-950/50 px-2 py-1 rounded-full border border-teal-500/20 text-[8px] lg:text-[10px] font-bold text-teal-100">
-                                <Users size={10} className="text-teal-400" />
-                                {language === 'th' ? `เชิญแล้ว: ${referralData?.stats?.totalTeam || user?.referralStats?.totalInvited || 0} คน` : `Invited: ${referralData?.stats?.totalTeam || user?.referralStats?.totalInvited || 0} Miners`}
+                        <div className="mt-4 flex items-center justify-between pt-3 border-t border-white/5">
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]"></div>
+                                <span className="text-[9px] font-bold text-stone-400 uppercase tracking-tight">
+                                    {language === 'th' ? `ทีมทั้งหมด: ${referralData?.stats?.totalTeam || 0}` : `Total Team: ${referralData?.stats?.totalTeam || 0}`}
+                                </span>
                             </div>
-                            <div className="flex items-center text-[10px] text-teal-500 font-bold uppercase group-hover:translate-x-1 transition-transform">
-                                {language === 'th' ? 'จัดการ' : 'Manage'} <ChevronRight size={14} />
+                            <div className="flex items-center text-[10px] text-yellow-500 font-black uppercase group-hover:translate-x-1 transition-transform">
+                                {language === 'th' ? 'จัดการ' : 'Manage'} <ChevronRight size={14} className="text-yellow-500" />
                             </div>
                         </div>
                     </div>
