@@ -2,7 +2,7 @@ import { Response } from 'express';
 import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthRequest } from '../middleware/auth';
-import { SHOP_ITEMS } from '../constants';
+import { SHOP_ITEMS, RIG_PRESETS, MINING_VOLATILITY_CONFIG } from '../constants';
 import User from '../models/User';
 import Rig from '../models/Rig';
 import WithdrawalRequest from '../models/WithdrawalRequest';
@@ -11,6 +11,7 @@ import ClaimRequest from '../models/ClaimRequest';
 import SystemConfig from '../models/SystemConfig';
 import Transaction from '../models/Transaction';
 import Withdrawal from '../models/Withdrawal';
+import { recalculateUserIncome } from './userController';
 
 // Convert All Currency Data to USD (1 USD = 32 THB)
 export const adminConvertCurrencyToUSD = async (req: AuthRequest, res: Response) => {
@@ -1221,5 +1222,64 @@ export const deleteAllUsers = async (req: AuthRequest, res: Response) => {
     } catch (error) {
         console.error('[ADMIN ERROR] deleteAllUsers failed:', error);
         res.status(500).json({ message: 'Server error during mass deletion', error });
+    }
+};
+
+// Admin Manual Add Rig
+export const adminAddRig = async (req: AuthRequest, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const { presetId } = req.body; // The ID from RIG_PRESETS
+
+        console.log(`[ADMIN] Manual Add Rig Preset ${presetId} to User ${userId}...`);
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const preset = RIG_PRESETS.find(p => p.id === Number(presetId));
+        if (!preset) return res.status(400).json({ message: 'Invalid Rig Preset ID' });
+
+        const volConfig = MINING_VOLATILITY_CONFIG[preset.id];
+        const lifespanDays = preset.durationMonths ? (preset.durationMonths * 30) : (preset.durationDays || 365);
+
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + lifespanDays);
+
+        const rig = await Rig.create({
+            ownerId: user._id,
+            name: preset.name,
+            investment: preset.price,
+            dailyProfit: preset.dailyProfit,
+            expiresAt,
+            slots: [null, null, null, null, null],
+            rarity: preset.type || 'COMMON',
+            repairCost: preset.repairCost || 0,
+            energyCostPerDay: preset.energyCostPerDay || 0,
+            bonusProfit: preset.bonusProfit || 0,
+            lastClaimAt: new Date(),
+            tierId: preset.id,
+            currentDurability: volConfig?.durabilityMax || 3000,
+            status: 'ACTIVE',
+            totalMined: 0,
+            level: 1
+        });
+
+        // Log Transaction
+        const adminTx = new Transaction({
+            userId: 'SYSTEM',
+            type: 'SYSTEM_ADJUSTMENT',
+            amount: 0,
+            status: 'COMPLETED',
+            description: `Admin manual add rig: ${preset.name.en} to user ${user.username}`
+        });
+        await adminTx.save();
+
+        // Recalculate Income
+        await recalculateUserIncome(user._id.toString());
+
+        res.json({ message: 'Rig added successfully by admin', rig });
+    } catch (error) {
+        console.error('[ADMIN ERROR] adminAddRig failed:', error);
+        res.status(500).json({ message: 'Server error', error });
     }
 };

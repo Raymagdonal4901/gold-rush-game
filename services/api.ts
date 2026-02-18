@@ -457,6 +457,10 @@ export const api = {
         }> => {
             const res = await client.get('/admin/revenue-stats');
             return res.data;
+        },
+        addRig: async (userId: string, presetId: number): Promise<any> => {
+            const res = await client.post(`/admin/users/${userId}/rigs`, { presetId });
+            return res.data;
         }
     },
     // Chat

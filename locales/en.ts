@@ -204,6 +204,14 @@ export const en = {
     common: {
         total_deposit: "Total Deposit",
         total_withdraw: "Total Withdraw",
-        no_data: "No Data"
+        no_data: "No Data",
+        add_machine: "Add Machine",
+        delete_machine_confirm: "Confirm deleting this machine? (Equipped items will be removed as well)",
+        select_machine: "Select Machine to Add",
+        add_success: "Machine added successfully"
+    },
+    history: {
+        date: "Date",
+        method: "Method",
     }
 };

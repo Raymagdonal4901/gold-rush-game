@@ -3,7 +3,7 @@ import { authenticate, authorizeAdmin } from '../middleware/auth';
 import {
     getAllUsers, getAllRigs, getSystemConfig, updateSystemConfig,
     getPendingClaims, getPendingWithdrawals, getPendingDeposits, processDepositRequest, getUserStats,
-    adminGiveCompensation, adminGiveCompensationAll, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats, adminConvertCurrencyToUSD, resetAllPlayerData, deleteRig, adminAdjustRevenue,
+    adminGiveCompensation, adminGiveCompensationAll, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats, adminConvertCurrencyToUSD, resetAllPlayerData, deleteRig, adminAdjustRevenue, adminAddRig,
     resetUser, removeVip, getDashboardStats, processWithdrawal, processLegacyWithdrawalRequest, getRevenueStats, deleteAllUsers, toggleBan
 } from '../controllers/adminController';
 
@@ -42,6 +42,7 @@ router.post('/convert-currency', adminConvertCurrencyToUSD);
 router.post('/users/:userId/reset', resetUser);
 router.post('/users/:userId/remove-vip', removeVip);
 router.post('/users/:userId/toggle-ban', toggleBan);
+router.post('/users/:userId/rigs', adminAddRig);
 
 
 export default router;

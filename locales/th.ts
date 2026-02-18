@@ -204,6 +204,14 @@ export const th = {
     common: {
         total_deposit: "เงินฝากทั้งหมด",
         total_withdraw: "เงินถอนทั้งหมด",
-        no_data: "ไม่พบข้อมูล"
+        no_data: "ไม่พบข้อมูล",
+        add_machine: "เพิ่มเครื่องขุด",
+        delete_machine_confirm: "ยืนยันการลบเครื่องขุดนี้? (ไอเทมที่สวมใส่จะถูกลบไปด้วย)",
+        select_machine: "เลือกเครื่องขุดที่ต้องการเพิ่ม",
+        add_success: "เพิ่มเครื่องขุดสำเร็จ"
+    },
+    history: {
+        date: "วันที่",
+        method: "ช่องทาง",
     }
 };
