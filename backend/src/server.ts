@@ -63,6 +63,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/upgrade', upgradeRoutes);
 app.use('/api/mines', minesRoutes);
 app.use('/api/lucky-draw', luckyDrawRoutes); // Mount Lucky Draw Routes
+
 // Health Check
 import { runRigTierIdMigration } from './services/migrationService';
 // เชื่อมต่อ Database และ Start Server

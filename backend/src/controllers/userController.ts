@@ -427,6 +427,18 @@ export const getReferrals = async (req: AuthRequest, res: Response) => {
             ...l3Users.map(u => mapUser(u, 3))
         ];
 
+        // Update cached stats if they differ from reality
+        const currentUser = await User.findById(userId);
+        if (currentUser && currentUser.referralStats) {
+            const actualL1 = l1Users.length;
+            if (currentUser.referralStats.totalInvited !== actualL1) {
+                currentUser.referralStats.totalInvited = actualL1;
+                currentUser.markModified('referralStats');
+                await currentUser.save();
+                console.log(`[SYNC] Updated referralStats for ${currentUser.username}: ${actualL1} invites`);
+            }
+        }
+
         res.json({
             referrals: hierarchy,
             teamDailyIncome: Math.round(teamDailyIncome * 100) / 100,
