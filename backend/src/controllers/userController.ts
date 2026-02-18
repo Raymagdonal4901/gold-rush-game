@@ -3,7 +3,7 @@ import User from '../models/User';
 import Rig from '../models/Rig';
 import { AuthRequest } from '../middleware/auth';
 
-import { MATERIAL_CONFIG, SLOT_EXPANSION_CONFIG, SHOP_ITEMS, RIG_UPGRADE_RULES, MINING_VOLATILITY_CONFIG } from '../constants';
+import { MATERIAL_CONFIG, SLOT_EXPANSION_CONFIG, SHOP_ITEMS, RIG_UPGRADE_RULES, MINING_VOLATILITY_CONFIG, LEVEL_CONFIG, ENERGY_CONFIG } from '../constants';
 
 export const unlockSlot = async (req: AuthRequest, res: Response) => {
     try {
@@ -391,18 +391,126 @@ export const deleteNotification = async (req: AuthRequest, res: Response) => {
 export const getReferrals = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.userId;
-        const referrals = await User.find({ referrerId: userId })
-            .select('username createdAt')
-            .sort({ createdAt: -1 });
 
-        const mappedReferrals = referrals.map(u => ({
-            username: u.username.length > 4 ? u.username.substring(0, 4) + '***' : u.username + '***',
-            joinedAt: u.createdAt
-        }));
+        // Helper to format names consistently
+        const formatName = (name: string) => name.length > 4 ? name.substring(0, 4) + '***' : name + '***';
 
-        res.json(mappedReferrals);
+        // Level 1: Direct Referrals
+        const l1Users = await User.find({ referrerId: userId }).select('username totalDailyIncome createdAt').lean();
+        const l1Ids = l1Users.map(u => u._id);
+
+        // Level 2: Friends of L1
+        const l2Users = await User.find({ referrerId: { $in: l1Ids } }).select('username referrerId totalDailyIncome createdAt').lean();
+        const l2Ids = l2Users.map(u => u._id);
+
+        // Level 3: Friends of L2
+        const l3Users = await User.find({ referrerId: { $in: l2Ids } }).select('username referrerId totalDailyIncome createdAt').lean();
+
+        // Calculate Team Stats
+        let teamDailyIncome = 0;
+        l1Users.forEach(u => teamDailyIncome += (u.totalDailyIncome || 0));
+        l2Users.forEach(u => teamDailyIncome += (u.totalDailyIncome || 0));
+        l3Users.forEach(u => teamDailyIncome += (u.totalDailyIncome || 0));
+
+        // Map to display format
+        const mapUser = (u: any, level: number) => ({
+            username: formatName(u.username),
+            joinedAt: u.createdAt,
+            level,
+            referrerId: u.referrerId?.toString(),
+            userId: u._id.toString()
+        });
+
+        const hierarchy = [
+            ...l1Users.map(u => mapUser(u, 1)),
+            ...l2Users.map(u => mapUser(u, 2)),
+            ...l3Users.map(u => mapUser(u, 3))
+        ];
+
+        res.json({
+            referrals: hierarchy,
+            teamDailyIncome: Math.round(teamDailyIncome * 100) / 100,
+            stats: {
+                l1Count: l1Users.length,
+                l2Count: l2Users.length,
+                l3Count: l3Users.length,
+                totalTeam: l1Users.length + l2Users.length + l3Users.length
+            }
+        });
     } catch (error) {
         console.error('Get referrals error:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+export const calculateUserStats = (level: number) => {
+    // Calculate Energy: Base + ((Level - 1) * Growth)
+    const maxEnergy = LEVEL_CONFIG.baseEnergy + ((level - 1) * LEVEL_CONFIG.energyPerLevel);
+
+    // Calculate Market Fee: Base - ((Level - 1) * Reduction)
+    let marketFee = LEVEL_CONFIG.baseMarketFee - ((level - 1) * LEVEL_CONFIG.feeReductionPerLevel);
+
+    // Ensure Fee doesn't go below Minimum (5%)
+    if (marketFee < LEVEL_CONFIG.minMarketFee) {
+        marketFee = LEVEL_CONFIG.minMarketFee;
+    }
+
+    return { maxEnergy, marketFee };
+};
+
+export const levelUpAccount = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.userId;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const currentLevel = user.accountLevel || 1;
+        const nextLevel = currentLevel + 1;
+
+        // Cost formula: baseCost * (costMultiplier ^ (currentLevel - 1))
+        const cost = Math.floor(LEVEL_CONFIG.baseCost * Math.pow(LEVEL_CONFIG.costMultiplier, currentLevel - 1));
+
+        // Scrap is Material Tier 0
+        const scraps = user.materials?.['0'] || 0;
+
+        if (scraps < cost) {
+            return res.status(400).json({
+                success: false,
+                message: `เศษหินไม่เพียงพอ จำเป็นต้องใช้ ${cost} ชิ้น (คุณมี ${scraps} ชิ้น)`,
+                required: cost,
+                owned: scraps
+            });
+        }
+
+        // Deduct cost
+        user.materials['0'] = scraps - cost;
+        user.markModified('materials');
+
+        // Increment level
+        user.accountLevel = nextLevel;
+
+        const newStats = calculateUserStats(nextLevel);
+        user.maxEnergy = newStats.maxEnergy;
+        user.marketFee = newStats.marketFee;
+
+        // Energy bonus + limit to the new max energy
+        user.energy = Math.min(newStats.maxEnergy, (user.energy || 0) + LEVEL_CONFIG.energyPerLevel);
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: `เลื่อนระดับบัญชีเป็น Level ${nextLevel} สำเร็จ!`,
+            user: {
+                accountLevel: user.accountLevel,
+                materials: user.materials,
+                energy: user.energy,
+                balance: user.balance
+            }
+        });
+    } catch (error) {
+        console.error('Level up account error:', error);
         res.status(500).json({ message: 'Server error', error });
     }
 };

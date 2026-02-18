@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, BookOpen, Wallet, Download, CheckCircle, ArrowRight, Package, RefreshCw, Zap, Hammer, Sparkles, AlertTriangle, Key, Cpu, ShieldCheck, Wrench, Pickaxe, ArrowUp, Info, Activity, Menu, Users, ShoppingBag, User, Mail, Settings, Coins, CreditCard, Banknote, Power, BarChart2, ChevronRight, ArrowDown, Flame, Target, Trophy, History, LogOut, Plus, Lock, CalendarCheck, Ghost, Truck, ArrowDownLeft, ArrowUpRight, Play, Pause, Bomb, Dices } from 'lucide-react';
+import { X, BookOpen, Wallet, Download, CheckCircle, ArrowRight, Package, RefreshCw, Zap, Hammer, Sparkles, AlertTriangle, Key, Cpu, ShieldCheck, Wrench, Pickaxe, ArrowUp, Info, Activity, Menu, Users, ShoppingBag, User, Mail, Settings, Coins, CreditCard, Banknote, Power, BarChart2, ChevronRight, ArrowDown, Flame, Target, Trophy, History, LogOut, Plus, Lock, CalendarCheck, Ghost, Truck, ArrowDownLeft, ArrowUpRight, Play, Pause, Bomb, Dices, Upload } from 'lucide-react';
 import { api } from '../services/api';
 // import { MockDB } from '../services/db'; // Not using MockDB directly for now unless needed
 import { useLanguage } from '../contexts/LanguageContext';
 import { translations } from '../services/translations';
-import { ROBOT_CONFIG, SHOP_ITEMS, MATERIAL_CONFIG, REPAIR_CONFIG, ENERGY_CONFIG, MAX_RIGS_PER_USER, RIG_PRESETS, RIG_UPGRADE_RULES } from '../constants';
+import { ROBOT_CONFIG, SHOP_ITEMS, MATERIAL_CONFIG, REPAIR_CONFIG, ENERGY_CONFIG, MAX_RIGS_PER_USER, RIG_PRESETS, RIG_UPGRADE_RULES, RIG_LEVEL_STYLES, LEVEL_CONFIG } from '../constants';
 import { MaterialIcon } from './MaterialIcon';
 
 // Utility functions moved here since utils folder is missing
@@ -22,6 +22,7 @@ const formatCountdown = (ms: number | null) => {
 import { RigCard } from './RigCard';
 import { RigMergeModal } from './RigMergeModal';
 import { InvestmentModal } from './InvestmentModal';
+import { AccountLevelModal } from './AccountLevelModal';
 import { AccessoryShopModal } from './AccessoryShopModal';
 import { LeaderboardModal } from './LeaderboardModal';
 import { InventoryModal } from './InventoryModal';
@@ -81,6 +82,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     // Modals
     const [isShopOpen, setIsShopOpen] = useState(false);
     const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
+    const [isAccountLevelOpen, setIsAccountLevelOpen] = useState(false);
     const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
     const [isInventoryOpen, setIsInventoryOpen] = useState(false);
     const [isDailyBonusOpen, setIsDailyBonusOpen] = useState(false);
@@ -100,12 +102,14 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [referralData, setReferralData] = useState<any>(null);
 
     // --- UNIVERSAL NAVIGATION ---
     const handleGeneralBack = () => {
         // Close modals in reverse priority
         if (isMobileMenuOpen) { setIsMobileMenuOpen(false); return; }
         if (isShopOpen) { setIsShopOpen(false); return; }
+        if (isAccountLevelOpen) { setIsAccountLevelOpen(false); return; }
         if (isUpgradeOpen) { setIsUpgradeOpen(false); return; }
         if (isLeaderboardOpen) { setIsLeaderboardOpen(false); return; }
         if (isInventoryOpen) { setIsInventoryOpen(false); return; }
@@ -144,6 +148,38 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
     const [selectedRigForMerge, setSelectedRigForMerge] = useState<any>(null);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleAvatarClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64String = reader.result as string;
+                try {
+                    const res = await api.user.updateProfile({ avatarUrl: base64String });
+                    if (res) {
+                        setUser({ ...user, avatarUrl: base64String });
+                        addNotification({
+                            id: Date.now().toString(),
+                            userId: user.id,
+                            message: language === 'th' ? 'อัปโหลดรูปโปรไฟล์สำเร็จ' : 'Avatar updated successfully',
+                            type: 'SUCCESS',
+                            read: false,
+                            timestamp: Date.now()
+                        });
+                    }
+                } catch (err) {
+                    console.error("Failed to update avatar", err);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
     const [successModalConfig, setSuccessModalConfig] = useState<{ title: string; message: string; type: 'SUCCESS' | 'KEY' | 'BATTERY' | 'ERROR' }>({
         title: '',
         message: '',
@@ -153,7 +189,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const [salvageResult, setSalvageResult] = useState<any>(null);
     const [pendingMaterial, setPendingMaterial] = useState<any>(null);
     const [claimedAmount, setClaimedAmount] = useState<number>(0);
-    const [isFurnaceActive, setIsFurnaceActive] = useState(true); // Default true for now
+    const [isFurnaceActive, setIsFurnaceActive] = useState(false); // Default false, was hardcoded true
     const [nextCollectMs, setNextCollectMs] = useState<number | null>(null);
     const [isConfirmRefillOpen, setIsConfirmRefillOpen] = useState(false);
 
@@ -268,11 +304,12 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     const fetchData = async () => {
         try {
             // Parallel fetch for speed
-            const [u, r, m, s] = await Promise.all([
+            const [u, r, m, s, refData] = await Promise.all([
                 api.getMe(),
                 api.getMyRigs(),
                 api.getMarketStatus(),
-                api.getGlobalStats().catch(() => ({ onlineMiners: 0, totalOreMined: 0, marketVolume: 0 })) // Fallback
+                api.getGlobalStats().catch(() => ({ onlineMiners: 0, totalOreMined: 0, marketVolume: 0 })), // Fallback
+                api.user.getReferrals().catch(() => null)
             ]);
 
             if (u) {
@@ -282,6 +319,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             if (r) setRigs(r);
             if (m) setMarketState(prev => JSON.stringify(prev) !== JSON.stringify(m) ? m : prev);
             if (s) setGlobalStats(s);
+            if (refData) setReferralData(refData);
 
         } catch (error) {
             console.error("Failed to fetch dashboard data", error);
@@ -938,19 +976,25 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                             <span className={language === 'en' ? 'text-blue-400' : 'text-stone-500'}>EN</span>
                         </button>
 
-                        <div className="relative group cursor-pointer" onClick={() => setIsVipOpen(true)}>
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-600 to-yellow-800 p-0.5">
-                                <div className="w-full h-full rounded-full bg-stone-900 flex items-center justify-center overflow-hidden">
+                        <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleAvatarChange}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-600 to-yellow-800 p-0.5 relative overflow-hidden group">
+                                <div className="w-full h-full rounded-full bg-stone-900 flex items-center justify-center overflow-hidden relative">
                                     {user?.avatarUrl ? (
-                                        <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                        <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                     ) : (
                                         <User size={20} className="text-yellow-500" />
                                     )}
-                                </div>
-                            </div>
-                            <div className="absolute -bottom-1 -right-1 bg-stone-900 rounded-full p-0.5">
-                                <div className="bg-yellow-500 text-[10px] font-black text-stone-900 px-1.5 rounded-full">
-                                    V{user?.vipLevel || 0}
+                                    {/* Upload Overlay */}
+                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Upload size={16} className="text-white" />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1083,17 +1127,25 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                             <Users size={48} className="text-teal-400" />
                         </div>
                         <div className="relative z-10">
-                            <div className="flex flex-col gap-0.5 mb-2 lg:mb-4">
-                                <span className="text-teal-500 text-[10px] lg:text-xs font-bold uppercase tracking-wider">{language === 'th' ? 'ระบบแนะนำเพื่อน •' : 'Referral System •'}</span>
-                                <span className="text-white text-xs lg:text-sm font-black">{language === 'th' ? 'รายได้สะสม' : 'Total Earnings'}</span>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <span className="text-2xl lg:text-4xl font-black text-teal-400 tracking-tighter">
-                                    {formatCurrency(user?.referralStats?.totalEarned || 0, { hideSymbol: true })}
-                                </span>
-                                <div className="flex flex-col text-[10px] lg:text-xs font-bold leading-none">
-                                    <span className="text-teal-500">{language === 'th' ? 'THB' : 'USD'}</span>
+                            <div className="flex items-center gap-4">
+                                <div className="flex flex-col">
+                                    <span className="text-teal-500 text-[10px] font-bold uppercase tracking-wider">{language === 'th' ? 'รายได้สะสม' : 'Total Earnings'}</span>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-xl lg:text-3xl font-black text-teal-400 tracking-tighter">
+                                            {formatCurrency(user?.referralStats?.totalEarned || 0, { hideSymbol: true })}
+                                        </span>
+                                        <span className="text-teal-600 text-[10px] lg:text-xs font-bold leading-none">{language === 'th' ? '฿' : 'USD'}</span>
+                                    </div>
+                                </div>
+                                <div className="h-8 w-px bg-teal-500/20"></div>
+                                <div className="flex flex-col">
+                                    <span className="text-teal-500 text-[10px] font-bold uppercase tracking-wider">{language === 'th' ? 'รายได้รวมทีม/วัน' : 'Team Daily Yield'}</span>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-xl lg:text-3xl font-black text-white tracking-tighter">
+                                            {formatCurrency(referralData?.teamDailyIncome || 0, { hideSymbol: true })}
+                                        </span>
+                                        <span className="text-teal-600 text-[10px] lg:text-xs font-bold leading-none">{language === 'th' ? '฿' : 'USD'}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1101,7 +1153,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                         <div className="mt-4 flex items-center justify-between">
                             <div className="flex items-center gap-1 bg-stone-950/50 px-2 py-1 rounded-full border border-teal-500/20 text-[8px] lg:text-[10px] font-bold text-teal-100">
                                 <Users size={10} className="text-teal-400" />
-                                {language === 'th' ? `เชิญแล้ว: ${user?.referralStats?.totalInvited || 0} คน` : `Invited: ${user?.referralStats?.totalInvited || 0} Miners`}
+                                {language === 'th' ? `เชิญแล้ว: ${referralData?.stats?.totalTeam || user?.referralStats?.totalInvited || 0} คน` : `Invited: ${referralData?.stats?.totalTeam || user?.referralStats?.totalInvited || 0} Miners`}
                             </div>
                             <div className="flex items-center text-[10px] text-teal-500 font-bold uppercase group-hover:translate-x-1 transition-transform">
                                 {language === 'th' ? 'จัดการ' : 'Manage'} <ChevronRight size={14} />
@@ -1388,6 +1440,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                                         overclockMultiplier={ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST || 1.5}
                                         addNotification={addNotification}
                                         onUpgrade={handleUpgradeRig}
+                                        user={user}
                                     />
                                 );
                             }
@@ -1493,6 +1546,16 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             }
 
             {/* Modals */}
+            <AccountLevelModal
+                isOpen={isAccountLevelOpen}
+                onClose={() => setIsAccountLevelOpen(false)}
+                user={user}
+                onSuccess={() => {
+                    fetchData();
+                    setIsAccountLevelOpen(false);
+                }}
+            />
+
             <LeaderboardModal
                 isOpen={isLeaderboardOpen}
                 onClose={() => setIsLeaderboardOpen(false)}

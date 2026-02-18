@@ -2,14 +2,15 @@
 import { RigLootModal } from './RigLootModal';
 import { OilRig, AccessoryItem } from '../services/types';
 import { OilRigAnimation } from './OilRigAnimation';
-import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, MINING_VOLATILITY_CONFIG, RIG_UPGRADE_RULES, MAX_RIG_LEVEL, RIG_LEVEL_STYLES } from '../constants';
-import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star, Settings, TrainFront, Clover, Download } from 'lucide-react';
+import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, MINING_VOLATILITY_CONFIG, RIG_UPGRADE_RULES, MAX_RIG_LEVEL, RIG_LEVEL_STYLES, LEVEL_CONFIG } from '../constants';
+import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star, Settings, TrainFront, Clover, Download, ArrowUp, ArrowRight } from 'lucide-react';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
 import { AutomatedBotOverlay } from './AutomatedBotOverlay';
 import { AccessoryIcon } from './AccessoryIcon';
 import { getItemDisplayName, getDurabilityInfo } from './AccessoryManagementModal';
+import { RigUpgradeModal } from './RigUpgradeModal';
 
 interface RigCardProps {
     rig: OilRig;
@@ -43,6 +44,7 @@ interface RigCardProps {
     isDemo?: boolean;
     addNotification?: (n: any) => void;
     onUpgrade?: (rigId: string) => Promise<any> | void;
+    user?: any;
 }
 
 export const RigCard: React.FC<RigCardProps> = ({
@@ -75,7 +77,8 @@ export const RigCard: React.FC<RigCardProps> = ({
     botCooldown,
     botWorkTimeLeft,
     onToggleBotPause,
-    onUpgrade
+    onUpgrade,
+    user
 }) => {
     const { t, language, getLocalized, formatCurrency, formatBonus } = useTranslation();
     const handleDestroyClick = async (e: React.MouseEvent) => {
@@ -173,13 +176,12 @@ export const RigCard: React.FC<RigCardProps> = ({
         return isNaN(n) ? 0 : n;
     };
 
-    let equippedBonus = 0;
+    let totalAccessoryPercent = 0;
     const equippedItems = (rig.slots || Array(MAX_SLOTS_PER_RIG).fill(null)).map(itemId => {
         if (!itemId) return null;
         const item = inventory.find(i => i.id === itemId);
         if (item) {
-            const effectiveItemBonus = (item.dailyBonus < 0.5 && item.dailyBonus > 0) ? item.dailyBonus * 35 : item.dailyBonus;
-            equippedBonus += effectiveItemBonus;
+            totalAccessoryPercent += (item.dailyBonus || 0);
         }
         return item;
     });
@@ -194,18 +196,20 @@ export const RigCard: React.FC<RigCardProps> = ({
     const upgradeRule = RIG_UPGRADE_RULES[rig.tierId || preset?.id || 1];
     const levelMult = upgradeRule ? Math.pow(upgradeRule.statGrowth, (rig.level || 1) - 1) : 1;
 
-    let totalDailyProfit = safeNumber(baseValue + effectiveBonusProfit + equippedBonus) *
-        safeNumber(globalMultiplier) *
-        safeNumber(reactorMultiplier) *
-        starMult *
-        levelMult;
+    // Account Efficiency (Sync with backend accountLevelFactor)
+    const accountLevel = rig.ownerLevel || 1;
+    const accountLevelMult = 1 + ((accountLevel - 1) * (LEVEL_CONFIG.yieldBonusPerLevel || 0.01));
 
-    if (isOverclockActive) {
-        totalDailyProfit *= overclockMultiplier;
-    }
-    if (isFurnaceActive) {
-        totalDailyProfit *= 2;
-    }
+    // Multiplicative Stacking Logic (Unified with Backend)
+    // Formula: Total = (Base) * OC * Stars * Level * AccountLevel * Global * Reactor * (1 + AccessoryPercent/100)
+    let totalDailyProfit = safeNumber(baseValue) *
+        (isOverclockActive ? overclockMultiplier : 1.0) *
+        starMult *
+        levelMult *
+        accountLevelMult *
+        safeNumber(globalMultiplier || 1.0) *
+        safeNumber(reactorMultiplier || 1.0) *
+        (1 + (totalAccessoryPercent / 100));
 
     const totalRatePerSecond = totalDailyProfit / 86400;
 
@@ -534,7 +538,7 @@ export const RigCard: React.FC<RigCardProps> = ({
                         ))}
                     </div>
                     <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                        <span className="text-[10px] font-bold text-black">{percent.toFixed(0)}%</span>
+                        <span className="text-[10px] font-bold text-black">{isEnergy ? `${percent.toFixed(0)}/${(LEVEL_CONFIG.baseEnergy || 100) + ((rig.ownerLevel || 1) - 1) * LEVEL_CONFIG.energyPerLevel}` : `${percent.toFixed(0)}%`}</span>
                     </div>
                 </div>
             </div>
@@ -555,19 +559,38 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <Coins className="text-yellow-500 animate-pulse mb-3" size={24} />
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_claim')}</h4>
                     {(() => {
-                        const furnaceMult = isFurnaceActive ? 2 : 1;
                         const overclockMultActual = isOverclockActive ? overclockMultiplier : 1;
-                        const commonMult = safeNumber(globalMultiplier) * safeNumber(reactorMultiplier);
 
                         const starMult = 1 + (rig.starLevel || 0) * 0.05;
                         const upgradeRule = RIG_UPGRADE_RULES[rig.tierId || preset?.id || 1];
                         const levelMult = upgradeRule ? Math.pow(upgradeRule.statGrowth, (rig.level || 1) - 1) : 1;
 
+                        // Account Efficiency (Sync with backend accountLevelFactor)
+                        const accountLevel = rig.ownerLevel || 1;
+                        const accountLevelMult = 1 + ((accountLevel - 1) * (LEVEL_CONFIG.yieldBonusPerLevel || 0.01));
+
+                        // Accessory/Item Percentage Logic (1.0 = 1% boost)
+                        let accessoryPercentLocal = 0;
+                        (rig.slots || Array(5).fill(null)).forEach(itemId => {
+                            if (!itemId) return;
+                            const item = inventory.find(i => i.id === itemId);
+                            if (item) {
+                                accessoryPercentLocal += (item.dailyBonus || 0);
+                            }
+                        });
+                        const itemMult = 1 + (accessoryPercentLocal / 100);
+
+                        const globalMult = (globalMultiplier && globalMultiplier > 1) ? globalMultiplier : 1;
+                        const reactorMult = (reactorMultiplier && reactorMultiplier > 1) ? reactorMultiplier : 1;
+
                         const baseValue = volConfig?.baseValue || 0;
                         const maxRandom = volConfig?.maxRandom || 0;
 
-                        const minYield = (baseValue + effectiveBonusProfit + equippedBonus) * commonMult * overclockMultActual * furnaceMult * starMult * levelMult;
-                        const maxYield = (baseValue + maxRandom + effectiveBonusProfit + equippedBonus) * commonMult * overclockMultActual * furnaceMult * starMult * levelMult;
+                        // Combined Multipliers (Multiplicative Stacking)
+                        const finalMultiplier = overclockMultActual * starMult * levelMult * accountLevelMult * itemMult * globalMult * reactorMult;
+
+                        const minYield = baseValue * finalMultiplier;
+                        const maxYield = (baseValue + maxRandom) * finalMultiplier;
 
                         return (
                             <div className="text-2xl font-mono font-bold text-white mb-1">
@@ -633,40 +656,14 @@ export const RigCard: React.FC<RigCardProps> = ({
                 </div>
             )}
 
-            {isUpgradeConfirming && (() => {
-                const tierId = rig.tierId || preset?.id || 1;
-                const rule = RIG_UPGRADE_RULES[tierId];
-                const currentLevel = rig.level || 1;
-                const cost = rule ? Math.floor(rule.baseCost * Math.pow(rule.costMultiplier, currentLevel - 1)) : 0;
-                const matName = MATERIAL_CONFIG.NAMES[rule?.materialTier as keyof typeof MATERIAL_CONFIG.NAMES] || { th: 'แร่', en: 'Ore' };
-
-                return (
-                    <div className="absolute inset-0 z-50 bg-stone-950/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 sm:p-6 text-center">
-                        <ArrowDownToLine className="text-blue-400 animate-bounce mb-3" size={24} />
-                        <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_upgrade')}</h4>
-                        <div className="text-2xl font-mono font-bold text-white mb-1">
-                            Lv.{currentLevel} → <span className="text-emerald-400">Lv.{currentLevel + 1}</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-2 mb-4">
-                            <span className="text-stone-500 text-[10px] uppercase tracking-wider">{t('rig.cost')}:</span>
-                            <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded border border-white/5">
-                                <span className="text-orange-400 font-bold text-sm">{cost}</span>
-                                <MaterialIcon id={rule?.materialTier || 0} size="w-5 h-5" />
-                                <span className="text-orange-400 text-[10px] font-bold">
-                                    {typeof matName === 'object' ? (language === 'th' ? matName.th : matName.en) : matName}
-                                </span>
-                            </div>
-                        </div>
-                        <div className="text-[10px] text-stone-400 mb-4 italic px-4">
-                            * {t('rig.upgrade_benefit')}
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 w-full mt-2">
-                            <button onClick={(e) => { e.stopPropagation(); setIsUpgradeConfirming(false); }} className="py-2.5 rounded border border-stone-700 text-stone-400 text-xs font-bold uppercase">{t('actions.cancel')}</button>
-                            <button onClick={confirmUpgrade} className="py-2.5 rounded bg-blue-600 text-white text-xs font-bold uppercase flex items-center justify-center gap-1"><ArrowDownToLine size={14} /> {t('actions.confirm')}</button>
-                        </div>
-                    </div>
-                );
-            })()}
+            <RigUpgradeModal
+                isOpen={isUpgradeConfirming}
+                onClose={() => setIsUpgradeConfirming(false)}
+                rig={rig}
+                user={user}
+                onSuccess={() => onUpgrade && onUpgrade(rig.id)}
+                inventory={inventory}
+            />
 
             {isUpgradeRolling && (
                 <div className="absolute inset-0 z-[60] bg-stone-950/80 backdrop-blur-md flex flex-col items-center justify-center">

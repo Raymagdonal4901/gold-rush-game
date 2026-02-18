@@ -106,6 +106,7 @@ export interface User {
   pin: string;
   role: UserRole;
   balance: number;
+  accountLevel?: number;
   createdAt: number;
   lastLogin?: number;
   bankQrCode?: string;

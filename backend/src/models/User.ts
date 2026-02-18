@@ -53,6 +53,9 @@ export interface IUser extends Document {
     isBanned: boolean;
     avatarUrl?: string; // Base64 or URL of user avatar
     purchasedRigIds: number[]; // Track lifetime purchases for one-time rigs
+    accountLevel: number;
+    maxEnergy?: number;
+    marketFee?: number;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -108,7 +111,10 @@ const UserSchema = new Schema<IUser>({
     warehouseCapacity: { type: Number, default: 3 },
     isBanned: { type: Boolean, default: false },
     avatarUrl: { type: String },
-    purchasedRigIds: { type: [Number], default: [] }
+    purchasedRigIds: { type: [Number], default: [] },
+    accountLevel: { type: Number, default: 1 },
+    maxEnergy: { type: Number, default: 100 },
+    marketFee: { type: Number, default: 10.0 }
 }, {
     timestamps: true
 });

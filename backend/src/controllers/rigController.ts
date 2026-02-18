@@ -3,7 +3,7 @@ import Rig from '../models/Rig';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
-import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS, ENERGY_CONFIG, MINING_VOLATILITY_CONFIG, SALVAGE_CONFIG, RIG_UPGRADE_RULES, MAX_RIG_LEVEL } from '../constants';
+import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS, ENERGY_CONFIG, MINING_VOLATILITY_CONFIG, SALVAGE_CONFIG, RIG_UPGRADE_RULES, MAX_RIG_LEVEL, LEVEL_CONFIG } from '../constants';
 import { recalculateUserIncome } from './userController';
 
 const MATERIAL_NAMES = MATERIAL_CONFIG.NAMES;
@@ -44,7 +44,8 @@ export function getRigBuffs(rig: any, user: any) {
         dropRateBoost: 0,
         critChance: 0,
         claimCooldownMultiplier: 1.0, // Multiplier: 1.0 = base, 0.9 = -10% cooldown
-        hashrateBoost: 1.0 // Multiplier: 1.0 = base, 1.1 = +10% hashrate
+        hashrateBoost: 1.0, // Multiplier: 1.0 = base, 1.1 = +10% hashrate
+        accountLevel: user.accountLevel || 1
     };
 
     if (rig.slots && rig.slots.length > 0) {
@@ -60,14 +61,22 @@ export function getRigBuffs(rig: any, user: any) {
                     if (config.buffs.dropRateBoost) buffs.dropRateBoost += config.buffs.dropRateBoost;
                     if (config.buffs.critChance) buffs.critChance += config.buffs.critChance;
 
-                    // Additive stacking for multipliers: Final = 1 + (bonus1) + (bonus2)
-                    if (config.buffs.claimCooldownMultiplier) {
-                        // cooldown: 0.9 means -10% -> (0.9 - 1) = -0.1
-                        buffs.claimCooldownMultiplier += (config.buffs.claimCooldownMultiplier - 1);
+                    // Unified Accessory Percentage Logic (1.0 = 1% hashrate boost)
+                    // We prioritize item.dailyBonus (leveled value) over static config
+                    const itemDailyBonus = item.dailyBonus || config.minBonus || 0;
+                    if (itemDailyBonus > 0) {
+                        // e.g. 10.0 bonus means +10% -> +0.10 to multiplier
+                        buffs.hashrateBoost += (itemDailyBonus / 100);
                     }
-                    if (config.buffs.hashrateBoost) {
-                        // hashrate: 1.03 means +3% -> (1.03 - 1) = +0.03
-                        buffs.hashrateBoost += (config.buffs.hashrateBoost - 1);
+
+                    // Also check for static hashrateBoost multipliers in config for compatibility
+                    if (config.buffs.hashrateBoost && config.buffs.hashrateBoost > 1.0) {
+                        buffs.hashrateBoost += (config.buffs.hashrateBoost - 1.0);
+                    }
+
+                    // claimCooldownMultiplier: 0.9 means -10% -> (0.9 - 1) = -0.1
+                    if (config.buffs.claimCooldownMultiplier) {
+                        buffs.claimCooldownMultiplier += (config.buffs.claimCooldownMultiplier - 1);
                     }
                 }
             }
@@ -121,24 +130,30 @@ export function calculateDailyYield(presetId: number, isOverclocked: boolean = f
 
     let isJackpot = false;
 
-    // --- Additive Stacking Implementation ---
-    // Final Multiplier = 1 + (OC Bonus) + (Item Bonus) + (Star Bonus)
-    // Star Bonus: Each star adds 5% yield (0.05)
-    let totalMultiplier = 1.0;
-    const ocBonus = isOverclocked ? (multiplier - 1.0) : 0;
-    const itemBonus = (buffs.hashrateBoost && buffs.hashrateBoost > 1.0) ? (buffs.hashrateBoost - 1.0) : 0;
-    const starBonus = starLevel * 0.05; // 5% per star
+    // --- Multiplicative Stacking Implementation (Unified) ---
+    // Final Yield = RawYield * Overclock * Items * Stars * Level * AccountLevel
 
-    totalMultiplier += ocBonus + itemBonus + starBonus;
+    // 1. Overclock (e.g. 1.5x)
+    const ocMult = isOverclocked ? multiplier : 1.0;
 
-    // Level multiplier: statGrowth^(level-1)
+    // 2. Items (e.g. 1.05x for 5% boost)
+    const itemMult = (buffs.hashrateBoost && buffs.hashrateBoost > 1.0) ? buffs.hashrateBoost : 1.0;
+
+    // 3. Stars (e.g. 1.05x for 1 star)
+    const starMult = 1 + (starLevel * 0.05);
+
+    // 4. Level multiplier (config-based growth)
     const upgradeRule = RIG_UPGRADE_RULES[presetId];
     const levelMult = upgradeRule ? Math.pow(upgradeRule.statGrowth, (rigLevel - 1)) : 1.0;
 
-    let finalYield = rawYield * totalMultiplier * levelMult;
+    // 5. Account Level efficiency boost: 1% per level (e.g. Level 2 = 1.01x)
+    const userAccountLevel = buffs.accountLevel || 1;
+    const accountLevelMult = 1 + ((userAccountLevel - 1) * (LEVEL_CONFIG.yieldBonusPerLevel || 0.01));
+
+    let finalYield = rawYield * ocMult * itemMult * starMult * levelMult * accountLevelMult;
 
     // Log breakdown for sanity check
-    console.log(`[YIELD_FIX] Tier ${presetId} | Base: ${rawYield} | OC_Bonus: ${ocBonus.toFixed(2)} | Item_Bonus: ${itemBonus.toFixed(2)} | Star_Bonus: ${starBonus.toFixed(2)} | Total_Mult: ${totalMultiplier.toFixed(2)} | Final: ${finalYield.toFixed(2)}`);
+    console.log(`[YIELD_FIX] Tier ${presetId} | Base: ${rawYield} | OC: ${ocMult}x | Item: ${itemMult}x | Star: ${starMult}x | Level: ${levelMult.toFixed(2)}x | AccLevel: ${accountLevelMult.toFixed(2)}x | Final: ${finalYield.toFixed(2)}`);
 
     // Roll for Jackpot: if (Math.random() < JackpotChance)
     // Overclock adds flat 0.02 (2%) to jackpot chance
@@ -407,7 +422,7 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
             try {
                 const referrer = await User.findById(user.referrerId);
                 if (referrer) {
-                    const commission = Math.floor(investment * 0.03); // 3%
+                    const commission = Math.floor(investment * 0.05); // 5%
                     if (commission > 0) {
                         referrer.balance += commission;
                         // Update Referral Stats
@@ -425,7 +440,7 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
                             type: 'REFERRAL_BONUS_BUY',
                             amount: commission,
                             status: 'COMPLETED',
-                            description: `ค่าคอมมิชชั่น 3% จากการซื้อเครื่องขุดของ ${user.username}`,
+                            description: `ค่าคอมมิชชั่น 5% จากการซื้อเครื่องขุดของ ${user.username}`,
                             details: { fromUser: user._id.toString() }
                         });
                         await refTx.save();

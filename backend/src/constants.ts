@@ -423,13 +423,13 @@ export const MINING_VOLATILITY_CONFIG: Record<number, {
     maxQuantity: number;
 }> = {
     1: { type: 'Stable', baseValue: 8, maxRandom: 4, jackpotChance: 0.01, jackpotMultiplier: 1.5, stabilityStars: 4, hashrateMin: 10, hashrateMax: 20, durabilityMax: 3000, durabilityDecay: 428, tag: 'Starter Choice', tagColor: 'green', maxQuantity: 10 },
-    2: { type: 'Stable', baseValue: 15, maxRandom: 7, jackpotChance: 0.02, jackpotMultiplier: 1.5, stabilityStars: 4, hashrateMin: 20, hashrateMax: 40, durabilityMax: 3000, durabilityDecay: 428, maxQuantity: 10 },
-    3: { type: 'Balanced', baseValue: 32, maxRandom: 13, jackpotChance: 0.03, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 50, hashrateMax: 80, durabilityMax: 3000, durabilityDecay: 428, tag: 'Best Value', tagColor: 'orange', maxQuantity: 50 },
-    4: { type: 'Balanced', baseValue: 50, maxRandom: 25, jackpotChance: 0.04, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 80, hashrateMax: 120, durabilityMax: 4000, durabilityDecay: 571, tag: 'Popular', tagColor: 'orange', maxQuantity: 50 },
-    5: { type: 'Balanced', baseValue: 70, maxRandom: 30, jackpotChance: 0.05, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 120, hashrateMax: 180, durabilityMax: 5000, durabilityDecay: 714, maxQuantity: 50 },
-    6: { type: 'Volatile', baseValue: 95, maxRandom: 40, jackpotChance: 0.06, jackpotMultiplier: 2.0, stabilityStars: 2, stabilityLabel: 'High Variance', hashrateMin: 150, hashrateMax: 250, durabilityMax: 6000, durabilityDecay: 857, tag: 'High Volatility', tagColor: 'purple', maxQuantity: 50 },
-    7: { type: 'Volatile', baseValue: 120, maxRandom: 60, jackpotChance: 0.08, jackpotMultiplier: 2.0, stabilityStars: 1, stabilityLabel: 'Extreme Risk', hashrateMin: 200, hashrateMax: 350, durabilityMax: 8000, durabilityDecay: 1142, tag: 'Tycoon Only', tagColor: 'red', maxQuantity: 50 },
-    8: { type: 'Chaos', baseValue: 300, maxRandom: 200, jackpotChance: 0.10, jackpotMultiplier: 3.0, stabilityStars: 0, stabilityLabel: 'Danger', hashrateMin: 1000, hashrateMax: 2000, durabilityMax: 12000, durabilityDecay: 1714, tag: 'God Tier', tagColor: 'gold', maxQuantity: 3 },
+    2: { type: 'Stable', baseValue: 15, maxRandom: 5, jackpotChance: 0.02, jackpotMultiplier: 1.5, stabilityStars: 4, hashrateMin: 20, hashrateMax: 40, durabilityMax: 3000, durabilityDecay: 428, maxQuantity: 10 },
+    3: { type: 'Balanced', baseValue: 25, maxRandom: 15, jackpotChance: 0.03, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 50, hashrateMax: 80, durabilityMax: 3000, durabilityDecay: 428, tag: 'Best Value', tagColor: 'orange', maxQuantity: 50 },
+    4: { type: 'Balanced', baseValue: 40, maxRandom: 20, jackpotChance: 0.04, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 80, hashrateMax: 120, durabilityMax: 4000, durabilityDecay: 571, tag: 'Popular', tagColor: 'orange', maxQuantity: 50 },
+    5: { type: 'Balanced', baseValue: 55, maxRandom: 25, jackpotChance: 0.05, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 120, hashrateMax: 180, durabilityMax: 5000, durabilityDecay: 714, maxQuantity: 50 },
+    6: { type: 'Volatile', baseValue: 65, maxRandom: 45, jackpotChance: 0.06, jackpotMultiplier: 2.0, stabilityStars: 2, stabilityLabel: 'High Variance', hashrateMin: 150, hashrateMax: 250, durabilityMax: 6000, durabilityDecay: 857, tag: 'High Volatility', tagColor: 'purple', maxQuantity: 50 },
+    7: { type: 'Volatile', baseValue: 80, maxRandom: 60, jackpotChance: 0.08, jackpotMultiplier: 2.0, stabilityStars: 1, stabilityLabel: 'Extreme Risk', hashrateMin: 200, hashrateMax: 350, durabilityMax: 8000, durabilityDecay: 1142, tag: 'Tycoon Only', tagColor: 'red', maxQuantity: 50 },
+    8: { type: 'Chaos', baseValue: 100, maxRandom: 100, jackpotChance: 0.10, jackpotMultiplier: 3.0, stabilityStars: 0, stabilityLabel: 'Danger', hashrateMin: 1000, hashrateMax: 2000, durabilityMax: 12000, durabilityDecay: 1714, tag: 'God Tier', tagColor: 'gold', maxQuantity: 3 },
     9: { type: 'Stable', baseValue: 2, maxRandom: 3, jackpotChance: 0, jackpotMultiplier: 1.0, stabilityStars: 5, hashrateMin: 1, hashrateMax: 5, durabilityMax: 999999, durabilityDecay: 0, tag: 'F2P Starter', tagColor: 'green', maxQuantity: 1 },
 };
 
@@ -440,15 +440,31 @@ export const RIG_UPGRADE_RULES: Record<number, {
     costMultiplier: number; statGrowth: number;
     durabilityBonus: number;
 }> = {
-    1: { materialTier: 0, baseCost: 30, costMultiplier: 2.0, statGrowth: 1.04, durabilityBonus: 100 },  // Starter → Stone
-    2: { materialTier: 0, baseCost: 25, costMultiplier: 2.0, statGrowth: 1.04, durabilityBonus: 100 },  // Drill → Stone
-    3: { materialTier: 1, baseCost: 20, costMultiplier: 2.0, statGrowth: 1.05, durabilityBonus: 150 },  // Coal → Coal
-    4: { materialTier: 2, baseCost: 15, costMultiplier: 1.8, statGrowth: 1.06, durabilityBonus: 200 },  // Copper → Copper
-    5: { materialTier: 3, baseCost: 10, costMultiplier: 1.8, statGrowth: 1.07, durabilityBonus: 300 },  // Iron → Iron
-    6: { materialTier: 4, baseCost: 5, costMultiplier: 1.5, statGrowth: 1.08, durabilityBonus: 400 },  // Gold → Gold
-    7: { materialTier: 5, baseCost: 3, costMultiplier: 1.5, statGrowth: 1.09, durabilityBonus: 500 },  // Diamond → Diamond
-    8: { materialTier: 6, baseCost: 2, costMultiplier: 1.5, statGrowth: 1.10, durabilityBonus: 1000 }, // Reactor → Crude Oil
-    9: { materialTier: 0, baseCost: 50, costMultiplier: 2.0, statGrowth: 1.03, durabilityBonus: 50 },   // F2P → Stone
+    // costMultiplier: 1.3 (Balanced Sweet Spot)
+    // Higher tier material = Lower base cost required
+    1: { materialTier: 0, baseCost: 20, costMultiplier: 1.3, statGrowth: 1.03, durabilityBonus: 100 },  // Starter → Stone
+    2: { materialTier: 0, baseCost: 20, costMultiplier: 1.3, statGrowth: 1.03, durabilityBonus: 100 },  // Drill → Stone
+    3: { materialTier: 1, baseCost: 20, costMultiplier: 1.3, statGrowth: 1.03, durabilityBonus: 150 },  // Coal → Coal
+    4: { materialTier: 2, baseCost: 18, costMultiplier: 1.3, statGrowth: 1.06, durabilityBonus: 200 },  // Copper → Copper
+    5: { materialTier: 3, baseCost: 16, costMultiplier: 1.3, statGrowth: 1.07, durabilityBonus: 300 },  // Iron → Iron
+    6: { materialTier: 4, baseCost: 14, costMultiplier: 1.3, statGrowth: 1.08, durabilityBonus: 400 },  // Gold → Gold
+    7: { materialTier: 5, baseCost: 12, costMultiplier: 1.3, statGrowth: 1.09, durabilityBonus: 500 },  // Diamond → Diamond
+    8: { materialTier: 6, baseCost: 10, costMultiplier: 1.3, statGrowth: 1.10, durabilityBonus: 1000 }, // Reactor → Crude Oil
+    9: { materialTier: 0, baseCost: 20, costMultiplier: 1.3, statGrowth: 1.03, durabilityBonus: 100 },  // Free Rig → Stone
+};
+
+// === Rig Stats Calculation (Per Rig Level) ===
+export const RIG_STATS_CONFIG = {
+    minLevel: 1,
+    maxLevel: 10,
+
+    // Base Stats (Lv.1)
+    baseEnergy: 100,
+    baseFee: 10.0,
+
+    // Growth per Level (Linear)
+    energyStep: 5,    // +5 per level
+    feeStep: 0.5      // -0.5% per level
 };
 
 export const SLOT_EXPANSION_CONFIG: Record<number, { title: { th: string; en: string }; cost: number; mats: Record<number, number>; item?: string; itemCount?: number }> = {
@@ -482,6 +498,20 @@ export const USDT_WITHDRAW_LIMITS = {
 };
 
 export const WITHDRAWAL_FEE_PERCENT = 0.10;
+
+export const LEVEL_CONFIG = {
+    baseCost: 50,
+    costMultiplier: 1.5,
+    yieldBonusPerLevel: 0.01,
+    baseIncomePerLevel: 0.5,
+    // Stats Logic
+    baseEnergy: 100,
+    energyPerLevel: 5,        // +5 per level
+    baseMarketFee: 10.0,
+    feeReductionPerLevel: 0.5, // -0.5% per level
+    minMarketFee: 5.0          // Cap at 5%
+};
+
 
 export const STORAGE_KEYS = {
     USERS: 'oil_baron_users',
@@ -598,7 +628,7 @@ export const SHOP_ITEMS: ShopItemConfig[] = [
     { id: 'mixer', name: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' }, price: 5, icon: 'Factory', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้สำหรับสกัดแร่ระดับต่ำให้เป็นแร่ระดับสูง', en: 'Used for refining low tier materials' } },
     { id: 'magnifying_glass', name: { th: 'แว่นขยายส่องแร่', en: 'Magnifying Glass' }, price: 5, icon: 'Search', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 365, description: { th: 'ใช้ตรวจสอบหาแร่หายากโดยอัตโนมัติ', en: 'Automatically detects rare minerals' } },
     { id: 'insurance_card', name: { th: 'ใบประกันความเสี่ยง', en: 'Insurance Card' }, price: 300, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ป้องกันระดับเครื่องจักรลดระดับเมื่ออัปเกรดล้มเหลว', en: 'Prevents rig downgrade upon upgrade failure' }, buyable: true },
-    { id: 'vip_withdrawal_card', name: { th: 'บัตร VIP ปลดล็อกถอนเงิน', en: 'VIP Withdrawal Card' }, price: 199, icon: 'CreditCard', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ใช้สำหรับปลดล็อกการถอนเงินถาวร', en: 'Unlocks permanent withdrawals' } },
+    { id: 'vip_withdrawal_card', name: { th: 'บัตร VIP ปลดล็อกถอนเงิน', en: 'VIP Withdrawal Card' }, price: 99, icon: 'CreditCard', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 0, description: { th: 'ใช้สำหรับปลดล็อกการถอนเงินถาวร', en: 'Unlocks permanent withdrawals' } },
     { id: 'ancient_blueprint', name: { th: 'แผนที่ขุดทองโบราณ', en: 'Ancient Blueprint' }, price: 10000, icon: 'FileText', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'ใช้แทนวัสดุหายากในการสร้างแท่นขุดระดับสูง', en: 'Substitute for rare materials in crafting high-tier rigs' }, buyable: false },
     { id: 'hourglass_small', name: { th: 'นาฬิกาทราย (เล็ก)', en: 'Hourglass (Small)' }, price: 5, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 30 นาที', en: 'Speed up exploration by 30 mins' } },
     { id: 'hourglass_medium', name: { th: 'นาฬิกาทราย (กลาง)', en: 'Hourglass (Medium)' }, price: 20, icon: 'Hourglass', minBonus: 0, maxBonus: 0, durationBonus: 0, lifespanDays: 999, description: { th: 'เร่งเวลาการสำรวจ 2 ชั่วโมง', en: 'Speed up exploration by 2 hours' } },

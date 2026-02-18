@@ -498,8 +498,16 @@ export const api = {
             const res = await client.post('/users/profile', data);
             return res.data;
         },
-        getReferrals: async (): Promise<{ username: string, joinedAt: string }[]> => {
+        getReferrals: async (): Promise<{
+            referrals: { username: string, joinedAt: string, level: number, userId: string, referrerId?: string }[],
+            teamDailyIncome: number,
+            stats: { l1Count: number, l2Count: number, l3Count: number, totalTeam: number }
+        }> => {
             const res = await client.get('/users/referrals');
+            return res.data;
+        },
+        levelUpAccount: async (): Promise<any> => {
+            const res = await client.post('/users/levelup');
             return res.data;
         }
     },

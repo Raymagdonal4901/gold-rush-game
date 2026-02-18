@@ -2,7 +2,7 @@ import { Response } from 'express';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
-import { MATERIAL_CONFIG, MATERIAL_RECIPES, SHOP_ITEMS } from '../constants';
+import { MATERIAL_CONFIG, MATERIAL_RECIPES, SHOP_ITEMS, LEVEL_CONFIG } from '../constants';
 
 
 
@@ -209,7 +209,12 @@ export const sellMaterial = async (req: AuthRequest, res: Response) => {
 
         const unitPrice = item.currentPrice;
         const subTotal = unitPrice * amount;
-        const tax = Math.floor(subTotal * 0.15); // 15% Market Tax
+
+        // Dynamic Market Tax based on Account Level
+        const baseTax = (LEVEL_CONFIG.baseMarketFee || 10.0) / 100;
+        const reduction = ((user.accountLevel || 1) - 1) * (LEVEL_CONFIG.marketFeeReduction / 100);
+        const taxRate = Math.max(LEVEL_CONFIG.minMarketFee / 100, baseTax - reduction);
+        const tax = Math.floor(subTotal * taxRate);
         const totalEarned = subTotal - tax;
 
         const newMaterials = { ...user.materials };
@@ -278,10 +283,11 @@ export const buyMaterial = async (req: AuthRequest, res: Response) => {
         const unitPrice = item.currentPrice;
         const subTotal = unitPrice * matAmount;
 
-        // Calculate Spread/Markup (Market Fee) - 15% for regular, 12% for Platinum
-        // Mastery discount if points >= 1000
-        const spreadPercent = (user.masteryPoints || 0) >= 1000 ? 0.12 : 0.15;
-        const tax = Math.ceil(subTotal * spreadPercent);
+        // Dynamic Market Tax based on Account Level
+        const baseTax = (LEVEL_CONFIG.baseMarketFee || 10.0) / 100;
+        const reduction = ((user.accountLevel || 1) - 1) * (LEVEL_CONFIG.marketFeeReduction / 100);
+        const taxRate = Math.max(LEVEL_CONFIG.minMarketFee / 100, baseTax - reduction);
+        const tax = Math.ceil(subTotal * taxRate);
         const totalCost = subTotal + tax;
 
         if (user.balance < totalCost) {

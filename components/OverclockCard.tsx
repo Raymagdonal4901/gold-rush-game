@@ -86,7 +86,7 @@ export const OverclockCard: React.FC<OverclockCardProps> = ({ user, language, on
                                 <div className="h-1.5 w-full bg-stone-950 rounded-full overflow-hidden border border-cyan-900/30">
                                     <div
                                         className="h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-white shadow-[0_0_10px_rgba(34,211,238,0.6)] transition-all duration-1000"
-                                        style={{ width: `${Math.min(100, (remainingMs / (24 * 3600000)) * 100)}%` }}
+                                        style={{ width: `${Math.min(100, (remainingMs / (ENERGY_CONFIG.OVERCLOCK_DURATION_HOURS * 3600000)) * 100)}%` }}
                                     />
                                 </div>
                             </div>
