@@ -409,7 +409,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                 // If rig has materials waiting to be collected
                 if (rig.currentMaterials > 0 && (!lastAutoKeyCollectRef.current[rig.id] || now - lastAutoKeyCollectRef.current[rig.id] > cooldown)) {
                     lastAutoKeyCollectRef.current[rig.id] = now;
-                    handleCollectMaterials(rig);
+                    handleCollectMaterials(rig, true);
                     continue;
                 }
 
@@ -425,7 +425,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
 
                 if (isGiftAvailable && (!lastAutoGiftCollectRef.current[rig.id] || now - lastAutoGiftCollectRef.current[rig.id] > cooldown)) {
                     lastAutoGiftCollectRef.current[rig.id] = now;
-                    handleClaimGift(rig);
+                    handleClaimGift(rig, true);
                     continue;
                 }
 
@@ -447,10 +447,13 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                 }
 
                 // D. Auto Claim Profits (Money)
-                // If last claim was more than 1 hour ago (Throttled per rig)
-                if (now - rig.lastClaimAt > 3600000 && (!lastAutoCollectRef.current[rig.id] || now - lastAutoCollectRef.current[rig.id] > cooldown)) {
+                // Backend cooldown is 24h (adjusted by buffs), we check every 1h or more to be safe but silent
+                const timeSinceLastClaim = now - (rig.lastClaimAt || 0);
+                const minClaimInterval = 3600000; // 1 Hour
+
+                if (timeSinceLastClaim > minClaimInterval && (!lastAutoCollectRef.current[rig.id] || now - lastAutoCollectRef.current[rig.id] > cooldown)) {
                     lastAutoCollectRef.current[rig.id] = now;
-                    handleClaim(rig.id, 0);
+                    handleClaim(rig.id, 0, true).catch(() => { });
                     continue;
                 }
             }
@@ -464,7 +467,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
 
 
     // Handlers
-    const handleClaim = async (rigId: string, amount: number) => {
+    const handleClaim = async (rigId: string, amount: number, isAuto: boolean = false) => {
         const rig = rigs.find(r => r.id === rigId);
         if (!rig) return;
 
@@ -484,9 +487,11 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                     r.id === rigId ? { ...r, lastClaimAt: new Date(res.lastClaimAt).getTime() } : r
                 ));
 
-                // Show Claim Result Popup
-                setClaimedAmount(finalAmount);
-                setIsClaimResultOpen(true);
+                // Show Claim Result Popup (only if not auto)
+                if (!isAuto) {
+                    setClaimedAmount(finalAmount);
+                    setIsClaimResultOpen(true);
+                }
 
                 return { success: true, amount: finalAmount };
             } else {
@@ -498,12 +503,14 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             const errMsg = err?.response?.data?.message || err?.message || t('common.error');
             const errCode = err?.response?.data?.code;
 
-            if (errCode === 'CLAIM_COOLDOWN') {
-                setCooldownMessage(errMsg);
-                setCooldownRemainingMs(err?.response?.data?.remainingMs);
-                setIsCooldownModalOpen(true);
-            } else {
-                alert(`${t('common.error')}: ${errMsg}`);
+            if (!isAuto) {
+                if (errCode === 'CLAIM_COOLDOWN') {
+                    setCooldownMessage(errMsg);
+                    setCooldownRemainingMs(err?.response?.data?.remainingMs);
+                    setIsCooldownModalOpen(true);
+                } else {
+                    alert(`${t('common.error')}: ${errMsg}`);
+                }
             }
             throw err; // Re-throw for RigCard to handle
         }
@@ -684,7 +691,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
         }
     };
 
-    const handleCollectMaterials = async (rigInput: any) => {
+    const handleCollectMaterials = async (rigInput: any, isAuto: boolean = false) => {
         try {
             // Resolve rig from ID if needed
             const rig = typeof rigInput === 'string'
@@ -710,20 +717,22 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                 const nameTh = typeof res.name === 'object' ? res.name.th : res.name;
                 const isKey = res.itemId === 'chest_key';
 
-                if (isKey) {
-                    setSuccessModalConfig({
-                        title: language === 'th' ? 'ได้รับกุญแจเข้าเหมือง!' : 'Key Received!',
-                        message: language === 'th' ? `คุณได้รับ ${nameTh} จำนวน ${res.amount} ดอก` : `You received ${res.amount}x ${typeof res.name === 'object' ? res.name.en : res.name}`,
-                        type: 'KEY'
-                    });
-                    setIsSuccessModalOpen(true);
-                } else {
-                    setPendingMaterial({
-                        name: res.name,
-                        tier: 999,
-                        amount: res.amount
-                    });
-                    setIsMaterialRevealOpen(true);
+                if (!isAuto) {
+                    if (isKey) {
+                        setSuccessModalConfig({
+                            title: language === 'th' ? 'ได้รับกุญแจเข้าเหมือง!' : 'Key Received!',
+                            message: language === 'th' ? `คุณได้รับ ${nameTh} จำนวน ${res.amount} ดอก` : `You received ${res.amount}x ${typeof res.name === 'object' ? res.name.en : res.name}`,
+                            type: 'KEY'
+                        });
+                        setIsSuccessModalOpen(true);
+                    } else {
+                        setPendingMaterial({
+                            name: res.name,
+                            tier: 999,
+                            amount: res.amount
+                        });
+                        setIsMaterialRevealOpen(true);
+                    }
                 }
             } else if (res && res.type === 'MATERIAL' && res.tier === 7) {
                 // Check if it's the old Vibranium that was confused for keys, now explicitly just material
@@ -734,8 +743,10 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             fetchData();
         } catch (err: any) {
             console.error("Collect materials failed", err);
-            const errMsg = err.response?.data?.message || "Collect failed";
-            alert(errMsg);
+            if (!isAuto) {
+                const errMsg = err.response?.data?.message || "Collect failed";
+                alert(errMsg);
+            }
         }
     };
 
@@ -759,7 +770,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
         }
     };
 
-    const handleClaimGift = async (rigInput: any) => {
+    const handleClaimGift = async (rigInput: any, isAuto: boolean = false) => {
         try {
             const rigId = typeof rigInput === 'string' ? rigInput : rigInput.id;
             const res = await api.claimRigGift(rigId);
@@ -768,21 +779,23 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                 const nameTh = typeof res.name === 'object' ? res.name.th : res.name;
                 const isKey = res.itemId === 'chest_key';
 
-                if (isKey) {
-                    setSuccessModalConfig({
-                        title: language === 'th' ? 'ได้รับกุญแจเข้าเหมือง!' : 'Key Received!',
-                        message: language === 'th' ? `คุณได้รับ ${nameTh} จำนวน ${res.amount} ดอก` : `You received ${res.amount}x ${typeof res.name === 'object' ? res.name.en : res.name}`,
-                        type: 'KEY'
-                    });
-                    setIsSuccessModalOpen(true);
-                } else {
-                    // Generic Item Reward Modal (Reuse Material Modal or Create New)
-                    setPendingMaterial({
-                        name: res.name,
-                        tier: 999, // Dummy tier for items
-                        amount: res.amount
-                    });
-                    setIsMaterialRevealOpen(true);
+                if (!isAuto) {
+                    if (isKey) {
+                        setSuccessModalConfig({
+                            title: language === 'th' ? 'ได้รับกุญแจเข้าเหมือง!' : 'Key Received!',
+                            message: language === 'th' ? `คุณได้รับ ${nameTh} จำนวน ${res.amount} ดอก` : `You received ${res.amount}x ${typeof res.name === 'object' ? res.name.en : res.name}`,
+                            type: 'KEY'
+                        });
+                        setIsSuccessModalOpen(true);
+                    } else {
+                        // Generic Item Reward Modal (Reuse Material Modal or Create New)
+                        setPendingMaterial({
+                            name: res.name,
+                            tier: 999, // Dummy tier for items
+                            amount: res.amount
+                        });
+                        setIsMaterialRevealOpen(true);
+                    }
                 }
                 fetchData();
             } else if (res && res.type === 'MATERIAL') {
@@ -792,35 +805,39 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                 // Vibranium (Tier 7) should NOT be a key anymore
                 const isKey = nameTh.includes('กุญแจ') && res.tier !== 7;
 
-                if (isKey) {
-                    setSuccessModalConfig({
-                        title: language === 'th' ? 'ได้รับกุญแจเข้าเหมือง!' : 'Key Received!',
-                        message: language === 'th' ? `คุณได้รับ ${nameTh} จำนวน ${res.amount} ดอก` : `You received ${res.amount}x ${typeof res.name === 'object' ? res.name.en : res.name}`,
-                        type: 'KEY'
-                    });
-                    setIsSuccessModalOpen(true);
-                } else {
-                    setPendingMaterial({
-                        name: res.name,
-                        tier: res.tier,
-                        amount: res.amount
-                    });
-                    setIsMaterialRevealOpen(true);
+                if (!isAuto) {
+                    if (isKey) {
+                        setSuccessModalConfig({
+                            title: language === 'th' ? 'ได้รับกุญแจเข้าเหมือง!' : 'Key Received!',
+                            message: language === 'th' ? `คุณได้รับ ${nameTh} จำนวน ${res.amount} ดอก` : `You received ${res.amount}x ${typeof res.name === 'object' ? res.name.en : res.name}`,
+                            type: 'KEY'
+                        });
+                        setIsSuccessModalOpen(true);
+                    } else {
+                        setPendingMaterial({
+                            name: res.name,
+                            tier: res.tier,
+                            amount: res.amount
+                        });
+                        setIsMaterialRevealOpen(true);
+                    }
                 }
                 fetchData();
             } else {
-                alert("No gift found!");
+                if (!isAuto) alert("No gift found!");
             }
         } catch (err: any) {
             console.error("Claim gift failed", err);
-            // alert(err.response?.data?.message || "Claim gift failed");
-            if (addNotification) addNotification({
-                id: Date.now().toString(),
-                message: err.response?.data?.message || t('rig.claim_gift_failed'),
-                type: 'ERROR',
-                read: false,
-                timestamp: Date.now()
-            });
+            if (!isAuto) {
+                // alert(err.response?.data?.message || "Claim gift failed");
+                if (addNotification) addNotification({
+                    id: Date.now().toString(),
+                    message: err.response?.data?.message || t('rig.claim_gift_failed'),
+                    type: 'ERROR',
+                    read: false,
+                    timestamp: Date.now()
+                });
+            }
         }
     };
 

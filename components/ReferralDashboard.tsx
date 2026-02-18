@@ -138,7 +138,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
                                 <div className="flex items-center gap-4 relative z-10">
                                     <div className="w-16 h-16 bg-yellow-500/10 rounded-2xl flex items-center justify-center border border-yellow-500/20">
                                         <div className="p-2.5 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.4)]">
-                                            <span className="text-stone-950 font-black text-2xl">5%</span>
+                                            <span className="text-stone-950 font-black text-xs">5/2/1%</span>
                                         </div>
                                     </div>
                                     <div>
@@ -146,7 +146,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
                                             {t('referral.purchase_bonus') || 'Purchase Bonus'}
                                         </h4>
                                         <p className="text-stone-500 text-[10px] font-bold leading-relaxed mt-1">
-                                            {t('referral.purchase_bonus_desc') || 'Receive immediately when friend buys a rig'}
+                                            {language === 'th' ? 'รับปันผล 3 ระดับ (5%, 2%, 1%) เมื่อเพื่อนร่วมทีมซื้อเครื่องขุด' : 'Earn 3 levels of commission (5%, 2%, 1%) when teammates buy rigs'}
                                         </p>
                                     </div>
                                 </div>
@@ -160,7 +160,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
                                 <div className="flex items-center gap-4 relative z-10">
                                     <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
                                         <div className="p-2.5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.4)]">
-                                            <span className="text-stone-950 font-black text-2xl">1%</span>
+                                            <span className="text-stone-950 font-black text-[10px]">1/0.5%</span>
                                         </div>
                                     </div>
                                     <div>
@@ -168,7 +168,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
                                             {t('referral.mining_bonus') || 'Mining Income'}
                                         </h4>
                                         <p className="text-stone-500 text-[10px] font-bold leading-relaxed mt-1">
-                                            {t('referral.mining_bonus_desc') || 'Passive income from every claim of friend'}
+                                            {language === 'th' ? 'รับปันผล 3 ระดับ (1%, 0.5%, 0.2%) ทุกครั้งที่เพื่อนร่วมทีมเก็บผลผลิต' : 'Earn 3 levels of passive income (1%, 0.5%, 0.2%) from every claim'}
                                         </p>
                                     </div>
                                 </div>

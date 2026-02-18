@@ -1413,6 +1413,46 @@ export const syncReferralStats = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * SYNC ALL REFERRAL STATS
+ * 
+ * Recalculates and syncs referral counts for ALL users in the database.
+ */
+export const syncAllReferralStats = async (req: AuthRequest, res: Response) => {
+    try {
+        console.log('[REPAIR] Starting global referral stats sync...');
+        const allUsers = await User.find({}).select('_id username referralStats');
+
+        let updatedCount = 0;
+        const reports = [];
+
+        for (const user of allUsers) {
+            const actualL1Count = await User.countDocuments({ referrerId: user._id });
+            const currentStats = (user as any).referralStats?.totalInvited || 0;
+
+            if (actualL1Count !== currentStats) {
+                await User.updateOne(
+                    { _id: user._id },
+                    { $set: { 'referralStats.totalInvited': actualL1Count } }
+                );
+                updatedCount++;
+                reports.push(`Updated ${user.username}: ${currentStats} -> ${actualL1Count}`);
+            }
+        }
+
+        console.log(`[REPAIR] Global sync complete. Updated ${updatedCount} users.`);
+        res.json({
+            success: true,
+            message: `Global sync complete. Updated ${updatedCount} users.`,
+            updatedCount,
+            reports: reports.slice(0, 50) // Return only first 50 to avoid huge response
+        });
+    } catch (error) {
+        console.error('[SYNC ALL ERROR]', error);
+        res.status(500).json({ message: 'Global sync failed', error });
+    }
+};
+
+/**
  * GET USER BY REFERRAL CODE (for admin lookup)
  * รองรับทั้งการค้นหาด้วย referralCode และ username
  */

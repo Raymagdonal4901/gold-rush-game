@@ -82,7 +82,7 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, r
                                 <div className="flex items-center gap-4 relative z-10">
                                     <div className="w-14 h-14 bg-yellow-500/10 rounded-xl flex items-center justify-center border border-yellow-500/30">
                                         <div className="p-2 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded shadow-[0_0_15px_rgba(234,179,8,0.4)]">
-                                            <span className="text-stone-950 font-black text-xl">5%</span>
+                                            <span className="text-stone-950 font-black text-xs">5/2/1%</span>
                                         </div>
                                     </div>
                                     <div>
@@ -90,7 +90,7 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, r
                                             {t('referral.purchase_bonus') || 'Purchase Referral Bonus'}
                                         </h4>
                                         <p className="text-stone-500 text-[10px] font-bold">
-                                            {t('referral.purchase_bonus_desc') || 'Receive immediately when friend buys a rig'}
+                                            {language === 'th' ? 'รับปันผล 3 ระดับ เมื่อเพื่อนซื้อเครื่องขุด' : '3-level bonus when friend buys a rig'}
                                         </p>
                                     </div>
                                 </div>
@@ -104,7 +104,7 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, r
                                 <div className="flex items-center gap-4 relative z-10">
                                     <div className="w-14 h-14 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/30">
                                         <div className="p-2 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded shadow-[0_0_15px_rgba(16,185,129,0.4)]">
-                                            <span className="text-stone-950 font-black text-xl">1%</span>
+                                            <span className="text-stone-950 font-black text-xs">1/0.5%</span>
                                         </div>
                                     </div>
                                     <div>
@@ -112,7 +112,7 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, r
                                             {t('referral.mining_bonus') || 'Mining Income'}
                                         </h4>
                                         <p className="text-stone-500 text-[10px] font-bold">
-                                            {t('referral.mining_bonus_desc') || 'Passive income from every claim of friend'}
+                                            {language === 'th' ? 'ปันผลจากการขุด 3 ระดับแบบ Passive' : 'Passive income from 3-level mining'}
                                         </p>
                                     </div>
                                 </div>

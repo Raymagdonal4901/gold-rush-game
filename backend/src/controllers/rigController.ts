@@ -3,7 +3,7 @@ import Rig from '../models/Rig';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
-import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS, ENERGY_CONFIG, MINING_VOLATILITY_CONFIG, SALVAGE_CONFIG, RIG_UPGRADE_RULES, MAX_RIG_LEVEL, LEVEL_CONFIG } from '../constants';
+import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS, ENERGY_CONFIG, MINING_VOLATILITY_CONFIG, SALVAGE_CONFIG, RIG_UPGRADE_RULES, MAX_RIG_LEVEL, LEVEL_CONFIG, REFERRAL_COMMISSION } from '../constants';
 import { recalculateUserIncome } from './userController';
 
 const MATERIAL_NAMES = MATERIAL_CONFIG.NAMES;
@@ -417,37 +417,53 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
             level: 1
         });
 
-        // === REFERRAL BONUS (3% of Purchase Price) ===
+        // === MULTI-LEVEL REFERRAL BONUS (L1, L2, L3) ===
         if (user.referrerId) {
-            try {
-                const referrer = await User.findById(user.referrerId);
-                if (referrer) {
-                    const commission = Math.floor(investment * 0.05); // 5%
-                    if (commission > 0) {
-                        // Atomic update to prevent race conditions
-                        await User.findByIdAndUpdate(user.referrerId, {
-                            $inc: {
-                                balance: commission,
-                                'referralStats.totalEarned': commission
-                            }
-                        });
+            (async () => {
+                let currentReferrerId = user.referrerId;
+                const levels = [
+                    { key: 'L1', percent: REFERRAL_COMMISSION.BUY.L1 },
+                    { key: 'L2', percent: REFERRAL_COMMISSION.BUY.L2 },
+                    { key: 'L3', percent: REFERRAL_COMMISSION.BUY.L3 }
+                ];
 
-                        // Log Transaction
-                        const refTx = new Transaction({
-                            userId: referrer._id,
-                            type: 'REFERRAL_BONUS_BUY',
-                            amount: commission,
-                            status: 'COMPLETED',
-                            description: `ค่าคอมมิชชั่น 5% จากการซื้อเครื่องขุดของ ${user.username}`,
-                            details: { fromUser: user._id.toString() }
-                        });
-                        await refTx.save();
-                        console.log(`[REFERRAL_BUY] Paid ${commission} THB to ${referrer.username} for purchase by ${user.username}`);
+                for (let i = 0; i < levels.length && currentReferrerId; i++) {
+                    try {
+                        const referrer = await User.findById(currentReferrerId);
+                        if (!referrer) break;
+
+                        const levelInfo = levels[i];
+                        const commission = Math.floor(investment * levelInfo.percent);
+
+                        if (commission > 0) {
+                            // Atomic update to prevent race conditions
+                            await User.findByIdAndUpdate(referrer._id, {
+                                $inc: {
+                                    balance: commission,
+                                    'referralStats.totalEarned': commission
+                                }
+                            });
+
+                            // Log Transaction
+                            const refTx = new Transaction({
+                                userId: referrer._id,
+                                type: 'REFERRAL_BONUS_BUY',
+                                amount: commission,
+                                status: 'COMPLETED',
+                                description: `ค่าคอมมิชชั่น ${levelInfo.key} (${Math.round(levelInfo.percent * 100)}%) จากการซื้อของ ${user.username}`,
+                                details: { fromUser: user._id.toString() }
+                            });
+                            await refTx.save();
+                            console.log(`[REFERRAL_BUY_${levelInfo.key}] Paid ${commission} THB to ${referrer.username} for purchase by ${user.username}`);
+                        }
+
+                        currentReferrerId = referrer.referrerId;
+                    } catch (err) {
+                        console.error(`[REFERRAL_BUY_ERROR] Level ${i + 1} bonus failed:`, err);
+                        break;
                     }
                 }
-            } catch (err) {
-                console.error('[REFERRAL_BUY_ERROR] Failed to pay bonus:', err);
-            }
+            })();
         }
 
         console.log(`[BUY_RIG DEBUG] Rig created with ID: ${rig._id}`);
@@ -559,17 +575,28 @@ export const claimRigProfit = async (req: AuthRequest, res: Response) => {
         console.log(`[CLAIM] New Balance: ${user.balance}`);
         await rig.save();
 
-        // === REFERRAL BONUS (1% of Yield - System Pays) ===
+        // === MULTI-LEVEL REFERRAL BONUS (L1, L2, L3) ===
         if (user.referrerId) {
             // Process async to not block response
             (async () => {
-                try {
-                    const referrer = await User.findById(user.referrerId);
-                    if (referrer) {
-                        const commission = Math.floor(amount * 0.01); // 1%
+                let currentReferrerId = user.referrerId;
+                const levels = [
+                    { key: 'L1', percent: REFERRAL_COMMISSION.YIELD.L1 },
+                    { key: 'L2', percent: REFERRAL_COMMISSION.YIELD.L2 },
+                    { key: 'L3', percent: REFERRAL_COMMISSION.YIELD.L3 }
+                ];
+
+                for (let i = 0; i < levels.length && currentReferrerId; i++) {
+                    try {
+                        const referrer = await User.findById(currentReferrerId);
+                        if (!referrer) break;
+
+                        const levelInfo = levels[i];
+                        const commission = Math.floor(amount * levelInfo.percent);
+
                         if (commission > 0) {
                             // Atomic update to prevent race conditions
-                            await User.findByIdAndUpdate(user.referrerId, {
+                            await User.findByIdAndUpdate(referrer._id, {
                                 $inc: {
                                     balance: commission,
                                     'referralStats.totalEarned': commission
@@ -581,15 +608,18 @@ export const claimRigProfit = async (req: AuthRequest, res: Response) => {
                                 type: 'REFERRAL_BONUS_YIELD',
                                 amount: commission,
                                 status: 'COMPLETED',
-                                description: `ค่าคอมมิชชั่น 1% จากการขุดของ ${user.username}`,
+                                description: `ค่าคอมมิชชั่น ${levelInfo.key} (${levelInfo.percent * 100}%) จากการขุดของ ${user.username}`,
                                 details: { fromUser: user._id.toString(), rigId: rig._id.toString() }
                             });
                             await refTx.save();
-                            console.log(`[REFERRAL_YIELD] Paid ${commission} THB to ${referrer.username} for mining by ${user.username}`);
+                            console.log(`[REFERRAL_YIELD_${levelInfo.key}] Paid ${commission} THB to ${referrer.username} for mining by ${user.username}`);
                         }
+
+                        currentReferrerId = referrer.referrerId;
+                    } catch (err) {
+                        console.error(`[REFERRAL_YIELD_ERROR] Level ${i + 1} bonus failed:`, err);
+                        break;
                     }
-                } catch (err) {
-                    console.error('[REFERRAL_YIELD_ERROR]', err);
                 }
             })();
         }

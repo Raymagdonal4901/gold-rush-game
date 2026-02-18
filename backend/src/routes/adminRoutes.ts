@@ -5,7 +5,7 @@ import {
     getPendingClaims, getPendingWithdrawals, getPendingDeposits, processDepositRequest, getUserStats,
     adminGiveCompensation, adminGiveCompensationAll, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats, adminConvertCurrencyToUSD, resetAllPlayerData, deleteRig, adminAdjustRevenue, adminAddRig,
     resetUser, removeVip, getDashboardStats, processWithdrawal, processLegacyWithdrawalRequest, getRevenueStats, deleteAllUsers, toggleBan,
-    repairReferralLinks, syncReferralStats, getUserByReferralCode,
+    repairReferralLinks, syncReferralStats, syncAllReferralStats, getUserByReferralCode,
     lookupUSDTDeposit
 } from '../controllers/adminController';
 
@@ -49,6 +49,7 @@ router.post('/users/:userId/rigs', adminAddRig);
 
 // Referral Repair & Audit Routes
 router.post('/referrals/repair', repairReferralLinks);
+router.post('/referrals/sync-all', syncAllReferralStats);
 router.post('/users/:userId/sync-referrals', syncReferralStats);
 router.get('/referrals/lookup/:code', getUserByReferralCode);
 

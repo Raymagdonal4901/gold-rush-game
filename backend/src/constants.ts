@@ -143,6 +143,19 @@ export const REPAIR_CONFIG = {
     COST_DIVISOR: 5,
 };
 
+export const REFERRAL_COMMISSION = {
+    BUY: {
+        L1: 0.05, // 5%
+        L2: 0.02, // 2%
+        L3: 0.01  // 1%
+    },
+    YIELD: {
+        L1: 0.01,   // 1%
+        L2: 0.005,  // 0.5%
+        L3: 0.002   // 0.2%
+    }
+};
+
 
 export const UPGRADE_CONFIG = {
     MAX_LEVEL: 10,
