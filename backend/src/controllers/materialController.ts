@@ -212,7 +212,7 @@ export const sellMaterial = async (req: AuthRequest, res: Response) => {
 
         // Dynamic Market Tax based on Account Level
         const baseTax = (LEVEL_CONFIG.baseMarketFee || 10.0) / 100;
-        const reduction = ((user.accountLevel || 1) - 1) * (LEVEL_CONFIG.marketFeeReduction / 100);
+        const reduction = ((user.accountLevel || 1) - 1) * (LEVEL_CONFIG.feeReductionPerLevel / 100);
         const taxRate = Math.max(LEVEL_CONFIG.minMarketFee / 100, baseTax - reduction);
         const tax = Math.floor(subTotal * taxRate);
         const totalEarned = subTotal - tax;
@@ -285,7 +285,7 @@ export const buyMaterial = async (req: AuthRequest, res: Response) => {
 
         // Dynamic Market Tax based on Account Level
         const baseTax = (LEVEL_CONFIG.baseMarketFee || 10.0) / 100;
-        const reduction = ((user.accountLevel || 1) - 1) * (LEVEL_CONFIG.marketFeeReduction / 100);
+        const reduction = ((user.accountLevel || 1) - 1) * (LEVEL_CONFIG.feeReductionPerLevel / 100);
         const taxRate = Math.max(LEVEL_CONFIG.minMarketFee / 100, baseTax - reduction);
         const tax = Math.ceil(subTotal * taxRate);
         const totalCost = subTotal + tax;

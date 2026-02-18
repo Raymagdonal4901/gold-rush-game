@@ -966,9 +966,9 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                             <ArrowRight size={14} className="rotate-180" />
                             <span className="hidden sm:inline">{language === 'th' ? 'กลับ' : 'BACK'}</span>
                         </button>
-                        <div className="flex items-center gap-1.5 ml-2 whitespace-nowrap flex-nowrap shrink-0">
-                            <Pickaxe className="text-yellow-500 shrink-0" size={18} />
-                            <span className="font-display font-black text-xs sm:text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 block whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 ml-1 sm:ml-2 whitespace-nowrap flex-nowrap shrink-0">
+                            <Pickaxe className="text-yellow-500 shrink-0" size={16} sm:size={20} />
+                            <span className="font-display font-black text-[10px] sm:text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 block whitespace-nowrap leading-none">
                                 GOLD RUSH
                             </span>
                         </div>
@@ -1043,7 +1043,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                         </button>
 
                         <button
-                            className="p-2 text-stone-400 hover:text-white transition-colors"
+                            className="p-2 text-stone-400 hover:text-white transition-colors shrink-0"
                             onClick={() => setIsMobileMenuOpen(true)}
                         >
                             <Menu size={24} />
@@ -1563,7 +1563,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             {/* Mobile Menu Overlay */}
             {
                 isMobileMenuOpen && (
-                    <div className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-xl animate-in slide-in-from-left duration-200 lg:hidden">
+                    <div className="fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl animate-in slide-in-from-left duration-200">
                         <div className="flex flex-col h-full p-6">
                             <div className="flex justify-between items-center mb-8">
                                 <div className="flex items-center gap-2">
