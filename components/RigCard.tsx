@@ -537,10 +537,10 @@ export const RigCard: React.FC<RigCardProps> = ({
                             <div key={i} className={`w-full h-[18%] rounded-[1px] ${i < filledSegments ? barColor : 'bg-transparent'} ${percent <= 10 && i < filledSegments ? 'animate-pulse' : ''}`} />
                         ))}
                     </div>
-                    <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                        <span className="text-[10px] font-bold text-black">{isEnergy ? `${percent.toFixed(0)}/${(LEVEL_CONFIG.baseEnergy || 100) + ((rig.ownerLevel || 1) - 1) * LEVEL_CONFIG.energyPerLevel}` : `${percent.toFixed(0)}%`}</span>
-                    </div>
                 </div>
+                <span className="text-[10px] font-bold text-white whitespace-nowrap">
+                    {isEnergy ? `${percent.toFixed(0)}/${(LEVEL_CONFIG.baseEnergy || 100) + ((rig.ownerLevel || 1) - 1) * LEVEL_CONFIG.energyPerLevel}` : `${percent.toFixed(0)}%`}
+                </span>
             </div>
         );
     };

@@ -953,9 +953,8 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     };
 
     return (
-        <div className="min-h-screen bg-black text-white font-sans selection:bg-yellow-500/30">
-            {/* Top Navigation Bar */}
-            <nav className="fixed top-0 left-0 right-0 z-[90] bg-stone-950/80 backdrop-blur-md border-b border-stone-800 h-16">
+        <div className="fixed inset-0 bg-black text-white font-sans selection:bg-yellow-500/30 flex flex-col overflow-hidden">
+            <nav className="flex-shrink-0 z-[100] bg-stone-950 border-b border-stone-800 h-16 sm:h-20 pt-[env(safe-area-inset-top)] shadow-2xl relative">
                 <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
                     {/* Logo & Mobile Menu */}
                     {/* Logo & Navigation */}
@@ -967,9 +966,9 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                             <ArrowRight size={14} className="rotate-180" />
                             <span className="hidden sm:inline">{language === 'th' ? 'กลับ' : 'BACK'}</span>
                         </button>
-                        <div className="flex items-center gap-2 ml-2">
-                            <Pickaxe className="text-yellow-500" size={20} />
-                            <span className="font-display font-black text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 hidden xs:inline">
+                        <div className="flex items-center gap-1.5 ml-2 whitespace-nowrap flex-nowrap shrink-0">
+                            <Pickaxe className="text-yellow-500 shrink-0" size={18} />
+                            <span className="font-display font-black text-xs sm:text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 block whitespace-nowrap">
                                 GOLD RUSH
                             </span>
                         </div>
@@ -1079,486 +1078,488 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             /> */}
 
 
-            <main className="pt-20 pb-24 lg:pb-8 px-2 lg:px-4 max-w-7xl mx-auto min-h-screen flex flex-col gap-4 lg:gap-6">
+            {/* Main Content Scrollable Area */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pt-4 pb-24 lg:pb-8 px-2 lg:px-4">
+                <main className="max-w-7xl mx-auto min-h-full flex flex-col gap-4 lg:gap-6">
 
-                {/* Tactical 2x2 Stats Grid for Mobile/Tablet */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-2">
-                    {/* 1. Balance Card (Gold Theme) */}
-                    <div className="col-span-1 lg:col-span-1 card-gold-premium rounded-2xl p-3 lg:p-5 flex flex-col justify-between relative gold-neon-border min-h-[160px] lg:min-h-[200px]">
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-1.5 mb-1 lg:mb-2 text-stone-500 font-bold text-[10px] lg:text-xs">
-                                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 shadow-[0_0_8px_#eab308]"></span>
-                                {language === 'th' ? 'ยอดเงินคงเหลือ' : 'Wallet Balance'}
-                                <div className="ml-auto premium-gold-icon p-1.5 rounded-full border border-yellow-500/30 relative">
-                                    <CreditCard size={14} className="text-stone-900 drop-shadow-sm" />
-                                    <div className="absolute -top-1 -right-1">
-                                        <i className="fas fa-crown text-yellow-100 text-[8px] drop-shadow-[0_0_3px_rgba(251,191,36,0.8)]"></i>
+                    {/* Tactical 2x2 Stats Grid for Mobile/Tablet */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-2">
+                        {/* 1. Balance Card (Gold Theme) */}
+                        <div className="col-span-1 lg:col-span-1 card-gold-premium rounded-2xl p-3 lg:p-5 flex flex-col justify-between relative gold-neon-border min-h-[160px] lg:min-h-[200px]">
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-1.5 mb-1 lg:mb-2 text-stone-500 font-bold text-[10px] lg:text-xs">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 shadow-[0_0_8px_#eab308]"></span>
+                                    {language === 'th' ? 'ยอดเงินคงเหลือ' : 'Wallet Balance'}
+                                    <div className="ml-auto premium-gold-icon p-1.5 rounded-full border border-yellow-500/30 relative">
+                                        <CreditCard size={14} className="text-stone-900 drop-shadow-sm" />
+                                        <div className="absolute -top-1 -right-1">
+                                            <i className="fas fa-crown text-yellow-100 text-[8px] drop-shadow-[0_0_3px_rgba(251,191,36,0.8)]"></i>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="flex items-baseline gap-1 mt-1 lg:mt-2">
-                                <span className="text-xl lg:text-3xl font-black text-white tracking-tighter">
-                                    {formatCurrency(user?.balance || 0, { hideSymbol: true })}
-                                </span>
-                                <span className="text-xs lg:text-sm font-bold text-yellow-500 italic">{language === 'th' ? 'THB' : 'USD'}</span>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 mt-4 mb-3">
-                            <button
-                                onClick={() => setIsDepositOpen(true)}
-                                className="py-2.5 bg-yellow-600 hover:bg-yellow-500 rounded-xl text-stone-900 text-[10px] lg:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-yellow-900/30"
-                            >
-                                {language === 'th' ? 'ฝากเงิน' : 'Deposit'}
-                            </button>
-                            {user?.inventory?.some((i: any) => i.itemId === 'vip_withdrawal_card' || i.id === 'vip_withdrawal_card' || i.typeId === 'vip_withdrawal_card') ? (
-                                <button
-                                    onClick={() => setIsWithdrawOpen(true)}
-                                    className="py-2.5 vip-withdraw-btn rounded-xl text-stone-950 text-[10px] lg:text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1 relative overflow-hidden group hover:scale-[1.02] duration-300"
-                                >
-                                    <div className="absolute inset-0 bg-yellow-400/20 blur-xl group-hover:bg-yellow-400/40 transition-all animate-pulse"></div>
-                                    <span className="relative z-10 flex items-center gap-1 drop-shadow-md text-white md:text-stone-900">
-                                        <CreditCard size={14} className="drop-shadow-sm" />
-                                        {language === 'th' ? 'ถอนเงิน VIP' : 'VIP Withdraw'}
+                                <div className="flex items-baseline gap-1 mt-1 lg:mt-2">
+                                    <span className="text-xl lg:text-3xl font-black text-white tracking-tighter">
+                                        {formatCurrency(user?.balance || 0, { hideSymbol: true })}
                                     </span>
-                                    <div className="absolute top-1 right-1">
-                                        <i className="fas fa-crown text-yellow-100 text-[8px] animate-ping"></i>
-                                    </div>
-                                </button>
-                            ) : (
+                                    <span className="text-xs lg:text-sm font-bold text-yellow-500 italic">{language === 'th' ? 'THB' : 'USD'}</span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 mt-4 mb-3">
                                 <button
-                                    onClick={() => setIsWithdrawOpen(true)}
-                                    className="py-2.5 bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-xl text-stone-300 text-[10px] lg:text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1"
+                                    onClick={() => setIsDepositOpen(true)}
+                                    className="py-2.5 bg-yellow-600 hover:bg-yellow-500 rounded-xl text-stone-900 text-[10px] lg:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-yellow-900/30"
                                 >
-                                    <CreditCard size={12} />
-                                    {language === 'th' ? 'ถอนเงิน' : 'Withdraw'}
+                                    {language === 'th' ? 'ฝากเงิน' : 'Deposit'}
                                 </button>
-                            )}
-                        </div>
-
-                        {/* Detailed Stats Badges */}
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-stone-950/40 backdrop-blur-sm rounded-xl p-2 border border-stone-800/50">
-                                <span className="text-[8px] font-bold text-stone-500 uppercase block mb-0.5">{language === 'th' ? 'ขุดได้ทั้งหมด' : 'Lifetime'}</span>
-                                <div className="flex items-center gap-1">
-                                    <span className="text-[10px] font-black text-stone-200">{formatCurrency(user?.totalLifetimeMined || 0)}</span>
-                                </div>
-                            </div>
-                            <div className="bg-stone-950/40 backdrop-blur-sm rounded-xl p-2 border border-stone-800/50">
-                                <span className="text-[8px] font-bold text-stone-500 uppercase block mb-0.5">{language === 'th' ? 'ถอนแล้ว' : 'Withdrawn'}</span>
-                                <div className="flex items-center gap-1">
-                                    <span className="text-[10px] font-black text-stone-200">{formatCurrency(user?.totalWithdrawn || 0)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 2. Referral System Card - PREMIUM SILVER REDESIGN */}
-                    <div
-                        onClick={() => setIsReferralOpen(true)}
-                        className="col-span-1 lg:col-span-1 premium-silver-card rounded-2xl p-3 lg:p-5 flex flex-col justify-between relative min-h-[160px] lg:min-h-[200px] cursor-pointer group hover:scale-[1.02] hover:border-slate-400/50 transition-all duration-300 overflow-hidden"
-                    >
-                        {/* Premium Background Accents */}
-                        <div className="shimmer-layer opacity-20 group-hover:opacity-40 transition-opacity"></div>
-                        <div className="absolute top-2 right-2 opacity-20 group-hover:opacity-40 transition-opacity flex gap-2">
-                            <Sparkles size={20} className="text-yellow-500 animate-pulse" />
-                            <Crown size={32} className="text-yellow-500" />
-                        </div>
-
-                        <div className="relative z-10">
-                            <h2 className="text-[10px] lg:text-xs font-black text-white tracking-[0.1em] uppercase mb-4 italic flex items-center gap-1.5 flex-wrap">
-                                <Zap size={12} className="text-yellow-500 fill-yellow-500 shrink-0" />
-                                <span className="whitespace-nowrap">Referral <span className="text-yellow-500">Empire</span></span>
-                            </h2>
-
-                            <div className="grid grid-cols-2 gap-2 lg:gap-4 mb-4">
-                                <div className="flex flex-col">
-                                    <span className="text-stone-500 text-[8px] font-bold uppercase tracking-wider truncate">{language === 'th' ? 'รายได้สะสม' : 'Total Earned'}</span>
-                                    <div className="flex items-center gap-0.5">
-                                        <span className="text-base lg:text-2xl font-black text-white tracking-tighter">
-                                            {formatCurrency(user?.referralStats?.totalEarned || 0, { hideSymbol: true })}
+                                {user?.inventory?.some((i: any) => i.itemId === 'vip_withdrawal_card' || i.id === 'vip_withdrawal_card' || i.typeId === 'vip_withdrawal_card') ? (
+                                    <button
+                                        onClick={() => setIsWithdrawOpen(true)}
+                                        className="py-2.5 vip-withdraw-btn rounded-xl text-stone-950 text-[10px] lg:text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1 relative overflow-hidden group hover:scale-[1.02] duration-300"
+                                    >
+                                        <div className="absolute inset-0 bg-yellow-400/20 blur-xl group-hover:bg-yellow-400/40 transition-all animate-pulse"></div>
+                                        <span className="relative z-10 flex items-center gap-1 drop-shadow-md text-white md:text-stone-900">
+                                            <CreditCard size={14} className="drop-shadow-sm" />
+                                            {language === 'th' ? 'ถอนเงิน VIP' : 'VIP Withdraw'}
                                         </span>
-                                        <span className="text-yellow-500 text-[10px] font-bold leading-none">฿</span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-stone-500 text-[8px] font-bold uppercase tracking-wider truncate">{language === 'th' ? 'รายได้ทีม/วัน' : 'Daily Yield'}</span>
-                                    <div className="flex items-center gap-0.5">
-                                        <span className="text-base lg:text-2xl font-black text-yellow-500 tracking-tighter">
-                                            {formatCurrency(referralData?.teamDailyIncome || 0, { hideSymbol: true })}
-                                        </span>
-                                        <span className="text-yellow-600 text-[10px] font-bold leading-none">฿</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Network Hierarchy Grid */}
-                            <div className="flex gap-2">
-                                <div className="flex-1 bg-white/5 border border-white/5 rounded-xl p-1.5 flex flex-col items-center">
-                                    <span className="text-[7px] font-black text-yellow-500 uppercase opacity-60">L1</span>
-                                    <span className="text-xs font-black text-white">{referralData?.stats?.l1Count || 0}</span>
-                                </div>
-                                <div className="flex-1 bg-white/5 border border-white/5 rounded-xl p-1.5 flex flex-col items-center">
-                                    <span className="text-[7px] font-black text-blue-400 uppercase opacity-60">L2</span>
-                                    <span className="text-xs font-black text-white">{referralData?.stats?.l2Count || 0}</span>
-                                </div>
-                                <div className="flex-1 bg-white/5 border border-white/5 rounded-xl p-1.5 flex flex-col items-center">
-                                    <span className="text-[7px] font-black text-purple-400 uppercase opacity-60">L3</span>
-                                    <span className="text-xs font-black text-white">{referralData?.stats?.l3Count || 0}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-4 flex items-center justify-between pt-3 border-t border-white/5">
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]"></div>
-                                <span className="text-[9px] font-bold text-stone-400 uppercase tracking-tight">
-                                    {language === 'th' ? `ทีมทั้งหมด: ${referralData?.stats?.totalTeam || 0}` : `Total Team: ${referralData?.stats?.totalTeam || 0}`}
-                                </span>
-                            </div>
-                            <div className="flex items-center text-[10px] text-yellow-500 font-black uppercase group-hover:translate-x-1 transition-transform">
-                                {language === 'th' ? 'จัดการ' : 'Manage'} <ChevronRight size={14} className="text-yellow-500" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 3. New Overclock Card */}
-                    <OverclockCard
-                        user={user}
-                        language={language}
-                        onActivate={() => setIsConfirmRefillOpen(true)}
-                        formatCountdown={formatCountdown}
-                        formatCurrency={formatCurrency}
-                    />
-
-                    {/* 4. Market Trends Card (Slate Theme) */}
-                    <div
-                        onClick={() => setIsMarketOpen(true)}
-                        className="col-span-1 lg:col-span-1 card-slate-market rounded-2xl p-3 lg:p-5 flex flex-col justify-between relative min-h-[160px] lg:min-h-[200px] cursor-pointer group hover:border-blue-500/50 transition-all duration-300"
-                    >
-                        {(() => {
-                            const trends = marketState?.trends || {};
-                            const topMatId = Object.entries(trends).reduce((top: any, [id, data]: [string, any]) => {
-                                if (!top || (data.multiplier > top.multiplier)) {
-                                    return { id, ...data };
-                                }
-                                return top;
-                            }, null)?.id;
-
-                            const topMatName = topMatId ? (MATERIAL_CONFIG.NAMES[Number(topMatId)]?.[language as 'th' | 'en'] || '') : '';
-                            const topMultiplier = topMatId ? trends[Number(topMatId)]?.multiplier : 1;
-                            const changePercent = ((topMultiplier - 1) * 100).toFixed(1);
-                            const isPositive = topMultiplier >= 1;
-
-                            return (
-                                <>
-                                    <div className="relative z-10">
-                                        <div className="flex items-center gap-1.5 mb-2 lg:mb-4">
-                                            <div className="live-indicator">
-                                                <div className="live-indicator-pulse" />
-                                                <div className="live-indicator-core" />
-                                            </div>
-                                            <span className="text-slate-500 text-[10px] lg:text-xs font-black uppercase tracking-widest">{language === 'th' ? 'ตลาดซื้อขายทรัพยากร' : 'Economy Hub'}</span>
+                                        <div className="absolute top-1 right-1">
+                                            <i className="fas fa-crown text-yellow-100 text-[8px] animate-ping"></i>
                                         </div>
-                                        <h3 className="text-base lg:text-xl font-black text-white leading-tight">
-                                            {language === 'th' ? 'เช็คราคาล่าสุด' : 'Live Analytics'}
-                                        </h3>
-                                    </div>
-
-                                    <div className="mt-4 mb-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-bold text-slate-500 truncate max-w-[80px]">
-                                                    {topMatName || 'Processing...'}
-                                                </span>
-                                                <div className={`text-sm lg:text-lg font-black flex items-center gap-0.5 ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                    {isPositive ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-                                                    {changePercent}%
-                                                </div>
-                                            </div>
-                                            {topMatId && (
-                                                <div className="bg-slate-800/50 p-1.5 rounded-xl border border-blue-500/10 backdrop-blur-sm group-hover:scale-110 transition-transform">
-                                                    <MaterialIcon id={Number(topMatId)} size="w-8 h-8 lg:w-10 lg:h-10" iconSize={24} />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-auto h-8 lg:h-10 w-full bg-blue-900/20 rounded-lg flex items-center border border-blue-500/20 overflow-hidden market-ticker-container">
-                                        <div className="market-ticker-content flex items-center h-full">
-                                            {/* Repeat for seamless loop */}
-                                            {(() => {
-                                                const pricedMaterials = [1, 2, 3, 4, 5, 6, 7];
-                                                const items = [...pricedMaterials, ...pricedMaterials, ...pricedMaterials, ...pricedMaterials];
-                                                return items.map((matId, idx) => {
-                                                    const trend = trends[matId] || { multiplier: 1 };
-                                                    const change = ((trend.multiplier - 1) * 100).toFixed(1);
-                                                    const isUp = trend.multiplier >= 1;
-                                                    const name = MATERIAL_CONFIG.NAMES[matId]?.[language as 'th' | 'en'] || '';
-
-                                                    return (
-                                                        <div key={idx} className="market-ticker-item flex items-center gap-2 px-4 border-r border-blue-500/10">
-                                                            <MaterialIcon id={matId} size="w-5 h-5" iconSize={14} />
-                                                            <div className="flex flex-col leading-none">
-                                                                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tight">{name}</span>
-                                                                <span className={`text-[10px] font-black flex items-center gap-0.5 ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                                    {isUp ? '▲' : '▼'}{Math.abs(Number(change))}%
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                });
-                                            })()}
-                                        </div>
-                                    </div>
-                                </>
-                            );
-                        })()}
-                    </div>
-                </div>
-
-
-                {/* Quick Actions */}
-                <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5 lg:gap-2 mb-4 lg:mb-6">
-                    {[
-                        { icon: ShoppingBag, label: t('dashboard.shop'), action: handleAddRig, color: "text-blue-200" },
-                        { icon: Package, label: t('dashboard.warehouse'), action: () => setIsWarehouseOpen(true), color: "text-orange-400" },
-                        { icon: CalendarCheck, label: t('dashboard.daily_bonus'), action: () => setIsDailyBonusOpen(true), color: "text-emerald-400" },
-                        { icon: Ghost, label: t('dashboard.dungeon'), action: () => setIsDungeonOpen(true), color: "text-purple-400" },
-                        { icon: Target, label: t('dashboard.missions'), action: () => setIsMissionOpen(true), color: "text-red-400" },
-                        { icon: BookOpen, label: t('user_guide.title'), action: () => setIsUserGuideOpen(true), color: "text-amber-400" },
-                        { icon: Bomb, label: t('mines.title') || "Mines", action: () => setIsMinesOpen(true), color: "text-red-500" },
-                        { icon: Dices, label: t('lucky_draw.title') || "Lucky Draw", action: () => setIsLuckyDrawOpen(true), color: "text-purple-400" },
-                        { icon: CreditCard, label: language === 'th' ? 'ประวัติธุรกรรม' : 'Transaction History', action: () => onOpenWallet(), color: "text-yellow-500" },
-                        { icon: Trophy, label: t('dashboard.leaderboard_title') || "Leaderboard", action: () => setIsLeaderboardOpen(true), color: "text-amber-200" },
-                        { icon: Truck, label: t('dashboard.logistics') || "Logistics", action: () => { }, color: "text-purple-400", comingSoon: true },
-                    ].map((item: any, idx) => (
-                        <button
-                            key={idx}
-                            onClick={item.comingSoon ? undefined : item.action}
-                            className={`flex flex-col items-center justify-center gap-1 lg:gap-2 bg-stone-900 border border-stone-800 rounded-xl p-2 lg:p-3 relative overflow-hidden transition-all ${item.comingSoon ? 'opacity-60 cursor-not-allowed' : 'hover:bg-stone-800 hover:border-stone-700 active:scale-95'}`}
-                        >
-                            <item.icon size={24} className={item.color} />
-                            <span className="text-[10px] font-bold text-stone-400 text-center leading-tight">{item.label}</span>
-                            {item.comingSoon && (
-                                <div className="absolute top-0 right-0 bg-stone-800 text-stone-500 text-[6px] font-black px-1.5 py-0.5 rounded-bl border-b border-l border-stone-700 uppercase tracking-tighter">
-                                    {t('common.coming_soon')}
-                                </div>
-                            )}
-                        </button>
-                    ))}
-                </div>
-
-                {/* AI Mascot (Permanent Center Position - Inline Controls) */}
-                {hasBot && (
-                    <div className="my-6 flex flex-col items-center justify-center gap-4 group transition-all duration-300">
-                        <div
-                            className="relative cursor-pointer active:scale-95 transition-transform"
-                            onClick={toggleBotPause}
-                        >
-                            <div className="absolute inset-0 bg-blue-500/15 blur-[30px] rounded-full group-hover:bg-blue-500/30 transition-all duration-700"></div>
-
-                            {/* Compact AI Bot Visuals */}
-                            <div className={`relative transform scale-75 lg:scale-95 transition-transform duration-500 group-hover:scale-105 ${botStatus === 'PAUSED' ? 'ai-robot-sleeping' : ''}`}>
-                                <div className={`w-24 h-16 bg-stone-900 border-2 rounded-2xl relative shadow-[0_0_20px_rgba(59,130,246,0.2)] overflow-hidden transition-colors ${botStatus === 'ACTIVE' ? 'border-blue-500/50' : 'border-stone-700 grayscale'}`}>
-                                    <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent"></div>
-                                    {/* Eyes */}
-                                    <div className="absolute inset-0 flex items-center justify-center gap-3">
-                                        {botStatus === 'ACTIVE' ? (
-                                            <>
-                                                <div className="w-4 h-6 rounded-full bg-blue-400/80 shadow-[0_0_8px_#60a5fa] ai-robot-eye ai-robot-pupil"></div>
-                                                <div className="w-4 h-6 rounded-full bg-blue-400/80 shadow-[0_0_8px_#60a5fa] ai-robot-eye-left ai-robot-pupil"></div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="w-5 h-1.5 bg-stone-600 rounded-full ai-robot-eyes-closed shadow-[0_0_4px_rgba(255,255,255,0.2)] opacity-50"></div>
-                                                <div className="w-5 h-1.5 bg-stone-600 rounded-full ai-robot-eyes-closed shadow-[0_0_4px_rgba(255,255,255,0.2)] opacity-50"></div>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {/* Status Lights */}
-                                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-stone-700"></div>
-                                        <div className={`w-1.5 h-1.5 rounded-full ${botStatus === 'ACTIVE' ? 'bg-emerald-500 shadow-[0_0_5px_#10b981]' : 'bg-stone-700'}`}></div>
-                                        <div className="w-1.5 h-1.5 rounded-full bg-stone-700"></div>
-                                    </div>
-                                </div>
-                                {/* Antenna */}
-                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                                    <div className="w-[2px] h-4 bg-stone-700"></div>
-                                    <div className={`w-2 h-2 rounded-full shadow-[0_0_10px_#3b82f6] ${botStatus === 'ACTIVE' ? 'bg-blue-500 animate-pulse' : 'bg-stone-500'}`}></div>
-                                </div>
-                                {/* Ears/Side Plates */}
-                                <div className="absolute top-1/2 -left-2 -translate-y-1/2 w-3 h-8 bg-stone-800 border-l border-blue-500/20 rounded-l-lg"></div>
-                                <div className="absolute top-1/2 -right-2 -translate-y-1/2 w-3 h-8 bg-stone-800 border-r border-blue-500/20 rounded-r-lg"></div>
-
-                                {/* Working Indicator */}
-                                {botStatus === 'WORKING' && (
-                                    <div className="absolute -top-2 -right-2 w-4 h-4 bg-emerald-500 rounded-full border-2 border-stone-950 shadow-[0_0_10px_#10b981] animate-bounce"></div>
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => setIsWithdrawOpen(true)}
+                                        className="py-2.5 bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-xl text-stone-300 text-[10px] lg:text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1"
+                                    >
+                                        <CreditCard size={12} />
+                                        {language === 'th' ? 'ถอนเงิน' : 'Withdraw'}
+                                    </button>
                                 )}
                             </div>
-                        </div>
 
-                        <div className="flex flex-col items-center gap-3">
-                            <div className="flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-transform" onClick={toggleBotPause}>
-                                <span className="text-white text-[10px] font-black uppercase tracking-widest opacity-80">
-                                    {language === 'th' ? 'หุ่นยนต์ AI ควบคุมระบบ' : 'AI System Control'}
-                                </span>
-                                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${botStatus === 'ACTIVE' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                                    <div className={`w-1 h-1 rounded-full ${botStatus === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
-                                    <span className={`text-[8px] font-black uppercase tracking-wider ${botStatus === 'ACTIVE' ? 'text-emerald-400' : 'text-red-400'}`}>
-                                        {botStatus === 'ACTIVE'
-                                            ? (language === 'th' ? 'กำลังทำงาน' : 'Active')
-                                            : (language === 'th' ? 'หยุดทำงาน' : 'Paused')}
-                                    </span>
+                            {/* Detailed Stats Badges */}
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="bg-stone-950/40 backdrop-blur-sm rounded-xl p-2 border border-stone-800/50">
+                                    <span className="text-[8px] font-bold text-stone-500 uppercase block mb-0.5">{language === 'th' ? 'ขุดได้ทั้งหมด' : 'Lifetime'}</span>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[10px] font-black text-stone-200">{formatCurrency(user?.totalLifetimeMined || 0)}</span>
+                                    </div>
                                 </div>
-                            </div>
-
-                            {/* Inline Status Badges */}
-                            <div className="flex flex-col gap-2 scale-90">
-
-                                {/* Expiration Timer */}
-                                <div className="flex items-center gap-2 bg-stone-900/50 border border-red-500/30 rounded-full px-4 py-1.5 shadow-lg shadow-red-950/20 backdrop-blur-sm">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_#ef4444]"></div>
-                                    <span className="text-[10px] font-black text-red-400 uppercase tracking-tighter mr-2">
-                                        {language === 'th' ? 'จะหมดอายุใน:' : 'Expires In:'}
-                                    </span>
-                                    <span className="text-[11px] font-mono font-black text-white tracking-widest">
-                                        {(() => {
-                                            const botItem = user?.inventory?.find((i: any) => i.typeId === 'ai_robot' && (!i.expireAt || i.expireAt > Date.now()));
-                                            if (!botItem || !botItem.expireAt) return language === 'th' ? 'ไม่มีกำหนด' : 'No Expiry';
-
-                                            const timeLeft = botItem.expireAt - Date.now();
-                                            const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-                                            const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-                                            if (days > 0) {
-                                                return `${days} ${language === 'th' ? 'วัน' : 'Days'} ${hours} ${language === 'th' ? 'ชม.' : 'Hrs'}`;
-                                            }
-
-                                            const m = Math.floor((timeLeft % 3600000) / 60000);
-                                            const s = Math.floor((timeLeft % 60000) / 1000);
-                                            return `${hours.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-                                        })()}
-                                    </span>
+                                <div className="bg-stone-950/40 backdrop-blur-sm rounded-xl p-2 border border-stone-800/50">
+                                    <span className="text-[8px] font-bold text-stone-500 uppercase block mb-0.5">{language === 'th' ? 'ถอนแล้ว' : 'Withdrawn'}</span>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[10px] font-black text-stone-200">{formatCurrency(user?.totalWithdrawn || 0)}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
 
-                {/* Rigs Grid */}
-                <div className="flex-1 mt-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
-                            <Pickaxe size={24} className="text-yellow-500" />
-                            {language === 'th' ? 'เครื่องขุดของฉัน' : 'My Mining Rigs'} ({rigs.length}/{(user?.warehouseCapacity || user?.unlockedSlots || 3)})
-                        </h2>
-                        {rigs.length < (user?.warehouseCapacity || user?.unlockedSlots || 3) && (
-                            <button
-                                onClick={handleAddRig}
-                                className="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-yellow-900/20"
-                            >
-                                <Plus size={16} />
-                                {language === 'th' ? 'ซื้อเครื่องเพิ่ม' : 'Add Rig'}
-                            </button>
-                        )}
-                    </div>
+                        {/* 2. Referral System Card - PREMIUM SILVER REDESIGN */}
+                        <div
+                            onClick={() => setIsReferralOpen(true)}
+                            className="col-span-1 lg:col-span-1 premium-silver-card rounded-2xl p-3 lg:p-5 flex flex-col justify-between relative min-h-[160px] lg:min-h-[200px] cursor-pointer group hover:scale-[1.02] hover:border-slate-400/50 transition-all duration-300 overflow-hidden"
+                        >
+                            {/* Premium Background Accents */}
+                            <div className="shimmer-layer opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                            <div className="absolute top-2 right-2 opacity-20 group-hover:opacity-40 transition-opacity flex gap-2">
+                                <Sparkles size={20} className="text-yellow-500 animate-pulse" />
+                                <Crown size={32} className="text-yellow-500" />
+                            </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {Array.from({ length: MAX_RIGS_PER_USER }).map((_, index) => {
-                            const slotNumber = index + 1;
-                            const rig = rigs[index];
-                            const isLocked = slotNumber > (user?.warehouseCapacity || user?.unlockedSlots || 3);
+                            <div className="relative z-10">
+                                <h2 className="text-[10px] lg:text-xs font-black text-white tracking-[0.1em] uppercase mb-4 italic flex items-center gap-1.5 flex-wrap">
+                                    <Zap size={12} className="text-yellow-500 fill-yellow-500 shrink-0" />
+                                    <span className="whitespace-nowrap">Referral <span className="text-yellow-500">Empire</span></span>
+                                </h2>
 
-                            if (rig) {
+                                <div className="grid grid-cols-2 gap-2 lg:gap-4 mb-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-stone-500 text-[8px] font-bold uppercase tracking-wider truncate">{language === 'th' ? 'รายได้สะสม' : 'Total Earned'}</span>
+                                        <div className="flex items-center gap-0.5">
+                                            <span className="text-base lg:text-2xl font-black text-white tracking-tighter">
+                                                {formatCurrency(user?.referralStats?.totalEarned || 0, { hideSymbol: true })}
+                                            </span>
+                                            <span className="text-yellow-500 text-[10px] font-bold leading-none">฿</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-stone-500 text-[8px] font-bold uppercase tracking-wider truncate">{language === 'th' ? 'รายได้ทีม/วัน' : 'Daily Yield'}</span>
+                                        <div className="flex items-center gap-0.5">
+                                            <span className="text-base lg:text-2xl font-black text-yellow-500 tracking-tighter">
+                                                {formatCurrency(referralData?.teamDailyIncome || 0, { hideSymbol: true })}
+                                            </span>
+                                            <span className="text-yellow-600 text-[10px] font-bold leading-none">฿</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Network Hierarchy Grid */}
+                                <div className="flex gap-2">
+                                    <div className="flex-1 bg-white/5 border border-white/5 rounded-xl p-1.5 flex flex-col items-center">
+                                        <span className="text-[7px] font-black text-yellow-500 uppercase opacity-60">L1</span>
+                                        <span className="text-xs font-black text-white">{referralData?.stats?.l1Count || 0}</span>
+                                    </div>
+                                    <div className="flex-1 bg-white/5 border border-white/5 rounded-xl p-1.5 flex flex-col items-center">
+                                        <span className="text-[7px] font-black text-blue-400 uppercase opacity-60">L2</span>
+                                        <span className="text-xs font-black text-white">{referralData?.stats?.l2Count || 0}</span>
+                                    </div>
+                                    <div className="flex-1 bg-white/5 border border-white/5 rounded-xl p-1.5 flex flex-col items-center">
+                                        <span className="text-[7px] font-black text-purple-400 uppercase opacity-60">L3</span>
+                                        <span className="text-xs font-black text-white">{referralData?.stats?.l3Count || 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 flex items-center justify-between pt-3 border-t border-white/5">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]"></div>
+                                    <span className="text-[9px] font-bold text-stone-400 uppercase tracking-tight">
+                                        {language === 'th' ? `ทีมทั้งหมด: ${referralData?.stats?.totalTeam || 0}` : `Total Team: ${referralData?.stats?.totalTeam || 0}`}
+                                    </span>
+                                </div>
+                                <div className="flex items-center text-[10px] text-yellow-500 font-black uppercase group-hover:translate-x-1 transition-transform">
+                                    {language === 'th' ? 'จัดการ' : 'Manage'} <ChevronRight size={14} className="text-yellow-500" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 3. New Overclock Card */}
+                        <OverclockCard
+                            user={user}
+                            language={language}
+                            onActivate={() => setIsConfirmRefillOpen(true)}
+                            formatCountdown={formatCountdown}
+                            formatCurrency={formatCurrency}
+                        />
+
+                        {/* 4. Market Trends Card (Slate Theme) */}
+                        <div
+                            onClick={() => setIsMarketOpen(true)}
+                            className="col-span-1 lg:col-span-1 card-slate-market rounded-2xl p-3 lg:p-5 flex flex-col justify-between relative min-h-[160px] lg:min-h-[200px] cursor-pointer group hover:border-blue-500/50 transition-all duration-300"
+                        >
+                            {(() => {
+                                const trends = marketState?.trends || {};
+                                const topMatId = Object.entries(trends).reduce((top: any, [id, data]: [string, any]) => {
+                                    if (!top || (data.multiplier > top.multiplier)) {
+                                        return { id, ...data };
+                                    }
+                                    return top;
+                                }, null)?.id;
+
+                                const topMatName = topMatId ? (MATERIAL_CONFIG.NAMES[Number(topMatId)]?.[language as 'th' | 'en'] || '') : '';
+                                const topMultiplier = topMatId ? trends[Number(topMatId)]?.multiplier : 1;
+                                const changePercent = ((topMultiplier - 1) * 100).toFixed(1);
+                                const isPositive = topMultiplier >= 1;
+
                                 return (
-                                    <RigCard
-                                        key={rig.id}
-                                        rig={rig}
-                                        availableRigs={rigs} // Pass all rigs for merge selection
-                                        onOpenMerge={(r) => {
-                                            setSelectedRigForMerge(r);
-                                            setIsMergeModalOpen(true);
-                                        }}
-                                        onClaim={(id, amount) => handleClaim(id, amount)}
-                                        onClaimGift={(r) => handleClaimGift(r)}
-                                        onManageAccessory={(rigId, slotIndex) => handleOpenAccessoryManager(rig, slotIndex)}
-                                        onUnlockSlot={(slotIndex) => handleUnlockSlot(rig, slotIndex)}
-                                        onRenew={(r) => handleRenew(r)}
-                                        onRepair={(r) => handleRepair(r)}
-                                        onCharge={(r) => handleChargeRigEnergy(r)}
-                                        onCollect={(r) => handleCollectMaterials(r)}
-                                        onScrap={(r) => handleScrap(r)}
-                                        inventory={user?.inventory || []}
-                                        isFurnaceActive={isFurnaceActive}
-                                        botStatus={botStatus === 'ACTIVE' ? 'WORKING' : 'PAUSED'}
-                                        botCooldown={0}
-                                        botWorkTimeLeft={0}
-                                        onToggleBotPause={toggleBotPause}
-                                        isOverclockActive={user?.isOverclockActive && new Date(user?.overclockExpiresAt).getTime() > Date.now()}
-                                        overclockMultiplier={ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST || 1.5}
-                                        addNotification={addNotification}
-                                        onUpgrade={handleUpgradeRig}
-                                        user={user}
-                                    />
-                                );
-                            }
+                                    <>
+                                        <div className="relative z-10">
+                                            <div className="flex items-center gap-1.5 mb-2 lg:mb-4">
+                                                <div className="live-indicator">
+                                                    <div className="live-indicator-pulse" />
+                                                    <div className="live-indicator-core" />
+                                                </div>
+                                                <span className="text-slate-500 text-[10px] lg:text-xs font-black uppercase tracking-widest">{language === 'th' ? 'ตลาดซื้อขายทรัพยากร' : 'Economy Hub'}</span>
+                                            </div>
+                                            <h3 className="text-base lg:text-xl font-black text-white leading-tight">
+                                                {language === 'th' ? 'เช็คราคาล่าสุด' : 'Live Analytics'}
+                                            </h3>
+                                        </div>
 
-                            if (isLocked) {
+                                        <div className="mt-4 mb-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-bold text-slate-500 truncate max-w-[80px]">
+                                                        {topMatName || 'Processing...'}
+                                                    </span>
+                                                    <div className={`text-sm lg:text-lg font-black flex items-center gap-0.5 ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                        {isPositive ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                                                        {changePercent}%
+                                                    </div>
+                                                </div>
+                                                {topMatId && (
+                                                    <div className="bg-slate-800/50 p-1.5 rounded-xl border border-blue-500/10 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                                                        <MaterialIcon id={Number(topMatId)} size="w-8 h-8 lg:w-10 lg:h-10" iconSize={24} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-auto h-8 lg:h-10 w-full bg-blue-900/20 rounded-lg flex items-center border border-blue-500/20 overflow-hidden market-ticker-container">
+                                            <div className="market-ticker-content flex items-center h-full">
+                                                {/* Repeat for seamless loop */}
+                                                {(() => {
+                                                    const pricedMaterials = [1, 2, 3, 4, 5, 6, 7];
+                                                    const items = [...pricedMaterials, ...pricedMaterials, ...pricedMaterials, ...pricedMaterials];
+                                                    return items.map((matId, idx) => {
+                                                        const trend = trends[matId] || { multiplier: 1 };
+                                                        const change = ((trend.multiplier - 1) * 100).toFixed(1);
+                                                        const isUp = trend.multiplier >= 1;
+                                                        const name = MATERIAL_CONFIG.NAMES[matId]?.[language as 'th' | 'en'] || '';
+
+                                                        return (
+                                                            <div key={idx} className="market-ticker-item flex items-center gap-2 px-4 border-r border-blue-500/10">
+                                                                <MaterialIcon id={matId} size="w-5 h-5" iconSize={14} />
+                                                                <div className="flex flex-col leading-none">
+                                                                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tight">{name}</span>
+                                                                    <span className={`text-[10px] font-black flex items-center gap-0.5 ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                        {isUp ? '▲' : '▼'}{Math.abs(Number(change))}%
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    });
+                                                })()}
+                                            </div>
+                                        </div>
+                                    </>
+                                );
+                            })()}
+                        </div>
+                    </div>
+
+
+                    {/* Quick Actions */}
+                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5 lg:gap-2 mb-4 lg:mb-6">
+                        {[
+                            { icon: ShoppingBag, label: t('dashboard.shop'), action: handleAddRig, color: "text-blue-200" },
+                            { icon: Package, label: t('dashboard.warehouse'), action: () => setIsWarehouseOpen(true), color: "text-orange-400" },
+                            { icon: CalendarCheck, label: t('dashboard.daily_bonus'), action: () => setIsDailyBonusOpen(true), color: "text-emerald-400" },
+                            { icon: Ghost, label: t('dashboard.dungeon'), action: () => setIsDungeonOpen(true), color: "text-purple-400" },
+                            { icon: Target, label: t('dashboard.missions'), action: () => setIsMissionOpen(true), color: "text-red-400" },
+                            { icon: BookOpen, label: t('user_guide.title'), action: () => setIsUserGuideOpen(true), color: "text-amber-400" },
+                            { icon: Bomb, label: t('mines.title') || "Mines", action: () => setIsMinesOpen(true), color: "text-red-500" },
+                            { icon: Dices, label: t('lucky_draw.title') || "Lucky Draw", action: () => setIsLuckyDrawOpen(true), color: "text-purple-400" },
+                            { icon: CreditCard, label: language === 'th' ? 'ประวัติธุรกรรม' : 'Transaction History', action: () => onOpenWallet(), color: "text-yellow-500" },
+                            { icon: Trophy, label: t('dashboard.leaderboard_title') || "Leaderboard", action: () => setIsLeaderboardOpen(true), color: "text-amber-200" },
+                            { icon: Truck, label: t('dashboard.logistics') || "Logistics", action: () => { }, color: "text-purple-400", comingSoon: true },
+                        ].map((item: any, idx) => (
+                            <button
+                                key={idx}
+                                onClick={item.comingSoon ? undefined : item.action}
+                                className={`flex flex-col items-center justify-center gap-1 lg:gap-2 bg-stone-900 border border-stone-800 rounded-xl p-2 lg:p-3 relative overflow-hidden transition-all ${item.comingSoon ? 'opacity-60 cursor-not-allowed' : 'hover:bg-stone-800 hover:border-stone-700 active:scale-95'}`}
+                            >
+                                <item.icon size={24} className={item.color} />
+                                <span className="text-[10px] font-bold text-stone-400 text-center leading-tight">{item.label}</span>
+                                {item.comingSoon && (
+                                    <div className="absolute top-0 right-0 bg-stone-800 text-stone-500 text-[6px] font-black px-1.5 py-0.5 rounded-bl border-b border-l border-stone-700 uppercase tracking-tighter">
+                                        {t('common.coming_soon')}
+                                    </div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* AI Mascot (Permanent Center Position - Inline Controls) */}
+                    {hasBot && (
+                        <div className="my-6 flex flex-col items-center justify-center gap-4 group transition-all duration-300">
+                            <div
+                                className="relative cursor-pointer active:scale-95 transition-transform"
+                                onClick={toggleBotPause}
+                            >
+                                <div className="absolute inset-0 bg-blue-500/15 blur-[30px] rounded-full group-hover:bg-blue-500/30 transition-all duration-700"></div>
+
+                                {/* Compact AI Bot Visuals */}
+                                <div className={`relative transform scale-75 lg:scale-95 transition-transform duration-500 group-hover:scale-105 ${botStatus === 'PAUSED' ? 'ai-robot-sleeping' : ''}`}>
+                                    <div className={`w-24 h-16 bg-stone-900 border-2 rounded-2xl relative shadow-[0_0_20px_rgba(59,130,246,0.2)] overflow-hidden transition-colors ${botStatus === 'ACTIVE' ? 'border-blue-500/50' : 'border-stone-700 grayscale'}`}>
+                                        <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent"></div>
+                                        {/* Eyes */}
+                                        <div className="absolute inset-0 flex items-center justify-center gap-3">
+                                            {botStatus === 'ACTIVE' ? (
+                                                <>
+                                                    <div className="w-4 h-6 rounded-full bg-blue-400/80 shadow-[0_0_8px_#60a5fa] ai-robot-eye ai-robot-pupil"></div>
+                                                    <div className="w-4 h-6 rounded-full bg-blue-400/80 shadow-[0_0_8px_#60a5fa] ai-robot-eye-left ai-robot-pupil"></div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="w-5 h-1.5 bg-stone-600 rounded-full ai-robot-eyes-closed shadow-[0_0_4px_rgba(255,255,255,0.2)] opacity-50"></div>
+                                                    <div className="w-5 h-1.5 bg-stone-600 rounded-full ai-robot-eyes-closed shadow-[0_0_4px_rgba(255,255,255,0.2)] opacity-50"></div>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* Status Lights */}
+                                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-stone-700"></div>
+                                            <div className={`w-1.5 h-1.5 rounded-full ${botStatus === 'ACTIVE' ? 'bg-emerald-500 shadow-[0_0_5px_#10b981]' : 'bg-stone-700'}`}></div>
+                                            <div className="w-1.5 h-1.5 rounded-full bg-stone-700"></div>
+                                        </div>
+                                    </div>
+                                    {/* Antenna */}
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                                        <div className="w-[2px] h-4 bg-stone-700"></div>
+                                        <div className={`w-2 h-2 rounded-full shadow-[0_0_10px_#3b82f6] ${botStatus === 'ACTIVE' ? 'bg-blue-500 animate-pulse' : 'bg-stone-500'}`}></div>
+                                    </div>
+                                    {/* Ears/Side Plates */}
+                                    <div className="absolute top-1/2 -left-2 -translate-y-1/2 w-3 h-8 bg-stone-800 border-l border-blue-500/20 rounded-l-lg"></div>
+                                    <div className="absolute top-1/2 -right-2 -translate-y-1/2 w-3 h-8 bg-stone-800 border-r border-blue-500/20 rounded-r-lg"></div>
+
+                                    {/* Working Indicator */}
+                                    {botStatus === 'WORKING' && (
+                                        <div className="absolute -top-2 -right-2 w-4 h-4 bg-emerald-500 rounded-full border-2 border-stone-950 shadow-[0_0_10px_#10b981] animate-bounce"></div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-transform" onClick={toggleBotPause}>
+                                    <span className="text-white text-[10px] font-black uppercase tracking-widest opacity-80">
+                                        {language === 'th' ? 'หุ่นยนต์ AI ควบคุมระบบ' : 'AI System Control'}
+                                    </span>
+                                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${botStatus === 'ACTIVE' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                                        <div className={`w-1 h-1 rounded-full ${botStatus === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                        <span className={`text-[8px] font-black uppercase tracking-wider ${botStatus === 'ACTIVE' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                            {botStatus === 'ACTIVE'
+                                                ? (language === 'th' ? 'กำลังทำงาน' : 'Active')
+                                                : (language === 'th' ? 'หยุดทำงาน' : 'Paused')}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Inline Status Badges */}
+                                <div className="flex flex-col gap-2 scale-90">
+
+                                    {/* Expiration Timer */}
+                                    <div className="flex items-center gap-2 bg-stone-900/50 border border-red-500/30 rounded-full px-4 py-1.5 shadow-lg shadow-red-950/20 backdrop-blur-sm">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_#ef4444]"></div>
+                                        <span className="text-[10px] font-black text-red-400 uppercase tracking-tighter mr-2">
+                                            {language === 'th' ? 'จะหมดอายุใน:' : 'Expires In:'}
+                                        </span>
+                                        <span className="text-[11px] font-mono font-black text-white tracking-widest">
+                                            {(() => {
+                                                const botItem = user?.inventory?.find((i: any) => i.typeId === 'ai_robot' && (!i.expireAt || i.expireAt > Date.now()));
+                                                if (!botItem || !botItem.expireAt) return language === 'th' ? 'ไม่มีกำหนด' : 'No Expiry';
+
+                                                const timeLeft = botItem.expireAt - Date.now();
+                                                const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                                                const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+                                                if (days > 0) {
+                                                    return `${days} ${language === 'th' ? 'วัน' : 'Days'} ${hours} ${language === 'th' ? 'ชม.' : 'Hrs'}`;
+                                                }
+
+                                                const m = Math.floor((timeLeft % 3600000) / 60000);
+                                                const s = Math.floor((timeLeft % 60000) / 1000);
+                                                return `${hours.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                                            })()}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Rigs Grid */}
+                    <div className="flex-1 mt-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
+                                <Pickaxe size={24} className="text-yellow-500" />
+                                {language === 'th' ? 'เครื่องขุดของฉัน' : 'My Mining Rigs'} ({rigs.length}/{(user?.warehouseCapacity || user?.unlockedSlots || 3)})
+                            </h2>
+                            {rigs.length < (user?.warehouseCapacity || user?.unlockedSlots || 3) && (
+                                <button
+                                    onClick={handleAddRig}
+                                    className="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-yellow-900/20"
+                                >
+                                    <Plus size={16} />
+                                    {language === 'th' ? 'ซื้อเครื่องเพิ่ม' : 'Add Rig'}
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {Array.from({ length: MAX_RIGS_PER_USER }).map((_, index) => {
+                                const slotNumber = index + 1;
+                                const rig = rigs[index];
+                                const isLocked = slotNumber > (user?.warehouseCapacity || user?.unlockedSlots || 3);
+
+                                if (rig) {
+                                    return (
+                                        <RigCard
+                                            key={rig.id}
+                                            rig={rig}
+                                            availableRigs={rigs} // Pass all rigs for merge selection
+                                            onOpenMerge={(r) => {
+                                                setSelectedRigForMerge(r);
+                                                setIsMergeModalOpen(true);
+                                            }}
+                                            onClaim={(id, amount) => handleClaim(id, amount)}
+                                            onClaimGift={(r) => handleClaimGift(r)}
+                                            onManageAccessory={(rigId, slotIndex) => handleOpenAccessoryManager(rig, slotIndex)}
+                                            onUnlockSlot={(slotIndex) => handleUnlockSlot(rig, slotIndex)}
+                                            onRenew={(r) => handleRenew(r)}
+                                            onRepair={(r) => handleRepair(r)}
+                                            onCharge={(r) => handleChargeRigEnergy(r)}
+                                            onCollect={(r) => handleCollectMaterials(r)}
+                                            onScrap={(r) => handleScrap(r)}
+                                            inventory={user?.inventory || []}
+                                            isFurnaceActive={isFurnaceActive}
+                                            botStatus={botStatus === 'ACTIVE' ? 'WORKING' : 'PAUSED'}
+                                            botCooldown={0}
+                                            botWorkTimeLeft={0}
+                                            onToggleBotPause={toggleBotPause}
+                                            isOverclockActive={user?.isOverclockActive && new Date(user?.overclockExpiresAt).getTime() > Date.now()}
+                                            overclockMultiplier={ENERGY_CONFIG.OVERCLOCK_PROFIT_BOOST || 1.5}
+                                            addNotification={addNotification}
+                                            onUpgrade={handleUpgradeRig}
+                                            user={user}
+                                        />
+                                    );
+                                }
+
+                                if (isLocked) {
+                                    return (
+                                        <div
+                                            key={`locked-${index}`}
+                                            onClick={() => {
+                                                setUnlockTargetSlot(slotNumber);
+                                                setIsSlotUnlockOpen(true);
+                                            }}
+                                            className="bg-stone-900/30 border-2 border-dashed border-stone-800/50 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-3 cursor-pointer group hover:border-yellow-600/30 transition-all min-h-[300px]"
+                                        >
+                                            <div className="bg-stone-800/50 p-4 rounded-full group-hover:bg-yellow-900/20 transition-all">
+                                                <Lock size={32} className="text-stone-600 group-hover:text-yellow-600" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-bold text-stone-500 group-hover:text-yellow-500">
+                                                    {language === 'th' ? `พื้นที่ขุดที่ ${slotNumber}` : `Mining Slot ${slotNumber}`}
+                                                </h3>
+                                                <p className="text-stone-600 text-xs mt-1">
+                                                    {language === 'th' ? 'ต้องปลดล็อกเพื่อใช้งาน' : 'Required expansion to use'}
+                                                </p>
+                                            </div>
+                                            <button className="mt-2 bg-stone-800 group-hover:bg-yellow-600 text-stone-400 group-hover:text-stone-900 px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all">
+                                                {language === 'th' ? 'ปลดล็อก' : 'Unlock'}
+                                            </button>
+                                        </div>
+                                    );
+                                }
+
                                 return (
                                     <div
-                                        key={`locked-${index}`}
-                                        onClick={() => {
-                                            setUnlockTargetSlot(slotNumber);
-                                            setIsSlotUnlockOpen(true);
-                                        }}
-                                        className="bg-stone-900/30 border-2 border-dashed border-stone-800/50 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-3 cursor-pointer group hover:border-yellow-600/30 transition-all min-h-[300px]"
+                                        key={`empty-${index}`}
+                                        onClick={handleAddRig}
+                                        className="bg-stone-900/50 border-2 border-dashed border-stone-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-3 cursor-pointer group hover:border-yellow-600/50 transition-all min-h-[300px]"
                                     >
-                                        <div className="bg-stone-800/50 p-4 rounded-full group-hover:bg-yellow-900/20 transition-all">
-                                            <Lock size={32} className="text-stone-600 group-hover:text-yellow-600" />
+                                        <div className="bg-stone-800 p-4 rounded-full group-hover:bg-yellow-900/30 transition-all">
+                                            <Plus size={32} className="text-stone-500 group-hover:text-yellow-500" />
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-bold text-stone-500 group-hover:text-yellow-500">
-                                                {language === 'th' ? `พื้นที่ขุดที่ ${slotNumber}` : `Mining Slot ${slotNumber}`}
+                                            <h3 className="text-lg font-bold text-stone-400 group-hover:text-white">
+                                                {language === 'th' ? 'ว่าง' : 'Empty Slot'}
                                             </h3>
-                                            <p className="text-stone-600 text-xs mt-1">
-                                                {language === 'th' ? 'ต้องปลดล็อกเพื่อใช้งาน' : 'Required expansion to use'}
+                                            <p className="text-stone-500 text-xs mt-1">
+                                                {language === 'th' ? 'คลิกเพื่อติดตั้งเครื่องขุด' : 'Click to add a rig'}
                                             </p>
                                         </div>
-                                        <button className="mt-2 bg-stone-800 group-hover:bg-yellow-600 text-stone-400 group-hover:text-stone-900 px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all">
-                                            {language === 'th' ? 'ปลดล็อก' : 'Unlock'}
-                                        </button>
                                     </div>
                                 );
-                            }
-
-                            return (
-                                <div
-                                    key={`empty-${index}`}
-                                    onClick={handleAddRig}
-                                    className="bg-stone-900/50 border-2 border-dashed border-stone-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-3 cursor-pointer group hover:border-yellow-600/50 transition-all min-h-[300px]"
-                                >
-                                    <div className="bg-stone-800 p-4 rounded-full group-hover:bg-yellow-900/30 transition-all">
-                                        <Plus size={32} className="text-stone-500 group-hover:text-yellow-500" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-stone-400 group-hover:text-white">
-                                            {language === 'th' ? 'ว่าง' : 'Empty Slot'}
-                                        </h3>
-                                        <p className="text-stone-500 text-xs mt-1">
-                                            {language === 'th' ? 'คลิกเพื่อติดตั้งเครื่องขุด' : 'Click to add a rig'}
-                                        </p>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                            })}
+                        </div>
                     </div>
-                </div>
 
-            </main >
-
+                </main >
+            </div>
             {/* Mobile Menu Overlay */}
             {
                 isMobileMenuOpen && (

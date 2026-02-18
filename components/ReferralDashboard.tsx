@@ -50,7 +50,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
 
     if (!isOpen) return null;
 
-    const filteredReferrals = referralData?.referrals.filter(ref =>
+    const filteredReferrals = referralData?.referrals?.filter(ref =>
         activeTab === 0 ? true : ref.level === activeTab
     ) || [];
 
