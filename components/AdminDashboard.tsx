@@ -933,11 +933,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 </div>
                             </div>
                             <div className="bg-stone-950 p-3 rounded border border-stone-800">
-                                <div className="text-xs text-stone-500 uppercase">{t('common.total_deposit') || 'Total Deposit'}</div>
+                                <div className="text-xs text-stone-500 uppercase">{t('common.total_deposit')}</div>
                                 <div className="text-lg font-bold text-emerald-400">+{Math.floor(userStats?.totalDeposits || 0).toLocaleString()} {CURRENCY}</div>
                             </div>
                             <div className="bg-stone-900 p-3 rounded border border-stone-800">
-                                <div className="text-xs text-stone-500 uppercase">{t('common.total_withdraw') || 'Total Withdraw'}</div>
+                                <div className="text-xs text-stone-500 uppercase">{t('common.total_withdraw')}</div>
                                 <div className="text-lg font-bold text-red-500">-{Math.floor(userStats?.totalWithdrawals || 0).toLocaleString()} {CURRENCY}</div>
                             </div>
                         </div>
@@ -945,12 +945,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         {/* Developer Revenue Summary moved to main dashboard */}
 
                         {/* Withdrawal History */}
-                        {userStats?.withdrawalHistory && userStats.withdrawalHistory.length > 0 && (
-                            <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
-                                <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-stone-400 uppercase tracking-wider flex items-center gap-2">
-                                    <FileText size={14} /> {t('admin.withdrawal_history')}
-                                </div>
-                                <div className="max-h-60 overflow-y-auto overflow-x-auto custom-scrollbar">
+                        <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
+                            <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-stone-400 uppercase tracking-wider flex items-center gap-2">
+                                <FileText size={14} /> {t('admin.withdrawal_history')}
+                            </div>
+                            <div className="max-h-60 overflow-y-auto overflow-x-auto custom-scrollbar">
+                                {userStats?.withdrawalHistory && userStats.withdrawalHistory.length > 0 ? (
                                     <table className="w-full text-left text-sm min-w-[600px]">
                                         <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
                                             <tr>
@@ -989,7 +989,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                                             {w.walletAddress || selectedUser.walletAddress}
                                                                         </button>
                                                                     ) : (
-                                                                        <span className="text-[10px] text-red-500 italic">{t('common.no_data') || 'No Data'}</span>
+                                                                        <span className="text-[10px] text-red-500 italic">{t('common.no_data')}</span>
                                                                     )}
                                                                 </div>
                                                             ) : (
@@ -1053,17 +1053,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
+                                ) : (
+                                    <div className="p-8 text-center text-stone-600 text-sm italic">
+                                        {t('common.no_data')}
+                                    </div>
+                                )}
                             </div>
-                        )}
+                        </div>
 
                         {/* Deposit History */}
-                        {userStats?.depositHistory && userStats.depositHistory.length > 0 && (
-                            <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
-                                <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-emerald-500 uppercase tracking-wider flex items-center gap-2">
-                                    <FileText size={14} /> {t('admin.deposit_history')}
-                                </div>
-                                <div className="max-h-60 overflow-y-auto overflow-x-auto custom-scrollbar">
+                        <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
+                            <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+                                <FileText size={14} /> {t('admin.deposit_history')}
+                            </div>
+                            <div className="max-h-60 overflow-y-auto overflow-x-auto custom-scrollbar">
+                                {userStats?.depositHistory && userStats.depositHistory.length > 0 ? (
                                     <table className="w-full text-left text-sm min-w-[600px]">
                                         <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
                                             <tr>
@@ -1125,9 +1129,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
+                                ) : (
+                                    <div className="p-8 text-center text-stone-600 text-sm italic">
+                                        {t('common.no_data')}
+                                    </div>
+                                )}
                             </div>
-                        )}
+                        </div>
 
                     </div>
 
