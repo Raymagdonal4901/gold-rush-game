@@ -1297,68 +1297,63 @@ export const repairReferralLinks = async (req: AuthRequest, res: Response) => {
     try {
         console.log('[REPAIR] Starting referral link repair...');
 
-        // ดึงผู้ใช้ทั้งหมดที่ไม่มี referrerId
-        const usersWithoutReferrer = await User.find({ referrerId: { $exists: false } })
-            .select('_id username referralCode createdAt')
+        // ดึงผู้ใช้ทั้งหมดที่ไม่มี referrerId หรือเป็น null
+        const usersWithoutReferrer = await User.find({
+            $or: [
+                { referrerId: { $exists: false } },
+                { referrerId: null }
+            ]
+        })
+            .select('_id username referralCode usedReferralCode createdAt')
             .lean();
 
-        // ดึงผู้ใช้ทั้งหมดที่มี referralCode (เพื่อใช้ lookup)
-        const allUsers = await User.find({ referralCode: { $exists: true, $ne: null } })
+        // ดึงผู้ใช้ทั้งหมดที่มีข้อมูล (เพื่อใช้ lookup)
+        const allUsers = await User.find({})
             .select('_id username referralCode')
             .lean();
 
-        // สร้าง map: referralCode -> userId
-        const codeToUser: Record<string, any> = {};
+        // สร้าง map สำหรับ lookup (ทั้ง username และ referralCode)
+        const lookupMap: Record<string, any> = {};
         for (const u of allUsers) {
-            if (u.referralCode) {
-                codeToUser[u.referralCode.toUpperCase()] = u;
-            }
+            if (u.referralCode) lookupMap[u.referralCode.toUpperCase()] = u;
+            if (u.username) lookupMap[u.username.toUpperCase()] = u;
         }
 
         let fixed = 0;
         const report: string[] = [];
 
-        // ตรวจสอบ Transaction records เพื่อหาว่าใครเคยจ่ายค่าคอมมิชชั่นให้ใคร
-        // วิธีนี้ช่วยหาความสัมพันธ์ที่หายไปได้
-        const referralTransactions = await Transaction.find({
-            type: { $in: ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD'] }
-        }).select('userId description').lean();
+        for (const user of usersWithoutReferrer) {
+            // ลองซ่อมจาก usedReferralCode (ถ้ามี)
+            let refCode = (user as any).usedReferralCode?.toUpperCase();
 
-        // สร้าง map: userId (referrer) -> set of referred userIds
-        // จาก transaction description ที่อาจมีข้อมูล
+            // ถ้าไม่มี usedReferralCode ให้ลองหาจาก field อื่นๆ ที่อาจจะเก็บไว้ (ถ้ามี)
+            if (!refCode && (user as any).referrerUsername) {
+                refCode = (user as any).referrerUsername.toUpperCase();
+            }
 
-        // วิธีที่ 2: ตรวจสอบจาก referralCode ใน URL ที่ถูกเก็บไว้
-        // ถ้า User model มี field เก็บ referralCode ที่ใช้ตอนสมัคร
-        const usersWithStoredRefCode = await User.find({
-            referrerId: { $exists: false },
-            usedReferralCode: { $exists: true, $ne: null }
-        }).select('_id username usedReferralCode').lean();
-
-        for (const user of usersWithStoredRefCode) {
-            const refCode = (user as any).usedReferralCode?.toUpperCase();
-            if (refCode && codeToUser[refCode]) {
-                const referrer = codeToUser[refCode];
+            if (refCode && lookupMap[refCode]) {
+                const referrer = lookupMap[refCode];
+                // ป้องกันการแนะนำตัวเอง
                 if (referrer._id.toString() !== user._id.toString()) {
                     await User.updateOne(
                         { _id: user._id },
                         { $set: { referrerId: referrer._id } }
                     );
+                    // อัปเดต stat ให้ผู้แนะนำด้วย
                     await User.updateOne(
                         { _id: referrer._id },
                         { $inc: { 'referralStats.totalInvited': 1 } }
                     );
                     fixed++;
                     report.push(`Fixed: ${user.username} -> referred by ${referrer.username}`);
-                    console.log(`[REPAIR] Fixed: ${user.username} -> ${referrer.username}`);
                 }
             }
         }
 
-        // สรุปผล
         console.log(`[REPAIR] Complete. Fixed ${fixed} referral links.`);
         res.json({
             message: `Repair complete. Fixed ${fixed} referral links.`,
-            totalUsersWithoutReferrer: usersWithoutReferrer.length,
+            totalUsersScanned: usersWithoutReferrer.length,
             fixedCount: fixed,
             report
         });
@@ -1396,18 +1391,18 @@ export const syncReferralStats = async (req: AuthRequest, res: Response) => {
         // อัปเดต stats
         await User.updateOne(
             { _id: targetUser._id },
-            { $set: { 'referralStats.totalInvited': l1Count } }
+            {
+                $set: {
+                    'referralStats.totalInvited': l1Count
+                }
+            }
         );
 
-        console.log(`[SYNC] ${targetUser.username}: L1=${l1Count}, L2=${l2Count}, L3=${l3Count}`);
-
         res.json({
+            success: true,
             username: targetUser.username,
-            referralCode: targetUser.referralCode,
             oldStats,
-            newStats: {
-                totalInvited: l1Count
-            },
+            newStats: { totalInvited: l1Count },
             actualCounts: { l1: l1Count, l2: l2Count, l3: l3Count, total: l1Count + l2Count + l3Count }
         });
     } catch (error) {
@@ -1418,17 +1413,22 @@ export const syncReferralStats = async (req: AuthRequest, res: Response) => {
 
 /**
  * GET USER BY REFERRAL CODE (for admin lookup)
+ * รองรับทั้งการค้นหาด้วย referralCode และ username
  */
 export const getUserByReferralCode = async (req: AuthRequest, res: Response) => {
     try {
         const { code } = req.params;
+        const normalizedCode = code.trim().toUpperCase();
 
         const user = await User.findOne({
-            referralCode: { $regex: new RegExp(`^${code}$`, 'i') }
+            $or: [
+                { referralCode: { $regex: new RegExp(`^${normalizedCode}$`, 'i') } },
+                { username: { $regex: new RegExp(`^${normalizedCode}$`, 'i') } }
+            ]
         }).select('_id username referralCode referralStats createdAt');
 
         if (!user) {
-            return res.status(404).json({ message: `No user found with referral code: ${code}` });
+            return res.status(404).json({ message: `No user found with code/username: ${code}` });
         }
 
         // นับจำนวนลูกทีมจริง
