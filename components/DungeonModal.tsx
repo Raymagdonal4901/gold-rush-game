@@ -475,8 +475,7 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                                 className="w-full py-3 bg-stone-800 hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold border border-stone-600"
                                             >
                                                 {!selectedRigId ? t('dungeon.select_rig_first') :
-                                                    user.balance < dungeon.cost ? t('common.insufficient_balance') :
-                                                        `${t('dungeon.start_exploration')} (${t('dungeon.pay_limit').replace('{amount}', formatCurrency(dungeon.cost))})`}
+                                                    `${t('dungeon.start_exploration')} (${t('dungeon.pay_limit').replace('{amount}', formatCurrency(dungeon.cost))})`}
                                             </button>
                                         );
                                     }
