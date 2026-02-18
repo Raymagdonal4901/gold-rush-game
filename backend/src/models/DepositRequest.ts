@@ -6,6 +6,8 @@ export interface IDepositRequest extends Document {
     amount: number;
     slipImage: string; // Base64
     status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    method?: 'BANK' | 'USDT';
+    fromWallet?: string;
     createdAt: Date;
     processedAt?: Date;
 }
@@ -16,6 +18,8 @@ const DepositRequestSchema: Schema = new Schema({
     amount: { type: Number, required: true },
     slipImage: { type: String, required: true }, // Store as base64 string for simplicity in MVP
     status: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'PENDING' },
+    method: { type: String, enum: ['BANK', 'USDT'], default: 'BANK' },
+    fromWallet: { type: String },
     processedAt: { type: Date }
 }, {
     timestamps: true

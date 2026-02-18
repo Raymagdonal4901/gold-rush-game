@@ -201,6 +201,8 @@ export interface DepositRequest {
   timestamp: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   transactionId?: string;
+  method?: 'BANK' | 'USDT';
+  fromWallet?: string;
 }
 
 export interface Withdrawal {

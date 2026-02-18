@@ -411,7 +411,7 @@ export const getSystemConfig = async (req: AuthRequest, res: Response) => {
 // Update System Config
 export const updateSystemConfig = async (req: AuthRequest, res: Response) => {
     try {
-        const { receivingQrCode, isMaintenanceMode } = req.body;
+        const { receivingQrCode, usdtWalletAddress, isMaintenanceMode } = req.body;
 
         // Upsert logic
         let config = await SystemConfig.findOne();
@@ -420,6 +420,7 @@ export const updateSystemConfig = async (req: AuthRequest, res: Response) => {
         }
 
         if (receivingQrCode !== undefined) config.receivingQrCode = receivingQrCode;
+        if (usdtWalletAddress !== undefined) config.usdtWalletAddress = usdtWalletAddress;
         if (isMaintenanceMode !== undefined) config.isMaintenanceMode = isMaintenanceMode;
         if (req.body.dropRate !== undefined) config.dropRate = req.body.dropRate;
 
@@ -1458,5 +1459,25 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
     } catch (error) {
         console.error('[LOOKUP ERROR]', error);
         res.status(500).json({ message: 'Lookup failed', error });
+    }
+};
+export const lookupUSDTDeposit = async (req: AuthRequest, res: Response) => {
+    try {
+        const { walletAddress } = req.query;
+
+        if (!walletAddress) {
+            return res.status(400).json({ message: 'Wallet address is required' });
+        }
+
+        const deposits = await DepositRequest.find({
+            $or: [
+                { fromWallet: { $regex: new RegExp(`^${walletAddress}$`, 'i') } },
+                { slipImage: 'CRYPTO_USDT_BSC' } // Fallback for auto-detected ones
+            ]
+        }).sort({ createdAt: -1 });
+
+        res.json(deposits);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
     }
 };

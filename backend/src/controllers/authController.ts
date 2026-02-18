@@ -13,7 +13,8 @@ export const getPublicConfig = async (req: Request, res: Response) => {
         const config = await SystemConfig.findOne();
         res.json({
             isMaintenanceMode: config ? config.isMaintenanceMode : false,
-            receivingQrCode: config ? config.receivingQrCode : null
+            receivingQrCode: config ? config.receivingQrCode : null,
+            usdtWalletAddress: config ? config.usdtWalletAddress : null
         });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error });

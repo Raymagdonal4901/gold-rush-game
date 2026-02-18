@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, QrCode, ArrowRight, CheckCircle, Upload, AlertCircle, ScanLine, Clock, FileText } from 'lucide-react';
+import { X, QrCode, ArrowRight, CheckCircle, Upload, AlertCircle, ScanLine, Clock, FileText, Copy } from 'lucide-react';
 import { CURRENCY, TRANSACTION_LIMITS, EXCHANGE_RATE_USD_THB, EXCHANGE_RATE_USDT_THB } from '../constants';
 import { api } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -19,6 +19,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
     const [depositCurrency, setDepositCurrency] = useState<'USD' | 'THB'>('THB');
     const [step, setStep] = useState<'INPUT' | 'PAYMENT' | 'SUCCESS'>('INPUT');
     const [systemQr, setSystemQr] = useState<string | null>(null);
+    const [systemUsdtWallet, setSystemUsdtWallet] = useState<string | null>(null);
     const [slipFile, setSlipFile] = useState<File | null>(null);
     const [slipPreview, setSlipPreview] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -35,11 +36,30 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
             setSlipPreview(null);
             api.getSystemConfig().then(config => {
                 setSystemQr(config.receivingQrCode || null);
+                setSystemUsdtWallet(config.usdtWalletAddress || '0xc523c42cb3dce0df59b998d8ae899fa4132b6de7');
             }).catch(err => {
-                console.error("Failed to load system QR", err);
+                console.error("Failed to load system config", err);
             });
         }
     }, [isOpen]);
+
+    const copyUsdtWallet = () => {
+        if (systemUsdtWallet) {
+            navigator.clipboard.writeText(systemUsdtWallet);
+            if (addNotification) {
+                addNotification({
+                    id: Date.now().toString(),
+                    userId: user.id,
+                    message: language === 'th' ? 'คัดลอกเลขกระเป๋าแล้ว!' : 'Wallet address copied!',
+                    type: 'SUCCESS',
+                    read: false,
+                    timestamp: Date.now()
+                });
+            } else {
+                alert(language === 'th' ? 'คัดลอกเลขกระเป๋าแล้ว!' : 'Wallet address copied!');
+            }
+        }
+    };
 
     const handleNextStep = () => {
         const val = parseFloat(amount);
@@ -72,7 +92,6 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
         // Normalize all deposits to THB for backend (consistent with balance storage)
         let finalAmount = parseFloat(amount);
         if (depositCurrency === 'USD') {
-            const { EXCHANGE_RATE_USDT_THB } = require('../constants');
             finalAmount = finalAmount * EXCHANGE_RATE_USDT_THB;
         }
 
@@ -81,7 +100,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
 
         api.createDepositRequest(
             finalAmount,
-            slipData
+            slipData,
+            isUSDT ? 'USDT' : 'BANK',
+            isUSDT ? walletAddress : undefined
         ).then(() => {
             setStep('SUCCESS');
         }).catch(err => {
@@ -182,7 +203,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
                                 {depositCurrency === 'USD' && amount && !isNaN(parseFloat(amount)) && (
                                     <div className="flex items-center justify-center gap-2 text-stone-500 text-xs font-mono">
                                         <span>≈</span>
-                                        <span className="text-emerald-500 font-bold">{(parseFloat(amount) * EXCHANGE_RATE_USDT_THB).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} $</span>
+                                        <span className="text-emerald-500 font-bold">{(parseFloat(amount) * EXCHANGE_RATE_USDT_THB).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ฿</span>
                                     </div>
                                 )}
 
@@ -235,11 +256,18 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
                                 {method === 'USDT' && (
                                     <div className="space-y-4 text-center">
                                         <div className="bg-emerald-900/10 border border-emerald-500/30 p-4 rounded-xl">
-                                            <p className="text-xs text-stone-400 mb-2">{t('deposit.wallet_label')}</p>
-                                            <div className="bg-black/40 p-3 rounded border border-stone-800 break-all font-mono text-[10px] text-emerald-400 select-all">
-                                                0xc523c42cb3dce0df59b998d8ae899fa4132b6de7
+                                            <p className="text-xs text-stone-400 mb-2">USDT Wallet Address (BEP-20)</p>
+                                            <div className="flex gap-2 items-center bg-black/40 p-3 rounded border border-stone-800 break-all font-mono text-[10px] text-emerald-400">
+                                                <span className="flex-1 select-all">{systemUsdtWallet}</span>
+                                                <button
+                                                    onClick={copyUsdtWallet}
+                                                    className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded border border-emerald-500/30 transition-colors"
+                                                    title="Copy Address"
+                                                >
+                                                    <Copy size={14} />
+                                                </button>
                                             </div>
-                                            <p className="text-[9px] text-stone-500 mt-2 italic">* {t('deposit.wallet_hint')}</p>
+                                            <p className="text-[9px] text-stone-500 mt-2 italic">* {t('deposit.wallet_hint') || 'Transfer USDT (BEP-20) to this wallet and upload slip'}</p>
                                         </div>
 
                                         <div className="space-y-2 text-left">
@@ -349,7 +377,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ isOpen, onClose, use
                                         </div>
 
                                         <button
-                                            onClick={() => handleConfirmPayment(false)}
+                                            onClick={() => handleConfirmPayment(method === 'USDT')}
                                             disabled={!slipFile || isLoading}
                                             className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-800 disabled:text-stone-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
                                         >

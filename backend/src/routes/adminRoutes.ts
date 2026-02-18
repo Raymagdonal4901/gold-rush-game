@@ -5,10 +5,12 @@ import {
     getPendingClaims, getPendingWithdrawals, getPendingDeposits, processDepositRequest, getUserStats,
     adminGiveCompensation, adminGiveCompensationAll, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats, adminConvertCurrencyToUSD, resetAllPlayerData, deleteRig, adminAdjustRevenue, adminAddRig,
     resetUser, removeVip, getDashboardStats, processWithdrawal, processLegacyWithdrawalRequest, getRevenueStats, deleteAllUsers, toggleBan,
-    repairReferralLinks, syncReferralStats, getUserByReferralCode
+    repairReferralLinks, syncReferralStats, getUserByReferralCode,
+    lookupUSDTDeposit
 } from '../controllers/adminController';
 
 const router = express.Router();
+router.get('/referrals/usdt-lookup', lookupUSDTDeposit);
 
 // All routes require Authentification AND Admin Role
 router.use(authenticate, authorizeAdmin);

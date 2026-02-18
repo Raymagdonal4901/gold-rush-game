@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Copy, Share2, Users, Gift, Crown, Key } from 'lucide-react';
+import { X, Copy, Share2, Users, Gift, Crown, Key, TrendingUp } from 'lucide-react';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface ReferralModalProps {
@@ -66,43 +66,54 @@ export const ReferralModal: React.FC<ReferralModalProps> = ({ isOpen, onClose, r
                         </div>
                     </div>
 
-                    {/* Rewards Info */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Referrer Reward */}
-                        <div className="bg-stone-900/50 p-4 rounded-lg border border-stone-800 hover:border-yellow-900/50 transition-colors">
-                            <div className="flex items-center gap-2 mb-2 text-yellow-500 font-bold text-sm uppercase">
-                                <Crown size={16} />
-                                {language === 'th' ? 'คุณจะได้รับ' : 'You Get'}
-                            </div>
-                            <div className="flex items-center gap-3 bg-stone-950 p-3 rounded border border-stone-800">
-                                <div className="w-10 h-10 bg-yellow-900/20 rounded flex items-center justify-center border border-yellow-500/30">
-                                    <div className="p-1.5 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-sm shadow-[0_0_10px_rgba(234,179,8,0.5)]">
-                                        <Key className="text-stone-900" size={20} />
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-white font-bold text-sm">1 Mine Key</div>
-                                    <div className="text-xs text-stone-500">{language === 'th' ? 'เมื่อเพื่อนเติมเงินครั้งแรก' : 'When friend deposits'}</div>
-                                </div>
-                            </div>
+                    {/* Your Benefits Section */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] pl-1">
+                            <Crown size={14} className="drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]" />
+                            {t('referral.benefits') || 'YOUR BENEFITS'}
                         </div>
 
-                        {/* Referee Reward */}
-                        <div className="bg-stone-900/50 p-4 rounded-lg border border-stone-800 hover:border-emerald-900/50 transition-colors">
-                            <div className="flex items-center gap-2 mb-2 text-emerald-500 font-bold text-sm uppercase">
-                                <Gift size={16} />
-                                {language === 'th' ? 'เพื่อนได้รับ' : 'Friend Gets'}
-                            </div>
-                            <div className="flex items-center gap-3 bg-stone-950 p-3 rounded border border-stone-800">
-                                <div className="w-10 h-10 bg-emerald-900/20 rounded flex items-center justify-center border border-emerald-500/30">
-                                    <img src="/assets/items/hat.png" alt="Hat" className="w-6 h-6 object-contain" />
+                        <div className="grid grid-cols-1 gap-3">
+                            {/* Card 1: Purchase Bonus */}
+                            <div className="bg-stone-900/80 p-4 rounded-2xl border border-yellow-600/20 shadow-lg relative overflow-hidden group hover:border-yellow-600/40 transition-all">
+                                <div className="absolute top-0 right-0 p-2 opacity-5 scale-150 rotate-12">
+                                    <Gift size={40} className="text-yellow-500" />
                                 </div>
-                                <div>
-                                    <div className="text-white font-bold text-sm">
-                                        {language === 'th' ? 'หมวกนิรภัยมาตรฐาน' : 'Standard Helmet'}
+                                <div className="flex items-center gap-4 relative z-10">
+                                    <div className="w-14 h-14 bg-yellow-500/10 rounded-xl flex items-center justify-center border border-yellow-500/30">
+                                        <div className="p-2 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded shadow-[0_0_15px_rgba(234,179,8,0.4)]">
+                                            <span className="text-stone-950 font-black text-xl">5%</span>
+                                        </div>
                                     </div>
-                                    <div className="text-xs text-stone-500">
-                                        {language === 'th' ? 'กดยืนยันรับจากกล่องจดหมาย' : 'Claim in your mailbox'}
+                                    <div>
+                                        <h4 className="text-white font-black text-sm uppercase tracking-tight">
+                                            {t('referral.purchase_bonus') || 'Purchase Referral Bonus'}
+                                        </h4>
+                                        <p className="text-stone-500 text-[10px] font-bold">
+                                            {t('referral.purchase_bonus_desc') || 'Receive immediately when friend buys a rig'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Mining Bonus */}
+                            <div className="bg-stone-900/80 p-4 rounded-2xl border border-emerald-600/20 shadow-lg relative overflow-hidden group hover:border-emerald-600/40 transition-all">
+                                <div className="absolute top-0 right-0 p-2 opacity-5 scale-150 -rotate-12">
+                                    <TrendingUp size={40} className="text-emerald-500" />
+                                </div>
+                                <div className="flex items-center gap-4 relative z-10">
+                                    <div className="w-14 h-14 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/30">
+                                        <div className="p-2 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                                            <span className="text-stone-950 font-black text-xl">1%</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-white font-black text-sm uppercase tracking-tight">
+                                            {t('referral.mining_bonus') || 'Mining Income'}
+                                        </h4>
+                                        <p className="text-stone-500 text-[10px] font-bold">
+                                            {t('referral.mining_bonus_desc') || 'Passive income from every claim of friend'}
+                                        </p>
                                     </div>
                                 </div>
                             </div>

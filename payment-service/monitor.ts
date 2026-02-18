@@ -34,6 +34,8 @@ const DepositRequestSchema = new mongoose.Schema({
     amount: Number,
     slipImage: String,
     status: String,
+    method: String,
+    fromWallet: String,
     processedAt: Date
 }, { timestamps: true });
 const DepositRequest = mongoose.models.DepositRequest || mongoose.model('DepositRequest', DepositRequestSchema);
@@ -75,6 +77,8 @@ async function startMonitor() {
                         username: user.username,
                         amount: amount,
                         slipImage: 'CRYPTO_USDT_BSC',
+                        method: 'USDT',
+                        fromWallet: from.toLowerCase(),
                         status: 'APPROVED',
                         processedAt: new Date()
                     });

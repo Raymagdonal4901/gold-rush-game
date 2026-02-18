@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { ArrowRight, Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, ShieldAlert, Info, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check, TrendingUp, CreditCard, Clock, Zap, Briefcase, Star, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu } from 'lucide-react';
+import { ArrowRight, Users, LayoutDashboard, Hammer, Coins, LogOut, Search, ShieldCheck, ShieldAlert, Info, Bell, CheckCircle, XCircle, FileText, ChevronRight, X, ArrowUpRight, ArrowDownLeft, AlertTriangle, QrCode, Upload, Save, CheckCircle2, AlertCircle as AlertCircleIcon, Download, Wallet, Trash2, Check, TrendingUp, CreditCard, Clock, Zap, Briefcase, Star, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, Truck, Cpu, Copy } from 'lucide-react';
 import { MockDB } from '../services/db';
 import { api } from '../services/api';
 import { User, OilRig, ClaimRequest, WithdrawalRequest, Withdrawal, DepositRequest, Notification } from '../services/types';
@@ -54,6 +54,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     // System Config State
     const [systemQr, setSystemQr] = useState<string | null>(null);
     const [isMaintenance, setIsMaintenance] = useState(false); // New
+    const [systemUsdtWallet, setSystemUsdtWallet] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Game Config State
@@ -116,6 +117,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     } | null>(null);
     const [isAddingRig, setIsAddingRig] = useState(false);
     const [addingRigPresetId, setAddingRigPresetId] = useState<number>(1);
+
+    // USDT Search State
+    const [usdtSearchWallet, setUsdtSearchWallet] = useState('');
+    const [usdtSearchResults, setUsdtSearchResults] = useState<DepositRequest[]>([]);
+    const [isSearchingUsdt, setIsSearchingUsdt] = useState(false);
 
     // Initial Load
     useEffect(() => {
@@ -192,6 +198,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
 
             if (config) {
                 setSystemQr(config.receivingQrCode || null);
+                setSystemUsdtWallet(config.usdtWalletAddress || '');
                 setIsMaintenance(config.isMaintenanceMode || false);
             }
 
@@ -200,6 +207,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             setFetchError(error.message || t('admin.fetch_error'));
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleUsdtLookup = async () => {
+        if (!usdtSearchWallet) return;
+        try {
+            setIsSearchingUsdt(true);
+            const results = await api.admin.lookupUSDTDeposit(usdtSearchWallet);
+            setUsdtSearchResults(results);
+            if (results.length === 0) {
+                alert(t('admin.no_data') || 'No USDT deposits found for this wallet.');
+            }
+        } catch (error) {
+            console.error("USDT lookup failed", error);
+            alert(t('admin.process_error') || 'Failed to search for USDT deposits.');
+        } finally {
+            setIsSearchingUsdt(false);
         }
     };
 
@@ -231,6 +255,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         } catch (error) {
             console.error("Failed to update maintenance mode", error);
             alert(t('admin.status_update_error'));
+        }
+    };
+
+    const handleUpdateUsdtWallet = async () => {
+        try {
+            await api.admin.updateSystemConfig({ usdtWalletAddress: systemUsdtWallet });
+            alert(t('admin.config_saved') || 'USDT Wallet Address updated successfully.');
+        } catch (error) {
+            console.error("Failed to update USDT wallet", error);
+            alert(t('admin.process_error'));
         }
     };
 
@@ -1350,6 +1384,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                         <span className="text-xs bg-emerald-900/40 text-emerald-300 px-1.5 rounded">{t('admin.deposit_label')}</span>
                                                     </div>
                                                     <div className="text-xs text-stone-500 font-mono mt-0.5">{new Date(d.timestamp).toLocaleString()}</div>
+                                                    {d.fromWallet && (
+                                                        <div className="flex items-center gap-1.5 mt-1">
+                                                            <div className="bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-900/30 flex items-center gap-1.5">
+                                                                <span className="text-[10px] font-mono text-blue-400 select-all">{d.fromWallet}</span>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        navigator.clipboard.writeText(d.fromWallet!);
+                                                                        alert(t('admin.copy_address_success') || 'Wallet address copied');
+                                                                    }}
+                                                                    className="p-1 hover:bg-blue-500/20 text-blue-400 rounded transition-colors"
+                                                                    title="Copy Wallet Address"
+                                                                >
+                                                                    <Copy size={10} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 {/* Slip Preview */}
                                                 <div
@@ -1469,6 +1521,105 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                 </div>
                             </div>
                         )}
+
+                        {/* === USDT DEPOSIT VERIFICATION TOOL === */}
+                        <div className="bg-stone-900 border border-blue-900/30 shadow-xl rounded-lg overflow-hidden">
+                            <div className="p-4 bg-blue-950/20 border-b border-blue-900/30 flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-blue-400 font-bold uppercase tracking-wider text-sm">
+                                    <Search size={16} /> {t('admin.verify_usdt_deposit') || 'VERIFY USDT DEPOSIT (ตรวจสอบ USDT)'}
+                                </div>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div className="flex flex-col md:flex-row gap-3">
+                                    <div className="relative flex-1">
+                                        <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder={t('admin.enter_wallet_address') || 'Enter Wallet Address...'}
+                                            value={usdtSearchWallet}
+                                            onChange={e => setUsdtSearchWallet(e.target.value)}
+                                            className="w-full bg-stone-950 border border-stone-800 rounded-lg pl-10 pr-4 py-3 text-white focus:border-blue-600 outline-none transition-all font-mono"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleUsdtLookup}
+                                        disabled={!usdtSearchWallet || isSearchingUsdt}
+                                        className="bg-blue-600 hover:bg-blue-500 disabled:bg-stone-800 disabled:text-stone-600 px-8 py-3 rounded-lg font-bold text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20"
+                                    >
+                                        {isSearchingUsdt ? (
+                                            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                        ) : (
+                                            <Search size={18} />
+                                        )}
+                                        {t('common.search') || 'SEARCH'}
+                                    </button>
+                                </div>
+
+                                {usdtSearchResults.length > 0 && (
+                                    <div className="mt-4 border border-stone-800 rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-stone-950 text-stone-500 text-xs uppercase">
+                                                <tr>
+                                                    <th className="p-3 font-bold">{t('history.date')}</th>
+                                                    <th className="p-3 font-bold">{t('admin.username')}</th>
+                                                    <th className="p-3 font-bold text-right">{t('admin.amount_label')}</th>
+                                                    <th className="p-3 font-bold text-center">{t('admin.status')}</th>
+                                                    <th className="p-3 font-bold text-right">{t('admin.management')}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-stone-800">
+                                                {usdtSearchResults.map(res => (
+                                                    <tr key={res.id} className="bg-stone-900/50 hover:bg-stone-900 transition-colors">
+                                                        <td className="p-3 text-stone-400 font-mono text-xs">
+                                                            {new Date(res.timestamp).toLocaleString()}
+                                                        </td>
+                                                        <td className="p-3">
+                                                            <div className="text-white font-bold">{res.username}</div>
+                                                            {res.fromWallet && (
+                                                                <div className="text-[10px] text-blue-400 font-mono flex items-center gap-1 mt-0.5">
+                                                                    <span>{res.fromWallet.slice(0, 6)}...{res.fromWallet.slice(-4)}</span>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            navigator.clipboard.writeText(res.fromWallet!);
+                                                                            alert(t('admin.copy_address_success') || 'Wallet address copied');
+                                                                        }}
+                                                                        className="hover:text-blue-300 transition-colors"
+                                                                    >
+                                                                        <Copy size={10} />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3 text-right text-emerald-400 font-mono font-bold">
+                                                            +{res.amount.toLocaleString()} USDT
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${res.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-500' :
+                                                                res.status === 'REJECTED' ? 'bg-red-900/30 text-red-500' :
+                                                                    'bg-yellow-900/30 text-yellow-500'
+                                                                }`}>
+                                                                {res.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-3 text-right">
+                                                            {res.status === 'PENDING' && (
+                                                                <button
+                                                                    onClick={() => handleDirectProcessDeposit(res.id, 'APPROVED')}
+                                                                    className="bg-emerald-600 hover:bg-emerald-500 text-white p-1.5 rounded transition-colors"
+                                                                    title="Approve"
+                                                                >
+                                                                    <Check size={14} />
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
                         {/* System Settings: QR Code */}
                         <div className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg p-6 flex flex-col md:flex-row items-start md:items-center gap-6">
@@ -2051,6 +2202,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                         onChange={(e) => handleConfigChange('repairCost', Number(e.target.value))}
                                         className="w-full accent-yellow-500 h-2 bg-stone-800 rounded-lg appearance-none cursor-pointer"
                                     />
+                                </div>
+
+                                <div className="bg-stone-950 p-4 rounded border border-stone-800">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <span className="text-stone-400 font-bold text-sm">USDT (BEP-20) Wallet</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={systemUsdtWallet}
+                                            onChange={(e) => setSystemUsdtWallet(e.target.value)}
+                                            placeholder="0x..."
+                                            className="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 font-mono text-blue-400 focus:border-blue-500 outline-none text-xs"
+                                        />
+                                        <button
+                                            onClick={handleUpdateUsdtWallet}
+                                            className="bg-stone-800 hover:bg-stone-700 text-stone-300 px-3 py-1 rounded border border-stone-700 text-xs font-bold transition-colors"
+                                        >
+                                            Save
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div className="mt-4 flex justify-end">

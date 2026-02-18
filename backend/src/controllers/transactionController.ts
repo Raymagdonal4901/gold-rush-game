@@ -185,7 +185,7 @@ export const getMyDeposits = async (req: AuthRequest, res: Response) => {
 };
 export const createDepositRequest = async (req: AuthRequest, res: Response) => {
     try {
-        const { amount, slipImage } = req.body;
+        const { amount, slipImage, method, fromWallet } = req.body;
         const userId = req.userId;
 
         if (!amount || !slipImage) {
@@ -208,6 +208,8 @@ export const createDepositRequest = async (req: AuthRequest, res: Response) => {
             username: user.username,
             amount,
             slipImage,
+            method: method || 'BANK',
+            fromWallet,
             status: 'PENDING'
         });
 

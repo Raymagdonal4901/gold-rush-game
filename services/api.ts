@@ -135,7 +135,7 @@ export const api = {
     },
 
     // System
-    getSystemConfig: async (): Promise<{ isMaintenanceMode: boolean, receivingQrCode: string | null }> => {
+    getSystemConfig: async (): Promise<{ isMaintenanceMode: boolean, receivingQrCode: string | null, usdtWalletAddress: string | null }> => {
         const res = await client.get('/auth/config');
         return res.data;
     },
@@ -161,8 +161,8 @@ export const api = {
     },
 
     // Transactions
-    createDepositRequest: async (amount: number, slipImage: string): Promise<any> => {
-        const res = await client.post('/transactions/deposit', { amount, slipImage });
+    createDepositRequest: async (amount: number, slipImage: string, method?: 'BANK' | 'USDT', fromWallet?: string): Promise<any> => {
+        const res = await client.post('/transactions/deposit', { amount, slipImage, method, fromWallet });
         return res.data;
     },
     createWithdrawalRequest: async (amount: number, pin: string, method?: 'BANK' | 'USDT', walletAddress?: string): Promise<any> => {
@@ -327,6 +327,11 @@ export const api = {
 
     // Admin API
     admin: {
+        // ... (other admin methods)
+        lookupUSDTDeposit: async (walletAddress: string): Promise<any> => {
+            const res = await client.get(`/admin/referrals/usdt-lookup?walletAddress=${walletAddress}`);
+            return res.data;
+        },
         getUsers: async (): Promise<User[]> => {
             const res = await client.get('/admin/users');
             // Ensure every user in the list has required fields
@@ -358,7 +363,7 @@ export const api = {
             const res = await client.get('/admin/config');
             return res.data;
         },
-        updateSystemConfig: async (data: { receivingQrCode?: string, isMaintenanceMode?: boolean }): Promise<any> => {
+        updateSystemConfig: async (data: { receivingQrCode?: string, usdtWalletAddress?: string, isMaintenanceMode?: boolean }): Promise<any> => {
             const res = await client.post('/admin/config', data);
             return res.data;
         },
@@ -598,7 +603,9 @@ const mapBackendDepositToFrontend = (d: any): DepositRequest => ({
     slipImage: d.slipImage,
     timestamp: new Date(d.createdAt || d.timestamp).getTime(),
     status: d.status,
-    transactionId: d.transactionId
+    transactionId: d.transactionId,
+    method: d.method,
+    fromWallet: d.fromWallet
 });
 
 const mapBackendWithdrawalToFrontend = (w: any): WithdrawalRequest => ({

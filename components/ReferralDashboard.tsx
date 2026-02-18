@@ -122,6 +122,60 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isOpen, on
                         </div>
                     </div>
 
+                    {/* Your Benefits Section - Premium Style */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-yellow-500 text-[10px] font-black uppercase tracking-[0.3em] pl-1">
+                            <Crown size={14} className="drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]" />
+                            {t('referral.benefits') || 'YOUR BENEFITS'}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* Card 1: Purchase Bonus */}
+                            <div className="bg-gradient-to-br from-stone-900 to-black p-5 rounded-3xl border border-yellow-600/20 shadow-xl relative overflow-hidden group hover:border-yellow-600/40 transition-all">
+                                <div className="absolute top-0 right-0 p-3 opacity-5 scale-150 rotate-12 group-hover:opacity-10 transition-opacity">
+                                    <Gift size={40} className="text-yellow-500" />
+                                </div>
+                                <div className="flex items-center gap-4 relative z-10">
+                                    <div className="w-16 h-16 bg-yellow-500/10 rounded-2xl flex items-center justify-center border border-yellow-500/20">
+                                        <div className="p-2.5 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.4)]">
+                                            <span className="text-stone-950 font-black text-2xl">5%</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-white font-black text-sm uppercase tracking-tight">
+                                            {t('referral.purchase_bonus') || 'Purchase Bonus'}
+                                        </h4>
+                                        <p className="text-stone-500 text-[10px] font-bold leading-relaxed mt-1">
+                                            {t('referral.purchase_bonus_desc') || 'Receive immediately when friend buys a rig'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Mining Bonus */}
+                            <div className="bg-gradient-to-br from-stone-900 to-black p-5 rounded-3xl border border-emerald-600/20 shadow-xl relative overflow-hidden group hover:border-emerald-600/40 transition-all">
+                                <div className="absolute top-0 right-0 p-3 opacity-5 scale-150 -rotate-12 group-hover:opacity-10 transition-opacity">
+                                    <TrendingUp size={40} className="text-emerald-500" />
+                                </div>
+                                <div className="flex items-center gap-4 relative z-10">
+                                    <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
+                                        <div className="p-2.5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                                            <span className="text-stone-950 font-black text-2xl">1%</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-white font-black text-sm uppercase tracking-tight">
+                                            {t('referral.mining_bonus') || 'Mining Income'}
+                                        </h4>
+                                        <p className="text-stone-500 text-[10px] font-bold leading-relaxed mt-1">
+                                            {t('referral.mining_bonus_desc') || 'Passive income from every claim of friend'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Stats Grid - Glassmorphism */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2 bg-gradient-to-r from-stone-900/40 to-black/40 backdrop-blur-md p-6 rounded-3xl border border-white/5 flex items-center justify-between group">
