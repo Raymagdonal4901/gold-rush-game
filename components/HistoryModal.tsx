@@ -32,7 +32,9 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
     "รางวัลจากดันเจี้ยน": "Dungeon Reward",
     "รับของขวัญ": "Claim Gift",
     "เก็บแร่": "Collect Material",
-    "ภาษีตลาด": "Market Tax"
+    "ภาษีตลาด": "Market Tax",
+    "เก็บผลผลิตจากเครื่องขุด": "Claim Income from Rig",
+    "เติมพลังงานเครื่องขุด": "Refill Rig Energy"
   };
 
   const getLocalizedDescription = (desc: string) => {
@@ -162,8 +164,9 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
   };
 
   const getAmountColor = (tx: Transaction) => {
+    const isExpense = ['WITHDRAWAL', 'BUY_RIG', 'ASSET_PURCHASE', 'ACCESSORY_PURCHASE', 'ACCESSORY_UPGRADE', 'ACCESSORY_CRAFT', 'RIG_RENEWAL', 'REPAIR', 'MATERIAL_BUY', 'ENERGY_REFILL', 'SLOT_EXPANSION', 'DUNGEON_ENTRY', 'MARKET_FEE', 'WITHDRAW_FEE', 'ITEM_BUY', 'GAME_LOSS', 'EXPENSE'].includes(tx.type);
+    if (isExpense || tx.amount < 0) return 'text-red-400';
     if (tx.amount > 0) return 'text-emerald-400';
-    if (tx.amount < 0) return 'text-red-400';
     return 'text-stone-400'; // For 0 amount (like crafting)
   };
 
@@ -226,8 +229,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, use
                     <div className={`font-mono font-bold ${getAmountColor(tx)}`}>
                       {tx.amount !== 0 ? (
                         <>
-                          {tx.amount > 0 ? '+' : ''}
-                          {formatCurrency((tx.amount) * ((tx as any).count || 1))}
+                          {(['WITHDRAWAL', 'BUY_RIG', 'ASSET_PURCHASE', 'ACCESSORY_PURCHASE', 'ACCESSORY_UPGRADE', 'ACCESSORY_CRAFT', 'RIG_RENEWAL', 'REPAIR', 'MATERIAL_BUY', 'ENERGY_REFILL', 'SLOT_EXPANSION', 'DUNGEON_ENTRY', 'MARKET_FEE', 'WITHDRAW_FEE', 'ITEM_BUY', 'GAME_LOSS', 'EXPENSE'].includes(tx.type) || tx.amount < 0) ? '-' : '+'}
+                          {formatCurrency(Math.abs(tx.amount) * ((tx as any).count || 1))}
                         </>
                       ) : (
                         <span className="text-stone-500 italic text-[10px]">{t('history.log_activity')}</span>

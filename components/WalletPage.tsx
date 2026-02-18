@@ -200,8 +200,7 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
                         <div className="text-center md:text-left">
                             <p className="text-stone-400 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mb-1 sm:mb-2">{t('wallet.available_balance')}</p>
                             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tighter flex flex-wrap items-baseline justify-center md:justify-start gap-1 sm:gap-2">
-                                {language === 'th' ? formatCurrency(user.balance) : formatCurrency(user.balance)}
-                                {language === 'th' && <span className="text-yellow-500 text-lg sm:text-xl uppercase">{t('common.thb')}</span>}
+                                {formatCurrency(user.balance)}
                             </h2>
                         </div>
                         {/* Withdraw Button Moved to Dashboard */}
@@ -244,23 +243,29 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
                                         </td>
                                     </tr>
                                 ) : (
-                                    transactions.map((tx) => (
-                                        <tr key={tx.id} className="hover:bg-white/5 transition-colors group border-b border-stone-800/20 last:border-0">
-                                            <td className="px-3 py-3 sm:px-6 sm:py-4 whitespace-nowrap">
-                                                <div className="text-[10px] sm:text-xs font-medium text-stone-400">{new Date(tx.timestamp).toLocaleDateString()}</div>
-                                                <div className="text-[8px] sm:text-[10px] text-stone-600">{new Date(tx.timestamp).toLocaleTimeString()}</div>
-                                            </td>
-                                            <td className="px-3 py-3 sm:px-6 sm:py-4">
-                                                <p className="text-[10px] sm:text-xs text-stone-300 max-w-[120px] sm:max-w-xs truncate">{getLocalizedDescription(tx.description)}</p>
-                                            </td>
-                                            <td className={`px-3 py-3 sm:px-6 sm:py-4 text-right font-bold text-xs sm:text-sm whitespace-nowrap ${tx.amount < 0 || tx.type === 'WITHDRAWAL' ? 'text-red-400' : 'text-green-400'}`}>
-                                                {(tx.type === 'WITHDRAWAL' || tx.amount < 0) ? '-' : '+'}{formatCurrency(Math.abs(tx.amount))}
-                                            </td>
-                                            <td className="px-3 py-3 sm:px-6 sm:py-4 text-center uppercase tracking-tighter sm:tracking-normal">
-                                                {getStatusBadge(tx.status)}
-                                            </td>
-                                        </tr>
-                                    ))
+                                    transactions.map((tx: any) => {
+                                        const isExpense = ['WITHDRAWAL', 'BUY_RIG', 'ASSET_PURCHASE', 'ACCESSORY_PURCHASE', 'ACCESSORY_UPGRADE', 'ACCESSORY_CRAFT', 'RIG_RENEWAL', 'REPAIR', 'MATERIAL_BUY', 'ENERGY_REFILL', 'SLOT_EXPANSION', 'DUNGEON_ENTRY', 'MARKET_FEE', 'WITHDRAW_FEE', 'ITEM_BUY', 'GAME_LOSS', 'EXPENSE'].includes(tx.type);
+                                        const amountColor = (isExpense || tx.amount < 0) ? 'text-red-400' : 'text-green-400';
+                                        const sign = (isExpense || tx.amount < 0) ? '-' : '+';
+
+                                        return (
+                                            <tr key={tx.id || tx._id} className="hover:bg-white/5 transition-colors group border-b border-stone-800/20 last:border-0">
+                                                <td className="px-3 py-3 sm:px-6 sm:py-4 whitespace-nowrap">
+                                                    <div className="text-[10px] sm:text-xs font-medium text-stone-400">{new Date(tx.timestamp).toLocaleDateString()}</div>
+                                                    <div className="text-[8px] sm:text-[10px] text-stone-600">{new Date(tx.timestamp).toLocaleTimeString()}</div>
+                                                </td>
+                                                <td className="px-3 py-3 sm:px-6 sm:py-4">
+                                                    <p className="text-[10px] sm:text-xs text-stone-300 max-w-[120px] sm:max-w-xs truncate">{getLocalizedDescription(tx.description)}</p>
+                                                </td>
+                                                <td className={`px-3 py-3 sm:px-6 sm:py-4 text-right font-bold text-xs sm:text-sm whitespace-nowrap ${amountColor}`}>
+                                                    {sign}{formatCurrency(Math.abs(tx.amount))}
+                                                </td>
+                                                <td className="px-3 py-3 sm:px-6 sm:py-4 text-center uppercase tracking-tighter sm:tracking-normal">
+                                                    {getStatusBadge(tx.status)}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>

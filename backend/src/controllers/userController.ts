@@ -215,7 +215,7 @@ export const getLeaderboard = async (req: Request, res: Response) => {
                     from: 'rigs',
                     let: { odId: { $toString: '$_id' } },
                     pipeline: [
-                        { $match: { $expr: { $eq: ['$ownerId', '$$odId'] }, isDead: { $ne: true } } },
+                        { $match: { $expr: { $eq: ['$ownerId', '$$odId'] }, isDead: { $ne: true }, tierId: { $ne: 9 } } },
                         { $sort: { tierId: -1 as const, investment: -1 as const } },
                     ],
                     as: 'rigs'

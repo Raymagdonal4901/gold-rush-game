@@ -4,6 +4,7 @@ import { X, Trophy, Medal, Crown, TrendingUp, Gift, Zap, Pickaxe } from 'lucide-
 import { MINING_VOLATILITY_CONFIG } from '../constants';
 import { api } from '../services/api';
 import { useTranslation } from '../contexts/LanguageContext';
+import { OilRigAnimation } from './OilRigAnimation';
 
 interface LeaderboardModalProps {
     isOpen: boolean;
@@ -186,6 +187,20 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ isOpen, onCl
                                                     player.username.charAt(0)
                                                 )}
                                             </div>
+
+                                            {/* Machine Preview (NEW) */}
+                                            {player.aceRig && (
+                                                <div className="w-14 h-10 shrink-0 overflow-hidden bg-stone-900/40 rounded-lg border border-stone-800/50 flex items-center justify-center scale-[0.7] -mx-2">
+                                                    <div className="w-[120px] h-[90px] scale-[0.5] shrink-0">
+                                                        <OilRigAnimation
+                                                            isActive={true}
+                                                            tier={player.aceRig.tierId}
+                                                            rigName={getRigName(player.aceRig)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <div className="min-w-0 flex-1">
                                                 <div className={`font-bold truncate ${player.rank === 1 ? 'text-yellow-200 text-base' : 'text-stone-200 text-sm'}`}>
                                                     {player.username}

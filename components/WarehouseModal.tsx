@@ -561,7 +561,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                 </div>
                                                 <div className="flex-1 min-w-0 text-center xs:text-left">
                                                     <h3 className={`font-bold text-sm leading-tight truncate ${getTierColor(tier)}`}>{name}</h3>
-                                                    {tier > 0 && tier < 8 && (
+                                                    {tier >= 0 && tier < 8 && (
                                                         <div className="mt-1 space-y-0.5">
                                                             <div className="flex items-center justify-center xs:justify-between text-[8px] text-stone-500 font-bold uppercase tracking-wider">
                                                                 <span className="hidden xs:inline">{t('warehouse.base_price')}</span>
@@ -581,8 +581,20 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                                     <>
                                                                         <div className="flex flex-col items-center xs:items-start">
                                                                             <div className="flex items-center gap-1">
-                                                                                <Tag size={8} className="text-stone-500" />
-                                                                                <span className="text-[9px] font-bold text-white">{formatCurrency(currentPrice)}</span>
+                                                                                {(() => {
+                                                                                    const base = MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES] || 0;
+                                                                                    if (currentPrice > base) return <TrendingUp size={8} className="text-emerald-500" />;
+                                                                                    if (currentPrice < base) return <TrendingDown size={8} className="text-red-500" />;
+                                                                                    return <Tag size={8} className="text-stone-500" />;
+                                                                                })()}
+                                                                                <span className={`text-[9px] font-bold ${(() => {
+                                                                                    const base = MATERIAL_CONFIG.PRICES[tier as keyof typeof MATERIAL_CONFIG.PRICES] || 0;
+                                                                                    if (currentPrice > base) return 'text-emerald-400';
+                                                                                    if (currentPrice < base) return 'text-red-400';
+                                                                                    return 'text-white';
+                                                                                })()}`}>
+                                                                                    {formatCurrency(currentPrice)}
+                                                                                </span>
                                                                             </div>
                                                                         </div>
                                                                         <div className="text-right hidden xs:block">
@@ -591,8 +603,8 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                                                 const diffFromBase = currentPrice - base;
                                                                                 const percent = (base > 0) ? (diffFromBase / base) * 100 : 0;
                                                                                 return (
-                                                                                    <div className={`text-[8px] font-bold ${percent >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                                                                        {percent >= 0 ? '+' : ''}{percent.toFixed(1)}%
+                                                                                    <div className={`text-[8px] font-bold ${percent > 0 ? 'text-emerald-500' : percent < 0 ? 'text-red-500' : 'text-stone-500'}`}>
+                                                                                        {percent > 0 ? '+' : ''}{percent.toFixed(1)}%
                                                                                     </div>
                                                                                 );
                                                                             })()}
