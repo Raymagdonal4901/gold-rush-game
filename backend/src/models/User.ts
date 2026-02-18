@@ -38,6 +38,7 @@ export interface IUser extends Document {
     // Referral System
     referralCode?: string; // Their own code (Short ID or Username)
     referrerId?: mongoose.Types.ObjectId; // The person who invited this user
+    usedReferralCode?: string; // The referral code they entered when registering (for repair)
     referralStats: {
         totalInvited: number;
         totalEarned: number;
@@ -97,6 +98,7 @@ const UserSchema = new Schema<IUser>({
     // Referral System
     referralCode: { type: String, unique: true, sparse: true },
     referrerId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+    usedReferralCode: { type: String, index: true, sparse: true }, // Store the code used at registration
     referralStats: {
         totalInvited: { type: Number, default: 0 },
         totalEarned: { type: Number, default: 0 },

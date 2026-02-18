@@ -1283,3 +1283,180 @@ export const adminAddRig = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
+
+/**
+ * REPAIR REFERRAL LINKS
+ * 
+ * สแกนผู้ใช้ทั้งหมดที่ไม่มี referrerId แต่มีการลงทะเบียนผ่าน referral link
+ * โดยการตรวจสอบ username ของผู้แนะนำที่อาจถูกเก็บไว้ใน field อื่น
+ * หรือสร้าง referrerId ใหม่จาก referralCode ที่ตรงกัน
+ * 
+ * วิธีการ: ดึงผู้ใช้ทุกคน แล้วหาว่าใครที่ referralCode ตรงกับ referrerId ที่ควรจะเป็น
+ */
+export const repairReferralLinks = async (req: AuthRequest, res: Response) => {
+    try {
+        console.log('[REPAIR] Starting referral link repair...');
+
+        // ดึงผู้ใช้ทั้งหมดที่ไม่มี referrerId
+        const usersWithoutReferrer = await User.find({ referrerId: { $exists: false } })
+            .select('_id username referralCode createdAt')
+            .lean();
+
+        // ดึงผู้ใช้ทั้งหมดที่มี referralCode (เพื่อใช้ lookup)
+        const allUsers = await User.find({ referralCode: { $exists: true, $ne: null } })
+            .select('_id username referralCode')
+            .lean();
+
+        // สร้าง map: referralCode -> userId
+        const codeToUser: Record<string, any> = {};
+        for (const u of allUsers) {
+            if (u.referralCode) {
+                codeToUser[u.referralCode.toUpperCase()] = u;
+            }
+        }
+
+        let fixed = 0;
+        const report: string[] = [];
+
+        // ตรวจสอบ Transaction records เพื่อหาว่าใครเคยจ่ายค่าคอมมิชชั่นให้ใคร
+        // วิธีนี้ช่วยหาความสัมพันธ์ที่หายไปได้
+        const referralTransactions = await Transaction.find({
+            type: { $in: ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD'] }
+        }).select('userId description').lean();
+
+        // สร้าง map: userId (referrer) -> set of referred userIds
+        // จาก transaction description ที่อาจมีข้อมูล
+
+        // วิธีที่ 2: ตรวจสอบจาก referralCode ใน URL ที่ถูกเก็บไว้
+        // ถ้า User model มี field เก็บ referralCode ที่ใช้ตอนสมัคร
+        const usersWithStoredRefCode = await User.find({
+            referrerId: { $exists: false },
+            usedReferralCode: { $exists: true, $ne: null }
+        }).select('_id username usedReferralCode').lean();
+
+        for (const user of usersWithStoredRefCode) {
+            const refCode = (user as any).usedReferralCode?.toUpperCase();
+            if (refCode && codeToUser[refCode]) {
+                const referrer = codeToUser[refCode];
+                if (referrer._id.toString() !== user._id.toString()) {
+                    await User.updateOne(
+                        { _id: user._id },
+                        { $set: { referrerId: referrer._id } }
+                    );
+                    await User.updateOne(
+                        { _id: referrer._id },
+                        { $inc: { 'referralStats.totalInvited': 1 } }
+                    );
+                    fixed++;
+                    report.push(`Fixed: ${user.username} -> referred by ${referrer.username}`);
+                    console.log(`[REPAIR] Fixed: ${user.username} -> ${referrer.username}`);
+                }
+            }
+        }
+
+        // สรุปผล
+        console.log(`[REPAIR] Complete. Fixed ${fixed} referral links.`);
+        res.json({
+            message: `Repair complete. Fixed ${fixed} referral links.`,
+            totalUsersWithoutReferrer: usersWithoutReferrer.length,
+            fixedCount: fixed,
+            report
+        });
+    } catch (error) {
+        console.error('[REPAIR ERROR]', error);
+        res.status(500).json({ message: 'Repair failed', error });
+    }
+};
+
+/**
+ * SYNC REFERRAL STATS FOR A SPECIFIC USER
+ * 
+ * นับจำนวนลูกทีมจริงจากฐานข้อมูล แล้วอัปเดต referralStats ให้ถูกต้อง
+ */
+export const syncReferralStats = async (req: AuthRequest, res: Response) => {
+    try {
+        const { userId } = req.params;
+
+        const targetUser = await User.findById(userId);
+        if (!targetUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // นับจำนวนลูกทีมจริง
+        const l1Count = await User.countDocuments({ referrerId: targetUser._id });
+        const l1Users = await User.find({ referrerId: targetUser._id }).select('_id');
+        const l1Ids = l1Users.map(u => u._id);
+        const l2Count = await User.countDocuments({ referrerId: { $in: l1Ids } });
+        const l2Users = await User.find({ referrerId: { $in: l1Ids } }).select('_id');
+        const l2Ids = l2Users.map(u => u._id);
+        const l3Count = await User.countDocuments({ referrerId: { $in: l2Ids } });
+
+        const oldStats = { ...targetUser.referralStats };
+
+        // อัปเดต stats
+        await User.updateOne(
+            { _id: targetUser._id },
+            { $set: { 'referralStats.totalInvited': l1Count } }
+        );
+
+        console.log(`[SYNC] ${targetUser.username}: L1=${l1Count}, L2=${l2Count}, L3=${l3Count}`);
+
+        res.json({
+            username: targetUser.username,
+            referralCode: targetUser.referralCode,
+            oldStats,
+            newStats: {
+                totalInvited: l1Count
+            },
+            actualCounts: { l1: l1Count, l2: l2Count, l3: l3Count, total: l1Count + l2Count + l3Count }
+        });
+    } catch (error) {
+        console.error('[SYNC ERROR]', error);
+        res.status(500).json({ message: 'Sync failed', error });
+    }
+};
+
+/**
+ * GET USER BY REFERRAL CODE (for admin lookup)
+ */
+export const getUserByReferralCode = async (req: AuthRequest, res: Response) => {
+    try {
+        const { code } = req.params;
+
+        const user = await User.findOne({
+            referralCode: { $regex: new RegExp(`^${code}$`, 'i') }
+        }).select('_id username referralCode referralStats createdAt');
+
+        if (!user) {
+            return res.status(404).json({ message: `No user found with referral code: ${code}` });
+        }
+
+        // นับจำนวนลูกทีมจริง
+        const l1Users = await User.find({ referrerId: user._id }).select('username createdAt');
+        const l1Ids = l1Users.map(u => u._id);
+        const l2Count = await User.countDocuments({ referrerId: { $in: l1Ids } });
+        const l2Users = await User.find({ referrerId: { $in: l1Ids } }).select('_id');
+        const l2Ids = l2Users.map(u => u._id);
+        const l3Count = await User.countDocuments({ referrerId: { $in: l2Ids } });
+
+        res.json({
+            user: {
+                id: user._id,
+                username: user.username,
+                referralCode: user.referralCode,
+                storedStats: user.referralStats,
+                createdAt: user.createdAt
+            },
+            actualCounts: {
+                l1: l1Users.length,
+                l2: l2Count,
+                l3: l3Count,
+                total: l1Users.length + l2Count + l3Count
+            },
+            l1Members: l1Users.map(u => ({ username: u.username, joinedAt: (u as any).createdAt }))
+        });
+    } catch (error) {
+        console.error('[LOOKUP ERROR]', error);
+        res.status(500).json({ message: 'Lookup failed', error });
+    }
+};

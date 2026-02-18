@@ -4,7 +4,8 @@ import {
     getAllUsers, getAllRigs, getSystemConfig, updateSystemConfig,
     getPendingClaims, getPendingWithdrawals, getPendingDeposits, processDepositRequest, getUserStats,
     adminGiveCompensation, adminGiveCompensationAll, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats, adminConvertCurrencyToUSD, resetAllPlayerData, deleteRig, adminAdjustRevenue, adminAddRig,
-    resetUser, removeVip, getDashboardStats, processWithdrawal, processLegacyWithdrawalRequest, getRevenueStats, deleteAllUsers, toggleBan
+    resetUser, removeVip, getDashboardStats, processWithdrawal, processLegacyWithdrawalRequest, getRevenueStats, deleteAllUsers, toggleBan,
+    repairReferralLinks, syncReferralStats, getUserByReferralCode
 } from '../controllers/adminController';
 
 const router = express.Router();
@@ -44,5 +45,9 @@ router.post('/users/:userId/remove-vip', removeVip);
 router.post('/users/:userId/toggle-ban', toggleBan);
 router.post('/users/:userId/rigs', adminAddRig);
 
+// Referral Repair & Audit Routes
+router.post('/referrals/repair', repairReferralLinks);
+router.post('/users/:userId/sync-referrals', syncReferralStats);
+router.get('/referrals/lookup/:code', getUserByReferralCode);
 
 export default router;

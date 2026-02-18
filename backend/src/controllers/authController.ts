@@ -116,6 +116,7 @@ export const register = async (req: Request, res: Response) => {
             isEmailVerified: false,
             referralCode: generatedRefCode,
             referrerId,
+            usedReferralCode: referralCode ? referralCode.trim() : undefined, // เก็บโค้ดที่ใช้ตอนสมัคร
             inventory: [] as any[],
             notifications,
             balance: 0,
