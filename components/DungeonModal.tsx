@@ -218,8 +218,22 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
     };
 
     const getRigLuckBonus = (rig: OilRig) => {
-        const tier = rig.investment >= 3000 ? 5 : rig.investment >= 2500 ? 4 : rig.investment >= 2000 ? 3 : rig.investment >= 1500 ? 2 : 1;
-        return (tier * 5); // 5% per tier
+        // Fallback for rigs without tierId based on investment
+        const tier = rig.tierId || (rig.investment >= 3000 ? 7 : rig.investment >= 2500 ? 6 : rig.investment >= 2000 ? 5 : rig.investment >= 1500 ? 4 : rig.investment >= 1000 ? 3 : rig.investment >= 500 ? 2 : 1);
+
+        const luckMap: Record<number, number> = {
+            9: 1,  // Rotten Glove
+            1: 3,  // Starter
+            2: 5,  // Common
+            3: 8,  // Uncommon
+            4: 12, // Rare
+            5: 16, // Epic
+            6: 22, // Legendary
+            7: 30, // Mythical
+            8: 50, // God Tier
+        };
+
+        return luckMap[tier] || 1;
     };
 
     return (
