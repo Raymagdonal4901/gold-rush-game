@@ -59,19 +59,26 @@ export const register = async (req: Request, res: Response) => {
         if (referralCode) {
             const trimmedRef = referralCode.trim();
             // Prevent self-referral
-            if (trimmedRef !== username) {
+            if (trimmedRef.toLowerCase() !== username.toLowerCase()) {
                 const referrer = await User.findOne({
-                    $or: [{ username: trimmedRef }, { referralCode: trimmedRef }]
+                    $or: [
+                        { username: { $regex: new RegExp(`^${trimmedRef}$`, 'i') } },
+                        { referralCode: { $regex: new RegExp(`^${trimmedRef}$`, 'i') } }
+                    ]
                 });
+
                 if (referrer) {
                     referrerId = referrer._id;
-                    // Increment Referrer's totalInvited stat
-                    if (!referrer.referralStats) {
-                        referrer.referralStats = { totalInvited: 0, totalEarned: 0 };
-                    }
-                    referrer.referralStats.totalInvited += 1;
-                    referrer.markModified('referralStats');
-                    await referrer.save();
+
+                    // Atomic Increment Referrer's totalInvited stat
+                    await User.updateOne(
+                        { _id: referrer._id },
+                        {
+                            $inc: { 'referralStats.totalInvited': 1 },
+                            // Ensure the object exists if it's missing (though default is handled by schema)
+                            $setOnInsert: { 'referralStats.totalEarned': 0 }
+                        }
+                    );
 
                     console.log(`[REFERRAL] New user ${username} referred by ${referrer.username}`);
                 }

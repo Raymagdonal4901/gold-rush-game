@@ -155,7 +155,7 @@ export const recalculateUserIncome = async (userId: string) => {
 
             const volConfig = MINING_VOLATILITY_CONFIG[rig.tierId || 1];
             const baseValue = volConfig?.baseValue || 0;
-            const bonusProfit = Number(rig.bonusProfit) || 0;
+            const bonusProfit = effectiveBonusProfit;
 
             // Equipment Bonus
             let equippedBonus = 0;
@@ -396,7 +396,7 @@ export const getReferrals = async (req: AuthRequest, res: Response) => {
         const formatName = (name: string) => name.length > 4 ? name.substring(0, 4) + '***' : name + '***';
 
         // Level 1: Direct Referrals
-        const l1Users = await User.find({ referrerId: userId }).select('username totalDailyIncome createdAt').lean();
+        const l1Users = await User.find({ referrerId: userId }).select('username totalDailyIncome createdAt referrerId').lean();
         const l1Ids = l1Users.map(u => u._id);
 
         // Level 2: Friends of L1

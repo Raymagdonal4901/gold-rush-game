@@ -424,15 +424,13 @@ export const buyRig = async (req: AuthRequest, res: Response) => {
                 if (referrer) {
                     const commission = Math.floor(investment * 0.05); // 5%
                     if (commission > 0) {
-                        referrer.balance += commission;
-                        // Update Referral Stats
-                        if (!referrer.referralStats) {
-                            referrer.referralStats = { totalInvited: 0, totalEarned: 0 };
-                        }
-                        referrer.referralStats.totalEarned += commission;
-                        referrer.markModified('referralStats');
-
-                        await referrer.save();
+                        // Atomic update to prevent race conditions
+                        await User.findByIdAndUpdate(user.referrerId, {
+                            $inc: {
+                                balance: commission,
+                                'referralStats.totalEarned': commission
+                            }
+                        });
 
                         // Log Transaction
                         const refTx = new Transaction({
@@ -570,15 +568,13 @@ export const claimRigProfit = async (req: AuthRequest, res: Response) => {
                     if (referrer) {
                         const commission = Math.floor(amount * 0.01); // 1%
                         if (commission > 0) {
-                            referrer.balance += commission;
-                            // Update Referral Stats
-                            if (!referrer.referralStats) {
-                                referrer.referralStats = { totalInvited: 0, totalEarned: 0 };
-                            }
-                            referrer.referralStats.totalEarned += commission;
-                            referrer.markModified('referralStats');
-
-                            await referrer.save();
+                            // Atomic update to prevent race conditions
+                            await User.findByIdAndUpdate(user.referrerId, {
+                                $inc: {
+                                    balance: commission,
+                                    'referralStats.totalEarned': commission
+                                }
+                            });
 
                             const refTx = new Transaction({
                                 userId: referrer._id,
