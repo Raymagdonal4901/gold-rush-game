@@ -1503,8 +1503,11 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
         const commissionStats = await Transaction.aggregate([
             {
                 $match: {
-                    userId: user._id.toString(),
-                    type: { $in: ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD', 'REFERRAL_BONUS'] },
+                    $or: [
+                        { userId: user._id.toString() },
+                        { userId: user._id }
+                    ],
+                    type: { $in: ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD', 'REFERRAL_BONUS', 'REFERRAL_BONUS_COMMISSION_BUY', 'REFERRAL_BONUS_COMMISSION_YIELD'] },
                     status: 'COMPLETED'
                 }
             },
@@ -1513,17 +1516,17 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
                     _id: null,
                     l1: {
                         $sum: {
-                            $cond: [{ $regexMatch: { input: "$description", regex: /L1/i } }, "$amount", 0]
+                            $cond: [{ $regexMatch: { input: "$description", regex: "L1", options: "i" } }, "$amount", 0]
                         }
                     },
                     l2: {
                         $sum: {
-                            $cond: [{ $regexMatch: { input: "$description", regex: /L2/i } }, "$amount", 0]
+                            $cond: [{ $regexMatch: { input: "$description", regex: "L2", options: "i" } }, "$amount", 0]
                         }
                     },
                     l3: {
                         $sum: {
-                            $cond: [{ $regexMatch: { input: "$description", regex: /L3/i } }, "$amount", 0]
+                            $cond: [{ $regexMatch: { input: "$description", regex: "L3", options: "i" } }, "$amount", 0]
                         }
                     },
                     total: { $sum: "$amount" }
