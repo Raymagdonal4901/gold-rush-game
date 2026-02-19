@@ -1499,6 +1499,40 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
             .select('username createdAt referralStats referrerId')
             .sort({ createdAt: -1 });
 
+        // Calculate Earnings per Level
+        const commissionStats = await Transaction.aggregate([
+            {
+                $match: {
+                    userId: user._id.toString(),
+                    type: { $in: ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD', 'REFERRAL_BONUS'] },
+                    status: 'COMPLETED'
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    l1: {
+                        $sum: {
+                            $cond: [{ $regexMatch: { input: "$description", regex: /L1/i } }, "$amount", 0]
+                        }
+                    },
+                    l2: {
+                        $sum: {
+                            $cond: [{ $regexMatch: { input: "$description", regex: /L2/i } }, "$amount", 0]
+                        }
+                    },
+                    l3: {
+                        $sum: {
+                            $cond: [{ $regexMatch: { input: "$description", regex: /L3/i } }, "$amount", 0]
+                        }
+                    },
+                    total: { $sum: "$amount" }
+                }
+            }
+        ]);
+
+        const earnings = commissionStats.length > 0 ? commissionStats[0] : { l1: 0, l2: 0, l3: 0, total: 0 };
+
         res.json({
             user: {
                 id: user._id,
@@ -1534,6 +1568,12 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
                 l2: l2Users.length,
                 l3: l3Users.length,
                 total: l1Users.length + l2Users.length + l3Users.length
+            },
+            earnings: {
+                l1: earnings.l1,
+                l2: earnings.l2,
+                l3: earnings.l3,
+                total: earnings.total
             }
         });
     } catch (error) {
