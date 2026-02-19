@@ -39,8 +39,8 @@ const DAILY_CHECKIN_REWARDS = [
 
 const getResetDayIdentifier = (timestamp: number) => {
     if (timestamp === 0) return 'never';
-    // Shift time by -7 hours so that 07:00 AM becomes 00:00 AM for date calculation
-    const date = new Date(timestamp - (7 * 60 * 60 * 1000));
+    // 00:00 UTC corresponds exactly to 07:00 ICT
+    const date = new Date(timestamp);
     return `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
 };
 

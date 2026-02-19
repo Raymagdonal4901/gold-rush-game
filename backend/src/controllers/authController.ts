@@ -59,6 +59,8 @@ export const register = async (req: Request, res: Response) => {
         let referrerId = null;
         if (referralCode) {
             const trimmedRef = referralCode.trim();
+            console.log(`[REFERRAL_TRACE] Registration for ${username} with code: "${trimmedRef}"`);
+
             // Prevent self-referral
             if (trimmedRef.toLowerCase() !== username.toLowerCase()) {
                 const referrer = await User.findOne({
@@ -70,19 +72,21 @@ export const register = async (req: Request, res: Response) => {
 
                 if (referrer) {
                     referrerId = referrer._id;
+                    console.log(`[REFERRAL_SUCCESS] User ${username} referred by ${referrer.username} (${referrer._id})`);
 
                     // Atomic Increment Referrer's totalInvited stat
                     await User.updateOne(
                         { _id: referrer._id },
                         {
                             $inc: { 'referralStats.totalInvited': 1 },
-                            // Ensure the object exists if it's missing (though default is handled by schema)
                             $setOnInsert: { 'referralStats.totalEarned': 0 }
                         }
                     );
-
-                    console.log(`[REFERRAL] New user ${username} referred by ${referrer.username}`);
+                } else {
+                    console.warn(`[REFERRAL_FAIL] No referrer found matching code: "${trimmedRef}" for user ${username}`);
                 }
+            } else {
+                console.warn(`[REFERRAL_WARN] Self-referral attempt by ${username}`);
             }
         }
 

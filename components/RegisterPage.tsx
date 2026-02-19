@@ -21,7 +21,18 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin, onB
 
     React.useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const ref = params.get('ref');
+        let ref = params.get('ref');
+
+        if (ref) {
+            console.log('[REFERRAL] Captured from URL:', ref);
+            sessionStorage.setItem('pending_referral', ref);
+        } else {
+            ref = sessionStorage.getItem('pending_referral');
+            if (ref) {
+                console.log('[REFERRAL] Restored from sessionStorage:', ref);
+            }
+        }
+
         if (ref) {
             setReferralCode(ref);
         }

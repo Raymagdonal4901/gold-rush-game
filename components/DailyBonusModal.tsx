@@ -16,32 +16,61 @@ interface DailyBonusModalProps {
 }
 
 export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClose, user, onRefresh, addNotification }) => {
-    const { t, getLocalized } = useTranslation();
+    const { t, getLocalized, language } = useTranslation();
     const [canCheckIn, setCanCheckIn] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [timeLeft, setTimeLeft] = useState<string>('');
 
     const getResetDayIdentifier = (timestamp: number) => {
         if (timestamp === 0) return 'never';
-        const date = new Date(timestamp - (7 * 60 * 60 * 1000));
+        // UTC 00:00 corresponds to 07:00 ICT
+        const date = new Date(timestamp);
         return `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
     };
 
     useEffect(() => {
+        let timer: NodeJS.Timeout;
+
         if (isOpen) {
-            let lastTime = 0;
-            if (user.lastCheckIn) {
-                const d = new Date(user.lastCheckIn);
-                if (!isNaN(d.getTime())) {
-                    lastTime = d.getTime();
+            const checkStatus = () => {
+                let lastTime = 0;
+                if (user.lastCheckIn) {
+                    const d = new Date(user.lastCheckIn);
+                    if (!isNaN(d.getTime())) {
+                        lastTime = d.getTime();
+                    }
                 }
-            }
 
-            const nowTime = Date.now();
-            const lastResetId = getResetDayIdentifier(lastTime);
-            const nowResetId = getResetDayIdentifier(nowTime);
+                const now = new Date();
+                const nowTime = now.getTime();
+                const lastResetId = getResetDayIdentifier(lastTime);
+                const nowResetId = getResetDayIdentifier(nowTime);
 
-            setCanCheckIn(lastTime === 0 || lastResetId !== nowResetId);
+                const canClaim = lastTime === 0 || lastResetId !== nowResetId;
+                setCanCheckIn(canClaim);
+
+                // Countdown logic
+                const nextReset = new Date(now);
+                nextReset.setUTCHours(0, 0, 0, 0);
+                if (nextReset <= now) {
+                    nextReset.setUTCDate(nextReset.getUTCDate() + 1);
+                }
+
+                const diff = nextReset.getTime() - nowTime;
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                setTimeLeft(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+            };
+
+            checkStatus();
+            timer = setInterval(checkStatus, 1000);
         }
+
+        return () => {
+            if (timer) clearInterval(timer);
+        };
     }, [isOpen, user]);
 
     if (!isOpen) return null;
@@ -176,16 +205,22 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({ isOpen, onClos
 
                 {/* Footer Controls */}
                 <div className="p-6 bg-stone-900 border-t border-stone-800 flex flex-col items-center shrink-0">
-                    <div className="mb-4 flex items-center gap-4">
-                        <p className="text-sm font-medium text-stone-400">
-                            {t('daily_checkin.streak_label')} <span className="text-emerald-400 font-bold">{currentStreak} / 30 วัน</span>
+                    <div className="mb-4 flex flex-col items-center gap-1">
+                        <p className="text-sm font-medium text-stone-300 flex items-center gap-2">
+                            {t('daily_checkin.streak_label')} <span className="text-emerald-400 font-bold">{currentStreak} / 30 {t('time.days')}</span>
                         </p>
+                        {!canCheckIn && timeLeft && (
+                            <p className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center gap-1.5 bg-orange-500/5 px-3 py-1 rounded-full border border-orange-500/10">
+                                <Timer size={10} />
+                                {language === 'th' ? 'รีเซ็ตในอีก' : 'Reset in'}: <span className="text-white font-mono">{timeLeft}</span>
+                            </p>
+                        )}
                     </div>
 
                     <button
                         onClick={handleCheckIn}
                         disabled={!canCheckIn || isSubmitting}
-                        className={`w-full max-w-sm py-4 rounded-xl font-bold text-xl shadow-xl transition-all transform active:scale-95 flex items-center justify-center gap-2
+                        className={`w-full max-sm:w-full py-4 rounded-xl font-bold text-xl shadow-xl transition-all transform active:scale-95 flex items-center justify-center gap-2
                             ${canCheckIn && !isSubmitting
                                 ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-emerald-900/40'
                                 : 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'}
