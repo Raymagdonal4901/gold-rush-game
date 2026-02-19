@@ -1506,7 +1506,7 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
         const commissionStats = await Transaction.aggregate([
             {
                 $match: {
-                    userId: new mongoose.Types.ObjectId(user._id.toString()),
+                    userId: new mongoose.Types.ObjectId(user._id as unknown as string),
                     type: { $in: ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD', 'REFERRAL_BONUS', 'REFERRAL_BONUS_COMMISSION_BUY', 'REFERRAL_BONUS_COMMISSION_YIELD', 'REFERRAL_BUY_BONUS', 'REFERRAL_YIELD_BONUS'] },
                     status: 'COMPLETED'
                 }
