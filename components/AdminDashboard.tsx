@@ -2431,53 +2431,45 @@ const ReferralNetworkView = ({ data, isLoading }: { data: any, isLoading: boolea
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Summary Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-stone-950 p-4 rounded-xl border border-stone-800 shadow-xl">
+                <div className="bg-stone-950 p-4 rounded-xl border border-stone-800 shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 bg-yellow-500/10 px-2 py-0.5 rounded-bl-lg border-b border-l border-yellow-500/20 text-[8px] font-bold text-yellow-500 uppercase tracking-tighter">
+                        Team Total: {(data.earnings?.teamTotal || 0).toLocaleString()} ฿
+                    </div>
                     <div className="text-[10px] text-stone-500 uppercase font-bold mb-1 tracking-widest flex justify-between">
-                        <span>Total Network</span>
-                        <span className="text-yellow-500">{(data.earnings?.total || 0).toLocaleString()} THB</span>
+                        <span>My Earnings</span>
+                        <span className="text-yellow-500">{(data.earnings?.total || 0).toLocaleString()} ฿</span>
                     </div>
                     <div className="text-2xl font-display font-bold text-white">{actualCounts.total}</div>
-                    <div className="mt-1 h-1 w-full bg-stone-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-yellow-500 to-yellow-300" style={{ width: '100%' }}></div>
-                    </div>
+                    <div className="text-[10px] text-stone-600 font-bold uppercase mt-1">Total Members</div>
                 </div>
                 <div className="bg-emerald-950/20 p-4 rounded-xl border border-emerald-900/30 shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 bg-emerald-500/10 px-2 py-0.5 rounded-bl-lg border-b border-l border-emerald-500/20 text-[8px] font-bold text-emerald-400 uppercase tracking-tighter">
-                        5% Buy / 1% Yield
+                        Team: {(data.earnings?.teamBreakdown?.l1 || 0).toLocaleString()} ฿
                     </div>
                     <div className="text-[10px] text-emerald-500 uppercase font-bold mb-1 tracking-widest">Level 1 (Direct)</div>
                     <div className="flex items-end justify-between">
                         <div className="text-2xl font-display font-bold text-emerald-400">{actualCounts.l1}</div>
-                        <div className="text-xs font-mono text-emerald-500/80">{(data.earnings?.l1 || 0).toLocaleString()} THB</div>
-                    </div>
-                    <div className="mt-1 h-1 w-full bg-stone-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500" style={{ width: `${(actualCounts.l1 / (actualCounts.total || 1)) * 100}%` }}></div>
+                        <div className="text-xs font-mono text-emerald-500/80">{(data.earnings?.l1 || 0).toLocaleString()} ฿</div>
                     </div>
                 </div>
                 <div className="bg-blue-950/20 p-4 rounded-xl border border-blue-900/30 shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 bg-blue-500/10 px-2 py-0.5 rounded-bl-lg border-b border-l border-blue-500/20 text-[8px] font-bold text-blue-400 uppercase tracking-tighter">
-                        2% Buy / 0.5% Yield
+                        Team: {(data.earnings?.teamBreakdown?.l2 || 0).toLocaleString()} ฿
                     </div>
                     <div className="text-[10px] text-blue-400 uppercase font-bold mb-1 tracking-widest">Level 2 (Indirect)</div>
                     <div className="flex items-end justify-between">
                         <div className="text-2xl font-display font-bold text-blue-400">{actualCounts.l2}</div>
-                        <div className="text-xs font-mono text-blue-400/80">{(data.earnings?.l2 || 0).toLocaleString()} THB</div>
-                    </div>
-                    <div className="mt-1 h-1 w-full bg-stone-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500" style={{ width: `${(actualCounts.l2 / (actualCounts.total || 1)) * 100}%` }}></div>
+                        <div className="text-xs font-mono text-blue-400/80">{(data.earnings?.l2 || 0).toLocaleString()} ฿</div>
                     </div>
                 </div>
                 <div className="bg-purple-950/20 p-4 rounded-xl border border-purple-900/30 shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 bg-purple-500/10 px-2 py-0.5 rounded-bl-lg border-b border-l border-purple-500/20 text-[8px] font-bold text-purple-400 uppercase tracking-tighter">
-                        1% Buy / 0.2% Yield
+                        Team: {(data.earnings?.teamBreakdown?.l3 || 0).toLocaleString()} ฿
                     </div>
                     <div className="text-[10px] text-purple-400 uppercase font-bold mb-1 tracking-widest">Level 3</div>
                     <div className="flex items-end justify-between">
                         <div className="text-2xl font-display font-bold text-purple-400">{actualCounts.l3}</div>
-                        <div className="text-xs font-mono text-purple-400/80">{(data.earnings?.l3 || 0).toLocaleString()} THB</div>
-                    </div>
-                    <div className="mt-1 h-1 w-full bg-stone-900 rounded-full overflow-hidden">
-                        <div className="h-full bg-purple-500" style={{ width: `${(actualCounts.l3 / (actualCounts.total || 1)) * 100}%` }}></div>
+                        <div className="text-xs font-mono text-purple-400/80">{(data.earnings?.l3 || 0).toLocaleString()} ฿</div>
                     </div>
                 </div>
             </div>
@@ -2503,8 +2495,8 @@ const ReferralNetworkView = ({ data, isLoading }: { data: any, isLoading: boolea
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-xs font-bold text-yellow-500 mb-0.5">{u.invitedCount}</div>
-                                        <div className="text-[10px] text-stone-600 uppercase font-bold tracking-tighter">Referrals</div>
+                                        <div className="text-xs font-bold text-yellow-500 mb-0.5">{(u.totalEarned || 0).toLocaleString()} ฿</div>
+                                        <div className="text-[10px] text-stone-600 uppercase font-bold tracking-tighter">{u.invitedCount} Ref</div>
                                     </div>
                                 </div>
                             ))}

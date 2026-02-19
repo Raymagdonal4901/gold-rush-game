@@ -1506,10 +1506,7 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
         const commissionStats = await Transaction.aggregate([
             {
                 $match: {
-                    $or: [
-                        { userId: user._id.toString() },
-                        { userId: user._id }
-                    ],
+                    userId: new mongoose.Types.ObjectId(user._id as string),
                     type: { $in: ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD', 'REFERRAL_BONUS', 'REFERRAL_BONUS_COMMISSION_BUY', 'REFERRAL_BONUS_COMMISSION_YIELD', 'REFERRAL_BUY_BONUS', 'REFERRAL_YIELD_BONUS'] },
                     status: 'COMPLETED'
                 }
@@ -1539,6 +1536,14 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
 
         const earnings = commissionStats.length > 0 ? commissionStats[0] : { l1: 0, l2: 0, l3: 0, total: 0 };
 
+        // Team Total Earnings Calculation (Sum of referralStats.totalEarned of all downline users)
+        const teamStats = {
+            l1: l1Users.reduce((sum, u) => sum + (u.referralStats?.totalEarned || 0), 0),
+            l2: l2Users.reduce((sum, u) => sum + (u.referralStats?.totalEarned || 0), 0),
+            l3: l3Users.reduce((sum, u) => sum + (u.referralStats?.totalEarned || 0), 0)
+        };
+        const teamTotalEarnings = teamStats.l1 + teamStats.l2 + teamStats.l3;
+
         // Fallback for total if aggregation is empty but user has earned something
         if (earnings.total === 0 && user.referralStats?.totalEarned > 0) {
             earnings.total = user.referralStats.totalEarned;
@@ -1557,21 +1562,24 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
                     id: u._id,
                     username: u.username,
                     joinedAt: u.createdAt,
-                    invitedCount: u.referralStats?.totalInvited || 0
+                    invitedCount: u.referralStats?.totalInvited || 0,
+                    totalEarned: u.referralStats?.totalEarned || 0
                 })),
                 l2: l2Users.map(u => ({
                     id: u._id,
                     username: u.username,
                     joinedAt: u.createdAt,
                     invitedCount: u.referralStats?.totalInvited || 0,
-                    referrerId: u.referrerId
+                    referrerId: u.referrerId,
+                    totalEarned: u.referralStats?.totalEarned || 0
                 })),
                 l3: l3Users.map(u => ({
                     id: u._id,
                     username: u.username,
                     joinedAt: u.createdAt,
                     invitedCount: u.referralStats?.totalInvited || 0,
-                    referrerId: u.referrerId
+                    referrerId: u.referrerId,
+                    totalEarned: u.referralStats?.totalEarned || 0
                 }))
             },
             actualCounts: {
@@ -1584,7 +1592,9 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
                 l1: earnings.l1,
                 l2: earnings.l2,
                 l3: earnings.l3,
-                total: earnings.total
+                total: earnings.total,
+                teamTotal: teamTotalEarnings,
+                teamBreakdown: teamStats
             }
         });
     } catch (error) {
