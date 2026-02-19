@@ -441,6 +441,16 @@ export const getPendingDeposits = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// Get All Deposits (History)
+export const getAllDeposits = async (req: AuthRequest, res: Response) => {
+    try {
+        const deposits = await DepositRequest.find({}).sort({ createdAt: -1 });
+        res.json(deposits);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
 // Process Deposit (Approve/Reject)
 export const processDepositRequest = async (req: AuthRequest, res: Response) => {
     try {

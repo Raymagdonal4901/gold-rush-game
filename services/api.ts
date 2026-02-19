@@ -379,6 +379,10 @@ export const api = {
             const res = await client.get('/admin/deposits');
             return res.data.map(mapBackendDepositToFrontend);
         },
+        getAllDeposits: async (): Promise<DepositRequest[]> => {
+            const res = await client.get('/admin/deposits-all');
+            return res.data.map(mapBackendDepositToFrontend);
+        },
         processDeposit: async (id: string, status: 'APPROVED' | 'REJECTED'): Promise<any> => {
             const res = await client.post(`/admin/deposits/${id}/process`, { status });
             return res.data;

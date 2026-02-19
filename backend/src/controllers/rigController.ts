@@ -10,6 +10,11 @@ const MATERIAL_NAMES = MATERIAL_CONFIG.NAMES;
 
 // Determine rig preset ID from investment amount or name matching
 export function getRigPresetId(rig: any): number {
+    // 0. Highest priority: Existing tierId (if already assigned)
+    if (rig.tierId && typeof rig.tierId === 'number' && rig.tierId > 0) {
+        return rig.tierId;
+    }
+
     const inv = rig.investment;
 
     // 1. First priority: Match by unique investment amounts (for standard paid rigs)
@@ -28,6 +33,15 @@ export function getRigPresetId(rig: any): number {
 
     // Tier 8: Vibranium Reactor (God Tier)
     if (name.includes('ปฏิกรณ์') || name.includes('Vibranium') || name.includes('God')) return 8;
+
+    // Special Tier matchers for names that might have 0 investment (Gifts/Rewards)
+    if (name.includes('พลั่ว') || name.includes('Starter')) return 1;
+    if (name.includes('สว่าน') || name.includes('Common') || name.includes('Portable Drill')) return 2;
+    if (name.includes('ถ่านหิน') || name.includes('Coal') || name.includes('Uncommon')) return 3;
+    if (name.includes('ทองแดง') || name.includes('Copper') || name.includes('Rare')) return 4;
+    if (name.includes('เหล็ก') || name.includes('Iron') || name.includes('Epic')) return 5;
+    if (name.includes('ทองคำ') || name.includes('Gold') || name.includes('Legendary')) return 6;
+    if (name.includes('เพชร') || name.includes('Diamond') || name.includes('Mythical')) return 7;
 
     // Tier 9: Rotten Glove (Starter)
     if (name.includes('เน่า') || name.includes('Rotten')) return 9;
@@ -515,7 +529,7 @@ export const claimRigProfit = async (req: AuthRequest, res: Response) => {
         }
 
         // หา Preset ID ของเครื่องขุด
-        const presetId = getRigPresetId(rig);
+        const presetId = rig.tierId || getRigPresetId(rig);
 
         // Save tierId if missing (migration)
         if (!rig.tierId) {

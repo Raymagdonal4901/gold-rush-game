@@ -559,17 +559,14 @@ export const RigCard: React.FC<RigCardProps> = ({
                     <Coins className="text-yellow-500 animate-pulse mb-3" size={24} />
                     <h4 className="text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">{t('rig.confirm_claim')}</h4>
                     {(() => {
-                        const overclockMultActual = isOverclockActive ? overclockMultiplier : 1;
+                        const overclockBoost = isOverclockActive ? overclockMultiplier : 1.0;
+                        const starMultValue = 1 + (rig.starLevel || 0) * 0.05;
+                        const upgradeRuleValue = RIG_UPGRADE_RULES[rig.tierId || preset?.id || 1];
+                        const levelMultValue = upgradeRuleValue ? Math.pow(upgradeRuleValue.statGrowth, (rig.level || 1) - 1) : 1;
 
-                        const starMult = 1 + (rig.starLevel || 0) * 0.05;
-                        const upgradeRule = RIG_UPGRADE_RULES[rig.tierId || preset?.id || 1];
-                        const levelMult = upgradeRule ? Math.pow(upgradeRule.statGrowth, (rig.level || 1) - 1) : 1;
+                        const userAccountLevel = user?.level || rig.ownerLevel || 1;
+                        const accountLevelMultValue = 1 + ((userAccountLevel - 1) * (LEVEL_CONFIG.yieldBonusPerLevel || 0.01));
 
-                        // Account Efficiency (Sync with backend accountLevelFactor)
-                        const accountLevel = rig.ownerLevel || 1;
-                        const accountLevelMult = 1 + ((accountLevel - 1) * (LEVEL_CONFIG.yieldBonusPerLevel || 0.01));
-
-                        // Accessory/Item Percentage Logic (1.0 = 1% boost)
                         let accessoryPercentLocal = 0;
                         (rig.slots || Array(5).fill(null)).forEach(itemId => {
                             if (!itemId) return;
@@ -578,19 +575,18 @@ export const RigCard: React.FC<RigCardProps> = ({
                                 accessoryPercentLocal += (item.dailyBonus || 0);
                             }
                         });
-                        const itemMult = 1 + (accessoryPercentLocal / 100);
+                        const itemMultValue = 1 + (accessoryPercentLocal / 100);
 
-                        const globalMult = (globalMultiplier && globalMultiplier > 1) ? globalMultiplier : 1;
-                        const reactorMult = (reactorMultiplier && reactorMultiplier > 1) ? reactorMultiplier : 1;
+                        const globalMultValue = (globalMultiplier && globalMultiplier > 1) ? globalMultiplier : 1;
+                        const reactorMultValue = (reactorMultiplier && reactorMultiplier > 1) ? reactorMultiplier : 1;
 
-                        const baseValue = volConfig?.baseValue || 0;
-                        const maxRandom = volConfig?.maxRandom || 0;
+                        const baseVal = volConfig?.baseValue || 0;
+                        const maxRand = volConfig?.maxRandom || 0;
 
-                        // Combined Multipliers (Multiplicative Stacking)
-                        const finalMultiplier = overclockMultActual * starMult * levelMult * accountLevelMult * itemMult * globalMult * reactorMult;
+                        const combinedMult = overclockBoost * starMultValue * levelMultValue * accountLevelMultValue * itemMultValue * globalMultValue * reactorMultValue;
 
-                        const minYield = baseValue * finalMultiplier;
-                        const maxYield = (baseValue + maxRandom) * finalMultiplier;
+                        const minYield = baseVal * combinedMult;
+                        const maxYield = (baseVal + maxRand) * combinedMult;
 
                         return (
                             <div className="text-2xl font-mono font-bold text-white mb-1">

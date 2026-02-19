@@ -2,7 +2,7 @@ import express from 'express';
 import { authenticate, authorizeAdmin } from '../middleware/auth';
 import {
     getAllUsers, getAllRigs, getSystemConfig, updateSystemConfig,
-    getPendingClaims, getPendingWithdrawals, getPendingDeposits, processDepositRequest, getUserStats,
+    getPendingClaims, getPendingWithdrawals, getPendingDeposits, getAllDeposits, processDepositRequest, getUserStats,
     adminGiveCompensation, adminGiveCompensationAll, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats, adminConvertCurrencyToUSD, resetAllPlayerData, deleteRig, adminAdjustRevenue, adminAddRig,
     resetUser, removeVip, getDashboardStats, processWithdrawal, processLegacyWithdrawalRequest, getRevenueStats, deleteAllUsers, toggleBan,
     repairReferralLinks, syncReferralStats, syncAllReferralStats, getUserByReferralCode,
@@ -30,6 +30,7 @@ router.get('/withdrawals', getPendingWithdrawals);
 router.put('/withdrawals/:id', processWithdrawal); // NEW for Part 6
 router.post('/withdrawals/:id/process', processLegacyWithdrawalRequest); // Keep legacy if needed
 router.get('/deposits', getPendingDeposits);
+router.get('/deposits-all', getAllDeposits);
 router.post('/deposits/:id/process', processDepositRequest);
 router.delete('/users/:userId', deleteUser);
 router.delete('/rigs/:rigId', deleteRig);

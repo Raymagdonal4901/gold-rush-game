@@ -23,6 +23,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     const [pendingClaims, setPendingClaims] = useState<ClaimRequest[]>([]);
     const [pendingWithdrawals, setPendingWithdrawals] = useState<Withdrawal[]>([]);
     const [pendingDeposits, setPendingDeposits] = useState<DepositRequest[]>([]); // New Phase 1
+    const [allDeposits, setAllDeposits] = useState<DepositRequest[]>([]);
     const [stats, setStats] = useState<{ totalUsers: number, totalRigs: number, pendingWithdrawalsCount: number } | null>(null);
     const [search, setSearch] = useState('');
     const [globalRevenue, setGlobalRevenue] = useState<{
@@ -123,6 +124,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     const [usdtSearchResults, setUsdtSearchResults] = useState<DepositRequest[]>([]);
     const [isSearchingUsdt, setIsSearchingUsdt] = useState(false);
 
+    const [depositSearch, setDepositSearch] = useState('');
+    const [showAllDeposits, setShowAllDeposits] = useState(true);
+
     // Initial Load
     useEffect(() => {
         refreshData();
@@ -173,6 +177,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 claims,
                 withdrawals,
                 deposits,
+                fetchedAllDeposits,
                 revenue,
                 dashboardStats,
                 revenueStats
@@ -183,6 +188,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 fetchSafe(() => api.admin.getPendingClaims(), []),
                 fetchSafe(() => api.admin.getPendingWithdrawals(), []),
                 fetchSafe(() => api.admin.getPendingDeposits(), []),
+                fetchSafe(() => api.admin.getAllDeposits(), []),
                 fetchSafe(() => api.admin.getGlobalRevenue(), null),
                 fetchSafe(() => api.admin.getDashboardStats(), null),
                 fetchSafe(() => api.admin.getRevenueStats(), null)
@@ -193,6 +199,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             setPendingClaims(claims || []);
             setPendingWithdrawals(withdrawals || []);
             setPendingDeposits(deposits || []);
+            setAllDeposits(fetchedAllDeposits || []);
             setGlobalRevenue(revenueStats); // Use the new comprehensive revenue stats
             setStats(dashboardStats);
 
@@ -1619,6 +1626,106 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     </div>
                                 )}
                             </div>
+                        </div>
+
+                        {/* === Full Deposit History Section === */}
+                        <div className="bg-stone-900 border border-stone-800 shadow-xl rounded-lg overflow-hidden">
+                            <div className="p-4 bg-stone-950 border-b border-stone-800 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 text-stone-400 font-bold uppercase tracking-wider text-sm">
+                                        <FileText size={16} /> ประวัติการฝากเงินทั้งหมด (ALL DEPOSITS)
+                                    </div>
+                                    <button
+                                        onClick={() => setShowAllDeposits(!showAllDeposits)}
+                                        className="flex items-center gap-2 text-[10px] font-bold px-2 py-1 rounded bg-stone-900 border border-stone-800 text-stone-500 hover:text-white hover:border-stone-700 transition-all"
+                                    >
+                                        {showAllDeposits ? (
+                                            <><ShieldCheck size={12} className="text-emerald-500" /> ซ่อนข้อมูล (HIDE)</>
+                                        ) : (
+                                            <><ShieldAlert size={12} className="text-yellow-500" /> แสดงข้อมูล (SHOW)</>
+                                        )}
+                                    </button>
+                                </div>
+                                <div className="relative w-64">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" size={14} />
+                                    <input
+                                        type="text"
+                                        placeholder="ค้นหาชื่อผู้ใช้งาน..."
+                                        value={depositSearch}
+                                        onChange={e => setDepositSearch(e.target.value)}
+                                        className="w-full bg-stone-900 border border-stone-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white focus:border-yellow-600 outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+                            {showAllDeposits && (
+                                <div className="overflow-x-auto max-h-[600px] custom-scrollbar animate-in fade-in slide-in-from-top-4 duration-300">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-stone-950 text-stone-500 text-[10px] uppercase font-bold sticky top-0 z-10 shadow-md">
+                                            <tr>
+                                                <th className="p-4">{t('history.date')}</th>
+                                                <th className="p-4">{t('admin.username')}</th>
+                                                <th className="p-4 text-right">{t('admin.amount_label')}</th>
+                                                <th className="p-4 text-center">{t('admin.method_label') || 'METHOD'}</th>
+                                                <th className="p-4 text-center">{t('admin.status')}</th>
+                                                <th className="p-4 text-right">{t('admin.slip') || 'SLIP'}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-stone-800">
+                                            {allDeposits
+                                                .filter(d => d.username.toLowerCase().includes(depositSearch.toLowerCase()))
+                                                .map(d => (
+                                                    <tr key={d.id} className="hover:bg-stone-800/30 transition-colors group">
+                                                        <td className="p-4 text-stone-500 font-mono text-xs">
+                                                            {new Date(d.timestamp).toLocaleString()}
+                                                        </td>
+                                                        <td className="p-4">
+                                                            <div className="text-stone-200 font-bold">{d.username}</div>
+                                                            <div className="text-[10px] text-stone-600 font-mono">{d.userId}</div>
+                                                        </td>
+                                                        <td className="p-4 text-right">
+                                                            <div className="text-emerald-400 font-mono font-bold">+{d.amount.toLocaleString()}</div>
+                                                            <div className="text-[10px] text-stone-500">{CURRENCY}</div>
+                                                        </td>
+                                                        <td className="p-4 text-center">
+                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${d.method === 'USDT' ? 'bg-blue-900/20 text-blue-400 border border-blue-500/20' : 'bg-stone-800 text-stone-400 border border-stone-700'}`}>
+                                                                {d.method || 'BANK'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-4 text-center">
+                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${d.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-500' :
+                                                                d.status === 'REJECTED' ? 'bg-red-900/30 text-red-500' :
+                                                                    'bg-yellow-900/30 text-yellow-500'
+                                                                }`}>
+                                                                {d.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-4 text-right">
+                                                            <div
+                                                                className={`inline-block w-8 h-10 bg-stone-950 border border-stone-800 rounded overflow-hidden shadow-sm ${!d.slipImage || d.slipImage === 'USDT_DIRECT_TRANSFER' ? 'cursor-default' : 'cursor-pointer hover:scale-110 transition-transform'}`}
+                                                                onClick={() => d.slipImage && d.slipImage !== 'USDT_DIRECT_TRANSFER' && setPreviewImage(d.slipImage)}
+                                                            >
+                                                                {d.slipImage === 'USDT_DIRECT_TRANSFER' || !d.slipImage ? (
+                                                                    <div className="w-full h-full flex items-center justify-center text-stone-800">
+                                                                        <Wallet size={12} />
+                                                                    </div>
+                                                                ) : (
+                                                                    <img src={d.slipImage} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" alt="Slip" />
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            {allDeposits.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={6} className="p-12 text-center text-stone-600 italic">
+                                                        {t('admin.no_data') || 'No deposit history found.'}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
 
                         {/* System Settings: QR Code */}

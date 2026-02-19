@@ -453,7 +453,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
 
                 if (timeSinceLastClaim > minClaimInterval && (!lastAutoCollectRef.current[rig.id] || now - lastAutoCollectRef.current[rig.id] > cooldown)) {
                     lastAutoCollectRef.current[rig.id] = now;
-                    handleClaim(rig.id, 0, true).catch(() => { });
+                    handleClaim(rig, 0, true).catch(() => { });
                     continue;
                 }
             }
@@ -467,9 +467,13 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
 
 
     // Handlers
-    const handleClaim = async (rigId: string, amount: number, isAuto: boolean = false) => {
-        const rig = rigs.find(r => r.id === rigId);
+    const handleClaim = async (rigInput: any, amount: number, isAuto: boolean = false) => {
+        const rig = typeof rigInput === 'string'
+            ? rigsRef.current.find(r => r.id === rigInput)
+            : rigInput;
         if (!rig) return;
+
+        const rigId = rig.id;
 
         try {
             // NOTE: Amount is calculated on server now for security. 
@@ -695,7 +699,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
         try {
             // Resolve rig from ID if needed
             const rig = typeof rigInput === 'string'
-                ? rigs.find((r: any) => r.id === rigInput)
+                ? rigsRef.current.find((r: any) => r.id === rigInput)
                 : rigInput;
 
             if (!rig) {
