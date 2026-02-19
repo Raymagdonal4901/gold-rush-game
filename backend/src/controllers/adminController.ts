@@ -1471,10 +1471,13 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
         const { code } = req.params;
         const normalizedCode = code.trim().toUpperCase();
 
+        const isObjectId = mongoose.Types.ObjectId.isValid(code);
+
         const user = await User.findOne({
             $or: [
                 { referralCode: { $regex: new RegExp(`^${normalizedCode}$`, 'i') } },
-                { username: { $regex: new RegExp(`^${normalizedCode}$`, 'i') } }
+                { username: { $regex: new RegExp(`^${normalizedCode}$`, 'i') } },
+                ...(isObjectId ? [{ _id: code }] : [])
             ]
         }).select('_id username referralCode referralStats createdAt');
 
@@ -1507,7 +1510,7 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
                         { userId: user._id.toString() },
                         { userId: user._id }
                     ],
-                    type: { $in: ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD', 'REFERRAL_BONUS', 'REFERRAL_BONUS_COMMISSION_BUY', 'REFERRAL_BONUS_COMMISSION_YIELD'] },
+                    type: { $in: ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD', 'REFERRAL_BONUS', 'REFERRAL_BONUS_COMMISSION_BUY', 'REFERRAL_BONUS_COMMISSION_YIELD', 'REFERRAL_BUY_BONUS', 'REFERRAL_YIELD_BONUS'] },
                     status: 'COMPLETED'
                 }
             },
@@ -1535,6 +1538,11 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
         ]);
 
         const earnings = commissionStats.length > 0 ? commissionStats[0] : { l1: 0, l2: 0, l3: 0, total: 0 };
+
+        // Fallback for total if aggregation is empty but user has earned something
+        if (earnings.total === 0 && user.referralStats?.totalEarned > 0) {
+            earnings.total = user.referralStats.totalEarned;
+        }
 
         res.json({
             user: {
