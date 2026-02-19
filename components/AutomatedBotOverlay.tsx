@@ -14,6 +14,7 @@ interface AutomatedBotOverlayProps {
     style?: React.CSSProperties;
     customStatusText?: string;
     customTimeLabel?: string;
+    username?: string;
 }
 
 export const AutomatedBotOverlay: React.FC<AutomatedBotOverlayProps> = ({
@@ -27,7 +28,8 @@ export const AutomatedBotOverlay: React.FC<AutomatedBotOverlayProps> = ({
     className = '',
     style = {},
     customStatusText,
-    customTimeLabel
+    customTimeLabel,
+    username
 }) => {
     const { t, language } = useTranslation();
 
@@ -78,18 +80,29 @@ export const AutomatedBotOverlay: React.FC<AutomatedBotOverlayProps> = ({
                     <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-2 h-10 bg-stone-800 rounded-r-md border-y border-r border-blue-500/30"></div>
 
                     {/* Face/Screen */}
-                    <div className="w-16 h-10 lg:w-24 lg:h-14 bg-black/80 rounded-lg border border-blue-500/30 relative overflow-hidden flex items-center justify-center gap-2 lg:gap-3">
+                    <div className="w-16 h-10 lg:w-24 lg:h-14 bg-black/80 rounded-lg border border-blue-500/30 relative overflow-hidden flex flex-col items-center justify-center pt-1">
                         {/* Eyes */}
-                        {status === 'PAUSED' ? (
-                            <>
-                                <div className="w-3.5 h-1 lg:w-5 lg:h-1.5 bg-stone-500 rounded-full ai-robot-eyes-closed shadow-[0_0_4px_rgba(255,255,255,0.2)]"></div>
-                                <div className="w-3.5 h-1 lg:w-5 lg:h-1.5 bg-stone-500 rounded-full ai-robot-eyes-closed shadow-[0_0_4px_rgba(255,255,255,0.2)]"></div>
-                            </>
-                        ) : (
-                            <>
-                                <div className={`w-3.5 h-3.5 lg:w-5 h-5 ${status === 'PAUSED' ? 'bg-stone-600' : 'bg-blue-400'} rounded-full ai-robot-eye ai-robot-pupil shadow-[0_0_8px_#60a5fa]`}></div>
-                                <div className={`w-3.5 h-3.5 lg:w-5 h-5 ${status === 'PAUSED' ? 'bg-stone-600' : 'bg-blue-400'} rounded-full ai-robot-eye-left ai-robot-pupil shadow-[0_0_8px_#60a5fa]`}></div>
-                            </>
+                        <div className="flex items-center justify-center gap-2 lg:gap-3">
+                            {status === 'PAUSED' ? (
+                                <>
+                                    <div className="w-3.5 h-1 lg:w-5 lg:h-1.5 bg-stone-500 rounded-full ai-robot-eyes-closed shadow-[0_0_4px_rgba(255,255,255,0.2)]"></div>
+                                    <div className="w-3.5 h-1 lg:w-5 lg:h-1.5 bg-stone-500 rounded-full ai-robot-eyes-closed shadow-[0_0_4px_rgba(255,255,255,0.2)]"></div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className={`w-3.5 h-3.5 lg:w-5 h-5 ${status === 'PAUSED' ? 'bg-stone-600' : 'bg-blue-400'} rounded-full ai-robot-eye ai-robot-pupil shadow-[0_0_8px_#60a5fa]`}></div>
+                                    <div className={`w-3.5 h-3.5 lg:w-5 h-5 ${status === 'PAUSED' ? 'bg-stone-600' : 'bg-blue-400'} rounded-full ai-robot-eye-left ai-robot-pupil shadow-[0_0_8px_#60a5fa]`}></div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Username Display on Screen */}
+                        {username && (
+                            <div className="mt-1 lg:mt-1.5">
+                                <span className={`text-[6px] lg:text-[8px] font-black tracking-tighter uppercase whitespace-nowrap overflow-hidden transition-colors ${status === 'PAUSED' ? 'text-stone-600' : 'text-blue-400/70'}`}>
+                                    {username}
+                                </span>
+                            </div>
                         )}
 
                         {/* Scan line effect */}

@@ -1014,9 +1014,9 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
 
                     {/* User Profile & Actions */}
                     <div className="flex items-center gap-1">
-                        <div className="hidden sm:flex flex-col items-end mr-2">
-                            <span className="text-sm font-bold text-white">{user?.username || 'User'}</span>
-                            <span className="text-xs text-stone-400">ID: {user?.id || '...'}</span>
+                        <div className="flex flex-col items-end mr-2">
+                            <span className="text-[10px] sm:text-sm font-bold text-white max-w-[80px] sm:max-w-none truncate">{user?.username || 'User'}</span>
+                            <span className="hidden sm:block text-xs text-stone-400">ID: {user?.id || '...'}</span>
                         </div>
 
                         {/* Language Toggle */}
@@ -1384,18 +1384,29 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                                 <div className={`relative transform scale-75 lg:scale-95 transition-transform duration-500 group-hover:scale-105 ${botStatus === 'PAUSED' ? 'ai-robot-sleeping' : ''}`}>
                                     <div className={`w-24 h-16 bg-stone-900 border-2 rounded-2xl relative shadow-[0_0_20px_rgba(59,130,246,0.2)] overflow-hidden transition-colors ${botStatus === 'ACTIVE' ? 'border-blue-500/50' : 'border-stone-700 grayscale'}`}>
                                         <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent"></div>
-                                        {/* Eyes */}
-                                        <div className="absolute inset-0 flex items-center justify-center gap-3">
-                                            {botStatus === 'ACTIVE' ? (
-                                                <>
-                                                    <div className="w-4 h-6 rounded-full bg-blue-400/80 shadow-[0_0_8px_#60a5fa] ai-robot-eye ai-robot-pupil"></div>
-                                                    <div className="w-4 h-6 rounded-full bg-blue-400/80 shadow-[0_0_8px_#60a5fa] ai-robot-eye-left ai-robot-pupil"></div>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <div className="w-5 h-1.5 bg-stone-600 rounded-full ai-robot-eyes-closed shadow-[0_0_4px_rgba(255,255,255,0.2)] opacity-50"></div>
-                                                    <div className="w-5 h-1.5 bg-stone-600 rounded-full ai-robot-eyes-closed shadow-[0_0_4px_rgba(255,255,255,0.2)] opacity-50"></div>
-                                                </>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center pt-1">
+                                            {/* Eyes */}
+                                            <div className="flex items-center justify-center gap-3">
+                                                {botStatus === 'ACTIVE' ? (
+                                                    <>
+                                                        <div className="w-4 h-6 rounded-full bg-blue-400/80 shadow-[0_0_8px_#60a5fa] ai-robot-eye ai-robot-pupil"></div>
+                                                        <div className="w-4 h-6 rounded-full bg-blue-400/80 shadow-[0_0_8px_#60a5fa] ai-robot-eye-left ai-robot-pupil"></div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="w-5 h-1.5 bg-stone-600 rounded-full ai-robot-eyes-closed shadow-[0_0_4px_rgba(255,255,255,0.2)] opacity-50"></div>
+                                                        <div className="w-5 h-1.5 bg-stone-600 rounded-full ai-robot-eyes-closed shadow-[0_0_4px_rgba(255,255,255,0.2)] opacity-50"></div>
+                                                    </>
+                                                )}
+                                            </div>
+
+                                            {/* Username Display on Screen */}
+                                            {user?.username && (
+                                                <div className="mt-1">
+                                                    <span className={`text-[6px] font-black tracking-tighter uppercase whitespace-nowrap overflow-hidden transition-colors ${botStatus === 'ACTIVE' ? 'text-blue-400/60' : 'text-stone-700'}`}>
+                                                        {user.username}
+                                                    </span>
+                                                </div>
                                             )}
                                         </div>
 
