@@ -41,6 +41,11 @@ import transactionRoutes from './routes/transactionRoutes';
 import walletRoutes from './routes/walletRoutes';
 import { checkMaintenance } from './middleware/checkMaintenance';
 
+// Basic Root Route
+app.get('/', (req, res) => {
+    res.send('Gold Rush Backend is running! Access /api for endpoints.');
+});
+
 // Health Check (must be above maintenance middleware for Render)
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'Gold Rush Backend is running!' });

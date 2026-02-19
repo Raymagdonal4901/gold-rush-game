@@ -470,6 +470,10 @@ export const api = {
         addRig: async (userId: string, presetId: number): Promise<any> => {
             const res = await client.post(`/admin/users/${userId}/rigs`, { presetId });
             return res.data;
+        },
+        getUserReferralNetwork: async (code: string): Promise<any> => {
+            const res = await client.get(`/admin/referrals/lookup/${code}`);
+            return res.data;
         }
     },
     // Chat

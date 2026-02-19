@@ -1482,13 +1482,22 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
             return res.status(404).json({ message: `No user found with code/username: ${code}` });
         }
 
-        // นับจำนวนลูกทีมจริง
-        const l1Users = await User.find({ referrerId: user._id }).select('username createdAt');
+        // L1: Direct referrals
+        const l1Users = await User.find({ referrerId: user._id })
+            .select('username createdAt referralStats')
+            .sort({ createdAt: -1 });
         const l1Ids = l1Users.map(u => u._id);
-        const l2Count = await User.countDocuments({ referrerId: { $in: l1Ids } });
-        const l2Users = await User.find({ referrerId: { $in: l1Ids } }).select('_id');
+
+        // L2: Referrals of L1
+        const l2Users = await User.find({ referrerId: { $in: l1Ids } })
+            .select('username createdAt referralStats referrerId')
+            .sort({ createdAt: -1 });
         const l2Ids = l2Users.map(u => u._id);
-        const l3Count = await User.countDocuments({ referrerId: { $in: l2Ids } });
+
+        // L3: Referrals of L2
+        const l3Users = await User.find({ referrerId: { $in: l2Ids } })
+            .select('username createdAt referralStats referrerId')
+            .sort({ createdAt: -1 });
 
         res.json({
             user: {
@@ -1498,13 +1507,34 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
                 storedStats: user.referralStats,
                 createdAt: user.createdAt
             },
+            network: {
+                l1: l1Users.map(u => ({
+                    id: u._id,
+                    username: u.username,
+                    joinedAt: u.createdAt,
+                    invitedCount: u.referralStats?.totalInvited || 0
+                })),
+                l2: l2Users.map(u => ({
+                    id: u._id,
+                    username: u.username,
+                    joinedAt: u.createdAt,
+                    invitedCount: u.referralStats?.totalInvited || 0,
+                    referrerId: u.referrerId
+                })),
+                l3: l3Users.map(u => ({
+                    id: u._id,
+                    username: u.username,
+                    joinedAt: u.createdAt,
+                    invitedCount: u.referralStats?.totalInvited || 0,
+                    referrerId: u.referrerId
+                }))
+            },
             actualCounts: {
                 l1: l1Users.length,
-                l2: l2Count,
-                l3: l3Count,
-                total: l1Users.length + l2Count + l3Count
-            },
-            l1Members: l1Users.map(u => ({ username: u.username, joinedAt: (u as any).createdAt }))
+                l2: l2Users.length,
+                l3: l3Users.length,
+                total: l1Users.length + l2Users.length + l3Users.length
+            }
         });
     } catch (error) {
         console.error('[LOOKUP ERROR]', error);

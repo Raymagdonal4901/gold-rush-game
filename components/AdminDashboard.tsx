@@ -127,6 +127,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     const [depositSearch, setDepositSearch] = useState('');
     const [showAllDeposits, setShowAllDeposits] = useState(true);
 
+    // Referral Network State
+    const [referralDetailTab, setReferralDetailTab] = useState<'GENERAL' | 'NETWORK'>('GENERAL');
+    const [networkData, setNetworkData] = useState<{
+        network?: {
+            l1: any[];
+            l2: any[];
+            l3: any[];
+        };
+        actualCounts?: {
+            l1: number;
+            l2: number;
+            l3: number;
+            total: number;
+        };
+    } | null>(null);
+    const [isFetchingNetwork, setIsFetchingNetwork] = useState(false);
+
     // Initial Load
     useEffect(() => {
         refreshData();
@@ -410,6 +427,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         } catch (error) {
             console.error("Failed to convert currency", error);
             alert(t('admin.process_error'));
+        }
+    };
+
+    const fetchReferralNetwork = async (code: string) => {
+        try {
+            setIsFetchingNetwork(true);
+            const data = await api.admin.getUserReferralNetwork(code);
+            setNetworkData(data);
+        } catch (error) {
+            console.error("Failed to fetch referral network", error);
+            alert("Failed to fetch referral network data");
+        } finally {
+            setIsFetchingNetwork(false);
+        }
+    };
+
+    const handleSelectUser = async (user: User) => {
+        setSelectedUser(user);
+        setReferralDetailTab('GENERAL');
+        setNetworkData(null);
+        setEconomyForm(prev => ({ ...prev, targetUser: user.id, compUser: user.id }));
+        try {
+            const stats = await api.admin.getUserStats(user.id);
+            setUserStats(stats);
+        } catch (error) {
+            console.error("Failed to fetch user stats", error);
         }
     };
 
@@ -775,468 +818,492 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                         </div>
 
                         <div className="p-6 overflow-y-auto space-y-6">
-                            {/* Stats Grid */}
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div className="bg-stone-950 p-3 rounded border border-stone-800">
-                                    <div className="text-xs text-stone-500 uppercase">{t('admin.user_balance')}</div>
-                                    <div className="text-lg font-bold text-white">{Math.floor(selectedUser.balance).toLocaleString()} {CURRENCY}</div>
-                                </div>
-                                <div className="bg-stone-900/50 p-3 rounded border border-stone-800">
-                                    <div className="text-xs text-stone-500 uppercase">{t('admin.rigs_count')}</div>
-                                    <div className="text-lg font-bold text-yellow-500">{getRigsForUser(selectedUser.id).length}</div>
-                                </div>
-                                <div className="bg-emerald-900/10 p-3 rounded border border-emerald-900/30">
-                                    <div className="text-xs text-emerald-500 font-bold uppercase">{t('admin.daily_yield')}</div>
-                                    <div className="text-lg font-bold text-emerald-400">+{Math.floor(getDailyProfitForUser(selectedUser.id)).toLocaleString()} {CURRENCY}</div>
-                                </div>
-                                <div className="bg-blue-900/10 p-3 rounded border border-blue-900/30">
-                                    <div className="text-xs text-blue-400 font-bold uppercase">{t('admin.role')}</div>
-                                    <div className="text-sm font-bold text-blue-200 uppercase">{selectedUser.role}</div>
-                                </div>
+                            {/* Tab Switcher */}
+                            <div className="flex border-b border-stone-800 -mx-6 px-6 mb-6">
+                                <button
+                                    onClick={() => setReferralDetailTab('GENERAL')}
+                                    className={`px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${referralDetailTab === 'GENERAL' ? 'border-yellow-600 text-yellow-500 bg-yellow-600/5' : 'border-transparent text-stone-500 hover:text-stone-300'}`}
+                                >
+                                    {t('admin.general_info') || "GENERAL INFO"}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setReferralDetailTab('NETWORK');
+                                        if (selectedUser && !networkData) fetchReferralNetwork(selectedUser.referralCode || selectedUser.username);
+                                    }}
+                                    className={`px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${referralDetailTab === 'NETWORK' ? 'border-yellow-600 text-yellow-500 bg-yellow-600/5' : 'border-transparent text-stone-500 hover:text-stone-300'}`}
+                                >
+                                    {t('admin.referral_network') || "REFERRAL NETWORK (ลูกทีม)"}
+                                </button>
                             </div>
 
-                            {showAudit && userStats?.audit && (
-                                <div className="bg-stone-950 border border-yellow-900/30 rounded-lg p-5 space-y-4 animate-in fade-in slide-in-from-top-2">
-                                    <div className="flex items-center justify-between border-b border-stone-800 pb-3">
-                                        <div className="flex items-center gap-2 text-yellow-500 font-bold uppercase text-xs">
-                                            <ShieldAlert size={16} /> {t('admin.financial_audit')}
+                            {referralDetailTab === 'GENERAL' ? (
+                                <>
+                                    {/* Stats Grid */}
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div className="bg-stone-950 p-3 rounded border border-stone-800">
+                                            <div className="text-xs text-stone-500 uppercase">{t('admin.user_balance')}</div>
+                                            <div className="text-lg font-bold text-white">{Math.floor(selectedUser.balance).toLocaleString()} {CURRENCY}</div>
                                         </div>
-                                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${userStats.audit.profitabilityRatio > 3 ? 'bg-red-900 text-red-100' : userStats.audit.profitabilityRatio > 1.5 ? 'bg-orange-900 text-orange-100' : 'bg-emerald-900 text-emerald-100'}`}>
-                                            {t('admin.fraud_risk')}: {userStats.audit.profitabilityRatio > 3 ? t('admin.risk_high') : userStats.audit.profitabilityRatio > 1.5 ? t('admin.risk_medium') : t('admin.risk_low')}
+                                        <div className="bg-stone-900/50 p-3 rounded border border-stone-800">
+                                            <div className="text-xs text-stone-500 uppercase">{t('admin.rigs_count')}</div>
+                                            <div className="text-lg font-bold text-yellow-500">{getRigsForUser(selectedUser.id).length}</div>
                                         </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        <div className="space-y-1">
-                                            <div className="text-[10px] text-stone-500 uppercase font-bold">{t('admin.profitability')}</div>
-                                            <div className={`text-xl font-mono font-bold ${userStats.audit.profitabilityRatio > 3 ? 'text-red-500' : 'text-white'}`}>
-                                                {(userStats.audit.profitabilityRatio * 100).toFixed(1)}%
-                                            </div>
+                                        <div className="bg-emerald-900/10 p-3 rounded border border-emerald-900/30">
+                                            <div className="text-xs text-emerald-500 font-bold uppercase">{t('admin.daily_yield')}</div>
+                                            <div className="text-lg font-bold text-emerald-400">+{Math.floor(getDailyProfitForUser(selectedUser.id)).toLocaleString()} {CURRENCY}</div>
                                         </div>
-                                        <div className="space-y-1">
-                                            <div className="text-[10px] text-stone-500 uppercase font-bold">{t('admin.total_mined')}</div>
-                                            <div className="text-xl font-mono font-bold text-emerald-400">
-                                                +{Math.floor(userStats.audit.totalMiningProfit).toLocaleString()}
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <div className="text-[10px] text-stone-500 uppercase font-bold">{t('admin.free_income')}</div>
-                                            <div className="text-xl font-mono font-bold text-blue-400">
-                                                +{Math.floor(userStats.audit.totalBonusIncome).toLocaleString()}
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <div className="text-[10px] text-stone-500 uppercase font-bold">{t('admin.net_cashflow')}</div>
-                                            <div className={`text-xl font-mono font-bold ${userStats.audit.netCashFlow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                {userStats.audit.netCashFlow > 0 ? '+' : ''}{Math.floor(userStats.audit.netCashFlow).toLocaleString()}
-                                            </div>
+                                        <div className="bg-blue-900/10 p-3 rounded border border-blue-900/30">
+                                            <div className="text-xs text-blue-400 font-bold uppercase">{t('admin.role')}</div>
+                                            <div className="text-sm font-bold text-blue-200 uppercase">{selectedUser.role}</div>
                                         </div>
                                     </div>
 
-                                    <div className="bg-stone-900/50 p-3 rounded text-[10px] text-stone-400 italic">
-                                        <Info size={12} className="inline mr-1 mb-0.5" />
-                                        {t('admin.audit_desc')}
-                                    </div>
-                                </div>
-                            )}
+                                    {showAudit && userStats?.audit && (
+                                        <div className="bg-stone-950 border border-yellow-900/30 rounded-lg p-5 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                            <div className="flex items-center justify-between border-b border-stone-800 pb-3">
+                                                <div className="flex items-center gap-2 text-yellow-500 font-bold uppercase text-xs">
+                                                    <ShieldAlert size={16} /> {t('admin.financial_audit')}
+                                                </div>
+                                                <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${userStats.audit.profitabilityRatio > 3 ? 'bg-red-900 text-red-100' : userStats.audit.profitabilityRatio > 1.5 ? 'bg-orange-900 text-orange-100' : 'bg-emerald-900 text-emerald-100'}`}>
+                                                    {t('admin.fraud_risk')}: {userStats.audit.profitabilityRatio > 3 ? t('admin.risk_high') : userStats.audit.profitabilityRatio > 1.5 ? t('admin.risk_medium') : t('admin.risk_low')}
+                                                </div>
+                                            </div>
 
-                            {/* Grid Container for Machines and History */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                                {/* Left Column: Mining Machines List */}
-                                <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
-                                    <div className="p-3 bg-stone-900 border-b border-stone-800 flex items-center justify-between">
-                                        <div className="font-bold text-xs text-yellow-500 uppercase tracking-wider flex items-center gap-2">
-                                            <Hammer size={14} /> {t('admin.mining_machines')}
-                                            <span className="text-[10px] bg-stone-800 text-stone-400 px-2 py-0.5 rounded-full lowercase">{getRigsForUser(selectedUser.id).length} machines</span>
-                                        </div>
-                                        <button
-                                            onClick={() => setIsAddingRig(!isAddingRig)}
-                                            className="flex items-center gap-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded transition-colors"
-                                        >
-                                            <Zap size={12} />
-                                            {t('common.add_machine')}
-                                        </button>
-                                    </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                <div className="space-y-1">
+                                                    <div className="text-[10px] text-stone-500 uppercase font-bold">{t('admin.profitability')}</div>
+                                                    <div className={`text-xl font-mono font-bold ${userStats.audit.profitabilityRatio > 3 ? 'text-red-500' : 'text-white'}`}>
+                                                        {(userStats.audit.profitabilityRatio * 100).toFixed(1)}%
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="text-[10px] text-stone-500 uppercase font-bold">{t('admin.total_mined')}</div>
+                                                    <div className="text-xl font-mono font-bold text-emerald-400">
+                                                        +{Math.floor(userStats.audit.totalMiningProfit).toLocaleString()}
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="text-[10px] text-stone-500 uppercase font-bold">{t('admin.free_income')}</div>
+                                                    <div className="text-xl font-mono font-bold text-blue-400">
+                                                        +{Math.floor(userStats.audit.totalBonusIncome).toLocaleString()}
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="text-[10px] text-stone-500 uppercase font-bold">{t('admin.net_cashflow')}</div>
+                                                    <div className={`text-xl font-mono font-bold ${userStats.audit.netCashFlow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                        {userStats.audit.netCashFlow > 0 ? '+' : ''}{Math.floor(userStats.audit.netCashFlow).toLocaleString()}
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                    {isAddingRig && (
-                                        <div className="p-3 bg-stone-900 border-b border-stone-800 space-y-3">
-                                            <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">{t('common.select_machine')}</div>
-                                            <div className="flex gap-2">
-                                                <select
-                                                    value={addingRigPresetId}
-                                                    onChange={(e) => setAddingRigPresetId(Number(e.target.value))}
-                                                    className="flex-1 bg-stone-950 border border-stone-800 rounded px-3 py-2 text-xs text-stone-200 focus:outline-none focus:border-emerald-500"
-                                                >
-                                                    {RIG_PRESETS.map(preset => (
-                                                        <option key={preset.id} value={preset.id}>
-                                                            {getLocalized(preset.name)} (+{preset.dailyProfit} {CURRENCY}/day)
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <button
-                                                    onClick={handleAdminAddRig}
-                                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded transition-colors"
-                                                >
-                                                    {t('common.add_machine')}
-                                                </button>
-                                                <button
-                                                    onClick={() => setIsAddingRig(false)}
-                                                    className="px-4 py-2 bg-stone-800 hover:bg-stone-700 text-stone-400 text-[10px] font-bold rounded transition-colors"
-                                                >
-                                                    {t('common.cancel')}
-                                                </button>
+                                            <div className="bg-stone-900/50 p-3 rounded text-[10px] text-stone-400 italic">
+                                                <Info size={12} className="inline mr-1 mb-0.5" />
+                                                {t('admin.audit_desc')}
                                             </div>
                                         </div>
                                     )}
-                                    <div className="max-h-80 overflow-y-auto">
-                                        {getRigsForUser(selectedUser.id).length > 0 ? (
-                                            <table className="w-full text-left text-sm">
-                                                <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
-                                                    <tr>
-                                                        <th className="p-3 font-medium">{t('admin.name')}</th>
-                                                        <th className="p-3 font-medium text-right">{t('admin.daily_profit')}</th>
-                                                        <th className="p-3 font-medium text-right italic text-stone-400">{t('admin.pending')}</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-stone-800">
-                                                    {getRigsForUser(selectedUser.id).map(r =>
-                                                        <tr key={r.id} className="hover:bg-stone-900 transition-colors group">
-                                                            <td className="p-3">
-                                                                <div className="font-bold text-stone-200">{getLocalized(r.name)}</div>
-                                                                <div className="text-[10px] text-stone-500 font-mono">ID: {r.id}</div>
-                                                                <div className={`text-[10px] font-mono mt-0.5 flex items-center gap-1 ${r.expiresAt < Date.now() ? 'text-red-500 font-bold' : 'text-stone-400'}`}>
-                                                                    <Clock size={10} /> {t('rig.expires_at')}: {new Date(r.expiresAt).toLocaleString()}
-                                                                </div>
-                                                                {/* Accessories */}
-                                                                {r.slots && r.slots.some(id => id) && (
-                                                                    <div className="flex flex-wrap gap-1 mt-2">
-                                                                        {r.slots.map((slotItemId, idx) => {
-                                                                            if (!slotItemId) return null;
-                                                                            const item = selectedUser.inventory?.find((i: any) => i.id === slotItemId);
-                                                                            if (!item) return null;
 
-                                                                            const typeIdLower = (item.typeId || '').toLowerCase();
-                                                                            let IconComp = Zap;
-                                                                            let colorClass = "text-yellow-400";
+                                    {/* Grid Container for Machines and History */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                                        {/* Left Column: Mining Machines List */}
+                                        <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
+                                            <div className="p-3 bg-stone-900 border-b border-stone-800 flex items-center justify-between">
+                                                <div className="font-bold text-xs text-yellow-500 uppercase tracking-wider flex items-center gap-2">
+                                                    <Hammer size={14} /> {t('admin.mining_machines')}
+                                                    <span className="text-[10px] bg-stone-800 text-stone-400 px-2 py-0.5 rounded-full lowercase">{getRigsForUser(selectedUser.id).length} machines</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => setIsAddingRig(!isAddingRig)}
+                                                    className="flex items-center gap-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded transition-colors"
+                                                >
+                                                    <Zap size={12} />
+                                                    {t('common.add_machine')}
+                                                </button>
+                                            </div>
 
-                                                                            const nameRaw = item.name;
-                                                                            const enName = typeof nameRaw === 'object' ? (nameRaw as any).en || '' : String(nameRaw || '');
-                                                                            const thName = typeof nameRaw === 'object' ? (nameRaw as any).th || '' : String(nameRaw || '');
+                                            {isAddingRig && (
+                                                <div className="p-3 bg-stone-900 border-b border-stone-800 space-y-3">
+                                                    <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">{t('common.select_machine')}</div>
+                                                    <div className="flex gap-2">
+                                                        <select
+                                                            value={addingRigPresetId}
+                                                            onChange={(e) => setAddingRigPresetId(Number(e.target.value))}
+                                                            className="flex-1 bg-stone-950 border border-stone-800 rounded px-3 py-2 text-xs text-stone-200 focus:outline-none focus:border-emerald-500"
+                                                        >
+                                                            {RIG_PRESETS.map(preset => (
+                                                                <option key={preset.id} value={preset.id}>
+                                                                    {getLocalized(preset.name)} (+{preset.dailyProfit} {CURRENCY}/day)
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                        <button
+                                                            onClick={handleAdminAddRig}
+                                                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded transition-colors"
+                                                        >
+                                                            {t('common.add_machine')}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setIsAddingRig(false)}
+                                                            className="px-4 py-2 bg-stone-800 hover:bg-stone-700 text-stone-400 text-[10px] font-bold rounded transition-colors"
+                                                        >
+                                                            {t('common.cancel')}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="max-h-80 overflow-y-auto">
+                                                {getRigsForUser(selectedUser.id).length > 0 ? (
+                                                    <table className="w-full text-left text-sm">
+                                                        <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
+                                                            <tr>
+                                                                <th className="p-3 font-medium">{t('admin.name')}</th>
+                                                                <th className="p-3 font-medium text-right">{t('admin.daily_profit')}</th>
+                                                                <th className="p-3 font-medium text-right italic text-stone-400">{t('admin.pending')}</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-stone-800">
+                                                            {getRigsForUser(selectedUser.id).map(r =>
+                                                                <tr key={r.id} className="hover:bg-stone-900 transition-colors group">
+                                                                    <td className="p-3">
+                                                                        <div className="font-bold text-stone-200">{getLocalized(r.name)}</div>
+                                                                        <div className="text-[10px] text-stone-500 font-mono">ID: {r.id}</div>
+                                                                        <div className={`text-[10px] font-mono mt-0.5 flex items-center gap-1 ${r.expiresAt < Date.now() ? 'text-red-500 font-bold' : 'text-stone-400'}`}>
+                                                                            <Clock size={10} /> {t('rig.expires_at')}: {new Date(r.expiresAt).toLocaleString()}
+                                                                        </div>
+                                                                        {/* Accessories */}
+                                                                        {r.slots && r.slots.some(id => id) && (
+                                                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                                                {r.slots.map((slotItemId, idx) => {
+                                                                                    if (!slotItemId) return null;
+                                                                                    const item = selectedUser.inventory?.find((i: any) => i.id === slotItemId);
+                                                                                    if (!item) return null;
 
-                                                                            if (typeIdLower.startsWith('glasses') || thName.includes('แว่น') || enName.includes('Glasses')) { IconComp = Glasses; colorClass = "text-blue-400"; }
-                                                                            else if (typeIdLower.startsWith('uniform') || typeIdLower.startsWith('shirt') || thName.includes('ชุด') || enName.includes('Uniform') || enName.includes('Suit')) { IconComp = Shirt; colorClass = "text-orange-400"; }
-                                                                            else if (typeIdLower.startsWith('bag') || thName.includes('กระเป๋า') || enName.includes('Bag') || enName.includes('Backpack')) { IconComp = Backpack; colorClass = "text-purple-400"; }
-                                                                            else if (typeIdLower.startsWith('boots') || thName.includes('รองเท้า') || enName.includes('Boots')) { IconComp = Footprints; colorClass = "text-yellow-400"; }
-                                                                            else if (typeIdLower.startsWith('mobile') || thName.includes('มือถือ') || enName.includes('Mobile')) { IconComp = Smartphone; colorClass = "text-cyan-400"; }
-                                                                            else if (typeIdLower.startsWith('pc') || thName.includes('คอม') || enName.includes('PC')) { IconComp = Monitor; colorClass = "text-rose-400"; }
+                                                                                    const typeIdLower = (item.typeId || '').toLowerCase();
+                                                                                    let IconComp = Zap;
+                                                                                    let colorClass = "text-yellow-400";
 
+                                                                                    const nameRaw = item.name;
+                                                                                    const enName = typeof nameRaw === 'object' ? (nameRaw as any).en || '' : String(nameRaw || '');
+                                                                                    const thName = typeof nameRaw === 'object' ? (nameRaw as any).th || '' : String(nameRaw || '');
+
+                                                                                    if (typeIdLower.startsWith('glasses') || thName.includes('แว่น') || enName.includes('Glasses')) { IconComp = Glasses; colorClass = "text-blue-400"; }
+                                                                                    else if (typeIdLower.startsWith('uniform') || typeIdLower.startsWith('shirt') || thName.includes('ชุด') || enName.includes('Uniform') || enName.includes('Suit')) { IconComp = Shirt; colorClass = "text-orange-400"; }
+                                                                                    else if (typeIdLower.startsWith('bag') || thName.includes('กระเป๋า') || enName.includes('Bag') || enName.includes('Backpack')) { IconComp = Backpack; colorClass = "text-purple-400"; }
+                                                                                    else if (typeIdLower.startsWith('boots') || thName.includes('รองเท้า') || enName.includes('Boots')) { IconComp = Footprints; colorClass = "text-yellow-400"; }
+                                                                                    else if (typeIdLower.startsWith('mobile') || thName.includes('มือถือ') || enName.includes('Mobile')) { IconComp = Smartphone; colorClass = "text-cyan-400"; }
+                                                                                    else if (typeIdLower.startsWith('pc') || thName.includes('คอม') || enName.includes('PC')) { IconComp = Monitor; colorClass = "text-rose-400"; }
+
+                                                                                    return (
+                                                                                        <div key={idx} className={`flex items-center gap-1 px-1.5 py-0.5 rounded bg-stone-900 border border-stone-800 text-[9px] font-bold ${colorClass}`} title={getLocalized(item.name)}>
+                                                                                            <IconComp size={10} />
+                                                                                            {item.level > 1 && <span>+{item.level}</span>}
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="p-3 text-right">
+                                                                        <div className="flex flex-col items-end">
+                                                                            {(() => {
+                                                                                const nameStr = typeof r.name === 'string' ? r.name : (r.name?.en || r.name?.th || '');
+                                                                                const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
+                                                                                const baseDailyProfit = (r.dailyProfit < 5 && r.dailyProfit > 0) ? r.dailyProfit * 35 : r.dailyProfit;
+                                                                                const effectiveBonusProfit = isNoBonusRig ? 0 : (r.bonusProfit || 0);
+
+                                                                                let equippedBonus = 0;
+                                                                                if (r.slots) {
+                                                                                    r.slots.forEach(slotItemId => {
+                                                                                        if (slotItemId) {
+                                                                                            const item = selectedUser.inventory?.find((i: any) => i.id === slotItemId);
+                                                                                            if (item) {
+                                                                                                const effectiveItemBonus = (item.dailyBonus < 0.5 && item.dailyBonus > 0) ? item.dailyBonus * 35 : item.dailyBonus;
+                                                                                                equippedBonus += effectiveItemBonus;
+                                                                                            }
+                                                                                        }
+                                                                                    });
+                                                                                }
+
+                                                                                const totalRowProfit = baseDailyProfit + effectiveBonusProfit + equippedBonus;
+
+                                                                                return (
+                                                                                    <>
+                                                                                        <div className="font-mono font-bold text-emerald-400">+{Math.floor(totalRowProfit).toLocaleString()}</div>
+                                                                                        <div className="text-[10px] text-stone-500 flex flex-col items-end">
+                                                                                            <span>{Math.floor(baseDailyProfit + effectiveBonusProfit).toLocaleString()} {t('rig.base_profit') || 'base'}</span>
+                                                                                            {equippedBonus > 1 && <span className="text-blue-400">+{Math.floor(equippedBonus).toLocaleString()} {t('rig.bonus') || 'bonus'}</span>}
+                                                                                        </div>
+                                                                                    </>
+                                                                                );
+                                                                            })()}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="p-3 text-right">
+                                                                        {(() => {
+                                                                            const lastClaim = r.lastClaimAt || r.purchasedAt;
+                                                                            const secondsElapsed = Math.max(0, (Date.now() - lastClaim) / 1000);
+                                                                            const nameStr = typeof r.name === 'string' ? r.name : (r.name?.en || r.name?.th || '');
+                                                                            const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
+                                                                            const baseDailyProfit = (r.dailyProfit < 5 && r.dailyProfit > 0) ? r.dailyProfit * 35 : r.dailyProfit;
+                                                                            const effectiveBonusProfit = isNoBonusRig ? 0 : (r.bonusProfit || 0);
+
+                                                                            let equippedBonus = 0;
+                                                                            if (r.slots) {
+                                                                                r.slots.forEach(slotItemId => {
+                                                                                    if (slotItemId) {
+                                                                                        const item = selectedUser.inventory?.find((i: any) => i.id === slotItemId);
+                                                                                        if (item) {
+                                                                                            const effectiveItemBonus = (item.dailyBonus < 0.5 && item.dailyBonus > 0) ? item.dailyBonus * 35 : item.dailyBonus;
+                                                                                            equippedBonus += effectiveItemBonus;
+                                                                                        }
+                                                                                    }
+                                                                                });
+                                                                            }
+
+                                                                            const dailyRate = baseDailyProfit + effectiveBonusProfit + equippedBonus;
+                                                                            const pending = (dailyRate / 86400) * secondsElapsed;
                                                                             return (
-                                                                                <div key={idx} className={`flex items-center gap-1 px-1.5 py-0.5 rounded bg-stone-900 border border-stone-800 text-[9px] font-bold ${colorClass}`} title={getLocalized(item.name)}>
-                                                                                    <IconComp size={10} />
-                                                                                    {item.level > 1 && <span>+{item.level}</span>}
+                                                                                <div className="flex flex-col items-end">
+                                                                                    <div className="font-mono font-bold text-yellow-500">+{pending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                                                    <div className="text-[10px] text-stone-600">{CURRENCY}</div>
                                                                                 </div>
                                                                             );
-                                                                        })}
-                                                                    </div>
-                                                                )}
-                                                            </td>
-                                                            <td className="p-3 text-right">
-                                                                <div className="flex flex-col items-end">
-                                                                    {(() => {
-                                                                        const nameStr = typeof r.name === 'string' ? r.name : (r.name?.en || r.name?.th || '');
-                                                                        const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
-                                                                        const baseDailyProfit = (r.dailyProfit < 5 && r.dailyProfit > 0) ? r.dailyProfit * 35 : r.dailyProfit;
-                                                                        const effectiveBonusProfit = isNoBonusRig ? 0 : (r.bonusProfit || 0);
-
-                                                                        let equippedBonus = 0;
-                                                                        if (r.slots) {
-                                                                            r.slots.forEach(slotItemId => {
-                                                                                if (slotItemId) {
-                                                                                    const item = selectedUser.inventory?.find((i: any) => i.id === slotItemId);
-                                                                                    if (item) {
-                                                                                        const effectiveItemBonus = (item.dailyBonus < 0.5 && item.dailyBonus > 0) ? item.dailyBonus * 35 : item.dailyBonus;
-                                                                                        equippedBonus += effectiveItemBonus;
-                                                                                    }
-                                                                                }
-                                                                            });
-                                                                        }
-
-                                                                        const totalRowProfit = baseDailyProfit + effectiveBonusProfit + equippedBonus;
-
-                                                                        return (
-                                                                            <>
-                                                                                <div className="font-mono font-bold text-emerald-400">+{Math.floor(totalRowProfit).toLocaleString()}</div>
-                                                                                <div className="text-[10px] text-stone-500 flex flex-col items-end">
-                                                                                    <span>{Math.floor(baseDailyProfit + effectiveBonusProfit).toLocaleString()} {t('rig.base_profit') || 'base'}</span>
-                                                                                    {equippedBonus > 1 && <span className="text-blue-400">+{Math.floor(equippedBonus).toLocaleString()} {t('rig.bonus') || 'bonus'}</span>}
-                                                                                </div>
-                                                                            </>
-                                                                        );
-                                                                    })()}
-                                                                </div>
-                                                            </td>
-                                                            <td className="p-3 text-right">
-                                                                {(() => {
-                                                                    const lastClaim = r.lastClaimAt || r.purchasedAt;
-                                                                    const secondsElapsed = Math.max(0, (Date.now() - lastClaim) / 1000);
-                                                                    const nameStr = typeof r.name === 'string' ? r.name : (r.name?.en || r.name?.th || '');
-                                                                    const isNoBonusRig = ['พลั่วสนิมเขรอะ', 'สว่านพกพา', 'Rusty Shovel', 'Portable Drill'].includes(nameStr);
-                                                                    const baseDailyProfit = (r.dailyProfit < 5 && r.dailyProfit > 0) ? r.dailyProfit * 35 : r.dailyProfit;
-                                                                    const effectiveBonusProfit = isNoBonusRig ? 0 : (r.bonusProfit || 0);
-
-                                                                    let equippedBonus = 0;
-                                                                    if (r.slots) {
-                                                                        r.slots.forEach(slotItemId => {
-                                                                            if (slotItemId) {
-                                                                                const item = selectedUser.inventory?.find((i: any) => i.id === slotItemId);
-                                                                                if (item) {
-                                                                                    const effectiveItemBonus = (item.dailyBonus < 0.5 && item.dailyBonus > 0) ? item.dailyBonus * 35 : item.dailyBonus;
-                                                                                    equippedBonus += effectiveItemBonus;
-                                                                                }
-                                                                            }
-                                                                        });
-                                                                    }
-
-                                                                    const dailyRate = baseDailyProfit + effectiveBonusProfit + equippedBonus;
-                                                                    const pending = (dailyRate / 86400) * secondsElapsed;
-                                                                    return (
-                                                                        <div className="flex flex-col items-end">
-                                                                            <div className="font-mono font-bold text-yellow-500">+{pending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                                                                            <div className="text-[10px] text-stone-600">{CURRENCY}</div>
+                                                                        })()}
+                                                                    </td>
+                                                                    <td className="p-3 text-right">
+                                                                        <div className="flex items-center justify-end">
+                                                                            <button
+                                                                                onClick={() => handleDeleteRig(r.id)}
+                                                                                className="p-1.5 text-stone-600 hover:text-red-500 hover:bg-red-900/20 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                                                                title={t('common.delete_machine_confirm')}
+                                                                            >
+                                                                                <Trash2 size={14} />
+                                                                            </button>
                                                                         </div>
-                                                                    );
-                                                                })()}
-                                                            </td>
-                                                            <td className="p-3 text-right">
-                                                                <div className="flex items-center justify-end">
-                                                                    <button
-                                                                        onClick={() => handleDeleteRig(r.id)}
-                                                                        className="p-1.5 text-stone-600 hover:text-red-500 hover:bg-red-900/20 rounded transition-colors opacity-0 group-hover:opacity-100"
-                                                                        title={t('common.delete_machine_confirm')}
-                                                                    >
-                                                                        <Trash2 size={14} />
-                                                                    </button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
-                                        ) : (
-                                            <div className="p-8 text-center text-stone-600 text-sm italic">
-                                                {t('admin.no_rigs')}
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                ) : (
+                                                    <div className="p-8 text-center text-stone-600 text-sm italic">
+                                                        {t('admin.no_rigs')}
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                    <div className="p-3 bg-stone-900 flex gap-3">
-                                        <div className="flex-1 bg-stone-950 p-3 rounded border border-stone-800">
-                                            <div className="text-xs text-stone-500 uppercase">{t('common.total_deposit')}</div>
-                                            <div className="text-lg font-bold text-emerald-400">+{Math.floor(userStats?.totalDeposits || 0).toLocaleString()} {CURRENCY}</div>
+                                            <div className="p-3 bg-stone-900 flex gap-3">
+                                                <div className="flex-1 bg-stone-950 p-3 rounded border border-stone-800">
+                                                    <div className="text-xs text-stone-500 uppercase">{t('common.total_deposit')}</div>
+                                                    <div className="text-lg font-bold text-emerald-400">+{Math.floor(userStats?.totalDeposits || 0).toLocaleString()} {CURRENCY}</div>
+                                                </div>
+                                                <div className="flex-1 bg-stone-950 p-3 rounded border border-stone-800">
+                                                    <div className="text-xs text-stone-500 uppercase">{t('common.total_withdraw')}</div>
+                                                    <div className="text-lg font-bold text-red-500">-{Math.floor(userStats?.totalWithdrawals || 0).toLocaleString()} {CURRENCY}</div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="flex-1 bg-stone-950 p-3 rounded border border-stone-800">
-                                            <div className="text-xs text-stone-500 uppercase">{t('common.total_withdraw')}</div>
-                                            <div className="text-lg font-bold text-red-500">-{Math.floor(userStats?.totalWithdrawals || 0).toLocaleString()} {CURRENCY}</div>
-                                        </div>
-                                    </div>
-                                </div>
 
-                                {/* Right Column: History Stack (2 Rows) */}
-                                <div className="space-y-6">
-                                    {/* Withdrawal History */}
-                                    <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
-                                        <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-stone-400 uppercase tracking-wider flex items-center gap-2">
-                                            <FileText size={14} /> {t('admin.withdrawal_history')}
-                                        </div>
-                                        <div className="max-h-60 overflow-y-auto overflow-x-auto custom-scrollbar">
-                                            {userStats?.withdrawalHistory && userStats.withdrawalHistory.length > 0 ? (
-                                                <table className="w-full text-left text-sm min-w-[500px]">
-                                                    <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
-                                                        <tr>
-                                                            <th className="p-3 font-medium whitespace-nowrap">{t('history.date')}</th>
-                                                            <th className="p-3 font-medium text-right whitespace-nowrap">{t('admin.amount_label')}</th>
-                                                            <th className="p-3 font-medium text-center whitespace-nowrap">{t('history.method')}</th>
-                                                            <th className="p-3 font-medium text-center whitespace-nowrap">{t('admin.status')}</th>
-                                                            <th className="p-3 font-medium text-right whitespace-nowrap">{t('admin.management')}</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-stone-800">
-                                                        {userStats.withdrawalHistory.map(w => (
-                                                            <tr key={w.id} className="hover:bg-stone-900 transition-colors">
-                                                                <td className="p-3 text-stone-400 text-xs font-mono">{new Date(w.timestamp).toLocaleString()}</td>
-                                                                <td className="p-3 text-right font-mono text-white">
-                                                                    {w.method === 'BANK'
-                                                                        ? `${Math.floor(w.amount * EXCHANGE_RATE_USD_THB).toLocaleString()} ฿`
-                                                                        : `$${Math.floor(w.amount).toLocaleString()}`
-                                                                    }
-                                                                </td>
-                                                                <td className="p-3 text-center">
-                                                                    <div className="flex flex-col items-center gap-1">
-                                                                        {(w.method === 'USDT' || (w.walletAddress && !w.bankQrCode)) ? (
-                                                                            <div className="flex flex-col items-center">
-                                                                                <span className="text-[10px] font-bold text-blue-400">USDT</span>
-                                                                                {(w.walletAddress || selectedUser.walletAddress) ? (
-                                                                                    <button
-                                                                                        onClick={() => {
-                                                                                            const addr = w.walletAddress || selectedUser.walletAddress;
-                                                                                            navigator.clipboard.writeText(addr!);
-                                                                                            alert(t('admin.copy_address_success'));
-                                                                                        }}
-                                                                                        className="text-[10px] text-stone-400 font-mono hover:text-blue-400 transition-colors break-all max-w-[120px]"
-                                                                                        title={w.walletAddress || selectedUser.walletAddress}
-                                                                                    >
-                                                                                        {w.walletAddress || selectedUser.walletAddress}
-                                                                                    </button>
-                                                                                ) : (
-                                                                                    <span className="text-[10px] text-red-500 italic">{t('common.no_data')}</span>
-                                                                                )}
-                                                                            </div>
-                                                                        ) : (
-                                                                            <>
-                                                                                {w.bankQrCode ? (
-                                                                                    <div
-                                                                                        className="w-8 h-8 bg-white p-0.5 rounded cursor-zoom-in overflow-hidden border border-stone-700"
-                                                                                        onClick={() => setPreviewImage(w.bankQrCode!)}
-                                                                                    >
-                                                                                        <img src={w.bankQrCode} alt="QR" className="w-full h-full object-cover" />
+                                        {/* Right Column: History Stack (2 Rows) */}
+                                        <div className="space-y-6">
+                                            {/* Withdrawal History */}
+                                            <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
+                                                <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-stone-400 uppercase tracking-wider flex items-center gap-2">
+                                                    <FileText size={14} /> {t('admin.withdrawal_history')}
+                                                </div>
+                                                <div className="max-h-60 overflow-y-auto overflow-x-auto custom-scrollbar">
+                                                    {userStats?.withdrawalHistory && userStats.withdrawalHistory.length > 0 ? (
+                                                        <table className="w-full text-left text-sm min-w-[500px]">
+                                                            <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
+                                                                <tr>
+                                                                    <th className="p-3 font-medium whitespace-nowrap">{t('history.date')}</th>
+                                                                    <th className="p-3 font-medium text-right whitespace-nowrap">{t('admin.amount_label')}</th>
+                                                                    <th className="p-3 font-medium text-center whitespace-nowrap">{t('history.method')}</th>
+                                                                    <th className="p-3 font-medium text-center whitespace-nowrap">{t('admin.status')}</th>
+                                                                    <th className="p-3 font-medium text-right whitespace-nowrap">{t('admin.management')}</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-stone-800">
+                                                                {userStats.withdrawalHistory.map(w => (
+                                                                    <tr key={w.id} className="hover:bg-stone-900 transition-colors">
+                                                                        <td className="p-3 text-stone-400 text-xs font-mono">{new Date(w.timestamp).toLocaleString()}</td>
+                                                                        <td className="p-3 text-right font-mono text-white">
+                                                                            {w.method === 'BANK'
+                                                                                ? `${Math.floor(w.amount * EXCHANGE_RATE_USD_THB).toLocaleString()} ฿`
+                                                                                : `$${Math.floor(w.amount).toLocaleString()}`
+                                                                            }
+                                                                        </td>
+                                                                        <td className="p-3 text-center">
+                                                                            <div className="flex flex-col items-center gap-1">
+                                                                                {(w.method === 'USDT' || (w.walletAddress && !w.bankQrCode)) ? (
+                                                                                    <div className="flex flex-col items-center">
+                                                                                        <span className="text-[10px] font-bold text-blue-400">USDT</span>
+                                                                                        {(w.walletAddress || selectedUser.walletAddress) ? (
+                                                                                            <button
+                                                                                                onClick={() => {
+                                                                                                    const addr = w.walletAddress || selectedUser.walletAddress;
+                                                                                                    navigator.clipboard.writeText(addr!);
+                                                                                                    alert(t('admin.copy_address_success'));
+                                                                                                }}
+                                                                                                className="text-[10px] text-stone-400 font-mono hover:text-blue-400 transition-colors break-all max-w-[120px]"
+                                                                                                title={w.walletAddress || selectedUser.walletAddress}
+                                                                                            >
+                                                                                                {w.walletAddress || selectedUser.walletAddress}
+                                                                                            </button>
+                                                                                        ) : (
+                                                                                            <span className="text-[10px] text-red-500 italic">{t('common.no_data')}</span>
+                                                                                        )}
                                                                                     </div>
                                                                                 ) : (
-                                                                                    <span className="text-stone-600 text-[10px] italic">No QR</span>
+                                                                                    <>
+                                                                                        {w.bankQrCode ? (
+                                                                                            <div
+                                                                                                className="w-8 h-8 bg-white p-0.5 rounded cursor-zoom-in overflow-hidden border border-stone-700"
+                                                                                                onClick={() => setPreviewImage(w.bankQrCode!)}
+                                                                                            >
+                                                                                                <img src={w.bankQrCode} alt="QR" className="w-full h-full object-cover" />
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <span className="text-stone-600 text-[10px] italic">No QR</span>
+                                                                                        )}
+                                                                                        <span className="text-[10px] font-bold text-stone-500 uppercase">BANK</span>
+                                                                                        {selectedUser.walletAddress && (
+                                                                                            <button
+                                                                                                onClick={() => {
+                                                                                                    navigator.clipboard.writeText(selectedUser.walletAddress!);
+                                                                                                    alert(t('admin.copy_address_success'));
+                                                                                                }}
+                                                                                                className="text-[9px] text-blue-400/50 hover:text-blue-400 font-mono transition-colors"
+                                                                                                title="USDT Wallet (BSC)"
+                                                                                            >
+                                                                                                {selectedUser.walletAddress.substring(0, 6)}...
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </>
                                                                                 )}
-                                                                                <span className="text-[10px] font-bold text-stone-500 uppercase">BANK</span>
-                                                                                {selectedUser.walletAddress && (
-                                                                                    <button
-                                                                                        onClick={() => {
-                                                                                            navigator.clipboard.writeText(selectedUser.walletAddress!);
-                                                                                            alert(t('admin.copy_address_success'));
-                                                                                        }}
-                                                                                        className="text-[9px] text-blue-400/50 hover:text-blue-400 font-mono transition-colors"
-                                                                                        title="USDT Wallet (BSC)"
-                                                                                    >
-                                                                                        {selectedUser.walletAddress.substring(0, 6)}...
-                                                                                    </button>
-                                                                                )}
-                                                                            </>
-                                                                        )}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="p-3 text-center">
-                                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${w.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-500' :
-                                                                        w.status === 'REJECTED' ? 'bg-red-900/30 text-red-500' :
-                                                                            'bg-yellow-900/30 text-yellow-500'
-                                                                        }`}>
-                                                                        {w.status}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="p-3 text-right">
-                                                                    {w.status === 'PENDING' && (
-                                                                        <div className="flex justify-end gap-1">
-                                                                            <button
-                                                                                onClick={() => initiateProcessWithdrawal(w, 'APPROVED')}
-                                                                                className="p-1.5 bg-emerald-900/30 text-emerald-500 hover:bg-emerald-900/50 rounded transition-colors"
-                                                                                title="Approve"
-                                                                            >
-                                                                                <Check size={14} />
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => initiateProcessWithdrawal(w, 'REJECTED')}
-                                                                                className="p-1.5 bg-red-900/30 text-red-500 hover:bg-red-900/50 rounded transition-colors"
-                                                                                title={t('admin.reject')}
-                                                                            >
-                                                                                <X size={14} />
-                                                                            </button>
-                                                                        </div>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            ) : (
-                                                <div className="p-8 text-center text-stone-600 text-sm italic">
-                                                    {t('common.no_data')}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Deposit History */}
-                                    <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
-                                        <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-emerald-500 uppercase tracking-wider flex items-center gap-2">
-                                            <FileText size={14} /> {t('admin.deposit_history')}
-                                        </div>
-                                        <div className="max-h-60 overflow-y-auto overflow-x-auto custom-scrollbar">
-                                            {userStats?.depositHistory && userStats.depositHistory.length > 0 ? (
-                                                <table className="w-full text-left text-sm min-w-[500px]">
-                                                    <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
-                                                        <tr>
-                                                            <th className="p-3 font-medium whitespace-nowrap">{t('history.date')}</th>
-                                                            <th className="p-3 font-medium text-right whitespace-nowrap">{t('admin.amount_label')}</th>
-                                                            <th className="p-3 font-medium text-center whitespace-nowrap">{t('history.method')}</th>
-                                                            <th className="p-3 font-medium text-center whitespace-nowrap">{t('admin.status')}</th>
-                                                            <th className="p-3 font-medium text-right whitespace-nowrap">{t('admin.management')}</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-stone-800">
-                                                        {userStats.depositHistory.map(d => (
-                                                            <tr key={d.id} className="hover:bg-stone-900 transition-colors">
-                                                                <td className="p-3 text-stone-400 text-xs font-mono">{new Date(d.timestamp).toLocaleString()}</td>
-                                                                <td className="p-3 text-right font-mono text-emerald-400">+{Math.floor(d.amount).toLocaleString()}</td>
-                                                                <td className="p-3 text-center">
-                                                                    <div
-                                                                        className="w-8 h-8 bg-stone-800 p-0.5 rounded cursor-zoom-in mx-auto overflow-hidden border border-stone-700"
-                                                                        onClick={() => setPreviewImage(d.slipImage)}
-                                                                    >
-                                                                        {d.slipImage === 'USDT_DIRECT_TRANSFER' ? (
-                                                                            <div className="w-full h-full flex items-center justify-center bg-blue-900/20 text-blue-400" title="USDT Direct Transfer">
-                                                                                <Wallet size={16} />
                                                                             </div>
-                                                                        ) : (
-                                                                            <img src={d.slipImage} alt="Slip" className="w-full h-full object-cover" />
-                                                                        )}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="p-3 text-center">
-                                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${d.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-500' :
-                                                                        d.status === 'REJECTED' ? 'bg-red-900/30 text-red-500' :
-                                                                            'bg-yellow-900/30 text-yellow-500'
-                                                                        }`}>
-                                                                        {d.status}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="p-3 text-right">
-                                                                    {d.status === 'PENDING' && (
-                                                                        <div className="flex justify-end gap-1">
-                                                                            <button
-                                                                                onClick={() => handleDirectProcessDeposit(d.id, 'APPROVED')}
-                                                                                className="p-1.5 bg-emerald-900/30 text-emerald-500 hover:bg-emerald-900/50 rounded transition-colors"
-                                                                                title="Approve"
-                                                                            >
-                                                                                <Check size={14} />
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => initiateProcessDeposit(d, 'REJECTED')}
-                                                                                className="p-1.5 bg-red-900/30 text-red-500 hover:bg-red-900/50 rounded transition-colors"
-                                                                                title={t('admin.reject')}
-                                                                            >
-                                                                                <X size={14} />
-                                                                            </button>
-                                                                        </div>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            ) : (
-                                                <div className="p-8 text-center text-stone-600 text-sm italic">
-                                                    {t('common.no_data')}
+                                                                        </td>
+                                                                        <td className="p-3 text-center">
+                                                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${w.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-500' :
+                                                                                w.status === 'REJECTED' ? 'bg-red-900/30 text-red-500' :
+                                                                                    'bg-yellow-900/30 text-yellow-500'
+                                                                                }`}>
+                                                                                {w.status}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td className="p-3 text-right">
+                                                                            {w.status === 'PENDING' && (
+                                                                                <div className="flex justify-end gap-1">
+                                                                                    <button
+                                                                                        onClick={() => initiateProcessWithdrawal(w, 'APPROVED')}
+                                                                                        className="p-1.5 bg-emerald-900/30 text-emerald-500 hover:bg-emerald-900/50 rounded transition-colors"
+                                                                                        title="Approve"
+                                                                                    >
+                                                                                        <Check size={14} />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => initiateProcessWithdrawal(w, 'REJECTED')}
+                                                                                        className="p-1.5 bg-red-900/30 text-red-500 hover:bg-red-900/50 rounded transition-colors"
+                                                                                        title={t('admin.reject')}
+                                                                                    >
+                                                                                        <X size={14} />
+                                                                                    </button>
+                                                                                </div>
+                                                                            )}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    ) : (
+                                                        <div className="p-8 text-center text-stone-600 text-sm italic">
+                                                            {t('common.no_data')}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
+                                            </div>
+
+                                            {/* Deposit History */}
+                                            <div className="bg-stone-950 rounded border border-stone-800 overflow-hidden">
+                                                <div className="p-3 bg-stone-900 border-b border-stone-800 font-bold text-xs text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+                                                    <FileText size={14} /> {t('admin.deposit_history')}
+                                                </div>
+                                                <div className="max-h-60 overflow-y-auto overflow-x-auto custom-scrollbar">
+                                                    {userStats?.depositHistory && userStats.depositHistory.length > 0 ? (
+                                                        <table className="w-full text-left text-sm min-w-[500px]">
+                                                            <thead className="bg-stone-900/50 text-stone-500 text-xs uppercase sticky top-0">
+                                                                <tr>
+                                                                    <th className="p-3 font-medium whitespace-nowrap">{t('history.date')}</th>
+                                                                    <th className="p-3 font-medium text-right whitespace-nowrap">{t('admin.amount_label')}</th>
+                                                                    <th className="p-3 font-medium text-center whitespace-nowrap">{t('history.method')}</th>
+                                                                    <th className="p-3 font-medium text-center whitespace-nowrap">{t('admin.status')}</th>
+                                                                    <th className="p-3 font-medium text-right whitespace-nowrap">{t('admin.management')}</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-stone-800">
+                                                                {userStats.depositHistory.map(d => (
+                                                                    <tr key={d.id} className="hover:bg-stone-900 transition-colors">
+                                                                        <td className="p-3 text-stone-400 text-xs font-mono">{new Date(d.timestamp).toLocaleString()}</td>
+                                                                        <td className="p-3 text-right font-mono text-emerald-400">+{Math.floor(d.amount).toLocaleString()}</td>
+                                                                        <td className="p-3 text-center">
+                                                                            <div
+                                                                                className="w-8 h-8 bg-stone-800 p-0.5 rounded cursor-zoom-in mx-auto overflow-hidden border border-stone-700"
+                                                                                onClick={() => setPreviewImage(d.slipImage)}
+                                                                            >
+                                                                                {d.slipImage === 'USDT_DIRECT_TRANSFER' ? (
+                                                                                    <div className="w-full h-full flex items-center justify-center bg-blue-900/20 text-blue-400" title="USDT Direct Transfer">
+                                                                                        <Wallet size={16} />
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <img src={d.slipImage} alt="Slip" className="w-full h-full object-cover" />
+                                                                                )}
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="p-3 text-center">
+                                                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${d.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-500' :
+                                                                                d.status === 'REJECTED' ? 'bg-red-900/30 text-red-500' :
+                                                                                    'bg-yellow-900/30 text-yellow-500'
+                                                                                }`}>
+                                                                                {d.status}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td className="p-3 text-right">
+                                                                            {d.status === 'PENDING' && (
+                                                                                <div className="flex justify-end gap-1">
+                                                                                    <button
+                                                                                        onClick={() => handleDirectProcessDeposit(d.id, 'APPROVED')}
+                                                                                        className="p-1.5 bg-emerald-900/30 text-emerald-500 hover:bg-emerald-900/50 rounded transition-colors"
+                                                                                        title="Approve"
+                                                                                    >
+                                                                                        <Check size={14} />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => initiateProcessDeposit(d, 'REJECTED')}
+                                                                                        className="p-1.5 bg-red-900/30 text-red-500 hover:bg-red-900/50 rounded transition-colors"
+                                                                                        title={t('admin.reject')}
+                                                                                    >
+                                                                                        <X size={14} />
+                                                                                    </button>
+                                                                                </div>
+                                                                            )}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    ) : (
+                                                        <div className="p-8 text-center text-stone-600 text-sm italic">
+                                                            {t('common.no_data')}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-
+                                </>
+                            ) : (
+                                <ReferralNetworkView data={networkData} isLoading={isFetchingNetwork} />
+                            )}
                         </div>
 
                         {/* Action Buttons - Fixed at bottom */}
@@ -2057,11 +2124,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                     <button
                                                         className="text-stone-500 hover:text-white p-2 rounded hover:bg-stone-800 transition-colors"
                                                         title="View Details"
-                                                        onClick={() => {
-                                                            setSelectedUser(u);
-                                                            setEconomyForm(prev => ({ ...prev, targetUser: u.id, compUser: u.id }));
-                                                            api.admin.getUserStats(u.id).then(setUserStats).catch(() => setUserStats({ totalDeposits: 0, totalWithdrawals: 0 }));
-                                                        }}
+                                                        onClick={() => handleSelectUser(u)}
                                                     >
                                                         <ChevronRight size={16} />
                                                     </button>
@@ -2345,5 +2408,130 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             {/* Chat System for Admin */}
             <ChatSystem currentUser={currentUser} />
         </div >
+    );
+};
+
+const ReferralNetworkView = ({ data, isLoading }: { data: any, isLoading: boolean }) => {
+    if (isLoading) return (
+        <div className="p-12 flex flex-col items-center justify-center gap-4 text-stone-500 animate-pulse">
+            <div className="w-10 h-10 border-2 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin"></div>
+            <div className="font-mono tracking-widest uppercase text-xs">FETCHING NETWORK DATA...</div>
+        </div>
+    );
+
+    if (!data) return (
+        <div className="p-12 text-center text-stone-500 border-2 border-dashed border-stone-800 rounded-xl">
+            No network data available for this user.
+        </div>
+    );
+
+    const { network, actualCounts } = data;
+
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Summary Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-stone-950 p-4 rounded-xl border border-stone-800 shadow-xl">
+                    <div className="text-[10px] text-stone-500 uppercase font-bold mb-1 tracking-widest">Total Network</div>
+                    <div className="text-2xl font-display font-bold text-white">{actualCounts.total}</div>
+                    <div className="mt-1 h-1 w-full bg-stone-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-yellow-500 to-yellow-300" style={{ width: '100%' }}></div>
+                    </div>
+                </div>
+                <div className="bg-emerald-950/20 p-4 rounded-xl border border-emerald-900/30 shadow-xl">
+                    <div className="text-[10px] text-emerald-500 uppercase font-bold mb-1 tracking-widest">Level 1 (Direct)</div>
+                    <div className="text-2xl font-display font-bold text-emerald-400">{actualCounts.l1}</div>
+                    <div className="mt-1 h-1 w-full bg-stone-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500" style={{ width: `${(actualCounts.l1 / (actualCounts.total || 1)) * 100}%` }}></div>
+                    </div>
+                </div>
+                <div className="bg-blue-950/20 p-4 rounded-xl border border-blue-900/30 shadow-xl">
+                    <div className="text-[10px] text-blue-400 uppercase font-bold mb-1 tracking-widest">Level 2 (Indirect)</div>
+                    <div className="text-2xl font-display font-bold text-blue-400">{actualCounts.l2}</div>
+                    <div className="mt-1 h-1 w-full bg-stone-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500" style={{ width: `${(actualCounts.l2 / (actualCounts.total || 1)) * 100}%` }}></div>
+                    </div>
+                </div>
+                <div className="bg-purple-950/20 p-4 rounded-xl border border-purple-900/30 shadow-xl">
+                    <div className="text-[10px] text-purple-400 uppercase font-bold mb-1 tracking-widest">Level 3</div>
+                    <div className="text-2xl font-display font-bold text-purple-400">{actualCounts.l3}</div>
+                    <div className="mt-1 h-1 w-full bg-stone-900 rounded-full overflow-hidden">
+                        <div className="h-full bg-purple-500" style={{ width: `${(actualCounts.l3 / (actualCounts.total || 1)) * 100}%` }}></div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Hierarchical Lists */}
+            <div className="space-y-6">
+                {/* Level 1 List */}
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 bg-emerald-900/10 p-2.5 rounded border border-emerald-900/20">
+                        <Users size={14} /> LEVEL 1 MEMBERS (Directly Invited)
+                    </div>
+                    {network.l1.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-4 border-l-2 border-emerald-900/30">
+                            {network.l1.map((u: any) => (
+                                <div key={u.id} className="bg-stone-950/50 p-3 rounded-lg border border-stone-800 flex justify-between items-center hover:bg-stone-900 transition-all group">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-emerald-900/20 flex items-center justify-center text-emerald-500 font-bold border border-emerald-900/30">
+                                            {u.username.substring(0, 2).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-bold text-white">{u.username}</div>
+                                            <div className="text-[10px] text-stone-500 font-mono">Joined: {new Date(u.joinedAt).toLocaleDateString()}</div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-xs font-bold text-yellow-500 mb-0.5">{u.invitedCount}</div>
+                                        <div className="text-[10px] text-stone-600 uppercase font-bold tracking-tighter">Referrals</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-stone-600 text-xs italic pl-6">No direct referrals found.</div>
+                    )}
+                </div>
+
+                {/* Level 2 List */}
+                {network.l2.length > 0 && (
+                    <div className="space-y-3 pt-2">
+                        <div className="flex items-center gap-2 text-xs font-bold text-blue-400 bg-blue-900/10 p-2.5 rounded border border-blue-900/20">
+                            <Users size={14} /> LEVEL 2 MEMBERS (Indirect)
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pl-4 border-l-2 border-blue-900/20">
+                            {network.l2.map((u: any) => (
+                                <div key={u.id} className="bg-stone-950/30 p-2.5 rounded-lg border border-stone-800/50 flex justify-between items-center">
+                                    <div>
+                                        <div className="text-sm font-bold text-stone-200">{u.username}</div>
+                                        <div className="text-[9px] text-stone-500 font-mono">{new Date(u.joinedAt).toLocaleDateString()}</div>
+                                    </div>
+                                    <div className="bg-stone-900 px-2 py-1 rounded border border-stone-800 text-[10px] font-bold text-stone-400">
+                                        {u.invitedCount}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Level 3 List */}
+                {network.l3.length > 0 && (
+                    <div className="space-y-3 pt-2">
+                        <div className="flex items-center gap-2 text-xs font-bold text-purple-400 bg-purple-900/10 p-2.5 rounded border border-purple-900/20">
+                            <Users size={14} /> LEVEL 3 MEMBERS
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 pl-4 border-l-2 border-purple-900/20">
+                            {network.l3.map((u: any) => (
+                                <div key={u.id} className="bg-stone-950/20 p-2 rounded-lg border border-stone-800/30 flex justify-between items-center opacity-80 hover:opacity-100 transition-opacity">
+                                    <div className="text-xs font-bold text-stone-300">{u.username}</div>
+                                    <div className="text-[10px] text-stone-600">{u.invitedCount}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 };
