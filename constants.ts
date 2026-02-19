@@ -951,3 +951,37 @@ export const DUNGEON_CONFIG: DungeonLevel[] = [
 
 
 
+
+export const SALVAGE_CONFIG: Record<string, {
+    materials: { tier: number; min: number; max: number; chance?: number }[];
+    bonus?: { itemId: string; chance: number; count?: number };
+}> = {
+    TIER_1: {
+        materials: [
+            { tier: 1, min: 3, max: 5 }, // Coal
+            { tier: 2, min: 1, max: 2 }  // Copper
+        ],
+        bonus: { itemId: 'repair_kit_1', chance: 0.10 } // 10% Chance for Basic Kit
+    },
+    TIER_2: {
+        materials: [
+            { tier: 2, min: 4, max: 6 }, // Copper
+            { tier: 3, min: 1, max: 3 }  // Iron
+        ],
+        bonus: { itemId: 'repair_kit_1', chance: 0.15 } // 15% Chance for Basic Kit
+    },
+    TIER_3: {
+        materials: [
+            { tier: 3, min: 5, max: 8 }, // Iron
+            { tier: 4, min: 1, max: 2 }  // Gold
+        ],
+        bonus: { itemId: 'repair_kit_2', chance: 0.10 } // 10% Chance for Standard Kit
+    },
+    TIER_4: {
+        materials: [
+            { tier: 4, min: 4, max: 6 }, // Gold
+            { tier: 5, min: 0, max: 1, chance: 0.30 } // 30% Chance for Diamond
+        ],
+        bonus: { itemId: 'repair_kit_2', chance: 0.20, count: 2 } // 20% Chance for 2 Standard Kits
+    }
+};

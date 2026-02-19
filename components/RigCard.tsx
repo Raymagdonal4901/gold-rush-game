@@ -2,7 +2,7 @@
 import { RigLootModal } from './RigLootModal';
 import { OilRig, AccessoryItem } from '../services/types';
 import { OilRigAnimation } from './OilRigAnimation';
-import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, MINING_VOLATILITY_CONFIG, RIG_UPGRADE_RULES, MAX_RIG_LEVEL, RIG_LEVEL_STYLES, LEVEL_CONFIG } from '../constants';
+import { BASE_CLAIM_AMOUNT, CURRENCY, RARITY_SETTINGS, GIFT_CYCLE_DAYS, RENEWAL_CONFIG, REPAIR_CONFIG, MATERIAL_CONFIG, RIG_PRESETS, MAX_SLOTS_PER_RIG, DEMO_SPEED_MULTIPLIER, EQUIPMENT_SERIES, ENERGY_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, MINING_VOLATILITY_CONFIG, RIG_UPGRADE_RULES, MAX_RIG_LEVEL, RIG_LEVEL_STYLES, LEVEL_CONFIG, SALVAGE_CONFIG } from '../constants';
 import { Pickaxe, Clock, Coins, Sparkles, Zap, Timer, Crown, Hexagon, Check, X, Gift, Briefcase, RefreshCw, AlertTriangle, Wrench, Hammer, HardHat, Glasses, Shirt, Backpack, Footprints, Smartphone, Monitor, Bot, ShoppingBag, BoxSelect, Info, Lock, Key, ArrowDownToLine, ZapOff, CheckCircle2, CalendarClock, Eye, Truck, Plus, Cpu, Trash2, Skull, Package, Factory, Search, Flame, Home, Fan, Wifi, Server, Grid, HardDrive, Calculator, Star, Settings, TrainFront, Clover, Download, ArrowUp, ArrowRight } from 'lucide-react';
 import { MaterialIcon } from './MaterialIcon';
 import { api } from '../services/api';
@@ -674,15 +674,74 @@ export const RigCard: React.FC<RigCardProps> = ({
             )}
 
             {isScrapConfirming && (
-                <div className="absolute inset-0 z-50 bg-red-950/95 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center border-2 border-red-900/50 rounded-xl">
-                    <Trash2 className="text-red-500 animate-bounce mb-4" size={32} />
-                    <h4 className="text-red-400 text-sm uppercase tracking-[0.2em] font-black mb-2">{t('rig.confirm_demolish')}</h4>
-                    <p className="text-stone-300 text-xs mb-4 leading-relaxed">
-                        {language === 'th' ? 'คุณแน่ใจหรือไม่ที่จะหลอมเครื่องขุดนี้? เครื่องขุดจะถูกทำลายและคุณจะได้รับวัตถุดิบบางส่วนคืน' : 'Are you sure you want to melt this rig? It will be destroyed and you will receive some materials back.'}
+                <div className="absolute inset-0 z-50 bg-red-950/95 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center border-2 border-red-900/50 rounded-xl overflow-hidden">
+                    <Trash2 className="text-red-500 animate-bounce mb-3" size={28} />
+                    <h4 className="text-red-400 text-xs uppercase tracking-[0.2em] font-black mb-1">{t('rig.confirm_demolish')}</h4>
+                    <p className="text-stone-400 text-[10px] mb-3 leading-relaxed">
+                        {language === 'th' ? 'หลอมเครื่องขุดเพื่อรับวัตถุดิบบางส่วนคืน' : 'Melt this rig to receive some materials back.'}
                     </p>
-                    <div className="grid grid-cols-2 gap-3 w-full mt-2">
-                        <button onClick={(e) => { e.stopPropagation(); setIsScrapConfirming(false); }} className="py-3 rounded-lg border border-stone-600 text-stone-300 text-xs font-bold uppercase">{t('common.cancel')}</button>
-                        <button onClick={confirmScrap} className="py-3 rounded-lg bg-red-600 text-white text-xs font-bold uppercase flex items-center justify-center gap-2"><Trash2 size={14} /> {t('rig.destroy')}</button>
+
+                    {/* SALVAGE REWARD PREVIEW */}
+                    <div className="w-full bg-black/40 rounded-lg p-2.5 mb-4 border border-red-900/30">
+                        <div className="text-[9px] font-bold text-red-400/70 uppercase tracking-widest mb-2 flex items-center justify-center gap-1.5">
+                            <Sparkles size={10} />
+                            {language === 'th' ? 'วัตถุดิบที่คาดว่าจะได้รับ' : 'ESTIMATED MATERIALS'}
+                        </div>
+                        <div className="space-y-1.5">
+                            {(() => {
+                                const pId = preset?.id || 1;
+                                let salvageTier = 'TIER_1';
+                                if (pId === 4) salvageTier = 'TIER_2';
+                                else if (pId === 5) salvageTier = 'TIER_3';
+                                else if ([6, 7, 8].includes(pId)) salvageTier = 'TIER_4';
+
+                                const salvage = SALVAGE_CONFIG[salvageTier];
+                                if (!salvage) return null;
+
+                                return (
+                                    <>
+                                        {salvage.materials.map((m, i) => {
+                                            const matName = MATERIAL_CONFIG.NAMES[m.tier as keyof typeof MATERIAL_CONFIG.NAMES];
+                                            const matColor = MATERIAL_CONFIG.COLORS[m.tier as keyof typeof MATERIAL_CONFIG.COLORS] || 'text-white';
+                                            return (
+                                                <div key={i} className="flex justify-between items-center text-[10px] bg-white/5 px-2 py-1 rounded">
+                                                    <div className="flex items-center gap-2">
+                                                        <MaterialIcon id={m.tier} size="w-5 h-5" iconSize={14} />
+                                                        <span className={`font-bold ${matColor}`}>{getLocalized(matName)}</span>
+                                                    </div>
+                                                    <span className="font-mono text-white/90">{m.min}-{m.max}</span>
+                                                </div>
+                                            );
+                                        })}
+                                        {salvage.bonus && (
+                                            <div className="flex justify-between items-center text-[10px] bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">
+                                                <div className="flex items-center gap-2">
+                                                    {(() => {
+                                                        const item = SHOP_ITEMS.find(si => si.id === salvage.bonus?.itemId);
+                                                        return (
+                                                            <>
+                                                                <div className="w-5 h-5 flex items-center justify-center bg-emerald-900/30 rounded border border-emerald-500/20">
+                                                                    <AccessoryIcon item={item || { id: salvage.bonus?.itemId }} size={12} />
+                                                                </div>
+                                                                <span className="font-bold text-emerald-400">
+                                                                    {item ? getLocalized(item.name) : salvage.bonus?.itemId}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
+                                                <span className="font-mono text-emerald-300">{(salvage.bonus.chance * 100).toFixed(0)}%</span>
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 w-full">
+                        <button onClick={(e) => { e.stopPropagation(); setIsScrapConfirming(false); }} className="py-2.5 rounded-lg border border-stone-700 text-stone-400 text-[10px] font-bold uppercase">{t('common.cancel')}</button>
+                        <button onClick={confirmScrap} className="py-2.5 rounded-lg bg-red-600 text-white text-[10px] font-bold uppercase flex items-center justify-center gap-2 shadow-lg shadow-red-950/40"><Trash2 size={12} /> {t('rig.destroy')}</button>
                     </div>
                 </div>
             )}
