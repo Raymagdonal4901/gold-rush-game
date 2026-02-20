@@ -1683,7 +1683,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                         <td className="p-3 text-right">
                                                             {res.status === 'PENDING' && (
                                                                 <button
-                                                                    onClick={() => handleDirectProcessDeposit(res.id, 'APPROVED')}
+                                                                    onClick={() => handleDirectProcessDeposit(res.id, 'APPROVE')}
                                                                     className="bg-emerald-600 hover:bg-emerald-500 text-white p-1.5 rounded transition-colors"
                                                                     title="Approve"
                                                                 >
@@ -2544,39 +2544,71 @@ function ReferralNetworkView({ data, isLoading }: { data: any, isLoading: boolea
         </div>
     );
 
-    const { network, actualCounts } = data;
+    const { network, actualCounts, earnings } = data;
 
     return (
         <div className="space-y-4 animate-in fade-in duration-500 mt-4">
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="bg-stone-900 border border-stone-800 p-3 rounded-lg">
-                    <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">Total Network</div>
-                    <div className="text-xl font-bold text-white">{data.totalCount || 0}</div>
+                    <div className="text-[10px] text-stone-500 uppercase font-bold mb-1">Total Commissions</div>
+                    <div className="text-xl font-bold text-yellow-500">{(earnings?.total || 0).toLocaleString()} <span className="text-[10px] font-normal text-stone-600">THB</span></div>
                 </div>
                 <div className="bg-emerald-950/20 border border-emerald-900/30 p-3 rounded-lg">
-                    <div className="text-[10px] text-emerald-500 uppercase font-bold mb-1">Level 1</div>
-                    <div className="text-xl font-bold text-emerald-400">{actualCounts?.l1 || 0}</div>
+                    <div className="flex justify-between items-start">
+                        <div className="text-[10px] text-emerald-500 uppercase font-bold mb-1">Level 1</div>
+                        <div className="text-[10px] text-emerald-600 font-mono">{actualCounts?.l1 || 0} users</div>
+                    </div>
+                    <div className="text-xl font-bold text-emerald-400">{(earnings?.l1 || 0).toLocaleString()} <span className="text-[10px] font-normal text-emerald-600">THB</span></div>
                 </div>
                 <div className="bg-blue-950/20 border border-blue-900/30 p-3 rounded-lg">
-                    <div className="text-[10px] text-blue-500 uppercase font-bold mb-1">Level 2</div>
-                    <div className="text-xl font-bold text-blue-400">{actualCounts?.l2 || 0}</div>
+                    <div className="flex justify-between items-start">
+                        <div className="text-[10px] text-blue-500 uppercase font-bold mb-1">Level 2</div>
+                        <div className="text-[10px] text-blue-600 font-mono">{actualCounts?.l2 || 0} users</div>
+                    </div>
+                    <div className="text-xl font-bold text-blue-400">{(earnings?.l2 || 0).toLocaleString()} <span className="text-[10px] font-normal text-blue-600">THB</span></div>
                 </div>
                 <div className="bg-purple-950/20 border border-purple-900/30 p-3 rounded-lg">
-                    <div className="text-[10px] text-purple-500 uppercase font-bold mb-1">Level 3</div>
-                    <div className="text-xl font-bold text-purple-400">{actualCounts?.l3 || 0}</div>
+                    <div className="flex justify-between items-start">
+                        <div className="text-[10px] text-purple-500 uppercase font-bold mb-1">Level 3</div>
+                        <div className="text-[10px] text-purple-600 font-mono">{actualCounts?.l3 || 0} users</div>
+                    </div>
+                    <div className="text-xl font-bold text-purple-400">{(earnings?.l3 || 0).toLocaleString()} <span className="text-[10px] font-normal text-purple-600">THB</span></div>
+                </div>
+            </div>
+
+            {/* Additional Info Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-stone-900/50 border border-stone-800 p-3 rounded-lg flex justify-between items-center">
+                    <div>
+                        <div className="text-[10px] text-stone-500 uppercase font-bold">Total Network Size</div>
+                        <div className="text-lg font-bold text-white">{data.totalCount || 0} <span className="text-[10px] font-normal text-stone-600">members</span></div>
+                    </div>
+                </div>
+                <div className="bg-stone-900/50 border border-stone-800 p-3 rounded-lg flex justify-between items-center">
+                    <div>
+                        <div className="text-[10px] text-stone-500 uppercase font-bold">Team Total Earnings</div>
+                        <div className="text-lg font-bold text-white">{(earnings?.teamTotal || 0).toLocaleString()} <span className="text-[10px] font-normal text-stone-600">THB</span></div>
+                    </div>
+                    <div className="text-[10px] text-stone-600 italic">Sum of all members' income</div>
                 </div>
             </div>
 
             {/* Level 1 Members */}
-            {network.l1.length > 0 && (
+            {network?.l1?.length > 0 && (
                 <div className="space-y-2">
-                    <div className="text-[10px] font-bold text-emerald-500 bg-emerald-900/20 px-3 py-1 rounded w-fit">LEVEL 1 MEMBERS</div>
+                    <div className="text-[10px] font-bold text-emerald-500 bg-emerald-900/20 px-3 py-1 rounded w-fit">LEVEL 1 MEMBERS ({network.l1.length})</div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
                         {network.l1.map((u: any) => (
-                            <div key={u.id} className="bg-stone-900 border border-stone-800 p-2 rounded flex justify-between items-center">
-                                <div className="text-xs font-bold text-stone-200">{u.username}</div>
-                                <div className="text-[10px] text-emerald-500">{u.invitedCount}</div>
+                            <div key={u.id} className="bg-stone-900 border border-stone-800 p-2 rounded">
+                                <div className="flex justify-between items-center mb-1">
+                                    <div className="text-xs font-bold text-stone-200">{u.username}</div>
+                                    <div className="text-[10px] text-emerald-500">{(u.totalEarned || 0).toLocaleString()} <span className="opacity-50">THB</span></div>
+                                </div>
+                                <div className="flex justify-between items-center text-[9px] text-stone-600 font-mono">
+                                    <span>Joined: {new Date(u.joinedAt).toLocaleDateString()}</span>
+                                    <span>Invited: {u.invitedCount}</span>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -2584,14 +2616,20 @@ function ReferralNetworkView({ data, isLoading }: { data: any, isLoading: boolea
             )}
 
             {/* Level 2 Members */}
-            {network.l2.length > 0 && (
+            {network?.l2?.length > 0 && (
                 <div className="space-y-2">
-                    <div className="text-[10px] font-bold text-blue-500 bg-blue-900/20 px-3 py-1 rounded w-fit">LEVEL 2 MEMBERS</div>
+                    <div className="text-[10px] font-bold text-blue-500 bg-blue-900/20 px-3 py-1 rounded w-fit">LEVEL 2 MEMBERS ({network.l2.length})</div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
                         {network.l2.map((u: any) => (
-                            <div key={u.id} className="bg-stone-900 border border-stone-800 p-2 rounded flex justify-between items-center opacity-80">
-                                <div className="text-xs font-bold text-stone-300">{u.username}</div>
-                                <div className="text-[10px] text-blue-500">{u.invitedCount}</div>
+                            <div key={u.id} className="bg-stone-900 border border-stone-800 p-2 rounded opacity-90">
+                                <div className="flex justify-between items-center mb-1">
+                                    <div className="text-xs font-bold text-stone-300">{u.username}</div>
+                                    <div className="text-[10px] text-blue-500">{(u.totalEarned || 0).toLocaleString()} <span className="opacity-50">THB</span></div>
+                                </div>
+                                <div className="flex justify-between items-center text-[9px] text-stone-600 font-mono">
+                                    <span>Joined: {new Date(u.joinedAt).toLocaleDateString()}</span>
+                                    <span>Invited: {u.invitedCount}</span>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -2599,14 +2637,20 @@ function ReferralNetworkView({ data, isLoading }: { data: any, isLoading: boolea
             )}
 
             {/* Level 3 Members */}
-            {network.l3.length > 0 && (
+            {network?.l3?.length > 0 && (
                 <div className="space-y-2">
-                    <div className="text-[10px] font-bold text-purple-500 bg-purple-900/20 px-3 py-1 rounded w-fit">LEVEL 3 MEMBERS</div>
+                    <div className="text-[10px] font-bold text-purple-500 bg-purple-900/20 px-3 py-1 rounded w-fit">LEVEL 3 MEMBERS ({network.l3.length})</div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
                         {network.l3.map((u: any) => (
-                            <div key={u.id} className="bg-stone-900 border border-stone-800 p-2 rounded flex justify-between items-center opacity-70">
-                                <div className="text-xs font-bold text-stone-400">{u.username}</div>
-                                <div className="text-[10px] text-purple-500">{u.invitedCount}</div>
+                            <div key={u.id} className="bg-stone-900 border border-stone-800 p-2 rounded opacity-80">
+                                <div className="flex justify-between items-center mb-1">
+                                    <div className="text-xs font-bold text-stone-400">{u.username}</div>
+                                    <div className="text-[10px] text-purple-500">{(u.totalEarned || 0).toLocaleString()} <span className="opacity-50">THB</span></div>
+                                </div>
+                                <div className="flex justify-between items-center text-[9px] text-stone-600 font-mono">
+                                    <span>Joined: {new Date(u.joinedAt).toLocaleDateString()}</span>
+                                    <span>Invited: {u.invitedCount}</span>
+                                </div>
                             </div>
                         ))}
                     </div>
