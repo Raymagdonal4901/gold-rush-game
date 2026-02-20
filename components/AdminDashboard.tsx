@@ -158,24 +158,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     useEffect(() => {
         const interval = setInterval(() => {
             refreshData(true);
-
-            /*
-            // Notifications (Keep MockDB for now until Backend Notification Implemented)
-            const msgs = MockDB.getUserNotifications(currentUser.id);
-            if (msgs.length > 0) {
-                msgs.forEach(n => {
-                    MockDB.markNotificationRead(n.id);
-                    setNotifications(prev => [...prev, n]);
-                    setTimeout(() => {
-                        setNotifications(prev => prev.filter(x => x.id !== n.id));
-                    }, 8000);
-                });
-            }
-            */
-        }, 3000); // Slower polling for API
+        }, 10000); // Poll every 10 seconds (increased from 3s to prevent overload)
 
         return () => clearInterval(interval);
-    }, [currentUser.id]);
+    }, []); // Empty dependency array for polling interval to prevent re-creation
 
     const refreshData = async (silent = false) => {
         try {
@@ -224,7 +210,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             setPendingWithdrawals(withdrawals || []);
             setPendingDeposits(deposits || []);
             setAllDeposits(fetchedAllDeposits || []);
-            setAllDeposits(fetchedAllDeposits || []);
+
 
             // Fallback: If getAllWithdrawals returns empty but we have pending, show pending at least
             console.log('[DEBUG] fetchedAllWithdrawals:', fetchedAllWithdrawals);
@@ -1866,8 +1852,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                             {new Date(w.createdAt).toLocaleString()}
                                                         </td>
                                                         <td className="p-4">
-                                                            <div className="text-stone-200 font-bold">{w.user?.username || 'Unknown'}</div>
-                                                            <div className="text-[10px] text-stone-600 font-mono">{w.userId as string}</div>
+                                                            <div className="text-stone-200 font-bold">
+                                                                {(w.user?.username && w.user.username !== 'Unknown') ? w.user.username : (typeof w.userId === 'string' ? w.userId : w.id)}
+                                                            </div>
+                                                            <div className="text-[10px] text-stone-600 font-mono">
+                                                                {(w.user?.username && w.user.username !== 'Unknown') ? (typeof w.userId === 'string' ? w.userId : w.id) : 'ID Only'}
+                                                            </div>
                                                         </td>
                                                         <td className="p-4 text-right">
                                                             <div className="text-red-400 font-mono font-bold">-{w.amount.toLocaleString()}</div>

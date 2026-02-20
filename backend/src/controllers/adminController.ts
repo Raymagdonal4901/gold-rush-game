@@ -1222,26 +1222,44 @@ export const processWithdrawal = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ message: 'Invalid action' });
         }
 
-        const withdrawal = await Withdrawal.findById(id);
+        // 1. Try to find in Withdrawal collection (Wallet System)
+        let withdrawal = await Withdrawal.findById(id).session(session);
+        let modelType = 'Withdrawal';
+
+        // 2. If not found, try WithdrawalRequest collection (Transaction System)
         if (!withdrawal) {
-            return res.status(404).json({ message: 'Withdrawal not found' });
+            withdrawal = await WithdrawalRequest.findById(id).session(session) as any;
+            modelType = 'WithdrawalRequest';
+        }
+
+        if (!withdrawal) {
+            await session.abortTransaction();
+            return res.status(404).json({ message: 'Withdrawal request not found in any system' });
         }
 
         if (withdrawal.status !== 'PENDING') {
+            await session.abortTransaction();
             return res.status(400).json({ message: 'Withdrawal already processed' });
         }
 
         const status = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
         withdrawal.status = status;
-        if (adminNote) withdrawal.adminNote = adminNote;
-        await withdrawal.save({ session });
+        if (adminNote) (withdrawal as any).adminNote = adminNote;
 
-        // Update associated transaction status
-        await Transaction.findOneAndUpdate(
-            { refId: id, type: 'WITHDRAWAL' },
-            { status: status === 'APPROVED' ? 'COMPLETED' : 'FAILED' },
-            { session }
-        );
+        if (modelType === 'Withdrawal') {
+            await (withdrawal as any).save({ session });
+            // Update associated transaction status for Wallet System
+            await Transaction.findOneAndUpdate(
+                { refId: id, type: 'WITHDRAWAL' },
+                { status: status === 'APPROVED' ? 'COMPLETED' : 'FAILED' },
+                { session }
+            );
+        } else {
+            // Transaction System (WithdrawalRequest)
+            await (withdrawal as any).save({ session });
+            // No separate transaction update needed here usually, but if there is a linked Transaction, update it?
+            // WithdrawalRequest usually IS the record. But let's check if we need to refund for REJECT.
+        }
 
         if (action === 'REJECT') {
             // Refund user balance
