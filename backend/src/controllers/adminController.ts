@@ -1642,13 +1642,21 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
             .sort({ createdAt: -1 });
 
         // Calculate Earnings per Level
+        // Transaction.userId is stored as String in schema, so we must match as string
+        const userIdStr = user._id.toString();
+        console.log(`[REFERRAL_LOOKUP] Searching commissions for userId: ${userIdStr} (${user.username})`);
+
+        // Debug: Count total referral transactions for this user
+        const debugCount = await Transaction.countDocuments({
+            userId: userIdStr,
+            type: { $in: ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD', 'REFERRAL_BONUS', 'REFERRAL_BONUS_COMMISSION_BUY', 'REFERRAL_BONUS_COMMISSION_YIELD', 'REFERRAL_BUY_BONUS', 'REFERRAL_YIELD_BONUS'] }
+        });
+        console.log(`[REFERRAL_LOOKUP] Found ${debugCount} referral transactions for ${user.username}`);
+
         const commissionStats = await Transaction.aggregate([
             {
                 $match: {
-                    $or: [
-                        { userId: user._id.toString() },
-                        { userId: user._id }
-                    ],
+                    userId: userIdStr,
                     type: { $in: ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD', 'REFERRAL_BONUS', 'REFERRAL_BONUS_COMMISSION_BUY', 'REFERRAL_BONUS_COMMISSION_YIELD', 'REFERRAL_BUY_BONUS', 'REFERRAL_YIELD_BONUS'] },
                     status: 'COMPLETED'
                 }
@@ -1676,6 +1684,8 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
             }
         ]);
 
+        console.log(`[REFERRAL_LOOKUP] Aggregation result:`, JSON.stringify(commissionStats));
+
         const earnings = commissionStats.length > 0 ? commissionStats[0] : { l1: 0, l2: 0, l3: 0, total: 0 };
 
         // Team Total Earnings Calculation (Sum of referralStats.totalEarned of all downline users)
@@ -1691,6 +1701,8 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
             earnings.total = user.referralStats.totalEarned;
         }
 
+        const totalNetworkCount = l1Users.length + l2Users.length + l3Users.length;
+
         res.json({
             user: {
                 id: user._id,
@@ -1699,6 +1711,7 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
                 storedStats: user.referralStats,
                 createdAt: user.createdAt
             },
+            totalCount: totalNetworkCount,
             network: {
                 l1: l1Users.map(u => ({
                     id: u._id,
@@ -1728,7 +1741,7 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
                 l1: l1Users.length,
                 l2: l2Users.length,
                 l3: l3Users.length,
-                total: l1Users.length + l2Users.length + l3Users.length
+                total: totalNetworkCount
             },
             earnings: {
                 l1: earnings.l1,
