@@ -220,8 +220,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 ? fetchedAllWithdrawals
                 : (withdrawals || []);
 
-            console.log('[DEBUG] finalAllWithdrawals:', finalAllWithdrawals.length);
-
             setAllWithdrawals(finalAllWithdrawals);
             setGlobalRevenue(revenueStats); // Use the new comprehensive revenue stats
             setStats(dashboardStats);
@@ -509,7 +507,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         }
     };
 
-    const initiateProcessClaim = (claim: ClaimRequest, status: 'APPROVED' | 'REJECTED') => {
+    const initiateProcessClaim = (claim: ClaimRequest, status: 'APPROVE' | 'REJECT') => {
 
         setConfirmAction({
             type: 'CLAIM',
@@ -598,17 +596,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 // handle claim if API exists...
                 alert(t('admin.process_error'));
             }
-            alert(confirmAction.action === 'APPROVED' ? t('admin.approved_success') : t('admin.rejected_success'));
+            alert(confirmAction.action === 'APPROVE' ? t('admin.approved_success') : t('admin.rejected_success'));
         } catch (error: any) {
-            console.error("Action failed", error);
-            alert(t('admin.process_error'));
+            console.error('[DEBUG] Action Error:', error);
+            const msg = error.response?.data?.message || error.message || t('admin.process_error');
+            alert(`Error: ${msg}`);
         }
-
         setConfirmAction(null);
         refreshData();
     };
 
-    const initiateProcessWithdrawal = (w: Withdrawal, status: 'APPROVED' | 'REJECTED') => {
+    const initiateProcessWithdrawal = (w: Withdrawal, status: 'APPROVE' | 'REJECT') => {
         setConfirmAction({
             type: 'WITHDRAWAL',
             id: w.id,
@@ -618,7 +616,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         });
     };
 
-    const initiateProcessDeposit = (d: DepositRequest, status: 'APPROVED' | 'REJECTED') => {
+    const initiateProcessDeposit = (d: DepositRequest, status: 'APPROVE' | 'REJECT') => {
         setConfirmAction({
             type: 'DEPOSIT',
             id: d.id,
@@ -628,11 +626,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         });
     };
 
-    const handleDirectProcessDeposit = async (id: string, status: 'APPROVED' | 'REJECTED') => {
+    const handleDirectProcessDeposit = async (id: string, status: 'APPROVE' | 'REJECT') => {
         try {
             await api.admin.processDeposit(id, status);
             refreshData();
-            alert(status === 'APPROVED' ? t('admin.approved_success') : t('admin.rejected_success'));
+            alert(status === 'APPROVE' ? t('admin.approved_success') : t('admin.rejected_success'));
         } catch (error: any) {
             console.error("Failed to process deposit", error);
             alert(t('admin.process_error'));
@@ -1202,14 +1200,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                                             {w.status === 'PENDING' && (
                                                                                 <div className="flex justify-end gap-1">
                                                                                     <button
-                                                                                        onClick={() => initiateProcessWithdrawal(w, 'APPROVED')}
+                                                                                        onClick={() => initiateProcessWithdrawal(w, 'APPROVE')}
                                                                                         className="p-1.5 bg-emerald-900/30 text-emerald-500 hover:bg-emerald-900/50 rounded transition-colors"
                                                                                         title="Approve"
                                                                                     >
                                                                                         <Check size={14} />
                                                                                     </button>
                                                                                     <button
-                                                                                        onClick={() => initiateProcessWithdrawal(w, 'REJECTED')}
+                                                                                        onClick={() => initiateProcessWithdrawal(w, 'REJECT')}
                                                                                         className="p-1.5 bg-red-900/30 text-red-500 hover:bg-red-900/50 rounded transition-colors"
                                                                                         title={t('admin.reject')}
                                                                                     >
@@ -1278,14 +1276,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                                             {d.status === 'PENDING' && (
                                                                                 <div className="flex justify-end gap-1">
                                                                                     <button
-                                                                                        onClick={() => handleDirectProcessDeposit(d.id, 'APPROVED')}
+                                                                                        onClick={() => handleDirectProcessDeposit(d.id, 'APPROVE')}
                                                                                         className="p-1.5 bg-emerald-900/30 text-emerald-500 hover:bg-emerald-900/50 rounded transition-colors"
                                                                                         title="Approve"
                                                                                     >
                                                                                         <Check size={14} />
                                                                                     </button>
                                                                                     <button
-                                                                                        onClick={() => initiateProcessDeposit(d, 'REJECTED')}
+                                                                                        onClick={() => initiateProcessDeposit(d, 'REJECT')}
                                                                                         className="p-1.5 bg-red-900/30 text-red-500 hover:bg-red-900/50 rounded transition-colors"
                                                                                         title={t('admin.reject')}
                                                                                     >
@@ -1503,13 +1501,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                 <span className="font-mono font-bold text-lg text-emerald-400">+{Math.floor(d.amount).toLocaleString()} <span className="text-stone-500 text-xs">{CURRENCY}</span></span>
                                                 <div className="flex items-center gap-2">
                                                     <button
-                                                        onClick={() => initiateProcessDeposit(d, 'REJECTED')}
+                                                        onClick={() => initiateProcessDeposit(d, 'REJECT')}
                                                         className="px-3 py-1.5 rounded border border-red-900/50 bg-stone-900 text-stone-400 text-xs font-bold uppercase hover:bg-red-900/20 hover:text-red-400 flex items-center gap-1 transition-colors"
                                                     >
                                                         <XCircle size={14} /> {t('admin.reject')}
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDirectProcessDeposit(d.id, 'APPROVED')}
+                                                        onClick={() => handleDirectProcessDeposit(d.id, 'APPROVE')}
                                                         className="px-3 py-1.5 rounded border border-emerald-500 bg-emerald-600 text-white text-xs font-bold uppercase hover:bg-emerald-500 flex items-center gap-1 transition-colors shadow-lg shadow-emerald-900/20"
                                                     >
                                                         <CheckCircle size={14} /> {t('admin.approve')}
@@ -1582,13 +1580,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                 </span>
                                                 <div className="flex items-center gap-2">
                                                     <button
-                                                        onClick={() => initiateProcessWithdrawal(w, 'REJECTED')}
+                                                        onClick={() => initiateProcessWithdrawal(w, 'REJECT')}
                                                         className="px-3 py-1.5 rounded border border-red-900/50 bg-stone-900 text-stone-400 text-xs font-bold uppercase hover:bg-red-900/20 hover:text-red-400 flex items-center gap-1 transition-colors"
                                                     >
                                                         <XCircle size={14} /> {t('admin.reject')}
                                                     </button>
                                                     <button
-                                                        onClick={() => initiateProcessWithdrawal(w, 'APPROVED')}
+                                                        onClick={() => initiateProcessWithdrawal(w, 'APPROVE')}
                                                         className="px-3 py-1.5 rounded border border-red-500 bg-red-600 text-white text-xs font-bold uppercase hover:bg-red-500 flex items-center gap-1 transition-colors shadow-lg shadow-red-900/20"
                                                     >
                                                         <CheckCircle size={14} /> {t('admin.approve')}
@@ -1854,10 +1852,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                         </td>
                                                         <td className="p-4">
                                                             <div className="text-stone-200 font-bold">
-                                                                {(w.user?.username && w.user.username !== 'Unknown') ? w.user.username : (typeof w.userId === 'string' ? w.userId : w.id)}
+                                                                {(w.user?.username && w.user.username !== 'Unknown') ? w.user.username : (w.username || w.userId || w.id)}
                                                             </div>
                                                             <div className="text-[10px] text-stone-600 font-mono">
-                                                                {(w.user?.username && w.user.username !== 'Unknown') ? (typeof w.userId === 'string' ? w.userId : w.id) : 'ID Only'}
+                                                                {(w.user?.username && w.user.username !== 'Unknown') ? (w.userId || w.id) : 'ID Only'}
                                                             </div>
                                                         </td>
                                                         <td className="p-4 text-right">
@@ -1881,14 +1879,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                             {w.status === 'PENDING' ? (
                                                                 <div className="flex justify-end gap-1">
                                                                     <button
-                                                                        onClick={() => initiateProcessWithdrawal(w, 'REJECTED')}
+                                                                        onClick={() => initiateProcessWithdrawal(w, 'REJECT')}
                                                                         className="p-1.5 bg-red-900/30 text-red-500 hover:bg-red-900/50 rounded transition-colors"
                                                                         title={t('admin.reject')}
                                                                     >
                                                                         <XCircle size={14} />
                                                                     </button>
                                                                     <button
-                                                                        onClick={() => initiateProcessWithdrawal(w, 'APPROVED')}
+                                                                        onClick={() => initiateProcessWithdrawal(w, 'APPROVE')}
                                                                         className="p-1.5 bg-emerald-900/30 text-emerald-500 hover:bg-emerald-900/50 rounded transition-colors"
                                                                         title="Approve"
                                                                     >

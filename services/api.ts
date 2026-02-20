@@ -387,8 +387,8 @@ export const api = {
             const res = await client.get('/admin/deposits-all');
             return res.data.map(mapBackendDepositToFrontend);
         },
-        processDeposit: async (id: string, status: 'APPROVED' | 'REJECTED'): Promise<any> => {
-            const res = await client.post(`/admin/deposits/${id}/process`, { status });
+        processDeposit: async (depositId: string, status: 'APPROVE' | 'REJECT'): Promise<any> => {
+            const res = await client.post(`/admin/deposits/${depositId}/process`, { status });
             return res.data;
         },
         processWithdrawal: async (id: string, action: 'APPROVE' | 'REJECT', adminNote?: string): Promise<any> => {

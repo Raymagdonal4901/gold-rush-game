@@ -455,7 +455,13 @@ export const getAllDeposits = async (req: AuthRequest, res: Response) => {
 export const processDepositRequest = async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
-        const { status } = req.body; // APPROVED or REJECTED
+        const { status: action } = req.body; // Map status to action internally for clarity
+
+        if (!['APPROVE', 'REJECT'].includes(action)) {
+            return res.status(400).json({ message: 'Invalid action' });
+        }
+
+        const status = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
 
         const deposit = await DepositRequest.findById(id);
         if (!deposit) return res.status(404).json({ message: 'Deposit request not found' });
@@ -1222,7 +1228,10 @@ export const processWithdrawal = async (req: AuthRequest, res: Response) => {
         const { id } = req.params;
         const { action, adminNote } = req.body; // action: 'APPROVE' | 'REJECT'
 
+        console.log(`[DEBUG] processWithdrawal called for ID: ${id}, Action: ${action}`);
+
         if (!['APPROVE', 'REJECT'].includes(action)) {
+            console.error('[DEBUG] Invalid action:', action);
             return res.status(400).json({ message: 'Invalid action' });
         }
 
@@ -1230,13 +1239,17 @@ export const processWithdrawal = async (req: AuthRequest, res: Response) => {
         let withdrawal = await Withdrawal.findById(id).session(session);
         let modelType = 'Withdrawal';
 
+        console.log(`[DEBUG] Search Withdrawal result: ${withdrawal ? 'FOUND' : 'NOT FOUND'}`);
+
         // 2. If not found, try WithdrawalRequest collection (Transaction System)
         if (!withdrawal) {
             withdrawal = await WithdrawalRequest.findById(id).session(session) as any;
             modelType = 'WithdrawalRequest';
+            console.log(`[DEBUG] Search WithdrawalRequest result: ${withdrawal ? 'FOUND' : 'NOT FOUND'}`);
         }
 
         if (!withdrawal) {
+            console.error(`[DEBUG] Withdrawal not found in any system for ID: ${id}`);
             await session.abortTransaction();
             return res.status(404).json({ message: 'Withdrawal request not found in any system' });
         }
