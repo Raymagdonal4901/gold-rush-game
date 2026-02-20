@@ -5,7 +5,7 @@ import {
     getPendingClaims, getPendingWithdrawals, getPendingDeposits, getAllDeposits, processDepositRequest, getUserStats,
     adminGiveCompensation, adminGiveCompensationAll, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats, adminConvertCurrencyToUSD, resetAllPlayerData, deleteRig, adminAdjustRevenue, adminAddRig,
     resetUser, removeVip, getDashboardStats, processWithdrawal, processLegacyWithdrawalRequest, getRevenueStats, deleteAllUsers, toggleBan,
-    repairReferralLinks, syncReferralStats, syncAllReferralStats, getUserByReferralCode,
+    repairReferralLinks, syncReferralStats, syncAllReferralStats, getUserByReferralCode, getAllWithdrawals,
     lookupUSDTDeposit
 } from '../controllers/adminController';
 
@@ -27,6 +27,7 @@ router.post('/config', updateSystemConfig);
 // Claims / Finance
 router.get('/claims', getPendingClaims);
 router.get('/withdrawals', getPendingWithdrawals);
+router.get('/withdrawals-all', getAllWithdrawals);
 router.put('/withdrawals/:id', processWithdrawal); // NEW for Part 6
 router.post('/withdrawals/:id/process', processLegacyWithdrawalRequest); // Keep legacy if needed
 router.get('/deposits', getPendingDeposits);

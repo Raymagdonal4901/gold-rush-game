@@ -375,6 +375,10 @@ export const api = {
             const res = await client.get('/admin/withdrawals');
             return res.data.map(mapBackendNewWithdrawalToFrontend);
         },
+        getAllWithdrawals: async (): Promise<Withdrawal[]> => {
+            const res = await client.get('/admin/withdrawals-all');
+            return res.data.map(mapBackendNewWithdrawalToFrontend);
+        },
         getPendingDeposits: async (): Promise<DepositRequest[]> => {
             const res = await client.get('/admin/deposits');
             return res.data.map(mapBackendDepositToFrontend);

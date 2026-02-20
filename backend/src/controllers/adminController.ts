@@ -1131,6 +1131,22 @@ export const getPendingWithdrawals = async (req: AuthRequest, res: Response) => 
 };
 
 /**
+ * Get all withdrawals with user details
+ */
+export const getAllWithdrawals = async (req: AuthRequest, res: Response) => {
+    try {
+        const withdrawals = await Withdrawal.find({})
+            .populate('userId', 'username email')
+            .sort({ createdAt: -1 });
+
+        res.json(withdrawals);
+    } catch (error) {
+        console.error('[ADMIN ERROR] getAllWithdrawals failed:', error);
+        res.status(500).json({ message: 'Server error fetching all withdrawals' });
+    }
+};
+
+/**
  * Process a withdrawal request (Approve/Reject)
  */
 export const processWithdrawal = async (req: AuthRequest, res: Response) => {
@@ -1435,17 +1451,43 @@ export const syncAllReferralStats = async (req: AuthRequest, res: Response) => {
         let updatedCount = 0;
         const reports = [];
 
-        for (const user of allUsers) {
-            const actualL1Count = await User.countDocuments({ referrerId: user._id });
-            const currentStats = (user as any).referralStats?.totalInvited || 0;
+        const refTypes = ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD', 'REFERRAL_BONUS', 'REFERRAL_BONUS_COMMISSION_BUY', 'REFERRAL_BONUS_COMMISSION_YIELD', 'REFERRAL_BUY_BONUS', 'REFERRAL_YIELD_BONUS'];
 
-            if (actualL1Count !== currentStats) {
+        for (const user of allUsers) {
+            // Count referrals (L1 only)
+            const actualL1Count = await User.countDocuments({ referrerId: user._id });
+
+            // Calculate total earned from transactions (Permissive match for userId)
+            const earningAggregation = await Transaction.aggregate([
+                {
+                    $match: {
+                        $or: [
+                            { userId: user._id.toString() },
+                            { userId: user._id }
+                        ],
+                        type: { $in: refTypes },
+                        status: 'COMPLETED'
+                    }
+                },
+                { $group: { _id: null, total: { $sum: '$amount' } } }
+            ]);
+            const actualTotalEarned = earningAggregation.length > 0 ? earningAggregation[0].total : 0;
+
+            const currentInvited = user.referralStats?.totalInvited || 0;
+            const currentEarned = user.referralStats?.totalEarned || 0;
+
+            if (actualL1Count !== currentInvited || actualTotalEarned !== currentEarned) {
                 await User.updateOne(
                     { _id: user._id },
-                    { $set: { 'referralStats.totalInvited': actualL1Count } }
+                    {
+                        $set: {
+                            'referralStats.totalInvited': actualL1Count,
+                            'referralStats.totalEarned': actualTotalEarned
+                        }
+                    }
                 );
                 updatedCount++;
-                reports.push(`Updated ${user.username}: ${currentStats} -> ${actualL1Count}`);
+                reports.push(`Updated ${user.username}: Invited ${currentInvited}->${actualL1Count}, Earned ${currentEarned}->${actualTotalEarned}`);
             }
         }
 
@@ -1506,7 +1548,10 @@ export const getUserByReferralCode = async (req: AuthRequest, res: Response) => 
         const commissionStats = await Transaction.aggregate([
             {
                 $match: {
-                    userId: new mongoose.Types.ObjectId(user._id as unknown as string),
+                    $or: [
+                        { userId: user._id.toString() },
+                        { userId: user._id }
+                    ],
                     type: { $in: ['REFERRAL_BONUS_BUY', 'REFERRAL_BONUS_YIELD', 'REFERRAL_BONUS', 'REFERRAL_BONUS_COMMISSION_BUY', 'REFERRAL_BONUS_COMMISSION_YIELD', 'REFERRAL_BUY_BONUS', 'REFERRAL_YIELD_BONUS'] },
                     status: 'COMPLETED'
                 }

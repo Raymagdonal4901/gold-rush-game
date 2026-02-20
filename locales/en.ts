@@ -179,6 +179,8 @@ export const en = {
         role: "ROLE",
         mining_machines: "MINING MACHINES",
         name: "NAME",
+        method_label: "METHOD",
+        slip: "SLIP",
         pending: "PENDING",
         withdrawal_history: "WITHDRAWAL HISTORY",
         deposit_history: "DEPOSIT HISTORY",
