@@ -696,7 +696,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     const totalUserBalance = users.reduce((sum, u) => sum + (u.balance || 0), 0);
 
     const filteredUsers = users.filter(u =>
-        u.username.toLowerCase().includes(search.toLowerCase())
+        u.username.toLowerCase().includes(search.toLowerCase()) ||
+        (u.id && u.id.toString().toLowerCase().includes(search.toLowerCase()))
     );
 
     if (isLoading && users.length === 0) {

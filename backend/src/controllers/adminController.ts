@@ -1183,7 +1183,11 @@ export const getAllWithdrawals = async (req: AuthRequest, res: Response) => {
             }),
             ...withdrawalRequests.map(w => {
                 const userObj = w.userId; // Populated user object
+                if (!w.username && !userObj?.username) {
+                    console.log(`[DEBUG_MISSING_USER] ReqID: ${w._id}, UserIdRaw: ${w.userId}, Type: ${typeof w.userId}, UserObj: ${userObj ? 'YES' : 'NO'}`);
+                }
                 return {
+
                     id: w._id,
                     userId: userObj?._id || w.userId, // use ID
                     amount: w.amount,
