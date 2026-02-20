@@ -857,7 +857,8 @@ export const LUCKY_DRAW_CONFIG = {
         { type: 'item', id: 'chest_key', amount: 1, chance: 2.0, label: { th: 'กุญแจเข้าเหมือง x1', en: 'Mine Key x1' } },
         { type: 'item', id: 'hourglass_medium', amount: 1, chance: 8.0, label: { th: 'เร่งเวลา 2 ชั่วโมง', en: '2 Hours Time Skip' } },
         { type: 'item', id: 'mixer', amount: 1, chance: 30.0, label: { th: 'โต๊ะช่างสกัดแร่', en: 'Crafting Table' } },
-        { type: 'money', amount: 5, chance: 53.9, label: { th: 'รางวัลปลอบใจ 5 ฿', en: '5 THB Consolation' } },
+        { type: 'material', tier: 0, amount: 4, chance: 20.0, label: { th: 'เศษหิน x4', en: 'Stone Shard x4' } },
+        { type: 'money', amount: 5, chance: 33.9, label: { th: 'รางวัลปลอบใจ 5 ฿', en: '5 THB Consolation' } },
     ]
 };
 

@@ -202,6 +202,7 @@ export const en = {
         risk_medium: "MEDIUM",
         risk_high: "HIGH",
         audit_desc: "Analyze income consistency to detect potential fraud or system hacking.",
+        no_data: "No history found",
     },
     common: {
         total_deposit: "Total Deposit",

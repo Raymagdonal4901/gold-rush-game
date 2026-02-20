@@ -1139,7 +1139,20 @@ export const getAllWithdrawals = async (req: AuthRequest, res: Response) => {
             .populate('userId', 'username email')
             .sort({ createdAt: -1 });
 
-        res.json(withdrawals);
+        const formattedWithdrawals = withdrawals.map(w => {
+            const userObj = w.userId as any;
+            return {
+                ...w.toObject(),
+                id: w._id,
+                userId: userObj?._id || w.userId, // Fallback if not populated
+                user: userObj?.username ? {
+                    username: userObj.username,
+                    email: userObj.email
+                } : undefined
+            };
+        });
+
+        res.json(formattedWithdrawals);
     } catch (error) {
         console.error('[ADMIN ERROR] getAllWithdrawals failed:', error);
         res.status(500).json({ message: 'Server error fetching all withdrawals' });

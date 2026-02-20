@@ -150,6 +150,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     // Initial Load
     useEffect(() => {
         console.log("AdminDashboard mounted - Force Refresh for All Withdrawals");
+        setWithdrawalSearch('');
         refreshData();
     }, []);
 
@@ -223,7 +224,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             setPendingWithdrawals(withdrawals || []);
             setPendingDeposits(deposits || []);
             setAllDeposits(fetchedAllDeposits || []);
-            setAllWithdrawals(fetchedAllWithdrawals || []);
+            setAllDeposits(fetchedAllDeposits || []);
+
+            // Fallback: If getAllWithdrawals returns empty but we have pending, show pending at least
+            const finalAllWithdrawals = (fetchedAllWithdrawals && fetchedAllWithdrawals.length > 0)
+                ? fetchedAllWithdrawals
+                : (withdrawals || []);
+
+            setAllWithdrawals(finalAllWithdrawals);
             setGlobalRevenue(revenueStats); // Use the new comprehensive revenue stats
             setStats(dashboardStats);
 
