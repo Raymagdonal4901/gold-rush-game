@@ -227,9 +227,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             setAllDeposits(fetchedAllDeposits || []);
 
             // Fallback: If getAllWithdrawals returns empty but we have pending, show pending at least
+            console.log('[DEBUG] fetchedAllWithdrawals:', fetchedAllWithdrawals);
+            console.log('[DEBUG] pendingWithdrawals (fallback):', withdrawals);
+
             const finalAllWithdrawals = (fetchedAllWithdrawals && fetchedAllWithdrawals.length > 0)
                 ? fetchedAllWithdrawals
                 : (withdrawals || []);
+
+            console.log('[DEBUG] finalAllWithdrawals:', finalAllWithdrawals.length);
 
             setAllWithdrawals(finalAllWithdrawals);
             setGlobalRevenue(revenueStats); // Use the new comprehensive revenue stats
@@ -1869,8 +1874,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                             <div className="text-[10px] text-stone-500">{CURRENCY}</div>
                                                         </td>
                                                         <td className="p-4 text-center">
-                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${(w.bankDetails && w.bankDetails.bankName) ? 'bg-stone-800 text-stone-400 border border-stone-700' : 'bg-blue-900/20 text-blue-400 border border-blue-500/20'}`}>
-                                                                {(w.bankDetails && w.bankDetails.bankName) ? 'BANK' : 'USDT'}
+                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${(w.method === 'BANK' || (w.bankDetails && w.bankDetails.bankName)) ? 'bg-stone-800 text-stone-400 border border-stone-700' : 'bg-blue-900/20 text-blue-400 border border-blue-500/20'}`}>
+                                                                {(w.method === 'BANK' || (w.bankDetails && w.bankDetails.bankName)) ? 'BANK' : 'USDT'}
                                                             </span>
                                                         </td>
                                                         <td className="p-4 text-center">

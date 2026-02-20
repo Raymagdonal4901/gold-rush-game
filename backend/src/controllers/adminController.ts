@@ -1133,24 +1133,73 @@ export const getPendingWithdrawals = async (req: AuthRequest, res: Response) => 
 /**
  * Get all withdrawals with user details
  */
+// Combine fields for mapping
+interface UnifiedWithdrawal {
+    _id: any;
+    userId: any;
+    amount: number;
+    status: string;
+    createdAt: Date;
+    method?: string;
+    bankDetails?: any;
+    walletAddress?: string;
+    bankQrCode?: string;
+    username?: string; // From WithdrawalRequest
+    adminNote?: string;
+}
+
 export const getAllWithdrawals = async (req: AuthRequest, res: Response) => {
     try {
+        // 1. Fetch from Withdrawal (New Wallet System)
         const withdrawals = await Withdrawal.find({})
             .populate('userId', 'username email')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 }) as any[];
 
-        const formattedWithdrawals = withdrawals.map(w => {
-            const userObj = w.userId as any;
-            return {
-                ...w.toObject(),
-                id: w._id,
-                userId: userObj?._id || w.userId, // Fallback if not populated
-                user: userObj?.username ? {
-                    username: userObj.username,
-                    email: userObj.email
-                } : undefined
-            };
-        });
+        // 2. Fetch from WithdrawalRequest (Transaction System)
+        const withdrawalRequests = await WithdrawalRequest.find({})
+            .populate('userId', 'username email')
+            .sort({ createdAt: -1 }) as any[];
+
+        console.log(`[DEBUG] getAllWithdrawals found: Withdrawal=${withdrawals.length}, WithdrawalRequest=${withdrawalRequests.length}`);
+
+        // 3. Normalize and Combine
+        const formattedWithdrawals = [
+            ...withdrawals.map(w => {
+                const userObj = w.userId;
+                return {
+                    id: w._id,
+                    userId: userObj?._id || w.userId,
+                    amount: w.amount,
+                    status: w.status,
+                    createdAt: w.createdAt,
+                    method: w.bankDetails ? 'BANK' : 'USDT', // Infer from data
+                    bankDetails: w.bankDetails,
+                    adminNote: w.adminNote,
+                    user: userObj?.username ? {
+                        username: userObj.username,
+                        email: userObj.email
+                    } : undefined
+                };
+            }),
+            ...withdrawalRequests.map(w => {
+                const userObj = w.userId; // Populated user object
+                return {
+                    id: w._id,
+                    userId: userObj?._id || w.userId, // use ID
+                    amount: w.amount,
+                    status: w.status,
+                    createdAt: w.createdAt,
+                    method: w.method || (w.walletAddress ? 'USDT' : 'BANK'),
+                    bankDetails: w.bankQrCode ? { bankName: 'QR Code', accountNumber: 'Scanned', accountName: w.username || userObj?.username } : undefined,
+                    walletAddress: w.walletAddress,
+                    bankQrCode: w.bankQrCode,
+                    user: {
+                        username: w.username || userObj?.username || 'Unknown',
+                        email: userObj?.email || ''
+                    }
+                };
+            })
+        ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         res.json(formattedWithdrawals);
     } catch (error) {
