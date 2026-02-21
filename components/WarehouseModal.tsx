@@ -695,7 +695,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                                 {item.level && item.level > 1 && <span className="ml-1 text-[10px] text-yellow-500">+{item.level}</span>}
                                                             </div>
                                                             <div className="text-[10px] text-stone-500 truncate">
-                                                                {item.dailyBonus > 0 ? `${formatBonus(item.dailyBonus)}/${t('time.day')}` : (item.specialEffect || (activeTab === 'ITEMS' ? t('warehouse.items_tab') : t('warehouse.equipment_tab')))}
+                                                                {item.dailyBonus > 0 ? `${formatBonus(item.dailyBonus)}/${t('time.day')}` : (getLocalized(item.specialEffect) || (activeTab === 'ITEMS' ? t('warehouse.items_tab') : t('warehouse.equipment_tab')))}
                                                             </div>
                                                             {getItemDisplayName(item).includes('หุ่นยนต์ AI') && (
                                                                 <div className="flex items-center gap-1 mt-0.5">
@@ -736,7 +736,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                                 {getItemDisplayName(item)}
                                                             </div>
                                                             <div className="text-[10px] text-stone-500 truncate mt-0.5">
-                                                                {item.specialEffect || `Repair Value: +${(item as any).repairValue || 3000} HP`}
+                                                                {getLocalized(item.specialEffect) || `Repair Value: +${(item as any).repairValue || 3000} HP`}
                                                             </div>
                                                             <div className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${rarityStyle.color}`}>
                                                                 {item.rarity}
