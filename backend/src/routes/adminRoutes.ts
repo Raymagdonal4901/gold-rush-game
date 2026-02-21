@@ -2,7 +2,7 @@ import express from 'express';
 import { authenticate, authorizeAdmin } from '../middleware/auth';
 import {
     getAllUsers, getAllRigs, getSystemConfig, updateSystemConfig,
-    getPendingClaims, getPendingWithdrawals, getPendingDeposits, getAllDeposits, processDepositRequest, getUserStats,
+    getPendingClaims, getPendingWithdrawals, getPendingDeposits, getAllDeposits, processDepositRequest, getUserStats, getUserMinesStats,
     adminGiveCompensation, adminGiveCompensationAll, adminAddItem, getGlobalRevenueStats, deleteUser, clearRevenueStats, adminConvertCurrencyToUSD, resetAllPlayerData, deleteRig, adminAdjustRevenue, adminAddRig,
     resetUser, removeVip, getDashboardStats, processWithdrawal, processLegacyWithdrawalRequest, getRevenueStats, deleteAllUsers, toggleBan,
     repairReferralLinks, syncReferralStats, syncAllReferralStats, getUserByReferralCode, getAllWithdrawals,
@@ -17,6 +17,7 @@ router.use(authenticate, authorizeAdmin);
 
 router.get('/users', getAllUsers);
 router.get('/users/:userId/stats', getUserStats);
+router.get('/users/:userId/mines-stats', getUserMinesStats);
 router.post('/users/compensation', adminGiveCompensation);
 router.post('/users/compensation-all', adminGiveCompensationAll);
 router.post('/users/items', adminAddItem);

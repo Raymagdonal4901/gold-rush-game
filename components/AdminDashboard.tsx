@@ -147,6 +147,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     } | null>(null);
     const [isFetchingNetwork, setIsFetchingNetwork] = useState(false);
 
+    // Mines Stats State
+    const [showMinesStats, setShowMinesStats] = useState(false);
+    const [minesStats, setMinesStats] = useState<any | null>(null);
+    const [isFetchingMines, setIsFetchingMines] = useState(false);
+
     // Initial Load
     useEffect(() => {
         console.log("AdminDashboard mounted - Force Refresh for All Withdrawals");
@@ -451,12 +456,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         setSelectedUser(user);
         setReferralDetailTab('GENERAL');
         setNetworkData(null);
+        setMinesStats(null);
+        setShowMinesStats(false);
         setEconomyForm(prev => ({ ...prev, targetUser: user.id, compUser: user.id }));
         try {
             const stats = await api.admin.getUserStats(user.id);
             setUserStats(stats);
         } catch (error) {
             console.error("Failed to fetch user stats", error);
+        }
+    };
+
+    const fetchMinesStats = async (userId: string) => {
+        try {
+            setIsFetchingMines(true);
+            const data = await api.admin.getUserMinesStats(userId);
+            setMinesStats(data);
+            setShowMinesStats(true);
+        } catch (error) {
+            console.error("Failed to fetch mines stats", error);
+            alert('ไม่สามารถดึงข้อมูลสถิติเกม Mines ได้');
+        } finally {
+            setIsFetchingMines(false);
         }
     };
 
@@ -811,12 +832,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                             </div>
                             <div className="flex items-center gap-4">
                                 <button
+                                    onClick={() => selectedUser && fetchMinesStats(selectedUser.id)}
+                                    disabled={isFetchingMines}
+                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 ${showMinesStats ? 'bg-orange-600 text-white' : 'bg-stone-800 text-stone-400 hover:text-white'}`}
+                                >
+                                    💣 {isFetchingMines ? 'Loading...' : 'Mines Stats'}
+                                </button>
+                                <button
                                     onClick={() => setShowAudit(!showAudit)}
                                     className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 ${showAudit ? 'bg-yellow-600 text-stone-900' : 'bg-stone-800 text-stone-400 hover:text-white'}`}
                                 >
                                     <ShieldAlert size={14} /> {t('admin.financial_audit') || "FINANCIAL AUDIT (ตรวจสอบ)"}
                                 </button>
-                                <button onClick={() => { setSelectedUser(null); setShowAudit(false); }} className="text-stone-500 hover:text-white p-2 hover:bg-stone-800 rounded">
+                                <button onClick={() => { setSelectedUser(null); setShowAudit(false); setShowMinesStats(false); setMinesStats(null); }} className="text-stone-500 hover:text-white p-2 hover:bg-stone-800 rounded">
                                     <X size={24} />
                                 </button>
                             </div>
@@ -905,6 +933,99 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                             <div className="bg-stone-900/50 p-3 rounded text-[10px] text-stone-400 italic">
                                                 <Info size={12} className="inline mr-1 mb-0.5" />
                                                 {t('admin.audit_desc')}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Mines Stats Panel */}
+                                    {showMinesStats && minesStats && (
+                                        <div className="bg-stone-950 border border-orange-900/40 rounded-lg p-5 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                            <div className="flex items-center justify-between border-b border-stone-800 pb-3">
+                                                <div className="flex items-center gap-2 text-orange-400 font-bold uppercase text-xs">
+                                                    💣 Mines Minigame Stats
+                                                </div>
+                                                <button onClick={() => { setShowMinesStats(false); setMinesStats(null); }} className="text-stone-500 hover:text-white">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+
+                                            {/* Summary Cards */}
+                                            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                                                <div className="bg-stone-900 p-3 rounded border border-stone-800 text-center">
+                                                    <div className="text-[10px] text-stone-500 uppercase font-bold">เกมทั้งหมด</div>
+                                                    <div className="text-xl font-mono font-bold text-white">{minesStats.summary.totalGames}</div>
+                                                </div>
+                                                <div className="bg-stone-900 p-3 rounded border border-emerald-900/30 text-center">
+                                                    <div className="text-[10px] text-emerald-500 uppercase font-bold">ชนะ 💎</div>
+                                                    <div className="text-xl font-mono font-bold text-emerald-400">{minesStats.summary.wins}</div>
+                                                </div>
+                                                <div className="bg-stone-900 p-3 rounded border border-red-900/30 text-center">
+                                                    <div className="text-[10px] text-red-500 uppercase font-bold">แพ้ 💣</div>
+                                                    <div className="text-xl font-mono font-bold text-red-400">{minesStats.summary.losses}</div>
+                                                </div>
+                                                <div className="bg-stone-900 p-3 rounded border border-stone-800 text-center">
+                                                    <div className="text-[10px] text-stone-500 uppercase font-bold">Win Rate</div>
+                                                    <div className={`text-xl font-mono font-bold ${parseFloat(minesStats.summary.winRate) >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                        {minesStats.summary.winRate}%
+                                                    </div>
+                                                </div>
+                                                <div className="bg-stone-900 p-3 rounded border border-stone-800 text-center">
+                                                    <div className="text-[10px] text-stone-500 uppercase font-bold">รวมเดิมพัน</div>
+                                                    <div className="text-sm font-mono font-bold text-yellow-400">{Math.floor(minesStats.summary.totalBet).toLocaleString()}</div>
+                                                </div>
+                                                <div className="bg-stone-900 p-3 rounded border border-stone-800 text-center">
+                                                    <div className="text-[10px] text-stone-500 uppercase font-bold">กำไร/ขาดทุน</div>
+                                                    <div className={`text-sm font-mono font-bold ${minesStats.summary.netProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                        {minesStats.summary.netProfit >= 0 ? '+' : ''}{Math.floor(minesStats.summary.netProfit).toLocaleString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Recent Games Table */}
+                                            <div className="space-y-2">
+                                                <div className="text-[10px] text-stone-500 uppercase font-bold tracking-wider">ประวัติ 20 เกมล่าสุด</div>
+                                                <div className="max-h-64 overflow-y-auto rounded border border-stone-800">
+                                                    <table className="w-full text-xs text-left">
+                                                        <thead className="bg-stone-900 text-stone-400 sticky top-0">
+                                                            <tr>
+                                                                <th className="px-3 py-2 font-medium">วันที่</th>
+                                                                <th className="px-3 py-2 font-medium text-center">💣</th>
+                                                                <th className="px-3 py-2 font-medium text-right">เดิมพัน</th>
+                                                                <th className="px-3 py-2 font-medium text-right">Multi</th>
+                                                                <th className="px-3 py-2 font-medium text-right">Win</th>
+                                                                <th className="px-3 py-2 font-medium text-center">สถานะ</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-stone-900">
+                                                            {minesStats.recentGames.map((g: any) => (
+                                                                <tr key={g._id} className="hover:bg-stone-900/50">
+                                                                    <td className="px-3 py-2 text-stone-500 font-mono whitespace-nowrap">
+                                                                        {new Date(g.createdAt).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-center font-bold text-orange-400">{g.minesCount}</td>
+                                                                    <td className="px-3 py-2 text-right font-mono text-stone-300">{Math.floor(g.betAmount).toLocaleString()}</td>
+                                                                    <td className="px-3 py-2 text-right font-mono text-yellow-400">{g.currentMultiplier.toFixed(2)}x</td>
+                                                                    <td className="px-3 py-2 text-right font-mono text-emerald-400">
+                                                                        {g.status === 'CASHED_OUT' ? `+${Math.floor(g.potentialWin).toLocaleString()}` : '-'}
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-center">
+                                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${g.status === 'CASHED_OUT' ? 'bg-emerald-900/50 text-emerald-400' :
+                                                                                g.status === 'EXPLODED' ? 'bg-red-900/50 text-red-400' :
+                                                                                    'bg-yellow-900/50 text-yellow-400'
+                                                                            }`}>
+                                                                            {g.status === 'CASHED_OUT' ? '✅ ชนะ' : g.status === 'EXPLODED' ? '💣 แพ้' : '⏳ Active'}
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                            {minesStats.recentGames.length === 0 && (
+                                                                <tr>
+                                                                    <td colSpan={6} className="px-3 py-6 text-center text-stone-500">ผู้ใช้ยังไม่เคยเล่นเกม Mines</td>
+                                                                </tr>
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
                                             </div>
                                         </div>
                                     )}

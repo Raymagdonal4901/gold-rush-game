@@ -410,6 +410,10 @@ export const api = {
             }
             return data;
         },
+        getUserMinesStats: async (userId: string): Promise<any> => {
+            const res = await client.get(`/admin/users/${userId}/mines-stats`);
+            return res.data;
+        },
         giveCompensation: async (userId: string, amount: number, reason: string): Promise<any> => {
             const res = await client.post('/admin/users/compensation', { userId, amount, reason });
             return res.data;

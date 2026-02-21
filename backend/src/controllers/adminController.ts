@@ -10,6 +10,7 @@ import DepositRequest from '../models/DepositRequest';
 import ClaimRequest from '../models/ClaimRequest';
 import SystemConfig from '../models/SystemConfig';
 import Transaction from '../models/Transaction';
+import MinesGame from '../models/MinesGame';
 import Withdrawal from '../models/Withdrawal';
 import { recalculateUserIncome } from './userController';
 
@@ -371,6 +372,64 @@ export const getUserStats = async (req: AuthRequest, res: Response) => {
         });
     } catch (error) {
         console.error('Error fetching user stats:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+// Get User Mines Minigame Stats (Admin)
+export const getUserMinesStats = async (req: AuthRequest, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const objId = new mongoose.Types.ObjectId(userId);
+
+        const [aggStats, recentGames] = await Promise.all([
+            MinesGame.aggregate([
+                { $match: { userId: objId } },
+                {
+                    $group: {
+                        _id: '$status',
+                        count: { $sum: 1 },
+                        totalBet: { $sum: '$betAmount' },
+                        totalPotential: { $sum: '$potentialWin' }
+                    }
+                }
+            ]),
+            MinesGame.find({ userId: objId })
+                .sort({ createdAt: -1 })
+                .limit(20)
+                .select('-mines') // Don't expose mine positions
+        ]);
+
+        // Transform aggregation results
+        const statMap: Record<string, any> = {};
+        aggStats.forEach((s: any) => statMap[s._id] = s);
+
+        const totalGames = aggStats.reduce((sum: number, s: any) => sum + s.count, 0);
+        const wins = statMap['CASHED_OUT'] || { count: 0, totalBet: 0, totalPotential: 0 };
+        const losses = statMap['EXPLODED'] || { count: 0, totalBet: 0, totalPotential: 0 };
+        const active = statMap['ACTIVE'] || { count: 0, totalBet: 0, totalPotential: 0 };
+
+        const totalBet = wins.totalBet + losses.totalBet + active.totalBet;
+        const totalWon = wins.totalPotential;
+        const totalLost = losses.totalBet;
+        const netProfit = totalWon - totalBet + active.totalBet;
+
+        res.json({
+            summary: {
+                totalGames,
+                wins: wins.count,
+                losses: losses.count,
+                active: active.count,
+                totalBet,
+                totalWon,
+                totalLost,
+                netProfit,
+                winRate: totalGames > 0 ? ((wins.count / (totalGames - active.count)) * 100).toFixed(1) : '0'
+            },
+            recentGames
+        });
+    } catch (error) {
+        console.error('Error fetching user mines stats:', error);
         res.status(500).json({ message: 'Server error', error });
     }
 };
