@@ -236,10 +236,23 @@ export const AccessoryShopModal: React.FC<AccessoryShopModalProps> = ({
 
     const getItemDisplayName = (item: any) => {
         if (!item) return '';
-        if (item.name && typeof item.name === 'object') {
-            return getLocalized(item.name);
+        const typeId = item.typeId || '';
+        const nameRaw = item.name;
+
+        let displayName = '';
+        // 1. Match by configuration names (centralized)
+        if (typeId === 'chest_key' || (typeof nameRaw === 'string' && (nameRaw.includes('กุญแจ') || nameRaw.includes('Key')))) displayName = t('items.mining_key');
+        else if (typeId === 'upgrade_chip' || (typeof nameRaw === 'string' && (nameRaw.includes('ชิป') || nameRaw.includes('Chip')))) displayName = t('items.upgrade_chip');
+        else if (typeId === 'mixer' || (typeof nameRaw === 'string' && (nameRaw.includes('โต๊ะช่าง') || nameRaw.includes('Mixer')))) displayName = t('items.material_mixer');
+        else if (typeId === 'magnifying_glass' || (typeof nameRaw === 'string' && (nameRaw.includes('แว่นขยาย') || nameRaw.includes('Search')))) displayName = t('items.magnifying_glass');
+        else if (typeId === 'robot' || typeId === 'ai_robot') displayName = t('items.ai_robot');
+        else displayName = getLocalized(nameRaw);
+
+        // Final safety check: ensure we always return a string to prevent React Error #31
+        if (typeof displayName === 'object') {
+            return getLocalized(displayName) || String(displayName || '');
         }
-        return item.name || '';
+        return String(displayName || '');
     };
 
 

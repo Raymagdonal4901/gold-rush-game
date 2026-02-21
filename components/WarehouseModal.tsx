@@ -224,24 +224,31 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
     };
 
     const getItemDisplayName = (item: any) => {
+        if (!item) return '';
         const typeId = item.typeId || '';
 
         // Safely extract name string
         let nameStr = '';
         if (item.name && typeof item.name === 'object') {
-            nameStr = (item.name as any).en || '';
+            nameStr = (item.name as any).en || (item.name as any).th || '';
         } else if (typeof item.name === 'string') {
             nameStr = item.name;
         }
 
-        if (typeId === 'chest_key' || nameStr.includes('กุญแจ') || nameStr.includes('Key')) return t('rig.mining_key');
-        if (typeId === 'upgrade_chip' || nameStr.includes('ชิป') || nameStr.includes('Chip')) return t('inventory.upgrade');
-        if (typeId === 'mixer' || nameStr.includes('โต๊ะช่าง') || nameStr.includes('Mixer')) return t('warehouse.extract');
-        if (typeId === 'magnifying_glass' || nameStr.includes('แว่นขยาย') || nameStr.includes('Search')) return getLocalized(item.name);
-        if (typeId === 'time_skip_ticket' || nameStr.includes('ตั๋วเร่งเวลา')) return language === 'th' ? 'ตั๋วเร่งเวลา' : 'Time Skip Ticket';
-        if (typeId === 'construction_nanobot' || nameStr.includes('นาโนบอทก่อสร้าง')) return language === 'th' ? 'นาโนบอทก่อสร้าง' : 'Construction Nanobot';
+        let displayName = '';
+        if (typeId === 'chest_key' || nameStr.includes('กุญแจ') || nameStr.includes('Key')) displayName = t('rig.mining_key');
+        else if (typeId === 'upgrade_chip' || nameStr.includes('ชิป') || nameStr.includes('Chip')) displayName = t('inventory.upgrade');
+        else if (typeId === 'mixer' || nameStr.includes('โต๊ะช่าง') || nameStr.includes('Mixer')) displayName = t('warehouse.extract');
+        else if (typeId === 'magnifying_glass' || nameStr.includes('แว่นขยาย') || nameStr.includes('Search')) displayName = getLocalized(item.name);
+        else if (typeId === 'time_skip_ticket' || nameStr.includes('ตั๋วเร่งเวลา')) displayName = language === 'th' ? 'ตั๋วเร่งเวลา' : 'Time Skip Ticket';
+        else if (typeId === 'construction_nanobot' || nameStr.includes('นาโนบอทก่อสร้าง')) displayName = language === 'th' ? 'นาโนบอทก่อสร้าง' : 'Construction Nanobot';
+        else displayName = getLocalized(item.name);
 
-        return getLocalized(item.name);
+        // Final safety check: ensure we always return a string to prevent React Error #31
+        if (typeof displayName === 'object') {
+            return getLocalized(displayName) || String(displayName || '');
+        }
+        return String(displayName || '');
     };
 
 

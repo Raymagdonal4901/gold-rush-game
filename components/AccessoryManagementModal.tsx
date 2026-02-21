@@ -31,15 +31,20 @@ export const getItemDisplayName = (item: any, t: any, getLocalized: any) => {
     const typeId = item.typeId || '';
     const nameRaw = item.name;
 
+    let displayName = '';
     // 1. Match by configuration names (centralized)
-    if (typeId === 'chest_key' || (typeof nameRaw === 'string' && (nameRaw.includes('กุญแจ') || nameRaw.includes('Key')))) return t('items.mining_key');
-    if (typeId === 'upgrade_chip' || (typeof nameRaw === 'string' && (nameRaw.includes('ชิป') || nameRaw.includes('Chip')))) return t('items.upgrade_chip');
-    if (typeId === 'mixer' || (typeof nameRaw === 'string' && (nameRaw.includes('โต๊ะช่าง') || nameRaw.includes('Mixer')))) return t('items.material_mixer');
-    if (typeId === 'magnifying_glass' || (typeof nameRaw === 'string' && (nameRaw.includes('แว่นขยาย') || nameRaw.includes('Search')))) return t('items.magnifying_glass');
-    if (typeId === 'robot' || typeId === 'ai_robot') return t('items.ai_robot');
+    if (typeId === 'chest_key' || (typeof nameRaw === 'string' && (nameRaw.includes('กุญแจ') || nameRaw.includes('Key')))) displayName = t('items.mining_key');
+    else if (typeId === 'upgrade_chip' || (typeof nameRaw === 'string' && (nameRaw.includes('ชิป') || nameRaw.includes('Chip')))) displayName = t('items.upgrade_chip');
+    else if (typeId === 'mixer' || (typeof nameRaw === 'string' && (nameRaw.includes('โต๊ะช่าง') || nameRaw.includes('Mixer')))) displayName = t('items.material_mixer');
+    else if (typeId === 'magnifying_glass' || (typeof nameRaw === 'string' && (nameRaw.includes('แว่นขยาย') || nameRaw.includes('Search')))) displayName = t('items.magnifying_glass');
+    else if (typeId === 'robot' || typeId === 'ai_robot') displayName = t('items.ai_robot');
+    else displayName = getLocalized(nameRaw);
 
-    // 2. User localization helper or raw name
-    return getLocalized(nameRaw);
+    // Final safety check: ensure we always return a string to prevent React Error #31
+    if (typeof displayName === 'object') {
+        return getLocalized(displayName) || String(displayName || '');
+    }
+    return String(displayName || '');
 };
 
 // --- EQUIPMENT DURABILITY HELPERS ---

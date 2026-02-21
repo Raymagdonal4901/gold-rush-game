@@ -48,10 +48,25 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         return result;
     };
 
-    const getLocalized = (content: string | { th: string; en: string } | undefined): string => {
+    const getLocalized = (content: any): string => {
         if (!content) return '';
         if (typeof content === 'string') return content;
-        return content[language] || content['en'];
+
+        // Handle standard { th, en } object or nested objects
+        if (typeof content === 'object') {
+            const val = content[language] || content['en'];
+            if (val && typeof val === 'string') return val;
+
+            // Fallback: if it's still an object, check for common name fields or return empty string
+            if (val && typeof val === 'object') {
+                return val.th || val.en || val.name || '';
+            }
+
+            // Final fallback for any other object structure
+            return content.th || content.en || content.name || '';
+        }
+
+        return String(content || '');
     };
 
     const formatCurrency = (amount: number, options?: { hideSymbol?: boolean; forceTHB?: boolean; forceUSD?: boolean; showDecimals?: boolean; precision?: number }): string => {
