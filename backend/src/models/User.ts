@@ -57,6 +57,7 @@ export interface IUser extends Document {
     accountLevel: number;
     maxEnergy?: number;
     marketFee?: number;
+    isBotPaused: boolean;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -116,7 +117,8 @@ const UserSchema = new Schema<IUser>({
     purchasedRigIds: { type: [Number], default: [] },
     accountLevel: { type: Number, default: 1 },
     maxEnergy: { type: Number, default: 100 },
-    marketFee: { type: Number, default: 10.0 }
+    marketFee: { type: Number, default: 10.0 },
+    isBotPaused: { type: Boolean, default: false }
 }, {
     timestamps: true
 });

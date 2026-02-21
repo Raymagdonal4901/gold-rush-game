@@ -239,6 +239,10 @@ export const api = {
             rig: res.data.rig ? mapBackendRigToFrontend(res.data.rig) : undefined
         };
     },
+    toggleBotPause: async (): Promise<{ success: boolean; isBotPaused: boolean; message: string }> => {
+        const res = await client.post('/rigs/toggle-bot-pause');
+        return res.data;
+    },
 
     upgradeAccessory: async (itemId: string, useInsurance: boolean): Promise<any> => {
         const response = await client.post('/accessories/upgrade', { itemId, useInsurance });

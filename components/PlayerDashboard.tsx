@@ -293,9 +293,16 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
     );
 
     // Toggle Pause
-    const toggleBotPause = () => {
+    const toggleBotPause = async () => {
         if (!hasBot) return;
-        setBotStatus(prev => prev === 'PAUSED' ? 'ACTIVE' : 'PAUSED');
+        try {
+            const res = await api.toggleBotPause();
+            if (res.success) {
+                setBotStatus(res.isBotPaused ? 'PAUSED' : 'ACTIVE');
+            }
+        } catch (err) {
+            console.error("Failed to toggle bot pause", err);
+        }
     };
 
     const userRef = useRef(user);
@@ -349,6 +356,9 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
             if (u) {
                 setUser(u);
                 setNotifications(u.notifications || []);
+                if (u.isBotPaused !== undefined) {
+                    setBotStatus(u.isBotPaused ? 'PAUSED' : 'ACTIVE');
+                }
             }
             if (r) setRigs(r);
             if (m) setMarketState(prev => JSON.stringify(prev) !== JSON.stringify(m) ? m : prev);

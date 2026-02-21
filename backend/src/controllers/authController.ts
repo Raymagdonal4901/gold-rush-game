@@ -6,6 +6,7 @@ import User from '../models/User';
 import Rig from '../models/Rig';
 import SystemConfig from '../models/SystemConfig';
 import { ENERGY_CONFIG } from '../constants';
+import { syncRobotActions } from '../services/robotService';
 
 // Public System Config (Maintenance only)
 export const getPublicConfig = async (req: Request, res: Response) => {
@@ -201,6 +202,10 @@ export const login = async (req: Request, res: Response) => {
             process.env.JWT_SECRET!,
             { expiresIn: '7d' }
         );
+
+        // Sync Robot Actions before returning user state
+        await syncRobotActions(user._id.toString());
+
         const updatedEnergy = await calculateAndSyncEnergy(user);
 
         // Normalize Capacity Fields (Repair for legacy users)
@@ -284,6 +289,9 @@ export const getProfile = async (req: any, res: Response) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
+
+        // Sync Robot Actions before returning profile
+        await syncRobotActions(user._id.toString());
 
         const updatedEnergy = await calculateAndSyncEnergy(user);
         // Normalize Capacity Fields (Repair for legacy users)

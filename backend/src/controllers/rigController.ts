@@ -5,6 +5,7 @@ import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
 import { MATERIAL_CONFIG, RIG_LOOT_TABLES, SHOP_ITEMS, RENEWAL_CONFIG, RIG_PRESETS, ENERGY_CONFIG, MINING_VOLATILITY_CONFIG, SALVAGE_CONFIG, RIG_UPGRADE_RULES, MAX_RIG_LEVEL, LEVEL_CONFIG, REFERRAL_COMMISSION } from '../constants';
 import { recalculateUserIncome } from './userController';
+import { syncRobotActions } from '../services/robotService';
 
 const MATERIAL_NAMES = MATERIAL_CONFIG.NAMES;
 
@@ -1555,5 +1556,24 @@ export const renewRig = async (req: AuthRequest, res: Response) => {
 
     } catch (error: any) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+export const toggleBotPause = async (req: AuthRequest, res: Response) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        user.isBotPaused = !user.isBotPaused;
+        await user.save();
+
+        res.json({
+            success: true,
+            isBotPaused: user.isBotPaused,
+            message: user.isBotPaused ? 'Robot Paused' : 'Robot Resumed'
+        });
+    } catch (error) {
+        console.error('Toggle bot pause error:', error);
+        res.status(500).json({ message: 'Server error', error });
     }
 };
