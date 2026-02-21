@@ -2,7 +2,7 @@ import { Response } from 'express';
 import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthRequest } from '../middleware/auth';
-import { SHOP_ITEMS, RIG_PRESETS, MINING_VOLATILITY_CONFIG } from '../constants';
+import { SHOP_ITEMS, RIG_PRESETS, MINING_VOLATILITY_CONFIG, WITHDRAWAL_FEE_PERCENT, CURRENCY } from '../constants';
 import User from '../models/User';
 import Rig from '../models/Rig';
 import WithdrawalRequest from '../models/WithdrawalRequest';
@@ -314,8 +314,8 @@ export const getUserStats = async (req: AuthRequest, res: Response) => {
         // 3.2 Market Fee (Tax from Selling)
         const rev_market_fees = revenueMap['MARKET_TAX'] || 0;
 
-        // 3.3 Withdrawal Fee (Currently 0 as no explicit transaction type yet)
-        const rev_withdrawal_fees = 0;
+        // 3.3 Withdrawal Fee
+        const rev_withdrawal_fees = revenueMap['WITHDRAW_FEE'] ? Math.abs(revenueMap['WITHDRAW_FEE']) : 0;
 
         // 3.4 Repair Fee
         const rev_repair_fees = revenueMap['REPAIR'] || 0;
@@ -681,10 +681,10 @@ export const getGlobalRevenueStats = async (req: AuthRequest, res: Response) => 
         // 3.2 Market Fee (Tax from Selling)
         const rev_market_fees = revenueMap['MARKET_TAX'] || 0;
 
-        // 3.3 Withdrawal Fee (10% of approved withdrawals)
-        const withdrawal_fees_bank = (withMap['BANK'] || 0) * 0.1;
-        const withdrawal_fees_usdt = (withMap['USDT'] || 0) * 0.1;
-        const rev_withdrawal_fees = withdrawal_fees_bank + withdrawal_fees_usdt;
+        // 3.3 Withdrawal Fee (Based on WITHDRAWAL_FEE_PERCENT of approved withdrawals)
+        const withdrawal_fees_bank = (withMap['BANK'] || 0) * WITHDRAWAL_FEE_PERCENT;
+        const withdrawal_fees_usdt = (withMap['USDT'] || 0) * WITHDRAWAL_FEE_PERCENT;
+        const rev_withdrawal_fees = (revenueMap['WITHDRAW_FEE'] ? Math.abs(revenueMap['WITHDRAW_FEE']) : 0) || (withdrawal_fees_bank + withdrawal_fees_usdt);
 
         // 3.4 Repair Fee
         const rev_repair_fees = revenueMap['REPAIR'] || 0;

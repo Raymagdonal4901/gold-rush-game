@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import User from '../models/User';
 import Withdrawal from '../models/Withdrawal';
 import Transaction from '../models/Transaction';
+import { WITHDRAWAL_FEE_PERCENT, CURRENCY } from '../constants';
 import mongoose from 'mongoose';
 
 export const requestWithdraw = async (req: AuthRequest, res: Response) => {
@@ -33,7 +34,7 @@ export const requestWithdraw = async (req: AuthRequest, res: Response) => {
         await user.save({ session });
 
         // 2. Calculate 5% withdrawal fee (House Revenue)
-        const withdrawalFee = Math.floor(amount * 0.05 * 100) / 100;
+        const withdrawalFee = Math.floor(amount * WITHDRAWAL_FEE_PERCENT * 100) / 100;
 
         // 3. Create Withdrawal record
         const withdrawal = await Withdrawal.create([

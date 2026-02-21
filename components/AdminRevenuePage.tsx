@@ -128,7 +128,7 @@ export const AdminRevenuePage: React.FC = () => {
                 />
                 <StatCard
                     title={t('admin_revenue.net_profit')}
-                    value={`${(totals.total * 0.95).toLocaleString()} ${CURRENCY}`}
+                    value={`${(totals.total * 0.90).toLocaleString()} ${CURRENCY}`}
                     icon={ArrowUpRight}
                     color="text-emerald-500"
                     trend={{ value: 15.7, isPositive: true }}
@@ -188,7 +188,7 @@ export const AdminRevenuePage: React.FC = () => {
                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
                         {t('admin_revenue.recent_stream')} <span className="text-xs font-normal text-stone-500 uppercase tracking-widest px-2 py-0.5 bg-stone-800 rounded-full">{t('admin_revenue.stream_live')}</span>
                     </h3>
-                    <button className="text-stone-500 hover:text-white transition-colors">
+                    <button className="text-stone-500 hover:text-white transition-colors" title="View All">
                         <ChevronRight size={20} />
                     </button>
                 </div>
