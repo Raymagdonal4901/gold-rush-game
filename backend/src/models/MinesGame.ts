@@ -9,6 +9,7 @@ export interface IMinesGame extends Document {
     revealed: number[]; // Array of indices user has clicked
     currentMultiplier: number;
     potentialWin: number;
+    deathTurn: number; // Turn at which the game auto-explodes (2-4)
     createdAt: Date;
 }
 
@@ -21,6 +22,7 @@ const MinesGameSchema: Schema = new Schema({
     revealed: { type: [Number], default: [] },
     currentMultiplier: { type: Number, default: 1.0 },
     potentialWin: { type: Number, required: true },
+    deathTurn: { type: Number, required: true, default: 3 },
     createdAt: { type: Date, default: Date.now }
 });
 

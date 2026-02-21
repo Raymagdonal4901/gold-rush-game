@@ -58,6 +58,9 @@ export const startGame = async (req: AuthRequest, res: Response) => {
             minesSet.add(crypto.randomInt(0, 25));
         }
 
+        // 💥 Randomly pick a "death turn" (2, 3, or 4) — game will auto-explode at this reveal
+        const deathTurn = crypto.randomInt(2, 5); // 2, 3, or 4
+
         // Create Game
         const game = new MinesGame({
             userId,
@@ -66,7 +69,8 @@ export const startGame = async (req: AuthRequest, res: Response) => {
             mines: Array.from(minesSet),
             status: 'ACTIVE',
             currentMultiplier: 1.0,
-            potentialWin: betAmount
+            potentialWin: betAmount,
+            deathTurn
         });
 
         // Deduct Balance Immediately
@@ -140,6 +144,48 @@ export const revealTile = async (req: AuthRequest, res: Response) => {
         game.currentMultiplier = Math.min(50.0, nextMultiplier);
         game.potentialWin = Math.floor(game.betAmount * game.currentMultiplier * 100) / 100;
         game.revealed.push(tileIndex);
+
+        // 💥 Auto-explode at deathTurn (2-4) — no matter what tile is picked
+        if (game.revealed.length >= game.deathTurn) {
+            game.status = 'EXPLODED';
+            game.potentialWin = 0;
+            game.markModified('mines');
+
+            await Promise.all([
+                game.save(),
+                Transaction.create({
+                    userId,
+                    type: 'GAME_LOSS',
+                    amount: game.betAmount,
+                    description: `เสียพนันเกม Mines (${game.minesCount} ระเบิด) [Auto-Explode ตาที่ ${game.revealed.length}]`,
+                    status: 'COMPLETED'
+                })
+            ]);
+
+            return res.json({
+                status: 'GAME_OVER',
+                mines: game.mines,
+                message: `BOOM! The mine detonated on turn ${game.revealed.length}!`
+            });
+        }
+
+        // 🔀 Re-randomize bomb positions 2-4 times every turn
+        // Bombs can NOT land on already-revealed tiles
+        const reshuffleCount = crypto.randomInt(2, 5); // 2, 3, or 4
+        for (let i = 0; i < reshuffleCount; i++) {
+            const safeSlots = Array.from({ length: 25 }, (_, idx) => idx)
+                .filter(idx => !game.revealed.includes(idx));
+
+            if (safeSlots.length > game.minesCount) {
+                const newMines = new Set<number>();
+                const shuffled = safeSlots.sort(() => crypto.randomInt(0, 2) - 0.5 > 0 ? 1 : -1);
+                for (let j = 0; j < game.minesCount; j++) {
+                    newMines.add(shuffled[j]);
+                }
+                game.mines = Array.from(newMines);
+                game.markModified('mines');
+            }
+        }
 
         await game.save();
 
