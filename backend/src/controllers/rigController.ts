@@ -920,6 +920,7 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
 
         // Per-Rig Loot Drop
         const presetId = getRigPresetId(rig);
+        const preset = RIG_PRESETS.find(p => p.id === presetId);
         const buffs = getRigBuffs(rig, user);
         const loot = rollLoot(presetId, buffs);
         const lootAmount = loot.amount;
@@ -971,6 +972,33 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
             rewardName = matName.th;
         }
 
+        // Bonus Key Drop for specific rigs (Daily Gift)
+        let hasBonusKey = false;
+        if (preset?.givesKey) {
+            const keyItem = SHOP_ITEMS.find(s => s.id === 'chest_key');
+            if (keyItem) {
+                hasBonusKey = true;
+                if (!user.inventory) user.inventory = [];
+                const lifespan = keyItem.lifespanDays || 365;
+                user.inventory.push({
+                    id: Math.random().toString(36).substr(2, 9),
+                    typeId: keyItem.id,
+                    name: keyItem.name,
+                    price: keyItem.price,
+                    dailyBonus: 0,
+                    durationBonus: 0,
+                    rarity: keyItem.rarity || 'RARE',
+                    purchasedAt: Date.now(),
+                    lifespanDays: lifespan,
+                    expireAt: Date.now() + (lifespan * 24 * 60 * 60 * 1000),
+                    maxDurability: lifespan * 100,
+                    currentDurability: lifespan * 100,
+                    level: 1
+                });
+                user.markModified('inventory');
+            }
+        }
+
         await user.save();
 
         // Log Transaction
@@ -979,7 +1007,7 @@ export const claimRigGift = async (req: AuthRequest, res: Response) => {
             type: 'GIFT_CLAIM',
             amount: 0,
             status: 'COMPLETED',
-            description: `ได้รับของขวัญจากเครื่องขุด: ${rewardName} x${lootAmount}`
+            description: `ได้รับของขวัญจากเครื่องขุด: ${rewardName} x${lootAmount}${hasBonusKey ? ' + กุญแจเข้าเหมือง x1' : ''}`
         });
         await giftTx.save();
 

@@ -119,7 +119,7 @@ export const th = {
         expired: "หมดอายุ",
         claim_rent: "เก็บผลผลิต",
         destroy: "ทำลาย",
-        mining_key: "กุญแจเหมือง",
+        mining_key: "กุญแจเข้าเหมือง",
         waiting_discovery: "รอการค้นพบ",
         capacity: "ความจุ",
         collect: "เก็บ",

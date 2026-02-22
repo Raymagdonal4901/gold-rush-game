@@ -200,7 +200,8 @@ export const MATERIAL_CONFIG = {
 };
 
 export interface LootEntry {
-    matTier: number;
+    matTier?: number;
+    itemId?: string;
     minAmount: number;
     maxAmount: number;
     chance: number;
@@ -394,6 +395,7 @@ export interface RigPreset {
     description?: { th: string; en: string };
     type?: string;
     materialChance?: number;
+    givesKey?: boolean;
 }
 
 export const RIG_PRESETS: RigPreset[] = [
@@ -411,9 +413,9 @@ export const RIG_PRESETS: RigPreset[] = [
         type: 'COMMON'
     },
     { id: 1, name: { th: 'พลั่วสนิมเขรอะ', en: 'Starter' }, price: 300, dailyProfit: 10, durationDays: 60, repairCost: 0, energyCostPerDay: 1, specialProperties: { infiniteDurability: false, noGift: true }, type: 'COMMON' },
-    { id: 2, name: { th: 'สว่านพกพา', en: 'Common' }, price: 500, dailyProfit: 18.5, durationDays: 60, repairCost: 0, energyCostPerDay: 2, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'UNCOMMON', specialProperties: { infiniteDurability: false } },
-    { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Uncommon' }, price: 1000, dailyProfit: 38.5, durationDays: 90, repairCost: 63, energyCostPerDay: 3, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'RARE' },
-    { id: 4, name: { th: 'เครื่องขุดทองแดง', en: 'Rare' }, price: 1500, dailyProfit: 62.5, durationDays: 90, repairCost: 122, energyCostPerDay: 6, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'SUPER_RARE' },
+    { id: 2, name: { th: 'สว่านพกพา', en: 'Common' }, price: 500, dailyProfit: 18.5, durationDays: 60, repairCost: 0, energyCostPerDay: 2, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'UNCOMMON', specialProperties: { infiniteDurability: false }, givesKey: true },
+    { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Uncommon' }, price: 1000, dailyProfit: 38.5, durationDays: 90, repairCost: 63, energyCostPerDay: 3, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'RARE', givesKey: true },
+    { id: 4, name: { th: 'เครื่องขุดทองแดง', en: 'Rare' }, price: 1500, dailyProfit: 62.5, durationDays: 90, repairCost: 122, energyCostPerDay: 6, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'SUPER_RARE', givesKey: true },
     { id: 5, name: { th: 'เครื่องขุดเหล็ก', en: 'Epic' }, price: 2000, dailyProfit: 85, durationDays: 120, repairCost: 182, energyCostPerDay: 10, type: 'EPIC' },
     { id: 6, name: { th: 'เครื่องขุดทองคำ', en: 'Legendary' }, price: 2500, dailyProfit: 115, durationDays: 120, repairCost: 252, energyCostPerDay: 15, type: 'MYTHIC' },
     { id: 7, name: { th: 'เครื่องขุดเพชร', en: 'Mythical' }, price: 3000, dailyProfit: 150, durationDays: 120, repairCost: 297, energyCostPerDay: 22, type: 'LEGENDARY' },
@@ -431,7 +433,8 @@ export const RIG_PRESETS: RigPreset[] = [
         },
         description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม. (แร่วาเบรเนียมได้จากการสกัดเท่านั้น)', en: 'Get Mining Key every 24h (Vibranium from refining only)' },
         specialProperties: { infiniteDurability: false, zeroEnergy: false, maxAllowed: 1 },
-        type: 'ULTRA_LEGENDARY'
+        type: 'ULTRA_LEGENDARY',
+        givesKey: true
     },
 ];
 

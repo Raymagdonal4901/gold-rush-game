@@ -221,14 +221,49 @@ export interface LootEntry {
 }
 
 export const RIG_LOOT_TABLES: Record<number, LootEntry[]> = {
-    // All rigs now only drop the Mine Key
-    2: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-    3: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-    4: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-    5: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-    6: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-    7: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
-    8: [{ itemId: 'chest_key', minAmount: 1, maxAmount: 1, chance: 100 }],
+    // Tier 2: สว่านพกพา (Portable Drill)
+    2: [
+        { matTier: 0, minAmount: 3, maxAmount: 5, chance: 60 },
+        { matTier: 1, minAmount: 1, maxAmount: 1, chance: 35 },
+        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 5 },
+    ],
+    // Tier 3: เครื่องขุดถ่านหิน (Coal Excavator)
+    3: [
+        { matTier: 0, minAmount: 5, maxAmount: 8, chance: 30 },
+        { matTier: 1, minAmount: 1, maxAmount: 2, chance: 50 },
+        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 15 },
+        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 5 },
+    ],
+    // Tier 4: เครื่องขุดทองแดง (Copper Excavator)
+    4: [
+        { matTier: 1, minAmount: 2, maxAmount: 3, chance: 50 },
+        { matTier: 2, minAmount: 1, maxAmount: 1, chance: 40 },
+        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 10 },
+    ],
+    // Tier 5: เครื่องขุดเหล็ก (Iron Excavator)
+    5: [
+        { matTier: 2, minAmount: 2, maxAmount: 2, chance: 40 },
+        { matTier: 3, minAmount: 1, maxAmount: 1, chance: 50 },
+        { matTier: 4, minAmount: 1, maxAmount: 1, chance: 10 },
+    ],
+    // Tier 6: เครื่องขุดทองคำ (Gold Excavator)
+    6: [
+        { matTier: 3, minAmount: 2, maxAmount: 2, chance: 40 },
+        { matTier: 4, minAmount: 1, maxAmount: 1, chance: 55 },
+        { matTier: 5, minAmount: 1, maxAmount: 1, chance: 5 },
+    ],
+    // Tier 7: เครื่องขุดเพชร (Diamond Excavator)
+    7: [
+        { matTier: 4, minAmount: 2, maxAmount: 2, chance: 40 },
+        { matTier: 5, minAmount: 1, maxAmount: 1, chance: 50 },
+        { matTier: 6, minAmount: 1, maxAmount: 1, chance: 10 },
+    ],
+    // Tier 8: เครื่องขุดปฏิกรณ์ (Reactor)
+    8: [
+        { matTier: 5, minAmount: 1, maxAmount: 2, chance: 60 },
+        { matTier: 6, minAmount: 1, maxAmount: 1, chance: 35 },
+        { matTier: 7, minAmount: 1, maxAmount: 1, chance: 5 },
+    ],
 };
 
 // --- NEW ENHANCEMENT SYSTEM ---
@@ -373,15 +408,16 @@ export interface RigPreset {
     description?: { th: string; en: string };
     type?: string;
     materialChance?: number;
+    givesKey?: boolean;
 }
 
 
 
 export const RIG_PRESETS: RigPreset[] = [
     { id: 1, name: { th: 'พลั่วสนิมเขรอะ', en: 'Starter' }, price: 300, dailyProfit: 10, durationDays: 60, repairCost: 0, energyCostPerDay: 1, specialProperties: { infiniteDurability: false, noGift: true }, type: 'COMMON' },
-    { id: 2, name: { th: 'สว่านพกพา', en: 'Common' }, price: 500, dailyProfit: 18.5, durationDays: 60, repairCost: 0, energyCostPerDay: 2, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'UNCOMMON', specialProperties: { infiniteDurability: false } },
-    { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Uncommon' }, price: 1000, dailyProfit: 38.5, durationDays: 90, repairCost: 63, energyCostPerDay: 3, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'RARE' },
-    { id: 4, name: { th: 'เครื่องขุดทองแดง', en: 'Rare' }, price: 1500, dailyProfit: 62.5, durationDays: 90, repairCost: 122, energyCostPerDay: 6, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'SUPER_RARE' },
+    { id: 2, name: { th: 'สว่านพกพา', en: 'Common' }, price: 500, dailyProfit: 18.5, durationDays: 60, repairCost: 0, energyCostPerDay: 2, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'UNCOMMON', specialProperties: { infiniteDurability: false }, givesKey: true },
+    { id: 3, name: { th: 'เครื่องขุดถ่านหิน', en: 'Uncommon' }, price: 1000, dailyProfit: 38.5, durationDays: 90, repairCost: 63, energyCostPerDay: 3, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'RARE', givesKey: true },
+    { id: 4, name: { th: 'เครื่องขุดทองแดง', en: 'Rare' }, price: 1500, dailyProfit: 62.5, durationDays: 90, repairCost: 122, energyCostPerDay: 6, description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม.', en: 'Get Mining Key every 24h' }, type: 'SUPER_RARE', givesKey: true },
     { id: 5, name: { th: 'เครื่องขุดเหล็ก', en: 'Epic' }, price: 2000, dailyProfit: 85, durationDays: 120, repairCost: 182, energyCostPerDay: 10, type: 'EPIC' },
     { id: 6, name: { th: 'เครื่องขุดทองคำ', en: 'Legendary' }, price: 2500, dailyProfit: 115, durationDays: 120, repairCost: 252, energyCostPerDay: 15, type: 'MYTHIC' },
     { id: 7, name: { th: 'เครื่องขุดเพชร', en: 'Mythical' }, price: 3000, dailyProfit: 150, durationDays: 120, repairCost: 297, energyCostPerDay: 22, type: 'LEGENDARY' },
@@ -399,7 +435,8 @@ export const RIG_PRESETS: RigPreset[] = [
         },
         description: { th: 'รับกุญแจเข้าเหมืองทุก 24 ชม. (แร่วาเบรเนียมได้จากการสกัดเท่านั้น)', en: 'Get Mining Key every 24h (Vibranium from refining only)' },
         specialProperties: { infiniteDurability: false, zeroEnergy: false, maxAllowed: 1 },
-        type: 'ULTRA_LEGENDARY'
+        type: 'ULTRA_LEGENDARY',
+        givesKey: true
     },
     {
         id: 9,
