@@ -1496,7 +1496,8 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ user: propUser, onLog
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
                                 <Pickaxe size={24} className="text-yellow-500" />
-                                {language === 'th' ? 'เครื่องขุดของฉัน' : 'My Mining Rigs'} ({rigs.length}/{(user?.warehouseCapacity || user?.unlockedSlots || 3)})
+                                <span>{language === 'th' ? 'เครื่องขุดของฉัน' : 'My Mining Rigs'}</span>
+                                <span className="opacity-50 text-base font-mono">({rigs.length}/{(user?.warehouseCapacity || user?.unlockedSlots || 3)})</span>
                             </h2>
                             {rigs.length < (user?.warehouseCapacity || user?.unlockedSlots || 3) && (
                                 <button
