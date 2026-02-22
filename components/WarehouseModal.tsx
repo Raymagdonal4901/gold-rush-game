@@ -65,9 +65,26 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         items.forEach(item => {
             // For consumables (items), group by typeId only to combine all of the same type
             // For equipment, group by typeId + rarity + level for differentiation
-            const key = groupByTypeIdOnly
-                ? item.typeId || getLocalized(item.name)
-                : `${item.typeId}_${item.rarity}_${item.level || 1}_${item.isHandmade ? 'hm' : 'std'}`;
+            let key = '';
+            if (groupByTypeIdOnly) {
+                const typeIdStr = (item.typeId || '').toLowerCase();
+                let nameLower = '';
+                if (item.name && typeof item.name === 'object') {
+                    nameLower = ((item.name as any).en || (item.name as any).th || '').toLowerCase();
+                } else if (typeof item.name === 'string') {
+                    nameLower = item.name.toLowerCase();
+                }
+
+                // Force all keys to group together
+                if (typeIdStr === 'chest_key' || nameLower.includes('key') || nameLower.includes('กุญแจ')) {
+                    key = 'chest_key';
+                } else {
+                    key = item.typeId || getLocalized(item.name);
+                }
+            } else {
+                key = `${item.typeId}_${item.rarity}_${item.level || 1}_${item.isHandmade ? 'hm' : 'std'}`;
+            }
+
             if (!groups[key]) {
                 groups[key] = { representative: item, count: 0, originalItems: [] };
             }
@@ -234,14 +251,15 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         } else if (typeof item.name === 'string') {
             nameStr = item.name;
         }
+        const nameLower = nameStr.toLowerCase();
 
         let displayName = '';
-        if (typeId === 'chest_key' || nameStr.includes('กุญแจ') || nameStr.includes('Key')) displayName = t('rig.mining_key');
-        else if (typeId === 'upgrade_chip' || nameStr.includes('ชิป') || nameStr.includes('Chip')) displayName = t('inventory.upgrade');
-        else if (typeId === 'mixer' || nameStr.includes('โต๊ะช่าง') || nameStr.includes('Mixer')) displayName = t('warehouse.extract');
-        else if (typeId === 'magnifying_glass' || nameStr.includes('แว่นขยาย') || nameStr.includes('Search')) displayName = getLocalized(item.name);
-        else if (typeId === 'time_skip_ticket' || nameStr.includes('ตั๋วเร่งเวลา')) displayName = language === 'th' ? 'ตั๋วเร่งเวลา' : 'Time Skip Ticket';
-        else if (typeId === 'construction_nanobot' || nameStr.includes('นาโนบอทก่อสร้าง')) displayName = language === 'th' ? 'นาโนบอทก่อสร้าง' : 'Construction Nanobot';
+        if (typeId === 'chest_key' || nameLower.includes('กุญแจ') || nameLower.includes('key')) displayName = t('rig.mining_key');
+        else if (typeId === 'upgrade_chip' || nameLower.includes('ชิป') || nameLower.includes('chip')) displayName = t('inventory.upgrade');
+        else if (typeId === 'mixer' || nameLower.includes('โต๊ะช่าง') || nameLower.includes('mixer')) displayName = t('warehouse.extract');
+        else if (typeId === 'magnifying_glass' || nameLower.includes('แว่นขยาย') || nameLower.includes('search')) displayName = getLocalized(item.name);
+        else if (typeId === 'time_skip_ticket' || nameLower.includes('ตั๋วเร่งเวลา')) displayName = language === 'th' ? 'ตั๋วเร่งเวลา' : 'Time Skip Ticket';
+        else if (typeId === 'construction_nanobot' || nameLower.includes('นาโนบอทก่อสร้าง')) displayName = language === 'th' ? 'นาโนบอทก่อสร้าง' : 'Construction Nanobot';
         else displayName = getLocalized(item.name);
 
         // Final safety check: ensure we always return a string to prevent React Error #31

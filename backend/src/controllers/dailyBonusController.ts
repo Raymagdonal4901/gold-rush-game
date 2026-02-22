@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import mongoose from 'mongoose';
+import { SHOP_ITEMS } from '../constants';
+import { v4 as uuidv4 } from 'uuid';
+
 
 // Copy of Frontend Constants
 const DAILY_CHECKIN_REWARDS = [
@@ -109,12 +112,25 @@ export const checkIn = async (req: Request, res: Response) => {
                 user.materials['5'] = (user.materials['5'] || 0) + 1;
                 user.markModified('materials');
             } else {
+                const shopItem = SHOP_ITEMS.find(s => s.id === reward.id);
+                const lifespan = shopItem?.lifespanDays || 0;
+                const bonus = shopItem ? (Number(shopItem.minBonus) + Number(shopItem.maxBonus)) / 2 : 0;
+
                 user.inventory.push({
-                    id: reward.id!,
-                    name: reward.id!.replace('_', ' '),
-                    type: 'CONSUMABLE',
-                    purchasedAt: new Date(),
-                    lifespanDays: 0 // Consumables have 0 lifespan (unlimited or 1-time)
+                    id: uuidv4(),
+                    typeId: reward.id!,
+                    name: shopItem?.name || reward.id!.replace('_', ' '),
+                    price: shopItem?.price || 0,
+                    dailyBonus: bonus,
+                    durationBonus: shopItem?.durationBonus || 0,
+                    rarity: shopItem?.rarity || 'RARE',
+                    purchasedAt: Date.now(),
+                    lifespanDays: lifespan,
+                    expireAt: lifespan > 0 ? Date.now() + (lifespan * 24 * 60 * 60 * 1000) : 0,
+                    currentDurability: shopItem?.maxDurability || 100,
+                    maxDurability: shopItem?.maxDurability || 100,
+                    level: 1,
+                    isHandmade: false
                 });
             }
             user.markModified('inventory');
