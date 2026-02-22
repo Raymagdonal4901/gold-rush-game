@@ -540,6 +540,11 @@ export const claimRigProfit = async (req: AuthRequest, res: Response) => {
         const volConfig = MINING_VOLATILITY_CONFIG[presetId];
         let durabilityDecay = volConfig?.durabilityDecay || 100;
 
+        // Apply Diamond Excavator specific penalty (2x faster wear)
+        if (presetId === 7) {
+            durabilityDecay *= 2;
+        }
+
         // === Check Overclock Status ===
         const isOverclocked = user.overclockExpiresAt && user.overclockExpiresAt.getTime() > now.getTime();
         const overclockMultiplier = user.overclockMultiplier || 1.5;
