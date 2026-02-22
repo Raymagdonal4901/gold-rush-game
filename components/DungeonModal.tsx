@@ -460,7 +460,17 @@ export const DungeonModal: React.FC<DungeonModalProps> = ({ isOpen, onClose, use
                                                 </button>
                                                 <button
                                                     onClick={() => handleStart(dungeon.id, true)}
-                                                    disabled={!selectedRigId || user.inventory.filter(i => i.typeId === 'chest_key').length < (dungeon.keyCost || 1)}
+                                                    disabled={!selectedRigId || user.inventory.filter(i => {
+                                                        const typeId = (i.typeId || '').toLowerCase();
+                                                        let nameStr = '';
+                                                        if (i.name && typeof i.name === 'object') {
+                                                            nameStr = (i.name as any).en || (i.name as any).th || '';
+                                                        } else if (typeof i.name === 'string') {
+                                                            nameStr = i.name;
+                                                        }
+                                                        const nameLower = nameStr.toLowerCase();
+                                                        return typeId === 'chest_key' || nameLower.includes('key') || nameLower.includes('กุญแจ');
+                                                    }).length < (dungeon.keyCost || 1)}
                                                     className="py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-stone-800 disabled:text-stone-500 disabled:border-stone-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg text-[10px] md:text-sm transition-all"
                                                 >
                                                     <Key size={14} /> {t('dungeon.use_key').replace('{count}', (dungeon.keyCost || 1).toString())}

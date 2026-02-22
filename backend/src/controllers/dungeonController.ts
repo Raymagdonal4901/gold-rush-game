@@ -29,7 +29,17 @@ export const startExpedition = async (req: AuthRequest, res: Response) => {
         // Cost validation
         if (useKey) {
             const keyCost = dungeon.keyCost || 1;
-            const keys = user.inventory.filter(i => i.typeId === 'chest_key');
+            const keys = user.inventory.filter(i => {
+                const typeId = (i.typeId || '').toLowerCase();
+                let nameStr = '';
+                if (i.name && typeof i.name === 'object') {
+                    nameStr = (i.name as any).en || (i.name as any).th || '';
+                } else if (typeof i.name === 'string') {
+                    nameStr = i.name;
+                }
+                const nameLower = nameStr.toLowerCase();
+                return typeId === 'chest_key' || nameLower.includes('key') || nameLower.includes('กุญแจ');
+            });
 
             if (keys.length < keyCost) {
                 return res.status(400).json({
@@ -40,7 +50,17 @@ export const startExpedition = async (req: AuthRequest, res: Response) => {
             // Remove the specified number of keys
             let removedCount = 0;
             user.inventory = user.inventory.filter(item => {
-                if (item.typeId === 'chest_key' && removedCount < keyCost) {
+                const typeId = (item.typeId || '').toLowerCase();
+                let nameStr = '';
+                if (item.name && typeof item.name === 'object') {
+                    nameStr = (item.name as any).en || (item.name as any).th || '';
+                } else if (typeof item.name === 'string') {
+                    nameStr = item.name;
+                }
+                const nameLower = nameStr.toLowerCase();
+                const isKey = typeId === 'chest_key' || nameLower.includes('key') || nameLower.includes('กุญแจ');
+
+                if (isKey && removedCount < keyCost) {
                     removedCount++;
                     return false;
                 }
