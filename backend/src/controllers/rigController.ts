@@ -538,7 +538,7 @@ export const claimRigProfit = async (req: AuthRequest, res: Response) => {
         }
 
         const volConfig = MINING_VOLATILITY_CONFIG[presetId];
-        let durabilityDecay = volConfig?.durabilityDecay || 100;
+        let durabilityDecay = volConfig?.durabilityDecay || 400;
 
         // Apply Diamond Excavator specific penalty (2x faster wear)
         if (presetId === 7) {

@@ -121,7 +121,7 @@ export const syncRobotActions = async (userId: string) => {
                     rig.totalMined = (rig.totalMined || 0) + amount;
 
                     // Durability Decay per claim
-                    let decay = volConfig?.durabilityDecay || 100;
+                    let decay = volConfig?.durabilityDecay || 400;
                     if (isOverclocked) decay *= 1.5;
                     rig.currentDurability = Math.max(0, (rig.currentDurability || 3000) - decay);
 

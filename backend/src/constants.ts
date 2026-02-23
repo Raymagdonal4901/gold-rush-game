@@ -472,14 +472,14 @@ export const MINING_VOLATILITY_CONFIG: Record<number, {
     tagColor?: 'green' | 'orange' | 'purple' | 'red' | 'gold';
     maxQuantity: number;
 }> = {
-    1: { type: 'Stable', baseValue: 8, maxRandom: 4, jackpotChance: 0.01, jackpotMultiplier: 1.5, stabilityStars: 4, hashrateMin: 10, hashrateMax: 20, durabilityMax: 3000, durabilityDecay: 428, tag: 'Starter Choice', tagColor: 'green', maxQuantity: 10 },
-    2: { type: 'Stable', baseValue: 15, maxRandom: 5, jackpotChance: 0.02, jackpotMultiplier: 1.5, stabilityStars: 4, hashrateMin: 20, hashrateMax: 40, durabilityMax: 3000, durabilityDecay: 428, maxQuantity: 10 },
-    3: { type: 'Balanced', baseValue: 25, maxRandom: 15, jackpotChance: 0.03, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 50, hashrateMax: 80, durabilityMax: 3000, durabilityDecay: 428, tag: 'Best Value', tagColor: 'orange', maxQuantity: 50 },
-    4: { type: 'Balanced', baseValue: 40, maxRandom: 20, jackpotChance: 0.04, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 80, hashrateMax: 120, durabilityMax: 4000, durabilityDecay: 571, tag: 'Popular', tagColor: 'orange', maxQuantity: 50 },
-    5: { type: 'Balanced', baseValue: 55, maxRandom: 25, jackpotChance: 0.05, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 120, hashrateMax: 180, durabilityMax: 5000, durabilityDecay: 714, maxQuantity: 50 },
-    6: { type: 'Volatile', baseValue: 65, maxRandom: 45, jackpotChance: 0.06, jackpotMultiplier: 2.0, stabilityStars: 2, stabilityLabel: 'High Variance', hashrateMin: 150, hashrateMax: 250, durabilityMax: 6000, durabilityDecay: 857, tag: 'High Volatility', tagColor: 'purple', maxQuantity: 50 },
-    7: { type: 'Volatile', baseValue: 80, maxRandom: 60, jackpotChance: 0.08, jackpotMultiplier: 2.0, stabilityStars: 1, stabilityLabel: 'Extreme Risk', hashrateMin: 200, hashrateMax: 350, durabilityMax: 8000, durabilityDecay: 1142, tag: 'Tycoon Only', tagColor: 'red', maxQuantity: 50 },
-    8: { type: 'Chaos', baseValue: 100, maxRandom: 100, jackpotChance: 0.10, jackpotMultiplier: 3.0, stabilityStars: 0, stabilityLabel: 'Danger', hashrateMin: 1000, hashrateMax: 2000, durabilityMax: 12000, durabilityDecay: 1714, tag: 'God Tier', tagColor: 'gold', maxQuantity: 3 },
+    1: { type: 'Stable', baseValue: 8, maxRandom: 4, jackpotChance: 0.01, jackpotMultiplier: 1.5, stabilityStars: 4, hashrateMin: 10, hashrateMax: 20, durabilityMax: 3000, durabilityDecay: 1712, tag: 'Starter Choice', tagColor: 'green', maxQuantity: 10 },
+    2: { type: 'Stable', baseValue: 15, maxRandom: 5, jackpotChance: 0.02, jackpotMultiplier: 1.5, stabilityStars: 4, hashrateMin: 20, hashrateMax: 40, durabilityMax: 3000, durabilityDecay: 1712, maxQuantity: 10 },
+    3: { type: 'Balanced', baseValue: 25, maxRandom: 15, jackpotChance: 0.03, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 50, hashrateMax: 80, durabilityMax: 3000, durabilityDecay: 1712, tag: 'Best Value', tagColor: 'orange', maxQuantity: 50 },
+    4: { type: 'Balanced', baseValue: 40, maxRandom: 20, jackpotChance: 0.04, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 80, hashrateMax: 120, durabilityMax: 4000, durabilityDecay: 2284, tag: 'Popular', tagColor: 'orange', maxQuantity: 50 },
+    5: { type: 'Balanced', baseValue: 55, maxRandom: 25, jackpotChance: 0.05, jackpotMultiplier: 1.5, stabilityStars: 3, hashrateMin: 120, hashrateMax: 180, durabilityMax: 5000, durabilityDecay: 2856, maxQuantity: 50 },
+    6: { type: 'Volatile', baseValue: 65, maxRandom: 45, jackpotChance: 0.06, jackpotMultiplier: 2.0, stabilityStars: 2, stabilityLabel: 'High Variance', hashrateMin: 150, hashrateMax: 250, durabilityMax: 6000, durabilityDecay: 3428, tag: 'High Volatility', tagColor: 'purple', maxQuantity: 50 },
+    7: { type: 'Volatile', baseValue: 80, maxRandom: 60, jackpotChance: 0.08, jackpotMultiplier: 2.0, stabilityStars: 1, stabilityLabel: 'Extreme Risk', hashrateMin: 200, hashrateMax: 350, durabilityMax: 8000, durabilityDecay: 4568, tag: 'Tycoon Only', tagColor: 'red', maxQuantity: 50 },
+    8: { type: 'Chaos', baseValue: 100, maxRandom: 100, jackpotChance: 0.10, jackpotMultiplier: 3.0, stabilityStars: 0, stabilityLabel: 'Danger', hashrateMin: 1000, hashrateMax: 2000, durabilityMax: 12000, durabilityDecay: 6856, tag: 'God Tier', tagColor: 'gold', maxQuantity: 3 },
     9: { type: 'Stable', baseValue: 2, maxRandom: 3, jackpotChance: 0, jackpotMultiplier: 1.0, stabilityStars: 5, hashrateMin: 1, hashrateMax: 5, durabilityMax: 999999, durabilityDecay: 0, tag: 'F2P Starter', tagColor: 'green', maxQuantity: 1 },
 };
 
