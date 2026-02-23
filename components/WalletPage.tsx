@@ -244,7 +244,8 @@ export const WalletPage: React.FC<WalletPageProps> = ({ user, onUpdateUser, onBa
                                     </tr>
                                 ) : (
                                     transactions.map((tx: any) => {
-                                        const isExpense = ['WITHDRAWAL', 'BUY_RIG', 'ASSET_PURCHASE', 'ACCESSORY_PURCHASE', 'ACCESSORY_UPGRADE', 'ACCESSORY_CRAFT', 'RIG_RENEWAL', 'REPAIR', 'MATERIAL_BUY', 'ENERGY_REFILL', 'SLOT_EXPANSION', 'DUNGEON_ENTRY', 'MARKET_FEE', 'WITHDRAW_FEE', 'ITEM_BUY', 'GAME_LOSS', 'EXPENSE'].includes(tx.type);
+                                        const isLuckyDrawCost = tx.type === 'LUCKY_DRAW' && tx.description.includes('เล่นเสี่ยงโชค');
+                                        const isExpense = isLuckyDrawCost || ['WITHDRAWAL', 'BUY_RIG', 'ASSET_PURCHASE', 'ACCESSORY_PURCHASE', 'ACCESSORY_UPGRADE', 'ACCESSORY_CRAFT', 'RIG_RENEWAL', 'REPAIR', 'MATERIAL_BUY', 'ENERGY_REFILL', 'SLOT_EXPANSION', 'DUNGEON_ENTRY', 'MARKET_FEE', 'WITHDRAW_FEE', 'ITEM_BUY', 'GAME_LOSS', 'EXPENSE'].includes(tx.type);
                                         const amountColor = (isExpense || tx.amount < 0) ? 'text-red-400' : 'text-green-400';
                                         const sign = (isExpense || tx.amount < 0) ? '-' : '+';
 

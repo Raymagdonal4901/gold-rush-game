@@ -69,7 +69,7 @@ export const playLuckyDraw = async (req: any, res: Response) => {
             const costTx = new Transaction({
                 userId: user._id,
                 type: 'LUCKY_DRAW',
-                amount: LUCKY_DRAW_CONFIG.COST,
+                amount: -LUCKY_DRAW_CONFIG.COST,
                 status: 'COMPLETED',
                 description: `เล่นเสี่ยงโชค (Lucky Draw)`
             });
