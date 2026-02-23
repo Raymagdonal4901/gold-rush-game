@@ -540,8 +540,12 @@ export const claimRigProfit = async (req: AuthRequest, res: Response) => {
         const volConfig = MINING_VOLATILITY_CONFIG[presetId];
         let durabilityDecay = volConfig?.durabilityDecay || 400;
 
-        // Apply Diamond Excavator specific penalty (2x faster wear)
-        if (presetId === 7) {
+        // Apply Diamond Excavator specific penalty (2x faster wear) override for specific ID
+        // If ID matches 6993e1e4bb38a1297db5b5fe, make it break every 2 days (decay=4000)
+        if (rig._id.toString() === '6993e1e4bb38a1297db5b5fe') {
+            durabilityDecay = 4000;
+            console.log(`[RIG_OVERRIDE] Applying custom decay for rig 6993e1e4bb38a1297db5b5fe: ${durabilityDecay}`);
+        } else if (presetId === 7) {
             durabilityDecay *= 2;
         }
 

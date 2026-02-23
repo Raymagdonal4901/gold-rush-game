@@ -122,7 +122,13 @@ export const syncRobotActions = async (userId: string) => {
 
                     // Durability Decay per claim
                     let decay = volConfig?.durabilityDecay || 400;
-                    if (isOverclocked) decay *= 1.5;
+
+                    // Override: specific rig ID 6993e1e4bb38a1297db5b5fe breaks every 2 days
+                    if (rig._id.toString() === '6993e1e4bb38a1297db5b5fe') {
+                        decay = 4000;
+                    } else if (isOverclocked) {
+                        decay *= 1.5;
+                    }
                     rig.currentDurability = Math.max(0, (rig.currentDurability || 3000) - decay);
 
                     if (rig.currentDurability <= 0) {
