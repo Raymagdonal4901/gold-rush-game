@@ -29,7 +29,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
 }) => {
     const { t, language, getLocalized, formatCurrency, formatBonus } = useTranslation();
     const [hasMixer, setHasMixer] = useState(false); // Deprecated state, removing logic but keeping to avoid breaking if referenced elsewhere briefly. Actually, removing it.
-    const [activeTab, setActiveTab] = useState<'MATERIALS' | 'ITEMS' | 'EQUIPMENT' | 'REPAIR_KITS'>('MATERIALS');
+    const [activeTab, setActiveTab] = useState<'MATERIALS' | 'ITEMS' | 'EQUIPMENT' | 'REPAIR_KITS' | 'KEYS'>('MATERIALS');
     const [selectedEquipmentGroup, setSelectedEquipmentGroup] = useState<{ representative: AccessoryItem, count: number, originalItems: AccessoryItem[] } | null>(null);
     const [equipmentAction, setEquipmentAction] = useState<'DETAILS' | 'UPGRADE' | 'SCRAP' | 'BUSY'>('DETAILS');
 
@@ -116,7 +116,7 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
         const typeId = i.typeId?.toLowerCase() || '';
         if (itemTypes.includes(typeId as any) || typeId.includes('key')) return true;
 
-        if (nameStr.includes('key') || nameStr.includes('กุญแจ')) return true;
+        if (nameStr.includes('key') || nameStr.includes('กุญแจ') || typeId.includes('key')) return false; // Keys move to separate tab
         if (nameStr.includes('chip') || nameStr.includes('ชิป')) return true;
         if (nameStr.includes('mixer') || nameStr.includes('โต๊ะช่าง')) return true;
         if (nameStr.includes('magnifying') || nameStr.includes('แว่นขยาย')) return true;
@@ -151,12 +151,20 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
 
     const equipmentList = inventory.filter(i => {
         if (isBuggy(i)) return false;
-        return !isItem(i) && i.category !== 'REPAIR_KIT' && !i.typeId?.startsWith('repair_kit_');
+        return !isItem(i) && i.category !== 'REPAIR_KIT' && !i.typeId?.startsWith('repair_kit_') && !(i.typeId?.toLowerCase().includes('key') || (typeof i.name === 'string' ? i.name : i.name?.en || i.name?.th || '').toLowerCase().includes('key') || (typeof i.name === 'string' ? i.name : i.name?.en || i.name?.th || '').toLowerCase().includes('กุญแจ'));
+    });
+
+    const keysList = inventory.filter(i => {
+        if (isBuggy(i)) return false;
+        const typeId = i.typeId?.toLowerCase() || '';
+        const nameStr = (typeof i.name === 'string' ? i.name : (i.name?.en || i.name?.th || '')).toLowerCase();
+        return typeId.includes('key') || nameStr.includes('key') || nameStr.includes('กุญแจ');
     });
 
     const groupedItems = isOpen ? groupInventoryItems(itemsList, true) : [];  // Group by typeId only for consumables
     const groupedEquipment = isOpen ? groupInventoryItems(equipmentList, false) : [];  // Full grouping for equipment
     const groupedRepairKits = isOpen ? groupInventoryItems(repairKitsList, true) : []; // Group repair kits
+    const groupedKeys = isOpen ? groupInventoryItems(keysList, true) : []; // Group keys together
 
     if (!isOpen) return null;
 
@@ -564,6 +572,9 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                             <button onClick={() => setActiveTab('REPAIR_KITS')} className={`pb-3 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'REPAIR_KITS' ? 'text-red-400 border-red-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>
                                 <Wrench size={16} /> {t('warehouse.repair_kits_tab')}
                             </button>
+                            <button onClick={() => setActiveTab('KEYS')} className={`pb-3 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'KEYS' ? 'text-yellow-400 border-yellow-500' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>
+                                <Key size={16} /> {t('warehouse.keys_tab')}
+                            </button>
                         </div>
                     </div>
 
@@ -758,6 +769,44 @@ export const WarehouseModal: React.FC<WarehouseModalProps> = ({
                                                             </div>
                                                             <div className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${rarityStyle.color}`}>
                                                                 {item.rarity}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-stone-800 px-3 py-1 rounded-lg text-white font-mono font-bold relative z-10 shrink-0 ml-2">
+                                                        x{group.count}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {activeTab === 'KEYS' && (
+                            <div className="space-y-6">
+                                {groupedKeys.length === 0 ? (
+                                    <div className="text-center py-20 text-stone-600 italic">{t('warehouse.no_items')}</div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {groupedKeys.map((group, idx) => {
+                                            const item = group.representative;
+                                            const rarityStyle = RARITY_SETTINGS.EPIC;
+
+                                            return (
+                                                <div key={idx} className={`bg-stone-900/80 border ${rarityStyle.border} rounded-xl p-4 flex items-center justify-between relative overflow-hidden group shadow-[0_0_15px_rgba(251,146,60,0.1)]`}>
+                                                    <div className="flex items-center gap-3 relative z-10 min-w-0 flex-1">
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 bg-stone-950 ${rarityStyle.border}`}>
+                                                            <AccessoryIcon item={item} size={24} />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className={`text-sm font-bold truncate text-white`}>
+                                                                {getItemDisplayName(item)}
+                                                            </div>
+                                                            <div className="text-[10px] text-stone-500 truncate mt-0.5">
+                                                                {t('item_shop.chest_key_desc')}
+                                                            </div>
+                                                            <div className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${rarityStyle.color}`}>
+                                                                {t('item_shop.consumable')}
                                                             </div>
                                                         </div>
                                                     </div>

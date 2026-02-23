@@ -56,7 +56,15 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({ isOpen, onClose,
             const nameStr = (typeof item.name === 'string' ? item.name : (item.name?.en || item.name?.th || '')).toLowerCase();
             if (nameStr === 'robot' || nameStr === 'hat') return;
 
-            const key = `${item.typeId}_${item.level || 1}_${item.rarity}`;
+            const typeId = (item.typeId || '').toLowerCase();
+            let key = '';
+            // Force all keys to group together
+            if (typeId === 'chest_key' || nameStr.includes('key') || nameStr.includes('กุญแจ')) {
+                key = 'chest_key';
+            } else {
+                key = `${item.typeId}_${item.level || 1}_${item.rarity}`;
+            }
+
             if (!groups[key]) {
                 groups[key] = { representative: item, count: 0, allIds: [], items: [] };
             }

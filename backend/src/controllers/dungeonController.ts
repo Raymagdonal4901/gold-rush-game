@@ -38,7 +38,7 @@ export const startExpedition = async (req: AuthRequest, res: Response) => {
                     nameStr = i.name;
                 }
                 const nameLower = nameStr.toLowerCase();
-                return typeId === 'chest_key' || nameLower.includes('key') || nameLower.includes('กุญแจ');
+                return typeId === 'chest_key' || typeId.includes('key') || nameLower.includes('key') || nameLower.includes('กุญแจ');
             });
 
             if (keys.length < keyCost) {
@@ -58,7 +58,7 @@ export const startExpedition = async (req: AuthRequest, res: Response) => {
                     nameStr = item.name;
                 }
                 const nameLower = nameStr.toLowerCase();
-                const isKey = typeId === 'chest_key' || nameLower.includes('key') || nameLower.includes('กุญแจ');
+                const isKey = typeId === 'chest_key' || typeId.includes('key') || nameLower.includes('key') || nameLower.includes('กุญแจ');
 
                 if (isKey && removedCount < keyCost) {
                     removedCount++;
