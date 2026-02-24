@@ -2,43 +2,11 @@ import { Request, Response } from 'express';
 import User from '../models/User';
 import Transaction from '../models/Transaction';
 import mongoose from 'mongoose';
-import { SHOP_ITEMS } from '../constants';
+import { SHOP_ITEMS, DAILY_CHECKIN_REWARDS } from '../constants';
 import { v4 as uuidv4 } from 'uuid';
 
 
 // Copy of Frontend Constants
-const DAILY_CHECKIN_REWARDS = [
-    { day: 1, reward: 'money', amount: 10, label: { th: '10 บาท', en: '10 THB' } },
-    { day: 2, reward: 'material', tier: 1, amount: 2, label: { th: 'ถ่านหิน x2', en: 'Coal x2' } },
-    { day: 3, reward: 'money', amount: 15, label: { th: '15 บาท', en: '15 THB' } },
-    { day: 4, reward: 'material', tier: 1, amount: 3, label: { th: 'ถ่านหิน x3', en: 'Coal x3' } },
-    { day: 5, reward: 'money', amount: 20, label: { th: '20 บาท', en: '20 THB' } },
-    { day: 6, reward: 'item', id: 'chest_key', amount: 1, label: { th: 'กุญแจเข้าเหมือง x1', en: 'Mining Key x1' } },
-    { day: 7, reward: 'item', id: 'chest_key', amount: 3, label: { th: 'กุญแจเข้าเหมือง x3', en: 'Mining Key x3' }, highlight: true },
-    { day: 8, reward: 'money', amount: 25, label: { th: '25 บาท', en: '25 THB' } },
-    { day: 9, reward: 'material', tier: 2, amount: 2, label: { th: 'ทองแดง x2', en: 'Copper x2' } },
-    { day: 10, reward: 'money', amount: 30, label: { th: '30 บาท', en: '30 THB' } },
-    { day: 11, reward: 'material', tier: 3, amount: 1, label: { th: 'เหล็ก x1', en: 'Iron x1' } },
-    { day: 12, reward: 'money', amount: 35, label: { th: '35 บาท', en: '35 THB' } },
-    { day: 13, reward: 'item', id: 'upgrade_chip', amount: 2, label: { th: 'ชิป x2', en: 'Upgrade Chip x2' } },
-    { day: 14, reward: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' }, highlight: true },
-    { day: 15, reward: 'money', amount: 40, label: { th: '40 บาท', en: '40 THB' } },
-    { day: 16, reward: 'material', tier: 3, amount: 2, label: { th: 'เหล็ก x2', en: 'Iron x2' } },
-    { day: 17, reward: 'material', tier: 2, amount: 5, label: { th: 'ทองแดง x5', en: 'Copper x5' } },
-    { day: 18, reward: 'money', amount: 45, label: { th: '45 บาท', en: '45 THB' } },
-    { day: 19, reward: 'material', tier: 3, amount: 2, label: { th: 'เหล็ก x2', en: 'Iron x2' } },
-    { day: 20, reward: 'item', id: 'upgrade_chip', amount: 5, label: { th: 'ชิป x5', en: 'Upgrade Chip x5' } },
-    { day: 21, reward: 'item', id: 'upgrade_chip', amount: 15, label: { th: 'ชิป x15', en: 'Upgrade Chip x15' }, highlight: true },
-    { day: 22, reward: 'money', amount: 50, label: { th: '50 บาท', en: '50 THB' } },
-    { day: 23, reward: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' } },
-    { day: 24, reward: 'item', id: 'chest_key', amount: 5, label: { th: 'กุญแจเข้าเหมือง x5', en: 'Mining Key x5' } },
-    { day: 25, reward: 'money', amount: 60, label: { th: '60 บาท', en: '60 THB' } },
-    { day: 26, reward: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' } },
-    { day: 27, reward: 'item', id: 'mixer', amount: 1, label: { th: 'เครื่องผสม', en: 'Mixer' } },
-    { day: 28, reward: 'money', amount: 100, label: { th: 'Jackpot 100 บาท', en: 'Jackpot 100 THB' }, highlight: true },
-    { day: 29, reward: 'material', tier: 4, amount: 1, label: { th: 'ทองคำ x1', en: 'Gold x1' } },
-    { day: 30, reward: 'grand_prize', label: { th: 'ใบประกันความเสี่ยง + เพชร', en: 'Insurance Card + Diamond' }, highlight: true, special: true },
-];
 
 const getResetDayIdentifier = (timestamp: number) => {
     if (timestamp === 0) return 'never';
@@ -115,23 +83,26 @@ export const checkIn = async (req: Request, res: Response) => {
                 const shopItem = SHOP_ITEMS.find(s => s.id === reward.id);
                 const lifespan = shopItem?.lifespanDays || 0;
                 const bonus = shopItem ? (Number(shopItem.minBonus) + Number(shopItem.maxBonus)) / 2 : 0;
+                const count = (reward as any).amount || 1;
 
-                user.inventory.push({
-                    id: uuidv4(),
-                    typeId: reward.id!,
-                    name: shopItem?.name || reward.id!.replace('_', ' '),
-                    price: shopItem?.price || 0,
-                    dailyBonus: bonus,
-                    durationBonus: shopItem?.durationBonus || 0,
-                    rarity: shopItem?.rarity || 'RARE',
-                    purchasedAt: Date.now(),
-                    lifespanDays: lifespan,
-                    expireAt: lifespan > 0 ? Date.now() + (lifespan * 24 * 60 * 60 * 1000) : 0,
-                    currentDurability: shopItem?.maxDurability || 100,
-                    maxDurability: shopItem?.maxDurability || 100,
-                    level: 1,
-                    isHandmade: false
-                });
+                for (let i = 0; i < count; i++) {
+                    user.inventory.push({
+                        id: uuidv4(),
+                        typeId: reward.id!,
+                        name: shopItem?.name || reward.id!.replace('_', ' '),
+                        price: shopItem?.price || 0,
+                        dailyBonus: bonus,
+                        durationBonus: shopItem?.durationBonus || 0,
+                        rarity: shopItem?.rarity || 'RARE',
+                        purchasedAt: Date.now(),
+                        lifespanDays: lifespan,
+                        expireAt: lifespan > 0 ? Date.now() + (lifespan * 24 * 60 * 60 * 1000) : 0,
+                        currentDurability: shopItem?.maxDurability || 100,
+                        maxDurability: shopItem?.maxDurability || 100,
+                        level: 1,
+                        isHandmade: false
+                    });
+                }
             }
             user.markModified('inventory');
         }
