@@ -367,7 +367,7 @@ export const api = {
             const res = await client.get('/admin/config');
             return res.data;
         },
-        updateSystemConfig: async (data: { receivingQrCode?: string, usdtWalletAddress?: string, isMaintenanceMode?: boolean }): Promise<any> => {
+        updateSystemConfig: async (data: { receivingQrCode?: string, usdtWalletAddress?: string, isMaintenanceMode?: boolean, isWithdrawalEnabled?: boolean }): Promise<any> => {
             const res = await client.post('/admin/config', data);
             return res.data;
         },
@@ -412,6 +412,10 @@ export const api = {
         },
         getUserMinesStats: async (userId: string): Promise<any> => {
             const res = await client.get(`/admin/users/${userId}/mines-stats`);
+            return res.data;
+        },
+        getUserDungeonStats: async (userId: string): Promise<any> => {
+            const res = await client.get(`/admin/users/${userId}/dungeon-stats`);
             return res.data;
         },
         giveCompensation: async (userId: string, amount: number, reason: string): Promise<any> => {

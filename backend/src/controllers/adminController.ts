@@ -434,6 +434,59 @@ export const getUserMinesStats = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// Get User Dungeon/Expedition Stats (Admin)
+export const getUserDungeonStats = async (req: AuthRequest, res: Response) => {
+    try {
+        const { userId } = req.params;
+
+        const [history, summaryStats] = await Promise.all([
+            Transaction.find({
+                userId,
+                type: { $in: ['DUNGEON_ENTRY', 'DUNGEON_REWARD'] }
+            }).sort({ timestamp: -1 }).limit(100),
+            Transaction.aggregate([
+                {
+                    $match: {
+                        userId,
+                        type: { $in: ['DUNGEON_ENTRY', 'DUNGEON_REWARD'] },
+                        status: 'COMPLETED'
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$type',
+                        count: { $sum: 1 },
+                        totalAmount: { $sum: '$amount' }
+                    }
+                }
+            ])
+        ]);
+
+        const summary: Record<string, any> = {
+            totalEntries: 0,
+            totalRewards: 0,
+            totalSpent: 0
+        };
+
+        summaryStats.forEach(s => {
+            if (s._id === 'DUNGEON_ENTRY') {
+                summary.totalEntries = s.count;
+                summary.totalSpent = Math.abs(s.totalAmount);
+            } else if (s._id === 'DUNGEON_REWARD') {
+                summary.totalRewards = s.count;
+            }
+        });
+
+        res.json({
+            summary,
+            history
+        });
+    } catch (error) {
+        console.error('Error fetching user dungeon stats:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
 // Get All Users
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
     try {
@@ -470,7 +523,7 @@ export const getSystemConfig = async (req: AuthRequest, res: Response) => {
 // Update System Config
 export const updateSystemConfig = async (req: AuthRequest, res: Response) => {
     try {
-        const { receivingQrCode, usdtWalletAddress, isMaintenanceMode } = req.body;
+        const { receivingQrCode, usdtWalletAddress, isMaintenanceMode, isWithdrawalEnabled } = req.body;
 
         // Upsert logic
         let config = await SystemConfig.findOne();
@@ -481,6 +534,7 @@ export const updateSystemConfig = async (req: AuthRequest, res: Response) => {
         if (receivingQrCode !== undefined) config.receivingQrCode = receivingQrCode;
         if (usdtWalletAddress !== undefined) config.usdtWalletAddress = usdtWalletAddress;
         if (isMaintenanceMode !== undefined) config.isMaintenanceMode = isMaintenanceMode;
+        if (isWithdrawalEnabled !== undefined) config.isWithdrawalEnabled = isWithdrawalEnabled;
         if (req.body.dropRate !== undefined) config.dropRate = req.body.dropRate;
 
         await config.save();

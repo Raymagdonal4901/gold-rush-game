@@ -5,11 +5,19 @@ import Withdrawal from '../models/Withdrawal';
 import Transaction from '../models/Transaction';
 import { WITHDRAWAL_FEE_PERCENT, CURRENCY } from '../constants';
 import mongoose from 'mongoose';
+import SystemConfig from '../models/SystemConfig';
 
 export const requestWithdraw = async (req: AuthRequest, res: Response) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
+        const config = await SystemConfig.findOne();
+        if (config && config.isWithdrawalEnabled === false) {
+            return res.status(403).json({
+                message: 'การถอนเงินปิดปรับปรุงชั่วคราว โปรดติดตามประกาศจากทางแอดมิน (Withdrawals are temporarily disabled)'
+            });
+        }
+
         const { amount, bankDetails } = req.body;
         const user = req.user;
 

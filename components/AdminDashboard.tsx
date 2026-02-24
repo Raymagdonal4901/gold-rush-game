@@ -55,6 +55,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     // System Config State
     const [systemQr, setSystemQr] = useState<string | null>(null);
     const [isMaintenance, setIsMaintenance] = useState(false); // New
+    const [isWithdrawalEnabled, setIsWithdrawalEnabled] = useState(true);
     const [systemUsdtWallet, setSystemUsdtWallet] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -152,6 +153,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
     const [minesStats, setMinesStats] = useState<any | null>(null);
     const [isFetchingMines, setIsFetchingMines] = useState(false);
 
+    // Dungeon Stats State
+    const [showDungeonStats, setShowDungeonStats] = useState(false);
+    const [dungeonStats, setDungeonStats] = useState<any | null>(null);
+    const [isFetchingDungeon, setIsFetchingDungeon] = useState(false);
+
     // Initial Load
     useEffect(() => {
         console.log("AdminDashboard mounted - Force Refresh for All Withdrawals");
@@ -233,6 +239,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                 setSystemQr(config.receivingQrCode || null);
                 setSystemUsdtWallet(config.usdtWalletAddress || '');
                 setIsMaintenance(config.isMaintenanceMode || false);
+                setIsWithdrawalEnabled(config.isWithdrawalEnabled !== undefined ? config.isWithdrawalEnabled : true);
             }
 
         } catch (error: any) {
@@ -242,6 +249,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             setIsLoading(false);
         }
     };
+
+    const toggleWithdrawal = async () => {
+        const newState = !isWithdrawalEnabled;
+        try {
+            await api.admin.updateSystemConfig({ isWithdrawalEnabled: newState });
+            setIsWithdrawalEnabled(newState);
+            alert(`Withdrawal Status: ${newState ? 'ENABLED' : 'DISABLED'}`);
+        } catch (error) {
+            console.error("Failed to update withdrawal status", error);
+            alert(t('admin.process_error'));
+        }
+    };
+
 
     const handleUsdtLookup = async () => {
         if (!usdtSearchWallet) return;
@@ -458,6 +478,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
         setNetworkData(null);
         setMinesStats(null);
         setShowMinesStats(false);
+        setDungeonStats(null);
+        setShowDungeonStats(false);
         setEconomyForm(prev => ({ ...prev, targetUser: user.id, compUser: user.id }));
         try {
             const stats = await api.admin.getUserStats(user.id);
@@ -473,11 +495,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
             const data = await api.admin.getUserMinesStats(userId);
             setMinesStats(data);
             setShowMinesStats(true);
+            setShowDungeonStats(false); // Close other panels
         } catch (error) {
             console.error("Failed to fetch mines stats", error);
             alert('ไม่สามารถดึงข้อมูลสถิติเกม Mines ได้');
         } finally {
             setIsFetchingMines(false);
+        }
+    };
+
+    const fetchDungeonStats = async (userId: string) => {
+        try {
+            setIsFetchingDungeon(true);
+            const data = await api.admin.getUserDungeonStats(userId);
+            setDungeonStats(data);
+            setShowDungeonStats(true);
+            setShowMinesStats(false); // Close other panels
+        } catch (error) {
+            console.error("Failed to fetch dungeon stats", error);
+            alert('ไม่สามารถดึงข้อมูลประวัติการลงเหมืองได้');
+        } finally {
+            setIsFetchingDungeon(false);
         }
     };
 
@@ -839,6 +877,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                     💣 {isFetchingMines ? 'Loading...' : 'Mines Stats'}
                                 </button>
                                 <button
+                                    onClick={() => selectedUser && fetchDungeonStats(selectedUser.id)}
+                                    disabled={isFetchingDungeon}
+                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 ${showDungeonStats ? 'bg-emerald-600 text-white' : 'bg-stone-800 text-stone-400 hover:text-white'}`}
+                                >
+                                    ⛏️ {isFetchingDungeon ? 'Loading...' : 'เหมือง (Dungeon)'}
+                                </button>
+                                <button
                                     onClick={() => setShowAudit(!showAudit)}
                                     className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 ${showAudit ? 'bg-yellow-600 text-stone-900' : 'bg-stone-800 text-stone-400 hover:text-white'}`}
                                 >
@@ -1010,8 +1055,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                                     </td>
                                                                     <td className="px-3 py-2 text-center">
                                                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${g.status === 'CASHED_OUT' ? 'bg-emerald-900/50 text-emerald-400' :
-                                                                                g.status === 'EXPLODED' ? 'bg-red-900/50 text-red-400' :
-                                                                                    'bg-yellow-900/50 text-yellow-400'
+                                                                            g.status === 'EXPLODED' ? 'bg-red-900/50 text-red-400' :
+                                                                                'bg-yellow-900/50 text-yellow-400'
                                                                             }`}>
                                                                             {g.status === 'CASHED_OUT' ? '✅ ชนะ' : g.status === 'EXPLODED' ? '💣 แพ้' : '⏳ Active'}
                                                                         </span>
@@ -1021,6 +1066,76 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                                             {minesStats.recentGames.length === 0 && (
                                                                 <tr>
                                                                     <td colSpan={6} className="px-3 py-6 text-center text-stone-500">ผู้ใช้ยังไม่เคยเล่นเกม Mines</td>
+                                                                </tr>
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Dungeon Stats Panel */}
+                                    {showDungeonStats && dungeonStats && (
+                                        <div className="bg-stone-950 border border-emerald-900/40 rounded-lg p-5 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                            <div className="flex items-center justify-between border-b border-stone-800 pb-3">
+                                                <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase text-xs">
+                                                    ⛏️ Dungeon / Expedition History
+                                                </div>
+                                                <button onClick={() => { setShowDungeonStats(false); setDungeonStats(null); }} className="text-stone-500 hover:text-white">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+
+                                            {/* Summary Cards */}
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div className="bg-stone-900 p-3 rounded border border-stone-800 text-center">
+                                                    <div className="text-[10px] text-stone-500 uppercase font-bold">ลงเหมืองทั้งหมด</div>
+                                                    <div className="text-xl font-mono font-bold text-white">{dungeonStats.summary.totalEntries}</div>
+                                                </div>
+                                                <div className="bg-stone-900 p-3 rounded border border-emerald-900/30 text-center">
+                                                    <div className="text-[10px] text-emerald-500 uppercase font-bold">รางวัลที่ได้รับ</div>
+                                                    <div className="text-xl font-mono font-bold text-emerald-400">{dungeonStats.summary.totalRewards}</div>
+                                                </div>
+                                                <div className="bg-stone-900 p-3 rounded border border-red-900/30 text-center">
+                                                    <div className="text-[10px] text-red-500 uppercase font-bold">ค่าใช้จ่ายรวม</div>
+                                                    <div className="text-xl font-mono font-bold text-red-400">-{Math.floor(dungeonStats.summary.totalSpent).toLocaleString()}</div>
+                                                </div>
+                                            </div>
+
+                                            {/* History Table */}
+                                            <div className="space-y-2">
+                                                <div className="text-[10px] text-stone-500 uppercase font-bold tracking-wider">ประวัติล่าสุด (Max 100)</div>
+                                                <div className="max-h-64 overflow-y-auto rounded border border-stone-800">
+                                                    <table className="w-full text-xs text-left">
+                                                        <thead className="bg-stone-900 text-stone-400 sticky top-0">
+                                                            <tr>
+                                                                <th className="px-3 py-2 font-medium">วันที่</th>
+                                                                <th className="px-3 py-2 font-medium">ประเภท</th>
+                                                                <th className="px-3 py-2 font-medium">รายละเอียด</th>
+                                                                <th className="px-3 py-2 font-medium text-right">จำนวน</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-stone-900">
+                                                            {dungeonStats.history.map((tx: any) => (
+                                                                <tr key={tx._id} className="hover:bg-stone-900/50">
+                                                                    <td className="px-3 py-2 text-stone-500 font-mono whitespace-nowrap">
+                                                                        {new Date(tx.timestamp).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                                    </td>
+                                                                    <td className="px-3 py-2">
+                                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tx.type === 'DUNGEON_REWARD' ? 'bg-emerald-900/40 text-emerald-500' : 'bg-stone-800 text-stone-400'}`}>
+                                                                            {tx.type === 'DUNGEON_REWARD' ? 'รางวัล' : 'เข้าเหมือง'}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-stone-300">{tx.description}</td>
+                                                                    <td className={`px-3 py-2 text-right font-mono font-bold ${tx.amount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                        {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString()}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                            {dungeonStats.history.length === 0 && (
+                                                                <tr>
+                                                                    <td colSpan={4} className="px-3 py-6 text-center text-stone-500">ไม่พบประวัติการลงเหมือง</td>
                                                                 </tr>
                                                             )}
                                                         </tbody>
@@ -2061,6 +2176,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onL
                                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isMaintenance ? 'translate-x-6' : 'translate-x-1'}`} />
                                     </button>
                                 </div>
+
+                                {/* Withdrawal Toggle */}
+                                <div className="flex items-center gap-3 pr-6 border-r border-stone-800">
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-xs text-stone-500 uppercase font-bold">Withdrawal Status</span>
+                                        <span className={`text-sm font-bold ${isWithdrawalEnabled ? 'text-emerald-500' : 'text-red-500'}`}>
+                                            {isWithdrawalEnabled ? 'ENABLED' : 'DISABLED'}
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={toggleWithdrawal}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-stone-950 ${isWithdrawalEnabled ? 'bg-emerald-600' : 'bg-stone-700'}`}
+                                    >
+                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isWithdrawalEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                    </button>
+                                </div>
+
                                 {systemQr && (
                                     <div className="w-16 h-16 bg-white rounded p-1">
                                         <img src={systemQr} alt="System QR" className="w-full h-full object-contain" />

@@ -7,6 +7,7 @@ import Transaction from '../models/Transaction';
 import Rig from '../models/Rig';
 import User from '../models/User';
 import { getRigPresetId, calculateDailyYield } from './rigController';
+import SystemConfig from '../models/SystemConfig';
 
 // ... (Existing imports)
 
@@ -18,6 +19,13 @@ import bcrypt from 'bcryptjs';
 // Create Withdrawal Request (User)
 export const createWithdrawalRequest = async (req: AuthRequest, res: Response) => {
     try {
+        const config = await SystemConfig.findOne();
+        if (config && config.isWithdrawalEnabled === false) {
+            return res.status(403).json({
+                message: 'การถอนเงินปิดปรับปรุงชั่วคราว โปรดติดตามประกาศจากทางแอดมิน (Withdrawals are temporarily disabled)'
+            });
+        }
+
         const { amount, pin, method, walletAddress } = req.body;
         const userId = req.userId;
 
