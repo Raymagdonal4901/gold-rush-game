@@ -627,6 +627,7 @@ export interface ShopItemConfig {
     specialEffect?: { th: string; en: string };
     description?: { th: string; en: string };
     tier?: number;
+    rarity?: string;
     requiredItem?: string;
     buffs?: {
         repairDiscount?: number;

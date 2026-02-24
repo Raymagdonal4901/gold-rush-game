@@ -70,6 +70,7 @@ export const MockDB = {
                 consecutiveLoginDays: 1,
                 dailyGiftClaimed: false,
                 unlockedSlots: 6,
+                warehouseCapacity: 10,
                 masteryPoints: 9999,
                 claimedRanks: [],
                 isBanned: false,
@@ -132,6 +133,7 @@ export const MockDB = {
             lastLoginDate: new Date().toDateString(),
             consecutiveLoginDays: 1,
             dailyGiftClaimed: false,
+            warehouseCapacity: 10,
             stats: {
                 totalMaterialsMined: 0, totalMoneySpent: 0, totalLogins: 1, luckyDraws: 0, questsCompleted: 0,
                 materialsCrafted: 0, dungeonsEntered: 0, itemsCrafted: 0, repairPercent: 0, rareLootCount: 0
@@ -507,10 +509,36 @@ export const MockDB = {
         user.lastCheckIn = now;
         user.dailyGiftClaimed = true;
 
-        // Reward logic (simplified for MockDB)
+        // Reward logic
         const reward = DAILY_CHECKIN_REWARDS.find(r => r.day === user.checkInStreak);
-        if (reward && reward.reward === 'money') {
-            user.balance += reward.amount;
+        if (reward) {
+            if (reward.reward === 'money') {
+                user.balance += reward.amount;
+            } else if (reward.reward === 'material') {
+                if (!user.materials) user.materials = {};
+                user.materials[reward.tier!] = (user.materials[reward.tier!] || 0) + (reward.amount || 1);
+            } else if (reward.reward === 'item') {
+                if (!user.inventory) user.inventory = [];
+                const shopItem = SHOP_ITEMS.find(s => s.id === reward.id);
+                const count = (reward as any).amount || 1;
+
+                for (let i = 0; i < count; i++) {
+                    const newItem: AccessoryItem = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        typeId: reward.id!,
+                        name: shopItem?.name || reward.id!.replace('_', ' '),
+                        price: shopItem?.price || 0,
+                        dailyBonus: shopItem ? (shopItem.minBonus + shopItem.maxBonus) / 2 : 0,
+                        durationBonus: shopItem?.durationBonus || 0,
+                        rarity: (shopItem?.rarity as any) || 'RARE',
+                        purchasedAt: Date.now(),
+                        lifespanDays: shopItem?.lifespanDays || 0,
+                        expireAt: shopItem?.lifespanDays ? Date.now() + (shopItem.lifespanDays * 24 * 60 * 60 * 1000) : 0,
+                        level: 1
+                    };
+                    user.inventory.push(newItem);
+                }
+            }
         }
 
         setStore(STORAGE_KEYS.USERS, users);
